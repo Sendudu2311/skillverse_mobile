@@ -12,7 +12,7 @@ SkillVerse is a comprehensive learning platform that provides:
 The project aims to convert an existing web application (built with Vite + React/TSX) into a Flutter mobile application.
 
 ## Current State
-- Contains legacy web code in `oldwebcodes/` directory
+- Contains legacy web code in `skillverse-prototype`
 - Written in TypeScript with React components
 - Features include authentication, courses, dashboard, jobs, portfolio, roadmaps, and AI chatbot
 - Uses modern web technologies with responsive design

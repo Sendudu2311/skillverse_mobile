@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'presentation/providers/auth_provider.dart';
+import 'presentation/providers/chat_provider.dart';
+import 'presentation/providers/course_provider.dart';
+import 'presentation/providers/roadmap_provider.dart';
+import 'presentation/providers/user_provider.dart';
 import 'presentation/app.dart';
 
 void main() async {
@@ -18,6 +22,13 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
+          create: (context) => ChatProvider(Provider.of<AuthProvider>(context, listen: false)),
+          update: (context, authProvider, previous) => previous ?? ChatProvider(authProvider),
+        ),
+        ChangeNotifierProvider(create: (_) => CourseProvider()),
+        ChangeNotifierProvider(create: (_) => RoadmapProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
       ],
       child: const SkillVerseApp(),
     ),

@@ -14,10 +14,10 @@ import 'pages/courses/courses_page.dart';
 import 'pages/courses/course_detail_page.dart';
 import 'pages/courses/course_learning_page.dart';
 import 'pages/jobs/jobs_page.dart';
-import 'pages/support/help_center_page.dart';
+import 'pages/help/help_center_page.dart';
 import 'pages/portfolio/portfolio_page.dart';
 import 'pages/legal/privacy_policy_page.dart';
-import 'pages/legal/terms_page.dart';
+import 'pages/terms/terms_of_service_page.dart';
 import 'pages/roadmap/roadmap_page.dart';
 import 'pages/profile/profile_page.dart';
 import 'pages/chat/chat_page.dart';
@@ -154,7 +154,7 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
           path: '/terms',
           builder: (context, state) => MainLayout(
             currentPath: state.matchedLocation,
-            child: const TermsPage(),
+            child: const TermsOfServicePage(),
           ),
         ),
         GoRoute(

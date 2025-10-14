@@ -62,21 +62,16 @@ class _LoginPageState extends State<LoginPage> {
                 Center(
                   child: Column(
                     children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(
-                          Icons.school_rounded,
-                          size: 40,
-                          color: Colors.white,
+                      SizedBox(
+                        width: 150,
+                        height: 150,
+                        child: Image.asset(
+                          'assets/skillverse.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                       
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 10),
                       
                       Text(
                         'Chào mừng trở lại!',

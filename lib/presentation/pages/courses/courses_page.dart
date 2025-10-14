@@ -1,101 +1,158 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/course_provider.dart';
+import '../../widgets/course_card.dart';
 
-class CoursesPage extends StatelessWidget {
+class CoursesPage extends StatefulWidget {
   const CoursesPage({super.key});
 
   @override
+  State<CoursesPage> createState() => _CoursesPageState();
+}
+
+class _CoursesPageState extends State<CoursesPage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Load initial courses after the first frame is built to ensure context is available.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Use listen: false if you are calling this inside initState.
+      // However, addPostFrameCallback defers it, so read is fine.
+      context.read<CourseProvider>().loadCourses();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Search Section
-          TextField(
-            decoration: InputDecoration(
-              hintText: 'Tìm kiếm khóa học...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.filter_list),
-                onPressed: () {
-                  // TODO: Implement filter
+    // Use Consumer to listen to changes in CourseProvider and rebuild the UI
+    return Consumer<CourseProvider>(
+      builder: (context, courseProvider, child) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ## Search Section ##
+              TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Tìm kiếm khóa học...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.filter_list),
+                    onPressed: () {
+                      // TODO: Implement filter functionality
+                    },
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onSubmitted: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                  if (value.isNotEmpty) {
+                    courseProvider.searchCourses(value);
+                  } else {
+                    // Load all courses again if search is cleared
+                    courseProvider.loadCourses(refresh: true);
+                  }
                 },
               ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 16),
+
+              // ## Categories Section ##
+              Text(
+                'Danh mục phổ biến',
+                style: Theme.of(context).textTheme.titleLarge,
               ),
-            ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 100,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _buildCategoryCard(context, 'Frontend', Icons.web, Colors.blue),
+                    _buildCategoryCard(context, 'Backend', Icons.storage, Colors.green),
+                    _buildCategoryCard(context, 'Mobile', Icons.phone_android, Colors.purple),
+                    _buildCategoryCard(context, 'UI/UX', Icons.design_services, Colors.orange),
+                    _buildCategoryCard(context, 'DevOps', Icons.settings, Colors.red),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ## Courses Section ##
+              Text(
+                _searchQuery.isNotEmpty ? 'Kết quả tìm kiếm' : 'Khóa học đề xuất',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+
+              // ## Conditional UI for Course List ##
+              _buildCourseList(courseProvider),
+            ],
           ),
-          const SizedBox(height: 16),
-          
-          // Categories Section
-          Text(
-            'Danh mục phổ biến',
-            style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            
-            SizedBox(
-              height: 100,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _buildCategoryCard(context, 'Frontend', Icons.web, Colors.blue),
-                  _buildCategoryCard(context, 'Backend', Icons.storage, Colors.green),
-                  _buildCategoryCard(context, 'Mobile', Icons.phone_android, Colors.purple),
-                  _buildCategoryCard(context, 'UI/UX', Icons.design_services, Colors.orange),
-                  _buildCategoryCard(context, 'DevOps', Icons.settings, Colors.red),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Recommended Courses
-            Text(
-              'Khóa học đề xuất',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            
-            _buildCourseCard(
-              context,
-              'Full Stack Web Development với React & Node.js',
-              'John Smith',
-              4.8,
-              120,
-              '2,999,000 VNĐ',
-              'Intermediate',
-            ),
-            
-            const SizedBox(height: 16),
-            
-            _buildCourseCard(
-              context,
-              'Flutter Mobile App Development',
-              'Sarah Johnson',
-              4.9,
-              85,
-              '1,999,000 VNĐ',
-              'Beginner',
-            ),
-            
-            const SizedBox(height: 16),
-            
-            _buildCourseCard(
-              context,
-              'UI/UX Design với Figma',
-              'Mike Chen',
-              4.7,
-              95,
-              '1,499,000 VNĐ',
-              'Beginner',
+        );
+      },
+    );
+  }
+
+  /// Builds the list of courses based on the provider's state.
+  Widget _buildCourseList(CourseProvider courseProvider) {
+    if (courseProvider.isLoading && courseProvider.courses.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    } else if (courseProvider.error != null) {
+      return Center(
+        child: Column(
+          children: [
+            Text('Lỗi: ${courseProvider.error}'),
+            ElevatedButton(
+              onPressed: () => courseProvider.refresh(),
+              child: const Text('Thử lại'),
             ),
           ],
         ),
       );
+    } else if (courseProvider.courses.isEmpty) {
+      return const Center(child: Text('Không có khóa học nào'));
+    } else {
+      return ListView.builder(
+        shrinkWrap: true, // Important for ListView inside SingleChildScrollView
+        physics: const NeverScrollableScrollPhysics(), // Disables ListView's own scrolling
+        itemCount: courseProvider.courses.length + (courseProvider.hasMorePages ? 1 : 0),
+        itemBuilder: (context, index) {
+          // Check if it's the last item and if there are more pages to load
+          if (index == courseProvider.courses.length) {
+            // Request the next page
+            courseProvider.loadCourses();
+            // Show a loading indicator at the bottom
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          final course = courseProvider.courses[index];
+          // Assuming you have a CourseCard widget defined elsewhere
+          return CourseCard(course: course);
+        },
+      );
     }
+  }
 
+  /// Helper widget for building category cards.
   Widget _buildCategoryCard(BuildContext context, String title, IconData icon, Color color) {
     return Container(
       width: 80,
@@ -113,163 +170,12 @@ class CoursesPage extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCourseCard(
-    BuildContext context,
-    String title,
-    String instructor,
-    double rating,
-    int students,
-    String price,
-    String level,
-  ) {
-    return Card(
-      elevation: 2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Course Image
-          Container(
-            height: 200,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            ),
-            child: const Icon(
-              Icons.image,
-              size: 64,
-              color: Colors.grey,
-            ),
-          ),
-          
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Course Title
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                
-                const SizedBox(height: 8),
-                
-                // Instructor
-                Text(
-                  'Giảng viên: $instructor',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-                ),
-                
-                const SizedBox(height: 8),
-                
-                // Rating and Students
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      rating.toString(),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(Icons.people, color: Colors.grey[600], size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$students học viên',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // Level and Price
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _getLevelColor(level).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        level,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _getLevelColor(level),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      price,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getLevelColor(String level) {
-    switch (level.toLowerCase()) {
-      case 'beginner':
-        return Colors.green;
-      case 'intermediate':
-        return Colors.orange;
-      case 'advanced':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-}
-
-class CourseDetailPlaceholder extends StatelessWidget {
-  final String courseId;
-
-  const CourseDetailPlaceholder({super.key, required this.courseId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Chi tiết khóa học $courseId'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.book, size: 64),
-            const SizedBox(height: 16),
-            Text('Chi tiết khóa học $courseId'),
-            const Text('Coming Soon...'),
-          ],
-        ),
       ),
     );
   }
