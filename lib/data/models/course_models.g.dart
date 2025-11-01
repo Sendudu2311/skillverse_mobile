@@ -8,10 +8,13 @@ part of 'course_models.dart';
 
 AuthorDto _$AuthorDtoFromJson(Map<String, dynamic> json) => AuthorDto(
   id: (json['id'] as num).toInt(),
-  firstName: json['firstName'] as String,
-  lastName: json['lastName'] as String,
+  firstName: json['firstName'] as String?,
+  lastName: json['lastName'] as String?,
   email: json['email'] as String,
   fullName: json['fullName'] as String?,
+  roles: (json['roles'] as List<dynamic>?)?.map((e) => e as String).toList(),
+  authProvider: json['authProvider'] as String?,
+  googleLinked: json['googleLinked'] as bool?,
 );
 
 Map<String, dynamic> _$AuthorDtoToJson(AuthorDto instance) => <String, dynamic>{
@@ -20,6 +23,9 @@ Map<String, dynamic> _$AuthorDtoToJson(AuthorDto instance) => <String, dynamic>{
   'lastName': instance.lastName,
   'email': instance.email,
   'fullName': instance.fullName,
+  'roles': instance.roles,
+  'authProvider': instance.authProvider,
+  'googleLinked': instance.googleLinked,
 };
 
 MediaDto _$MediaDtoFromJson(Map<String, dynamic> json) => MediaDto(
@@ -48,7 +54,7 @@ CourseSummaryDto _$CourseSummaryDtoFromJson(Map<String, dynamic> json) =>
     CourseSummaryDto(
       id: (json['id'] as num).toInt(),
       title: json['title'] as String,
-      description: json['description'] as String,
+      description: json['description'] as String?,
       shortDescription: json['shortDescription'] as String?,
       level: $enumDecode(_$CourseLevelEnumMap, json['level']),
       status: $enumDecode(_$CourseStatusEnumMap, json['status']),
@@ -59,12 +65,15 @@ CourseSummaryDto _$CourseSummaryDtoFromJson(Map<String, dynamic> json) =>
           : MediaDto.fromJson(json['thumbnail'] as Map<String, dynamic>),
       thumbnailUrl: json['thumbnailUrl'] as String?,
       enrollmentCount: (json['enrollmentCount'] as num).toInt(),
+      moduleCount: (json['moduleCount'] as num?)?.toInt(),
       price: (json['price'] as num?)?.toDouble(),
       currency: json['currency'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
       reviewCount: (json['reviewCount'] as num?)?.toInt(),
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
+      submittedDate: json['submittedDate'] as String?,
+      publishedDate: json['publishedDate'] as String?,
     );
 
 Map<String, dynamic> _$CourseSummaryDtoToJson(CourseSummaryDto instance) =>
@@ -80,12 +89,15 @@ Map<String, dynamic> _$CourseSummaryDtoToJson(CourseSummaryDto instance) =>
       'thumbnail': instance.thumbnail,
       'thumbnailUrl': instance.thumbnailUrl,
       'enrollmentCount': instance.enrollmentCount,
+      'moduleCount': instance.moduleCount,
       'price': instance.price,
       'currency': instance.currency,
       'rating': instance.rating,
       'reviewCount': instance.reviewCount,
       'createdAt': instance.createdAt,
       'updatedAt': instance.updatedAt,
+      'submittedDate': instance.submittedDate,
+      'publishedDate': instance.publishedDate,
     };
 
 const _$CourseLevelEnumMap = {
@@ -128,3 +140,45 @@ Map<String, dynamic> _$PageResponseToJson<T>(
   'last': instance.last,
   'empty': instance.empty,
 };
+
+CourseDetailDto _$CourseDetailDtoFromJson(Map<String, dynamic> json) =>
+    CourseDetailDto(
+      id: (json['id'] as num).toInt(),
+      title: json['title'] as String,
+      description: json['description'] as String,
+      level: json['level'] as String,
+      status: json['status'] as String,
+      author: AuthorDto.fromJson(json['author'] as Map<String, dynamic>),
+      thumbnail: json['thumbnail'] == null
+          ? null
+          : MediaDto.fromJson(json['thumbnail'] as Map<String, dynamic>),
+      price: (json['price'] as num?)?.toDouble(),
+      currency: json['currency'] as String?,
+      authorName: json['authorName'] as String?,
+      thumbnailUrl: json['thumbnailUrl'] as String?,
+      enrollmentCount: (json['enrollmentCount'] as num).toInt(),
+      createdAt: json['createdAt'] as String?,
+      updatedAt: json['updatedAt'] as String?,
+      submittedDate: json['submittedDate'] as String?,
+      publishedDate: json['publishedDate'] as String?,
+    );
+
+Map<String, dynamic> _$CourseDetailDtoToJson(CourseDetailDto instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'title': instance.title,
+      'description': instance.description,
+      'level': instance.level,
+      'status': instance.status,
+      'author': instance.author,
+      'thumbnail': instance.thumbnail,
+      'price': instance.price,
+      'currency': instance.currency,
+      'authorName': instance.authorName,
+      'thumbnailUrl': instance.thumbnailUrl,
+      'enrollmentCount': instance.enrollmentCount,
+      'createdAt': instance.createdAt,
+      'updatedAt': instance.updatedAt,
+      'submittedDate': instance.submittedDate,
+      'publishedDate': instance.publishedDate,
+    };

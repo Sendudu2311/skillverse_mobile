@@ -99,11 +99,14 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
           ),
         ),
         GoRoute(
-          path: '${AppConstants.coursesRoute}/learning',
-          builder: (context, state) => MainLayout(
-            currentPath: state.matchedLocation,
-            child: const CourseLearningPage(),
-          ),
+          path: '${AppConstants.coursesRoute}/:courseId/learning',
+          builder: (context, state) {
+            final courseId = state.pathParameters['courseId'] ?? '';
+            return MainLayout(
+              currentPath: state.matchedLocation,
+              child: CourseLearningPage(courseId: courseId),
+            );
+          },
         ),
         GoRoute(
           path: '${AppConstants.coursesRoute}/:courseId',

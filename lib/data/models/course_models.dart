@@ -25,17 +25,23 @@ enum CourseLevel {
 @JsonSerializable()
 class AuthorDto {
   final int id;
-  final String firstName;
-  final String lastName;
+  final String? firstName;
+  final String? lastName;
   final String email;
   final String? fullName;
+  final List<String>? roles;
+  final String? authProvider;
+  final bool? googleLinked;
 
   AuthorDto({
     required this.id,
-    required this.firstName,
-    required this.lastName,
+    this.firstName,
+    this.lastName,
     required this.email,
     this.fullName,
+    this.roles,
+    this.authProvider,
+    this.googleLinked,
   });
 
   factory AuthorDto.fromJson(Map<String, dynamic> json) => _$AuthorDtoFromJson(json);
@@ -72,7 +78,7 @@ class MediaDto {
 class CourseSummaryDto {
   final int id;
   final String title;
-  final String description;
+  final String? description;
   final String? shortDescription;
   final CourseLevel level;
   final CourseStatus status;
@@ -81,17 +87,20 @@ class CourseSummaryDto {
   final MediaDto? thumbnail;
   final String? thumbnailUrl;
   final int enrollmentCount;
+  final int? moduleCount;
   final double? price;
   final String? currency;
   final double? rating;
   final int? reviewCount;
   final String? createdAt;
   final String? updatedAt;
+  final String? submittedDate;
+  final String? publishedDate;
 
   CourseSummaryDto({
     required this.id,
     required this.title,
-    required this.description,
+    this.description,
     this.shortDescription,
     required this.level,
     required this.status,
@@ -100,12 +109,15 @@ class CourseSummaryDto {
     this.thumbnail,
     this.thumbnailUrl,
     required this.enrollmentCount,
+    this.moduleCount,
     this.price,
     this.currency,
     this.rating,
     this.reviewCount,
     this.createdAt,
     this.updatedAt,
+    this.submittedDate,
+    this.publishedDate,
   });
 
   factory CourseSummaryDto.fromJson(Map<String, dynamic> json) => _$CourseSummaryDtoFromJson(json);
@@ -145,4 +157,46 @@ class PageResponse<T> {
   factory PageResponse.fromJson(Map<String, dynamic> json, T Function(Object?) fromJsonT) =>
       _$PageResponseFromJson(json, fromJsonT);
   Map<String, dynamic> toJson(Object? Function(T) toJsonT) => _$PageResponseToJson(this, toJsonT);
+}
+
+@JsonSerializable()
+class CourseDetailDto {
+  final int id;
+  final String title;
+  final String description;
+  final String level;
+  final String status;
+  final AuthorDto author;
+  final MediaDto? thumbnail;
+  final double? price;
+  final String? currency;
+  final String? authorName;
+  final String? thumbnailUrl;
+  final int enrollmentCount;
+  final String? createdAt;
+  final String? updatedAt;
+  final String? submittedDate;
+  final String? publishedDate;
+
+  CourseDetailDto({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.level,
+    required this.status,
+    required this.author,
+    this.thumbnail,
+    this.price,
+    this.currency,
+    this.authorName,
+    this.thumbnailUrl,
+    required this.enrollmentCount,
+    this.createdAt,
+    this.updatedAt,
+    this.submittedDate,
+    this.publishedDate,
+  });
+
+  factory CourseDetailDto.fromJson(Map<String, dynamic> json) => _$CourseDetailDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$CourseDetailDtoToJson(this);
 }

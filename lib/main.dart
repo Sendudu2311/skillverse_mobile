@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/chat_provider.dart';
 import 'presentation/providers/course_provider.dart';
+import 'presentation/providers/enrollment_provider.dart';
 import 'presentation/providers/roadmap_provider.dart';
 import 'presentation/providers/user_provider.dart';
 import 'presentation/app.dart';
@@ -27,6 +28,7 @@ void main() async {
           update: (context, authProvider, previous) => previous ?? ChatProvider(authProvider),
         ),
         ChangeNotifierProvider(create: (_) => CourseProvider()),
+        ChangeNotifierProvider(create: (_) => EnrollmentProvider()),
         ChangeNotifierProvider(create: (_) => RoadmapProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
       ],
