@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:convert';
 import '../../core/constants/app_constants.dart';
 import '../../core/exceptions/api_exception.dart';
@@ -8,10 +9,18 @@ import '../models/auth_models.dart';
 class AuthService {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
-  AuthService._internal();
+  AuthService._internal() {
+    _googleSignIn = GoogleSignIn(
+      scopes: ['email', 'profile'],
+      // NOTE: serverClientId removed to avoid ApiException: 10
+      // Will use accessToken as fallback when idToken is not available
+      // Backend supports both idToken and accessToken (see AuthService.java line 510)
+    );
+  }
 
   final ApiClient _apiClient = ApiClient();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  late final GoogleSignIn _googleSignIn;
 
   /// Đăng nhập người dùng
   Future<AuthResponse> login(LoginRequest request) async {
@@ -64,6 +73,68 @@ class AuthService {
     }
   }
 
+  /// Đăng nhập bằng Google
+  Future<AuthResponse> signInWithGoogle() async {
+    try {
+      // Sign in with Google
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        throw ApiException('Đăng nhập Google bị hủy');
+      }
+
+      // Get authentication details
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // WORKAROUND: On Android, idToken may be null due to OAuth client config issues
+      // Backend supports receiving accessToken in the idToken field (see AuthService.java line 510)
+      // Use accessToken as fallback when idToken is not available
+      final tokenToSend = googleAuth.idToken ?? googleAuth.accessToken;
+
+      if (tokenToSend == null) {
+        throw ApiException('Không thể lấy Google token');
+      }
+
+      // Send token to backend (idToken preferred, accessToken as fallback)
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/auth/google',
+        data: {
+          'idToken': tokenToSend,  // Backend will accept either idToken or accessToken
+        },
+      );
+
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+
+      final authResponse = AuthResponse.fromJson(response.data!);
+
+      // Lưu tokens và user data
+      await _saveTokens(authResponse.accessToken, authResponse.refreshToken);
+      await _saveUserData(authResponse.user);
+
+      // Set auth token cho các request tiếp theo
+      _apiClient.setAuthToken(authResponse.accessToken);
+
+      return authResponse;
+    } catch (e) {
+      // Sign out from Google if authentication failed
+      await _googleSignIn.signOut();
+
+      if (e is ApiException) rethrow;
+      throw ApiException('Đăng nhập Google thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Đăng xuất khỏi Google
+  Future<void> signOutGoogle() async {
+    try {
+      await _googleSignIn.signOut();
+    } catch (e) {
+      // Ignore sign out errors
+    }
+  }
+
   /// Xác thực email với OTP
   Future<void> verifyEmail(String email, String otp) async {
     try {
@@ -80,7 +151,7 @@ class AuthService {
   /// Gửi lại OTP
   Future<void> resendOtp(String email) async {
     try {
-      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+      await _apiClient.dio.post<Map<String, dynamic>>(
         '/auth/resend-otp',
         data: {'email': email},
       );
@@ -93,7 +164,7 @@ class AuthService {
   /// Quên mật khẩu
   Future<void> forgotPassword(String email) async {
     try {
-      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+      await _apiClient.dio.post<Map<String, dynamic>>(
         '/auth/forgot-password',
         data: {'email': email},
       );
@@ -116,6 +187,8 @@ class AuthService {
     } finally {
       // Always clear local data
       await _clearLocalData();
+      // Sign out from Google
+      await signOutGoogle();
     }
   }
 

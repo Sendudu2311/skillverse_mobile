@@ -81,6 +81,9 @@ dependencies:
   # Share
   share_plus: ^7.2.1
 
+  # Google Sign In
+  google_sign_in: ^6.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

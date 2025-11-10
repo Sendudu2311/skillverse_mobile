@@ -5,6 +5,8 @@ import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/chat_provider.dart';
 import 'presentation/providers/course_provider.dart';
 import 'presentation/providers/enrollment_provider.dart';
+import 'presentation/providers/payment_provider.dart';
+import 'presentation/providers/premium_provider.dart';
 import 'presentation/providers/roadmap_provider.dart';
 import 'presentation/providers/user_provider.dart';
 import 'presentation/app.dart';
@@ -29,6 +31,8 @@ void main() async {
         ),
         ChangeNotifierProvider(create: (_) => CourseProvider()),
         ChangeNotifierProvider(create: (_) => EnrollmentProvider()),
+        ChangeNotifierProvider(create: (_) => PaymentProvider()),
+        ChangeNotifierProvider(create: (_) => PremiumProvider()),
         ChangeNotifierProvider(create: (_) => RoadmapProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
       ],

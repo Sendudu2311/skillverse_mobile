@@ -27,7 +27,7 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
-    
+
     final success = await authProvider.login(
       _emailController.text.trim(),
       _passwordController.text,
@@ -45,6 +45,23 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    final authProvider = context.read<AuthProvider>();
+
+    final success = await authProvider.signInWithGoogle();
+
+    if (success && mounted) {
+      context.go('/dashboard');
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'Đăng nhập Google thất bại'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,22 +73,22 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 48),
-                
+                const SizedBox(height: 16),
+
                 // Logo and Title
                 Center(
                   child: Column(
                     children: [
                       SizedBox(
-                        width: 150,
-                        height: 150,
+                        width: 120,
+                        height: 120,
                         child: Image.asset(
                           'assets/skillverse.png',
                           fit: BoxFit.contain,
                         ),
                       ),
-                      
-                      const SizedBox(height: 10),
+
+                      const SizedBox(height: 8),
                       
                       Text(
                         'Chào mừng trở lại!',
@@ -92,9 +109,9 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                 ),
-                
-                const SizedBox(height: 48),
-                
+
+                const SizedBox(height: 32),
+
                 // Email Field
                 TextFormField(
                   controller: _emailController,
@@ -177,7 +194,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 
                 const SizedBox(height: 24),
-                
+
                 // Divider
                 Row(
                   children: [
@@ -194,9 +211,38 @@ class _LoginPageState extends State<LoginPage> {
                     const Expanded(child: Divider()),
                   ],
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
+                // Google Sign In Button
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, child) {
+                    return OutlinedButton.icon(
+                      onPressed: authProvider.isLoading ? null : _handleGoogleSignIn,
+                      icon: authProvider.isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Image.asset(
+                              'assets/google_logo.png',
+                              height: 24,
+                              width: 24,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(Icons.g_mobiledata, size: 24);
+                              },
+                            ),
+                      label: const Text('Đăng nhập với Google'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
                 // Register Button
                 OutlinedButton(
                   onPressed: () => context.go('/register'),

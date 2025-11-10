@@ -44,5 +44,42 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-#Environment files
+# Environment files
 .env
+.env.local
+.env.*.local
+
+# Google Services (contains sensitive API keys)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# Firebase
+.firebase/
+firebase.json
+.firebaserc
+
+# Keystore files (IMPORTANT: Never commit!)
+*.jks
+*.keystore
+key.properties
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.gr.dart
+
+# iOS Pods
+ios/Pods/
+ios/Podfile.lock
+ios/.symlinks/
+
+# macOS
+.DS_Store
+macos/Pods/
+macos/Podfile.lock
+
+# Windows
+windows/flutter/ephemeral/
+
+# Linux
+linux/flutter/ephemeral/

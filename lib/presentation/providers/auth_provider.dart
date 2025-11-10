@@ -77,6 +77,23 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Đăng nhập bằng Google
+  Future<bool> signInWithGoogle() async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final response = await _authService.signInWithGoogle();
+      _user = response.user;
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setError(_getErrorMessage(e));
+      _setLoading(false);
+      return false;
+    }
+  }
+
   /// Xác thực email
   Future<bool> verifyEmail(String email, String otp) async {
     _setLoading(true);
