@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../data/models/premium_models.dart';
 import '../../../data/models/payment_models.dart';
 import '../../providers/premium_provider.dart';
+import '../../providers/payment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../payment/payment_webview_page.dart';
 
@@ -14,8 +15,6 @@ class PremiumPlansPage extends StatefulWidget {
 }
 
 class _PremiumPlansPageState extends State<PremiumPlansPage> {
-  bool _isStudentMode = false;
-
   @override
   void initState() {
     super.initState();
@@ -166,38 +165,22 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
                       ),
                     ),
 
-                  // Student Discount Toggle
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: SwitchListTile(
-                      title: const Text('Giảm giá sinh viên'),
-                      subtitle: const Text('Bật nếu bạn là sinh viên'),
-                      value: _isStudentMode,
-                      onChanged: (value) {
-                        setState(() {
-                          _isStudentMode = value;
-                        });
-                      },
-                      secondary: const Icon(Icons.school),
-                    ),
-                  ),
-
                   const SizedBox(height: 16),
 
-                  // Plans List
+                  // Plans List (filter out FREE_TIER)
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    itemCount: plans.length,
+                    itemCount: plans.where((p) => p.planType != PlanType.freeTier).length,
                     itemBuilder: (context, index) {
-                      final plan = plans[index];
+                      final filteredPlans = plans.where((p) => p.planType != PlanType.freeTier).toList();
+                      final plan = filteredPlans[index];
                       final isCurrentPlan = currentSubscription != null &&
                           currentSubscription.plan.id == plan.id;
 
                       return _PlanCard(
                         plan: plan,
-                        isStudentMode: _isStudentMode,
                         isCurrentPlan: isCurrentPlan,
                         onSubscribe: () => _handleSubscribe(plan),
                       );
@@ -267,6 +250,8 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
       return;
     }
 
+    final price = plan.price;
+
     // Show confirmation dialog
     if (!mounted) return;
     final confirmed = await showDialog<bool>(
@@ -275,7 +260,7 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
         title: const Text('Xác nhận đăng ký'),
         content: Text(
           'Bạn muốn đăng ký gói ${plan.displayName}?\n\n'
-          'Giá: ${_isStudentMode && plan.studentPrice != null ? plan.studentPrice : plan.price} ${plan.currency}/${plan.durationMonths} tháng',
+          'Giá: ${price.toStringAsFixed(0)} ${plan.currency}/${plan.durationMonths} tháng',
         ),
         actions: [
           TextButton(
@@ -293,62 +278,144 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
     if (confirmed != true) return;
     if (!mounted) return;
 
-    final premiumProvider = context.read<PremiumProvider>();
-
-    // Create subscription (backend will create payment and return checkout URL)
-    final subscription = await premiumProvider.createSubscription(
-      planId: plan.id,
-      paymentMethod: PaymentMethod.payos,
-      applyStudentDiscount: _isStudentMode,
-      successUrl: 'skillverse://payment/success',
-      cancelUrl: 'skillverse://payment/cancel',
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
     );
 
-    if (subscription == null) {
+    final paymentProvider = context.read<PaymentProvider>();
+
+    // Create payment for premium subscription
+    final paymentResponse = await paymentProvider.createPayment(
+      amount: price,
+      type: PaymentType.premiumSubscription,
+      paymentMethod: PaymentMethod.payos,
+      description: 'Đăng ký gói ${plan.displayName}',
+      planId: plan.id,
+      successUrl: 'https://skillverse.app/payment/success',
+      cancelUrl: 'https://skillverse.app/payment/cancel',
+    );
+
+    // Close loading dialog
+    if (mounted) Navigator.pop(context);
+
+    if (paymentResponse == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              premiumProvider.errorMessage ?? 'Lỗi tạo đăng ký',
+              paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán',
             ),
+            backgroundColor: Colors.red,
           ),
         );
       }
       return;
     }
 
-    // Navigate to payment page
-    // Note: Backend should return payment checkout URL in subscription response
-    // For now, show success message
-    if (mounted) {
+    // Navigate to payment webview
+    if (!mounted) return;
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentWebViewPage(
+          checkoutUrl: paymentResponse.checkoutUrl,
+          successUrl: 'https://skillverse.app/payment/success',
+          cancelUrl: 'https://skillverse.app/payment/cancel',
+        ),
+      ),
+    );
+
+    // Handle payment result
+    if (!mounted) return;
+    if (result != null && result['success'] == true) {
+      // Payment successful - verify and reload subscription
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng ký thành công!')),
+        const SnackBar(
+          content: Text('Thanh toán thành công! Đang kích hoạt gói Premium...'),
+          backgroundColor: Colors.green,
+        ),
       );
-      // Reload plans to update current subscription
-      _loadPlans();
+
+      // Reload premium subscription data
+      final premiumProvider = context.read<PremiumProvider>();
+      await premiumProvider.loadCurrentSubscription();
+      await _loadPlans();
+
+      // Show success dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            icon: const Icon(Icons.check_circle, color: Colors.green, size: 64),
+            title: const Text('Đăng ký thành công!'),
+            content: Text(
+              'Bạn đã đăng ký thành công gói ${plan.displayName}.\n'
+              'Hãy tận hưởng các tính năng Premium ngay bây giờ!',
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tuyệt vời!'),
+              ),
+            ],
+          ),
+        );
+      }
+    } else if (result != null && result['cancelled'] == true) {
+      // Payment cancelled by user
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thanh toán đã bị hủy'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+
+      // Cancel the payment on backend
+      if (paymentResponse.transactionReference.isNotEmpty) {
+        await paymentProvider.cancelPayment(
+          paymentResponse.transactionReference,
+          reason: 'Người dùng hủy thanh toán',
+        );
+      }
+    } else {
+      // Payment failed or unknown result
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thanh toán không thành công. Vui lòng thử lại.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }
 
 class _PlanCard extends StatelessWidget {
   final PremiumPlanDto plan;
-  final bool isStudentMode;
   final bool isCurrentPlan;
   final VoidCallback onSubscribe;
 
   const _PlanCard({
     required this.plan,
-    required this.isStudentMode,
     required this.isCurrentPlan,
     required this.onSubscribe,
   });
 
+  String _formatDuration(int months) {
+    // Handle MAX_INT or very large values (permanent/lifetime)
+    if (months > 1000) {
+      return 'Vĩnh viễn';
+    }
+    return '$months tháng';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final price =
-        isStudentMode && plan.studentPrice != null ? plan.studentPrice : plan.price;
-    final originalPrice = plan.price;
-    final hasDiscount = isStudentMode && plan.studentPrice != null;
+    final price = plan.price;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16.0),
@@ -402,7 +469,7 @@ class _PlanCard extends StatelessWidget {
               textBaseline: TextBaseline.alphabetic,
               children: [
                 Text(
-                  '${price!.toStringAsFixed(0)}đ',
+                  '${price.toStringAsFixed(0)}đ',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.primary,
@@ -410,23 +477,12 @@ class _PlanCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '/ ${plan.durationMonths} tháng',
+                  '/ ${_formatDuration(plan.durationMonths)}',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 16,
                   ),
                 ),
-                if (hasDiscount) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    '${originalPrice.toStringAsFixed(0)}đ',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 14,
-                      decoration: TextDecoration.lineThrough,
-                    ),
-                  ),
-                ],
               ],
             ),
             const SizedBox(height: 16),

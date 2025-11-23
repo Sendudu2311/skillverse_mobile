@@ -130,7 +130,81 @@ class ProfilePage extends StatelessWidget {
                 ),
                 
                 const SizedBox(height: 24),
-                
+
+                // Premium Banner
+                InkWell(
+                  onTap: () {
+                    context.push('/premium');
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.orange.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.workspace_premium,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Nâng cấp Premium',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Truy cập không giới hạn tất cả khóa học',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
                 // Menu Items
                 _buildMenuItem(
                   context,
@@ -140,31 +214,31 @@ class ProfilePage extends StatelessWidget {
                     context.go('/courses');
                   },
                 ),
-                
+
                 _buildMenuItem(
                   context,
                   'Chứng chỉ',
                   Icons.card_membership_outlined,
                   () {
-                    context.go('/profile/certificates');
+                    context.push('/profile/certificates');
                   },
                 ),
-                
+
                 _buildMenuItem(
                   context,
                   'Lịch sử thanh toán',
                   Icons.payment_outlined,
                   () {
-                    context.go('/profile/payments');
+                    context.push('/profile/payments');
                   },
                 ),
-                
+
                 _buildMenuItem(
                   context,
                   'Cài đặt',
                   Icons.settings_outlined,
                   () {
-                    context.go('/profile/settings');
+                    context.push('/profile/settings');
                   },
                 ),
                 

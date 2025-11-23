@@ -9,13 +9,13 @@ class PaymentService {
   final ApiClient _apiClient = ApiClient();
 
   /// Create a new payment
-  /// POST /api/payments/create
+  /// POST /payments/create
   Future<CreatePaymentResponseDto> createPayment({
     required CreatePaymentRequestDto request,
   }) async {
     try {
       final response = await _apiClient.dio.post(
-        '/api/payments/create',
+        '/payments/create',
         data: request.toJson(),
       );
       return CreatePaymentResponseDto.fromJson(response.data);
@@ -25,10 +25,10 @@ class PaymentService {
   }
 
   /// Get payment history for authenticated user
-  /// GET /api/payments/history
+  /// GET /payments/history
   Future<List<PaymentTransactionDto>> getPaymentHistory() async {
     try {
-      final response = await _apiClient.dio.get('/api/payments/history');
+      final response = await _apiClient.dio.get('/payments/history');
 
       final List<dynamic> data = response.data as List<dynamic>;
       return data
@@ -41,13 +41,13 @@ class PaymentService {
   }
 
   /// Get payment by internal reference
-  /// GET /api/payments/transaction/{internalReference}
+  /// GET /payments/transaction/{internalReference}
   Future<PaymentTransactionDto?> getPaymentByReference({
     required String internalReference,
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/payments/transaction/$internalReference',
+        '/payments/transaction/$internalReference',
       );
       return PaymentTransactionDto.fromJson(response.data);
     } catch (e) {
@@ -57,13 +57,13 @@ class PaymentService {
   }
 
   /// Get payment by ID
-  /// GET /api/payments/transaction/id/{paymentId}
+  /// GET /payments/transaction/id/{paymentId}
   Future<PaymentTransactionDto?> getPaymentById({
     required int paymentId,
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/payments/transaction/id/$paymentId',
+        '/payments/transaction/id/$paymentId',
       );
       return PaymentTransactionDto.fromJson(response.data);
     } catch (e) {
@@ -73,14 +73,14 @@ class PaymentService {
   }
 
   /// Cancel a pending payment
-  /// PUT /api/payments/cancel/{internalReference}
+  /// PUT /payments/cancel/{internalReference}
   Future<void> cancelPayment({
     required String internalReference,
     String? reason,
   }) async {
     try {
       await _apiClient.dio.put(
-        '/api/payments/cancel/$internalReference',
+        '/payments/cancel/$internalReference',
         queryParameters: reason != null ? {'reason': reason} : null,
       );
     } catch (e) {
@@ -89,7 +89,7 @@ class PaymentService {
   }
 
   /// Update payment status (internal use)
-  /// PUT /api/payments/status/{internalReference}
+  /// PUT /payments/status/{internalReference}
   Future<PaymentTransactionDto> updatePaymentStatus({
     required String internalReference,
     required PaymentStatus status,
@@ -104,7 +104,7 @@ class PaymentService {
       }
 
       final response = await _apiClient.dio.put(
-        '/api/payments/status/$internalReference',
+        '/payments/status/$internalReference',
         queryParameters: queryParams,
       );
       return PaymentTransactionDto.fromJson(response.data);

@@ -11,12 +11,15 @@ import '../pages/courses/courses_page.dart';
 import '../pages/courses/course_detail_page.dart';
 import '../pages/chat/chat_page.dart';
 import '../pages/profile/profile_page.dart';
+import '../pages/premium/premium_plans_page.dart';
+import '../pages/payment/payment_history_page.dart';
 import '../pages/splash_page.dart';
 import '../widgets/main_layout.dart';
 import '../providers/auth_provider.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
+    debugLogDiagnostics: true,
     initialLocation: '/splash',
     redirect: (context, state) {
       final authProvider = context.read<AuthProvider>();
@@ -125,6 +128,13 @@ class AppRouter {
         ),
       ),
 
+      // Premium Route
+      GoRoute(
+        path: '/premium',
+        name: 'premium',
+        builder: (context, state) => const PremiumPlansPage(),
+      ),
+
       // Profile Route
       GoRoute(
         path: '/profile',
@@ -146,10 +156,7 @@ class AppRouter {
       GoRoute(
         path: '/profile/payments',
         name: 'profile-payments',
-        builder: (context, state) => MainLayout(
-          currentPath: state.matchedLocation,
-          child: Scaffold(appBar: AppBar(title: const Text('Lịch sử thanh toán')), body: const Center(child: Text('Payments placeholder'))),
-        ),
+        builder: (context, state) => const PaymentHistoryPage(),
       ),
       GoRoute(
         path: '/profile/settings',

@@ -5,12 +5,14 @@ part 'premium_models.g.dart';
 
 /// Plan type enum
 enum PlanType {
+  @JsonValue('FREE_TIER')
+  freeTier,
   @JsonValue('PREMIUM_BASIC')
   premiumBasic,
-  @JsonValue('PREMIUM_PRO')
-  premiumPro,
-  @JsonValue('PREMIUM_ULTIMATE')
-  premiumUltimate,
+  @JsonValue('PREMIUM_PLUS')
+  premiumPlus,
+  @JsonValue('STUDENT_PACK')
+  studentPack,
 }
 
 /// Subscription status enum

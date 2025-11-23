@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import '../../data/models/auth_models.dart';
 import '../../data/services/auth_service.dart';
+import '../../data/services/api_client.dart';
 import '../../core/exceptions/api_exception.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
+  final ApiClient _apiClient = ApiClient();
 
   UserDto? _user;
   bool _isLoading = false;
@@ -23,6 +25,11 @@ class AuthProvider extends ChangeNotifier {
       final isAuth = await _authService.isAuthenticated();
       if (isAuth) {
         _user = await _authService.getStoredUser();
+        // IMPORTANT: Set token vào ApiClient sau khi load từ storage
+        final token = await _authService.getAccessToken();
+        if (token != null) {
+          _apiClient.setAuthToken(token);
+        }
       }
       _clearError();
     } catch (e) {
@@ -131,11 +138,14 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       await _authService.logout();
-      _user = null;
-      _clearError();
     } catch (e) {
-      _setError(_getErrorMessage(e));
+      // Ignore logout errors - always clear local state
+      debugPrint('Logout error: $e');
     } finally {
+      // Always clear user and token regardless of API call result
+      _user = null;
+      _apiClient.clearAuthToken();
+      _clearError();
       _setLoading(false);
     }
   }

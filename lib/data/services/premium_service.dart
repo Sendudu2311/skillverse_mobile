@@ -9,10 +9,10 @@ class PremiumService {
   final ApiClient _apiClient = ApiClient();
 
   /// Get available premium plans
-  /// GET /api/premium/plans
+  /// GET /premium/plans
   Future<List<PremiumPlanDto>> getAvailablePlans() async {
     try {
-      final response = await _apiClient.dio.get('/api/premium/plans');
+      final response = await _apiClient.dio.get('/premium/plans');
 
       final List<dynamic> data = response.data as List<dynamic>;
       return data
@@ -25,12 +25,12 @@ class PremiumService {
   }
 
   /// Get premium plan by ID
-  /// GET /api/premium/plans/{planId}
+  /// GET /premium/plans/{planId}
   Future<PremiumPlanDto?> getPlanById({
     required int planId,
   }) async {
     try {
-      final response = await _apiClient.dio.get('/api/premium/plans/$planId');
+      final response = await _apiClient.dio.get('/premium/plans/$planId');
       return PremiumPlanDto.fromJson(response.data);
     } catch (e) {
       // Return null if not found (404)
@@ -39,13 +39,13 @@ class PremiumService {
   }
 
   /// Create premium subscription
-  /// POST /api/premium/subscribe
+  /// POST /premium/subscribe
   Future<UserSubscriptionDto> createSubscription({
     required CreateSubscriptionRequestDto request,
   }) async {
     try {
       final response = await _apiClient.dio.post(
-        '/api/premium/subscribe',
+        '/premium/subscribe',
         data: request.toJson(),
       );
       return UserSubscriptionDto.fromJson(response.data);
@@ -55,11 +55,11 @@ class PremiumService {
   }
 
   /// Get current subscription for authenticated user
-  /// GET /api/premium/subscription/current
+  /// GET /premium/subscription/current
   Future<UserSubscriptionDto?> getCurrentSubscription() async {
     try {
       final response =
-          await _apiClient.dio.get('/api/premium/subscription/current');
+          await _apiClient.dio.get('/premium/subscription/current');
       return UserSubscriptionDto.fromJson(response.data);
     } catch (e) {
       // Return null if no active subscription (404)
@@ -68,11 +68,11 @@ class PremiumService {
   }
 
   /// Get subscription history
-  /// GET /api/premium/subscription/history
+  /// GET /premium/subscription/history
   Future<List<UserSubscriptionDto>> getSubscriptionHistory() async {
     try {
       final response =
-          await _apiClient.dio.get('/api/premium/subscription/history');
+          await _apiClient.dio.get('/premium/subscription/history');
 
       final List<dynamic> data = response.data as List<dynamic>;
       return data
@@ -85,13 +85,13 @@ class PremiumService {
   }
 
   /// Cancel subscription
-  /// PUT /api/premium/subscription/cancel
+  /// PUT /premium/subscription/cancel
   Future<void> cancelSubscription({
     String? reason,
   }) async {
     try {
       await _apiClient.dio.put(
-        '/api/premium/subscription/cancel',
+        '/premium/subscription/cancel',
         queryParameters: reason != null ? {'reason': reason} : null,
       );
     } catch (e) {
@@ -100,10 +100,10 @@ class PremiumService {
   }
 
   /// Check if user has active premium subscription
-  /// GET /api/premium/status
+  /// GET /premium/status
   Future<bool> checkPremiumStatus() async {
     try {
-      final response = await _apiClient.dio.get('/api/premium/status');
+      final response = await _apiClient.dio.get('/premium/status');
       return response.data as bool;
     } catch (e) {
       rethrow;

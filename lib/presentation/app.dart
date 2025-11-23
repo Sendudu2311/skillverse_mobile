@@ -21,6 +21,8 @@ import 'pages/terms/terms_of_service_page.dart';
 import 'pages/roadmap/roadmap_page.dart';
 import 'pages/profile/profile_page.dart';
 import 'pages/chat/chat_page.dart';
+import 'pages/premium/premium_plans_page.dart';
+import 'pages/payment/payment_history_page.dart';
 import 'widgets/main_layout.dart';
 import 'themes/app_theme.dart';
 
@@ -32,29 +34,31 @@ class SkillVerseApp extends StatefulWidget {
 }
 
 class _SkillVerseAppState extends State<SkillVerseApp> {
-  late final GoRouter _router;
+  GoRouter? _router;
 
   @override
-  void initState() {
-    super.initState();
-    _router = _createRouter();
-    
-    // Initialize auth
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AuthProvider>().initialize();
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Create router only once when dependencies are ready
+    _router ??= _createRouter();
   }
 
   GoRouter _createRouter() {
+    final authProvider = context.read<AuthProvider>();
+
+    // Initialize auth on first router creation (deferred to avoid build conflicts)
+    Future.microtask(() => authProvider.initialize());
+
     return GoRouter(
       initialLocation: '/',
+      refreshListenable: authProvider, // Listen to auth changes for auto-redirect
       routes: [
         // Splash
         GoRoute(
           path: '/',
           builder: (context, state) => const SplashPage(),
         ),
-        
+
         // Auth routes
         GoRoute(
           path: AppConstants.loginRoute,
@@ -75,7 +79,7 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
           path: '/forgot-password',
           builder: (context, state) => const ForgotPasswordPage(),
         ),
-        
+
         // Main app routes wrapped in MainLayout so pages render inside the app scaffold
         GoRoute(
           path: AppConstants.homeRoute,
@@ -174,10 +178,21 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
             child: const JobsPage(),
           ),
         ),
+        // Premium subscription page
+        GoRoute(
+          path: '/premium',
+          builder: (context, state) => const PremiumPlansPage(),
+        ),
+        // Payment history page
+        GoRoute(
+          path: '/profile/payments',
+          builder: (context, state) => const PaymentHistoryPage(),
+        ),
       ],
       redirect: (context, state) {
         final authProvider = context.read<AuthProvider>();
         final isAuthenticated = authProvider.isAuthenticated;
+        final isLoading = authProvider.isLoading;
         final isAuthRoute = [
           AppConstants.loginRoute,
           AppConstants.registerRoute,
@@ -186,8 +201,13 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
         ].contains(state.matchedLocation);
 
         // If loading, stay on splash
-        if (authProvider.isLoading && state.matchedLocation == '/') {
+        if (isLoading && state.matchedLocation == '/') {
           return null;
+        }
+
+        // After loading finished on splash, redirect appropriately
+        if (!isLoading && state.matchedLocation == '/') {
+          return isAuthenticated ? AppConstants.dashboardRoute : AppConstants.loginRoute;
         }
 
         // If not authenticated and not on auth route, go to login
@@ -207,11 +227,21 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Show loading if router not ready yet
+    if (_router == null) {
+      return MaterialApp(
+        home: const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+        theme: AppTheme.lightTheme,
+      );
+    }
+
     return MaterialApp.router(
       title: AppConstants.appName,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light, // Always light for minimal design
+      themeMode: ThemeMode.light,
       routerConfig: _router,
       debugShowCheckedModeBanner: false,
     );

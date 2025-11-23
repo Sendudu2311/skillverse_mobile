@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/course_models.dart';
 import '../../../data/models/module_models.dart';
+import '../../../data/models/payment_models.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/enrollment_provider.dart';
+import '../../providers/payment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../../data/services/module_service.dart';
+import '../payment/payment_webview_page.dart';
 import 'course_learning_page.dart';
 
 class CourseDetailPage extends StatefulWidget {
@@ -146,10 +149,199 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
         );
       }
     } else {
-      // Paid course - navigate to payment
+      // Paid course - show payment dialog and process
+      await _handlePaidCourseEnroll();
+    }
+  }
+
+  Future<void> _handlePaidCourseEnroll() async {
+    if (_course == null) return;
+
+    final price = _course!.price!;
+    final currency = _course!.currency ?? 'VND';
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận mua khóa học'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _course!.title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Giá: ${price.toStringAsFixed(0)} $currency',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Bạn sẽ được:'),
+            const SizedBox(height: 8),
+            const Text('• Truy cập trọn đời vào khóa học'),
+            const Text('• Chứng chỉ hoàn thành'),
+            const Text('• Hỗ trợ từ giảng viên'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Thanh toán'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    final paymentProvider = context.read<PaymentProvider>();
+
+    // Create payment for course purchase
+    final paymentResponse = await paymentProvider.createPayment(
+      amount: price,
+      type: PaymentType.coursePurchase,
+      paymentMethod: PaymentMethod.payos,
+      description: 'Mua khóa học: ${_course!.title}',
+      courseId: int.parse(widget.courseId),
+      successUrl: 'https://skillverse.app/payment/success',
+      cancelUrl: 'https://skillverse.app/payment/cancel',
+    );
+
+    // Close loading dialog
+    if (mounted) Navigator.pop(context);
+
+    if (paymentResponse == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Navigate to payment webview
+    if (!mounted) return;
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentWebViewPage(
+          checkoutUrl: paymentResponse.checkoutUrl,
+          successUrl: 'https://skillverse.app/payment/success',
+          cancelUrl: 'https://skillverse.app/payment/cancel',
+        ),
+      ),
+    );
+
+    // Handle payment result
+    if (!mounted) return;
+    await _handlePaymentResult(result, paymentResponse);
+  }
+
+  Future<void> _handlePaymentResult(
+    Map<String, dynamic>? result,
+    CreatePaymentResponseDto paymentResponse,
+  ) async {
+    final authProvider = context.read<AuthProvider>();
+    final enrollmentProvider = context.read<EnrollmentProvider>();
+    final paymentProvider = context.read<PaymentProvider>();
+    final courseId = int.parse(widget.courseId);
+
+    if (result != null && result['success'] == true) {
+      // Payment successful - enroll user in course
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Chức năng thanh toán sẽ được triển khai sau'),
+          content: Text('Thanh toán thành công! Đang đăng ký khóa học...'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Auto-enroll user after successful payment
+      final enrolled = await enrollmentProvider.enrollInCourse(
+        courseId: courseId,
+        userId: authProvider.user!.id,
+      );
+
+      if (enrolled && mounted) {
+        // Show success dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            icon: const Icon(Icons.check_circle, color: Colors.green, size: 64),
+            title: const Text('Mua khóa học thành công!'),
+            content: Text(
+              'Bạn đã mua thành công khóa học "${_course!.title}".\n'
+              'Bắt đầu học ngay bây giờ!',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Để sau'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Navigate to course learning page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          CourseLearningPage(courseId: widget.courseId),
+                    ),
+                  );
+                },
+                child: const Text('Học ngay'),
+              ),
+            ],
+          ),
+        );
+      }
+    } else if (result != null && result['cancelled'] == true) {
+      // Payment cancelled by user
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thanh toán đã bị hủy'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+
+      // Cancel the payment on backend
+      if (paymentResponse.transactionReference.isNotEmpty) {
+        await paymentProvider.cancelPayment(
+          paymentResponse.transactionReference,
+          reason: 'Người dùng hủy thanh toán',
+        );
+      }
+    } else {
+      // Payment failed or unknown result
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thanh toán không thành công. Vui lòng thử lại.'),
+          backgroundColor: Colors.red,
         ),
       );
     }
