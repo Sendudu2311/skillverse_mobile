@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
+import '../../themes/app_theme.dart';
+import '../../widgets/stat_card.dart';
+import '../../widgets/premium_card.dart';
+import '../../widgets/glass_card.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -24,7 +29,7 @@ class ProfilePage extends StatelessWidget {
                     gradient: LinearGradient(
                       colors: [
                         Theme.of(context).colorScheme.primary,
-                        Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(16),
@@ -65,7 +70,7 @@ class ProfilePage extends StatelessWidget {
                         user?.email ?? '',
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
                       ),
                       
@@ -75,7 +80,7 @@ class ProfilePage extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -98,32 +103,31 @@ class ProfilePage extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildStatCard(
-                        context,
-                        'Khóa học',
-                        '3',
-                        Icons.school,
-                        Colors.blue,
+                      child: StatCard(
+                        title: 'Khóa học',
+                        value: '3',
+                        icon: Icons.school,
+                        gradientColors: const [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+                        onTap: () => context.go('/courses'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildStatCard(
-                        context,
-                        'Chứng chỉ',
-                        '2',
-                        Icons.card_membership,
-                        Colors.orange,
+                      child: StatCard(
+                        title: 'Chứng chỉ',
+                        value: '2',
+                        icon: Icons.card_membership,
+                        gradientColors: const [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
+                        onTap: () => context.push('/portfolio'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildStatCard(
-                        context,
-                        'Điểm',
-                        '1,250',
-                        Icons.star,
-                        Colors.purple,
+                      child: StatCard(
+                        title: 'Điểm',
+                        value: '1,250',
+                        icon: Icons.star,
+                        gradientColors: const [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
                       ),
                     ),
                   ],
@@ -132,75 +136,13 @@ class ProfilePage extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // Premium Banner
-                InkWell(
+                PremiumCard(
+                  title: 'Nâng cấp Premium',
+                  subtitle: 'Truy cập không giới hạn tất cả khóa học',
+                  icon: Icons.workspace_premium,
                   onTap: () {
                     context.push('/premium');
                   },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.orange.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.workspace_premium,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Nâng cấp Premium',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Truy cập không giới hạn tất cả khóa học',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.arrow_forward_ios,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
 
                 const SizedBox(height: 24),
@@ -217,10 +159,10 @@ class ProfilePage extends StatelessWidget {
 
                 _buildMenuItem(
                   context,
-                  'Chứng chỉ',
-                  Icons.card_membership_outlined,
+                  'Portfolio & Chứng chỉ',
+                  Icons.work_history_outlined,
                   () {
-                    context.push('/profile/certificates');
+                    context.push('/portfolio');
                   },
                 ),
 
@@ -241,7 +183,22 @@ class ProfilePage extends StatelessWidget {
                     context.push('/profile/settings');
                   },
                 ),
-                
+
+                // Dark Mode Toggle
+                Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, _) {
+                    return _buildMenuItemWithSwitch(
+                      context,
+                      'Chế độ tối',
+                      Icons.dark_mode_outlined,
+                      themeProvider.isDarkMode,
+                      (value) {
+                        themeProvider.toggleTheme();
+                      },
+                    );
+                  },
+                ),
+
                 _buildMenuItem(
                   context,
                   'Hỗ trợ',
@@ -287,41 +244,7 @@ class ProfilePage extends StatelessWidget {
       );
     }
 
-  Widget _buildStatCard(
-    BuildContext context,
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
+  
 
   Widget _buildMenuItem(
     BuildContext context,
@@ -329,13 +252,36 @@ class ProfilePage extends StatelessWidget {
     IconData icon,
     VoidCallback onTap,
   ) {
-    return Card(
+    return GlassCard(
       margin: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.zero,
+      onTap: onTap,
       child: ListTile(
         leading: Icon(icon),
         title: Text(title),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
+      ),
+    );
+  }
+
+  Widget _buildMenuItemWithSwitch(
+    BuildContext context,
+    String title,
+    IconData icon,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
+    return GlassCard(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.zero,
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        trailing: Switch(
+          value: value,
+          onChanged: onChanged,
+        ),
       ),
     );
   }

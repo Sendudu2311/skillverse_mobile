@@ -1,210 +1,303 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/stat_card.dart';
+import '../../widgets/glass_card.dart';
+import '../../themes/app_theme.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> with TickerProviderStateMixin {
+  late AnimationController _welcomeController;
+  late AnimationController _statsController;
+  late AnimationController _coursesController;
+
+  late Animation<double> _welcomeSlideAnimation;
+  late Animation<double> _welcomeFadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Welcome section animation
+    _welcomeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _welcomeSlideAnimation = Tween<double>(begin: 50.0, end: 0.0).animate(
+      CurvedAnimation(parent: _welcomeController, curve: Curves.easeOut),
+    );
+    _welcomeFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _welcomeController, curve: Curves.easeIn),
+    );
+
+    // Stats section animation
+    _statsController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    // Courses section animation
+    _coursesController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    // Start animations sequentially
+    _welcomeController.forward().then((_) {
+      _statsController.forward();
+      _coursesController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _welcomeController.dispose();
+    _statsController.dispose();
+    _coursesController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         final user = authProvider.user;
-        
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Welcome Section
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Xin chào, ${user?.fullName ?? 'Learner'}!',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+              // Welcome Section with gradient and animation
+              AnimatedBuilder(
+                animation: _welcomeController,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(0, _welcomeSlideAnimation.value),
+                    child: Opacity(
+                      opacity: _welcomeFadeAnimation.value,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppTheme.themeBlueStart,
+                              AppTheme.themeBlueEnd,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.themeBlueStart.withValues(alpha: 0.4),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Xin chào,',
+                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          color: Colors.white.withValues(alpha: 0.9),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        user?.fullName ?? 'Learner',
+                                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: const Icon(
+                                    Icons.waving_hand,
+                                    color: Colors.white,
+                                    size: 32,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.lightbulb_outline,
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'Hôm nay bạn muốn học gì?',
+                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                        color: Colors.white.withValues(alpha: 0.95),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Hôm nay bạn muốn học gì?',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Stats Section
-                Text(
-                  'Thống kê học tập',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        'Khóa học',
-                        '3',
-                        Icons.book_outlined,
-                        Colors.blue,
-                      ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        'Hoàn thành',
-                        '65%',
-                        Icons.trending_up_outlined,
-                        Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 12),
-                
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        'Streak',
-                        '7 ngày',
-                        Icons.local_fire_department_outlined,
-                        Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        'Điểm',
-                        '1,250',
-                        Icons.star_outline,
-                        Colors.purple,
-                      ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Recent Courses
-                Text(
-                  'Khóa học gần đây',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                
-                _buildCourseCard(
-                  context,
-                  'Full Stack Web Development',
-                  'Đang học',
-                  0.65,
-                  Colors.blue,
-                ),
-                
-                const SizedBox(height: 12),
-                
-                _buildCourseCard(
-                  context,
-                  'Mobile App Development',
-                  'Chưa bắt đầu',
-                  0.0,
-                  Colors.purple,
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Learning Goals
-                Text(
-                  'Mục tiêu học tập',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                
-                _buildGoalCard(
-                  context,
-                  'Hoàn thành khóa React.js',
-                  'Còn 2 tuần',
-                  Icons.code,
-                ),
-                
-                const SizedBox(height: 12),
-                
-                _buildGoalCard(
-                  context,
-                  'Xây dựng portfolio project',
-                  'Còn 1 tháng',
-                  Icons.build,
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    }
-
-  Widget _buildStatCard(
-    BuildContext context,
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.bodySmall,
+                  );
+                },
               ),
+
+              const SizedBox(height: 24),
+
+              // Stats Section
+              Text(
+                'Thống kê học tập',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: StatCard(
+                      title: 'Khóa học',
+                      value: '3',
+                      icon: Icons.book_outlined,
+                      gradientColors: const [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+                      onTap: () => context.go('/courses'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: StatCard(
+                      title: 'Hoàn thành',
+                      value: '65%',
+                      icon: Icons.trending_up_outlined,
+                      gradientColors: const [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: StatCard(
+                      title: 'Streak',
+                      value: '7',
+                      icon: Icons.local_fire_department_outlined,
+                      gradientColors: const [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: StatCard(
+                      title: 'Điểm',
+                      value: '1,250',
+                      icon: Icons.star_outline,
+                      gradientColors: const [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Recent Courses
+              Text(
+                'Khóa học gần đây',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              _buildCourseCard(
+                context,
+                'Full Stack Web Development',
+                'Đang học',
+                0.65,
+                const [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+              ),
+
+              const SizedBox(height: 12),
+
+              _buildCourseCard(
+                context,
+                'Mobile App Development',
+                'Chưa bắt đầu',
+                0.0,
+                const [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Learning Goals
+              Text(
+                'Mục tiêu học tập',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              _buildGoalCard(
+                context,
+                'Hoàn thành khóa React.js',
+                'Còn 2 tuần',
+                Icons.code,
+              ),
+
+              const SizedBox(height: 12),
+
+              _buildGoalCard(
+                context,
+                'Xây dựng portfolio project',
+                'Còn 1 tháng',
+                Icons.build,
+              ),
+
+              const SizedBox(height: 24),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -213,17 +306,10 @@ class DashboardPage extends StatelessWidget {
     String title,
     String status,
     double progress,
-    Color color,
+    List<Color> gradientColors,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-        ),
-      ),
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -233,35 +319,52 @@ class DashboardPage extends StatelessWidget {
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: color,
+                  gradient: LinearGradient(colors: gradientColors),
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: gradientColors.first.withValues(alpha: 0.4),
+                      blurRadius: 8,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             status,
-            style: Theme.of(context).textTheme.bodySmall,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+            ),
           ),
           if (progress > 0) ...[
-            const SizedBox(height: 12),
-            LinearProgressIndicator(
-              value: progress,
-              backgroundColor: color.withOpacity(0.2),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: gradientColors.first.withValues(alpha: 0.2),
+                valueColor: AlwaysStoppedAnimation<Color>(gradientColors.first),
+              ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             Text(
               '${(progress * 100).toInt()}% hoàn thành',
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: gradientColors.first,
+              ),
             ),
           ],
         ],
@@ -275,18 +378,26 @@ class DashboardPage extends StatelessWidget {
     String deadline,
     IconData icon,
   ) {
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-        ),
-      ),
       child: Row(
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.themeBlueStart.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: 24),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -294,17 +405,24 @@ class DashboardPage extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   deadline,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                  ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right),
+          Icon(
+            Icons.chevron_right,
+            color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.5),
+          ),
         ],
       ),
     );

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/course_models.dart';
@@ -10,6 +11,9 @@ import '../../providers/auth_provider.dart';
 import '../../../data/services/module_service.dart';
 import '../payment/payment_webview_page.dart';
 import 'course_learning_page.dart';
+import '../../widgets/glass_card.dart';
+import '../../themes/app_theme.dart';
+import '../../../core/utils/number_formatter.dart';
 
 class CourseDetailPage extends StatefulWidget {
   final String courseId;
@@ -19,7 +23,8 @@ class CourseDetailPage extends StatefulWidget {
   State<CourseDetailPage> createState() => _CourseDetailPageState();
 }
 
-class _CourseDetailPageState extends State<CourseDetailPage> {
+class _CourseDetailPageState extends State<CourseDetailPage>
+    with SingleTickerProviderStateMixin {
   bool isWishlisted = false;
   String activeTab = 'overview';
   int? expandedModule;
@@ -30,12 +35,28 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
   bool _isLoadingModules = true;
   bool _isEnrolling = false;
 
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
   final ModuleService _moduleService = ModuleService();
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+    );
     _loadCourseData();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCourseData() async {
@@ -59,6 +80,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
         _course = course;
         _isLoadingCourse = false;
       });
+      _animationController.forward();
     } catch (e) {
       setState(() => _isLoadingCourse = false);
       if (mounted) {
@@ -99,6 +121,8 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     if (_course == null) return;
 
     final authProvider = context.read<AuthProvider>();
+    final enrollmentProvider = context.read<EnrollmentProvider>();
+
     if (authProvider.user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Vui lòng đăng nhập để đăng ký khóa học')),
@@ -106,45 +130,32 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
       return;
     }
 
-    final enrollmentProvider = context.read<EnrollmentProvider>();
     final courseId = int.parse(widget.courseId);
 
-    // Check if already enrolled
-    if (enrollmentProvider.isEnrolled(courseId)) {
-      // Navigate to course learning page
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CourseLearningPage(courseId: widget.courseId),
-        ),
-      );
-      return;
-    }
-
-    // Check if free course
+    // Check if this is a free course (price is null or 0)
     if (_course!.price == null || _course!.price == 0) {
+      // Free course - enroll directly
       setState(() => _isEnrolling = true);
-      final success = await enrollmentProvider.enrollInCourse(
+
+      final enrolled = await enrollmentProvider.enrollInCourse(
         courseId: courseId,
         userId: authProvider.user!.id,
       );
+
       setState(() => _isEnrolling = false);
 
-      if (success && mounted) {
+      if (enrolled && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đăng ký khóa học thành công!')),
-        );
-        // Navigate to course learning page
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CourseLearningPage(courseId: widget.courseId),
+          const SnackBar(
+            content: Text('Đăng ký thành công!'),
+            backgroundColor: Colors.green,
           ),
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(enrollmentProvider.errorMessage ?? 'Đăng ký thất bại'),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -175,7 +186,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Giá: ${price.toStringAsFixed(0)} $currency',
+              'Giá: ${NumberFormatter.formatCurrency(price, currency: currency)}',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.bold,
@@ -251,31 +262,19 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
       MaterialPageRoute(
         builder: (context) => PaymentWebViewPage(
           checkoutUrl: paymentResponse.checkoutUrl,
-          successUrl: 'https://skillverse.app/payment/success',
-          cancelUrl: 'https://skillverse.app/payment/cancel',
         ),
       ),
     );
 
     // Handle payment result
-    if (!mounted) return;
-    await _handlePaymentResult(result, paymentResponse);
-  }
-
-  Future<void> _handlePaymentResult(
-    Map<String, dynamic>? result,
-    CreatePaymentResponseDto paymentResponse,
-  ) async {
     final authProvider = context.read<AuthProvider>();
     final enrollmentProvider = context.read<EnrollmentProvider>();
-    final paymentProvider = context.read<PaymentProvider>();
     final courseId = int.parse(widget.courseId);
 
-    if (result != null && result['success'] == true) {
-      // Payment successful - enroll user in course
+    if (result != null && result['success'] == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Thanh toán thành công! Đang đăng ký khóa học...'),
+          content: Text('Thanh toán thành công!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -347,23 +346,39 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     }
   }
 
+  List<Color> _getLevelGradient(CourseLevel level) {
+    switch (level) {
+      case CourseLevel.beginner:
+        return [AppTheme.themeGreenStart, AppTheme.themeGreenEnd];
+      case CourseLevel.intermediate:
+        return [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd];
+      case CourseLevel.advanced:
+        return [AppTheme.themePurpleStart, AppTheme.themePurpleEnd];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoadingCourse) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Chi tiết khóa học'),
-          elevation: 0,
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppTheme.galaxyDarkest, AppTheme.galaxyDark],
+            ),
+          ),
+          child: const Center(child: CircularProgressIndicator()),
         ),
-        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_course == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Chi tiết khóa học'),
           elevation: 0,
+          backgroundColor: Colors.transparent,
         ),
         body: const Center(child: Text('Không tìm thấy khóa học')),
       );
@@ -372,373 +387,717 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     final enrollmentProvider = context.watch<EnrollmentProvider>();
     final isEnrolled =
         enrollmentProvider.isEnrolled(int.parse(widget.courseId));
+    final gradientColors = _getLevelGradient(_course!.level);
 
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        title: const Text('Chi tiết khóa học'),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Stack(
           children: [
-            // Hero Image
+            // Gradient Background
             Container(
-              height: 220,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-              ),
-              child: Center(
-                child: _course!.thumbnailUrl != null
-                    ? Image.network(
-                        _course!.thumbnailUrl!,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.play_circle_fill,
-                                size: 72, color: Colors.white),
-                      )
-                    : const Icon(Icons.play_circle_fill,
-                        size: 72, color: Colors.white),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppTheme.galaxyDarkest, AppTheme.galaxyDark],
+                ),
               ),
             ),
-
-            Padding(
-              padding: const EdgeInsets.all(16.0),
+            // Content
+            SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _course!.title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _course!.description ?? 'Không có mô tả',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        if (_course!.rating != null) ...[
-                          Chip(
-                            avatar: const Icon(Icons.star,
-                                color: Colors.amber, size: 16),
-                            label: Text(
-                              _course!.rating!.toStringAsFixed(1),
+                  // Hero Image with Gradient Overlay
+                  Stack(
+                    children: [
+                      Container(
+                        height: 300,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: gradientColors,
+                          ),
+                        ),
+                        child: _course!.thumbnailUrl != null
+                            ? Image.network(
+                                _course!.thumbnailUrl!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Center(
+                                  child: Icon(Icons.play_circle_fill,
+                                      size: 72, color: Colors.white),
+                                ),
+                              )
+                            : const Center(
+                                child: Icon(Icons.play_circle_fill,
+                                    size: 72, color: Colors.white),
+                              ),
+                      ),
+                      // Gradient Overlay - only at bottom
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          height: 150,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                AppTheme.galaxyDarkest.withValues(alpha: 0.9),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                        ],
-                        Chip(
-                          avatar: const Icon(Icons.people, size: 16),
-                          label: Text('${_course!.enrollmentCount}'),
                         ),
-                        const SizedBox(width: 8),
-                        Chip(
-                          avatar: const Icon(Icons.school, size: 16),
-                          label:
-                              Text(_course!.level.name.toUpperCase()),
+                      ),
+                    ],
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Level Badge and Price Badge
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: gradientColors),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: gradientColors[0].withValues(alpha: 0.4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.school,
+                                      color: Colors.white, size: 16),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _course!.level.name.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Only show MIỄN PHÍ badge for free courses
+                            if (_course!.price == null || _course!.price == 0) ...[
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      AppTheme.themeGreenStart,
+                                      AppTheme.themeGreenEnd
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppTheme.themeGreenStart
+                                          .withValues(alpha: 0.4),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.card_giftcard,
+                                        color: Colors.white, size: 16),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'MIỄN PHÍ',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
+                        const SizedBox(height: 16),
+
+                        // Title
+                        Text(
+                          _course!.title,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Author
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: gradientColors[0],
+                              child: const Icon(Icons.person,
+                                  size: 18, color: Colors.white),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _course!.authorName ?? 'Unknown',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: AppTheme.darkTextSecondary,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Stats
+                        GlassCard(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _StatItem(
+                                icon: Icons.people_outline,
+                                label: 'Học viên',
+                                value: '${_course!.enrollmentCount}',
+                                color: AppTheme.themeBlueStart,
+                              ),
+                              Container(
+                                width: 1,
+                                height: 40,
+                                color: AppTheme.darkBorderColor,
+                              ),
+                              _StatItem(
+                                icon: Icons.auto_stories_outlined,
+                                label: 'Modules',
+                                value: '${_course!.moduleCount ?? 0}',
+                                color: AppTheme.themePurpleStart,
+                              ),
+                              if (_course!.rating != null) ...[
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: AppTheme.darkBorderColor,
+                                ),
+                                _StatItem(
+                                  icon: Icons.star_outline,
+                                  label: 'Đánh giá',
+                                  value: NumberFormatter.formatRating(_course!.rating!),
+                                  color: Colors.amber,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Price Section (only for paid courses)
+                        if (_course!.price != null && _course!.price! > 0)
+                          GlassCard(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Giá khóa học',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: AppTheme.darkTextSecondary,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    ShaderMask(
+                                      shaderCallback: (bounds) =>
+                                          LinearGradient(
+                                        colors: gradientColors,
+                                      ).createShader(bounds),
+                                      child: Text(
+                                        NumberFormatter.formatCurrency(_course!.price!, currency: _course!.currency ?? 'VND'),
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        const SizedBox(height: 20),
+
+                        // Description Section
+                        GlassCard(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.description_outlined,
+                                      color: gradientColors[0], size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Mô tả',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(color: Colors.white),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _course!.description ?? 'Không có mô tả',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: AppTheme.darkTextSecondary,
+                                      height: 1.6,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Benefits Section
+                        GlassCard(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.verified_outlined,
+                                      color: gradientColors[0], size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Khóa học bao gồm:',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(color: Colors.white),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              _BenefitItem(
+                                icon: Icons.access_time,
+                                text: 'Truy cập trọn đời',
+                                color: gradientColors[0],
+                              ),
+                              const SizedBox(height: 12),
+                              _BenefitItem(
+                                icon: Icons.card_membership,
+                                text: 'Chứng chỉ hoàn thành',
+                                color: gradientColors[0],
+                              ),
+                              const SizedBox(height: 12),
+                              _BenefitItem(
+                                icon: Icons.support_agent,
+                                text: 'Hỗ trợ giảng viên',
+                                color: gradientColors[0],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Curriculum Section
+                        GlassCard(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.list_alt,
+                                      color: gradientColors[0], size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Nội dung khóa học',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(color: Colors.white),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              if (_isLoadingModules)
+                                const Center(child: CircularProgressIndicator())
+                              else if (_modules.isEmpty)
+                                const Text(
+                                  'Chưa có nội dung khóa học',
+                                  style: TextStyle(
+                                      color: AppTheme.darkTextSecondary),
+                                )
+                              else
+                                ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: _modules.length,
+                                  itemBuilder: (context, index) {
+                                    final module = _modules[index];
+                                    final isExpanded =
+                                        expandedModule == module.id;
+                                    return _ModuleItem(
+                                      module: module,
+                                      isExpanded: isExpanded,
+                                      onTap: () => toggleModule(module.id),
+                                      gradientColors: gradientColors,
+                                    );
+                                  },
+                                ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 100), // Space for bottom button
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _course!.price == null || _course!.price == 0
-                                ? 'MIỄN PHÍ'
-                                : '${_course!.price!.toStringAsFixed(0)} ${_course!.currency ?? 'VNĐ'}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.darkCardBackground,
+          border: Border(
+            top: BorderSide(
+              color: AppTheme.darkBorderColor,
+              width: 1,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          child: isEnrolled
+              ? Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: gradientColors),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: gradientColors[0].withValues(alpha: 0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                CourseLearningPage(courseId: widget.courseId),
                           ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed:
-                                  _isEnrolling ? null : _handleEnroll,
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                child: _isEnrolling
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : Text(
-                                        isEnrolled
-                                            ? 'Vào học'
-                                            : 'Đăng ký ngay',
-                                        maxLines: 1,
-                                      ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.play_circle_filled,
+                                color: Colors.white),
+                            SizedBox(width: 12),
+                            Text(
+                              'Tiếp tục học',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: toggleWishlist,
-                              icon: Icon(isWishlisted
-                                  ? Icons.favorite
-                                  : Icons.favorite_border),
-                              label: Text(
-                                isWishlisted ? 'Đã lưu' : 'Lưu khóa học',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Khóa học bao gồm:',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall,
-                          ),
-                          const SizedBox(height: 6),
-                          const Text('• Truy cập trọn đời',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                          const Text('• Chứng chỉ hoàn thành',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                          const Text('• Hỗ trợ giảng viên',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  )
-                ],
-              ),
-            ),
-
-            // Tabs
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  _TabButton(
-                    label: 'Tổng quan',
-                    active: activeTab == 'overview',
-                    onTap: () => setState(() => activeTab = 'overview'),
                   ),
-                  _TabButton(
-                    label: 'Nội dung khóa học',
-                    active: activeTab == 'curriculum',
-                    onTap: () => setState(() => activeTab = 'curriculum'),
+                )
+              : Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: gradientColors),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: gradientColors[0].withValues(alpha: 0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  _TabButton(
-                    label: 'Giảng viên',
-                    active: activeTab == 'instructor',
-                    onTap: () => setState(() => activeTab = 'instructor'),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _isEnrolling ? null : _handleEnroll,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: _isEnrolling
+                            ? const Center(
+                                child: SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.add_circle_outline,
+                                      color: Colors.white),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _course!.price == null ||
+                                            _course!.price == 0
+                                        ? 'Đăng ký ngay'
+                                        : 'Mua khóa học',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: activeTab == 'overview'
-                  ? _buildOverview()
-                  : activeTab == 'curriculum'
-                      ? _buildCurriculum()
-                      : _buildInstructor(),
-            ),
-            const SizedBox(height: 40),
-          ],
+                ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildOverview() {
+class _StatItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _StatItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 4),
         Text(
-          'Mô tả',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 8),
-        Text(_course!.description ?? 'Không có mô tả'),
-        const SizedBox(height: 16),
-        Text(
-          'Chi tiết khóa học',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 8),
-        _InfoRow(
-          icon: Icons.school,
-          label: 'Cấp độ',
-          value: _course!.level.name.toUpperCase(),
-        ),
-        _InfoRow(
-          icon: Icons.people,
-          label: 'Học viên',
-          value: '${_course!.enrollmentCount}',
-        ),
-        if (_course!.rating != null)
-          _InfoRow(
-            icon: Icons.star,
-            label: 'Đánh giá',
-            value: '${_course!.rating!.toStringAsFixed(1)}/5.0',
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
-        _InfoRow(
-          icon: Icons.subject,
-          label: 'Số module',
-          value: '${_modules.length}',
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppTheme.darkTextSecondary,
+            fontSize: 12,
+          ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildCurriculum() {
-    if (_isLoadingModules) {
-      return const Center(child: CircularProgressIndicator());
-    }
+class _BenefitItem extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
 
-    if (_modules.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: Text('Chưa có nội dung khóa học'),
-        ),
-      );
-    }
+  const _BenefitItem({
+    required this.icon,
+    required this.text,
+    required this.color,
+  });
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: _modules.map((module) {
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          child: ListTile(
-            title: Text(
-              module.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: module.description != null
-                ? Text(module.description!)
-                : null,
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => toggleModule(module.id),
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(8),
           ),
-        );
-      }).toList(),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: AppTheme.darkTextPrimary,
+              fontSize: 14,
+            ),
+          ),
+        ),
+        const Icon(Icons.check_circle, color: AppTheme.themeGreenStart, size: 20),
+      ],
     );
   }
+}
 
-  Widget _buildInstructor() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 36,
-              child: Text(
-                (_course!.author.firstName?.isNotEmpty ?? false ? _course!.author.firstName![0] : 'U').toUpperCase(),
-                style: const TextStyle(fontSize: 24),
+class _ModuleItem extends StatelessWidget {
+  final ModuleSummaryDto module;
+  final bool isExpanded;
+  final VoidCallback onTap;
+  final List<Color> gradientColors;
+
+  const _ModuleItem({
+    required this.module,
+    required this.isExpanded,
+    required this.onTap,
+    required this.gradientColors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isExpanded
+                    ? gradientColors[0].withValues(alpha: 0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isExpanded
+                      ? gradientColors[0].withValues(alpha: 0.3)
+                      : Colors.transparent,
+                  width: 1,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    'Giảng viên: ${_course!.authorName ?? _course!.author.fullName ?? '${_course!.author.firstName} ${_course!.author.lastName}'}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: gradientColors),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${module.orderIndex}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  Text('Email: ${_course!.author.email}'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          module.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: gradientColors[0],
+                  ),
                 ],
               ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TabButton extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  const _TabButton({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Chip(
-          label: Text(label),
-          backgroundColor:
-              active ? Theme.of(context).colorScheme.primary : Colors.grey[200],
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            '$label: ',
-            style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
           ),
-          Text(value),
-        ],
-      ),
+        ),
+        if (isExpanded && module.description != null)
+          Container(
+            margin: const EdgeInsets.only(left: 56, top: 8, bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.darkBackgroundSecondary,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              module.description!,
+              style: const TextStyle(
+                color: AppTheme.darkTextSecondary,
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+          ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }

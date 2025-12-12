@@ -56,8 +56,16 @@ CourseSummaryDto _$CourseSummaryDtoFromJson(Map<String, dynamic> json) =>
       title: json['title'] as String,
       description: json['description'] as String?,
       shortDescription: json['shortDescription'] as String?,
-      level: $enumDecode(_$CourseLevelEnumMap, json['level']),
-      status: $enumDecode(_$CourseStatusEnumMap, json['status']),
+      level: $enumDecode(
+        _$CourseLevelEnumMap,
+        json['level'],
+        unknownValue: CourseLevel.beginner,
+      ),
+      status: $enumDecode(
+        _$CourseStatusEnumMap,
+        json['status'],
+        unknownValue: CourseStatus.public,
+      ),
       author: AuthorDto.fromJson(json['author'] as Map<String, dynamic>),
       authorName: json['authorName'] as String?,
       thumbnail: json['thumbnail'] == null
@@ -117,7 +125,7 @@ PageResponse<T> _$PageResponseFromJson<T>(
   Map<String, dynamic> json,
   T Function(Object? json) fromJsonT,
 ) => PageResponse<T>(
-  content: (json['items'] as List<dynamic>?)?.map(fromJsonT).toList() ?? [],
+  content: (json['items'] as List<dynamic>?)?.map(fromJsonT).toList(),
   page: (json['page'] as num?)?.toInt() ?? 0,
   size: (json['size'] as num?)?.toInt() ?? 10,
   totalElements: (json['total'] as num?)?.toInt() ?? 0,

@@ -6,8 +6,10 @@ import 'presentation/providers/chat_provider.dart';
 import 'presentation/providers/course_provider.dart';
 import 'presentation/providers/enrollment_provider.dart';
 import 'presentation/providers/payment_provider.dart';
+import 'presentation/providers/portfolio_provider.dart';
 import 'presentation/providers/premium_provider.dart';
 import 'presentation/providers/roadmap_provider.dart';
+import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/user_provider.dart';
 import 'presentation/app.dart';
 
@@ -24,6 +26,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
           create: (context) => ChatProvider(Provider.of<AuthProvider>(context, listen: false)),
@@ -32,6 +35,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CourseProvider()),
         ChangeNotifierProvider(create: (_) => EnrollmentProvider()),
         ChangeNotifierProvider(create: (_) => PaymentProvider()),
+        ChangeNotifierProvider(create: (_) => PortfolioProvider()),
         ChangeNotifierProvider(create: (_) => PremiumProvider()),
         ChangeNotifierProvider(create: (_) => RoadmapProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),

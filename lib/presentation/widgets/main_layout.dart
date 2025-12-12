@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
+import 'galaxy_background.dart';
 
 class MainLayout extends StatefulWidget {
   final Widget child;
@@ -69,14 +71,31 @@ class _MainLayoutState extends State<MainLayout> {
   }
 
   void _updateSelectedIndex() {
+    // Special case: Portfolio page highlights Profile tab
+    if (widget.currentPath == '/portfolio') {
+      setState(() {
+        _selectedIndex = 4; // Profile tab index
+      });
+      return;
+    }
+
+    // Check for exact match first, then prefix match
+    int? exactMatch;
+    int? prefixMatch;
+
     for (int i = 0; i < _navigationItems.length; i++) {
-      if (widget.currentPath.startsWith(_navigationItems[i].route)) {
-        setState(() {
-          _selectedIndex = i;
-        });
+      if (widget.currentPath == _navigationItems[i].route) {
+        exactMatch = i;
         break;
       }
+      if (prefixMatch == null && widget.currentPath.startsWith(_navigationItems[i].route)) {
+        prefixMatch = i;
+      }
     }
+
+    setState(() {
+      _selectedIndex = exactMatch ?? prefixMatch ?? 0;
+    });
   }
 
   void _onItemTapped(int index) {
@@ -97,6 +116,8 @@ class _MainLayoutState extends State<MainLayout> {
         return 'Chat';
       case '/profile':
         return 'Hồ sơ';
+      case '/portfolio':
+        return 'Portfolio';
       default:
         return 'SkillVerse';
     }
@@ -128,12 +149,19 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
+  bool _shouldShowBackButton() {
+    // Show back button for sub-pages (not main navigation items)
+    return !_navigationItems.any((item) => item.route == widget.currentPath);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = context.watch<ThemeProvider>().isDarkMode;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_getPageTitle()),
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: _shouldShowBackButton(),
         elevation: 0,
         actions: [
           IconButton(
@@ -148,7 +176,9 @@ class _MainLayoutState extends State<MainLayout> {
           ),
         ],
       ),
-      body: widget.child,
+      body: isDarkMode
+        ? GalaxyBackground(child: widget.child)
+        : widget.child,
       bottomNavigationBar: _navigationItems.length >= 2
           ? BottomNavigationBar(
               currentIndex: _selectedIndex,

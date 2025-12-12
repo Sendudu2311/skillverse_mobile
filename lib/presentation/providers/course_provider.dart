@@ -10,17 +10,30 @@ class CourseProvider with ChangeNotifier {
   String? _error;
   int _currentPage = 0;
   bool _hasMorePages = true;
+  CourseLevel? _selectedLevel;
 
-  List<CourseSummaryDto> get courses => _courses;
+  List<CourseSummaryDto> get courses {
+    if (_selectedLevel == null) {
+      return _courses;
+    }
+    return _courses.where((course) => course.level == _selectedLevel).toList();
+  }
+
+  List<CourseSummaryDto> get allCourses => _courses;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasMorePages => _hasMorePages;
+  CourseLevel? get selectedLevel => _selectedLevel;
+
+  void setLevelFilter(CourseLevel? level) {
+    _selectedLevel = level;
+    notifyListeners();
+  }
 
   /// Load courses with pagination
   Future<void> loadCourses({
     bool refresh = false,
     String? search,
-    CourseLevel? level,
     CourseStatus? status,
   }) async {
     if (refresh) {
@@ -40,7 +53,6 @@ class CourseProvider with ChangeNotifier {
         page: _currentPage,
         size: 10,
         search: search,
-        level: level,
         status: status,
       );
 
@@ -65,23 +77,11 @@ class CourseProvider with ChangeNotifier {
 
   /// Search courses
   Future<void> searchCourses(String query) async {
-    _currentPage = 0;
-    _courses.clear();
-    _hasMorePages = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final pageResponse = await _courseService.searchCourses(query);
-      _courses = pageResponse.content ?? [];
-      _hasMorePages = !pageResponse.last;
-      _currentPage = pageResponse.last ? 0 : 1;
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    // Use loadCourses with search parameter instead of separate endpoint
+    await loadCourses(
+      refresh: true,
+      search: query,
+    );
   }
 
   /// Get course by ID

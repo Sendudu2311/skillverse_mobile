@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../core/constants/app_constants.dart';
 import 'providers/auth_provider.dart';
+import 'providers/theme_provider.dart';
 import 'pages/splash/splash_page.dart';
 import 'pages/auth/login_page.dart';
 import 'pages/auth/register_page.dart';
@@ -237,13 +238,17 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
       );
     }
 
-    return MaterialApp.router(
-      title: AppConstants.appName,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
-      routerConfig: _router,
-      debugShowCheckedModeBanner: false,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return MaterialApp.router(
+          title: AppConstants.appName,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeProvider.themeMode,
+          routerConfig: _router,
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }

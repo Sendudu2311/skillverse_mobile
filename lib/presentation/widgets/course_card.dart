@@ -1,152 +1,405 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/course_models.dart';
+import '../themes/app_theme.dart';
+import 'glass_card.dart';
 
-class CourseCard extends StatelessWidget {
+class CourseCard extends StatefulWidget {
   final CourseSummaryDto course;
+  final int index;
 
-  const CourseCard({super.key, required this.course});
+  const CourseCard({super.key, required this.course, this.index = 0});
+
+  @override
+  State<CourseCard> createState() => _CourseCardState();
+}
+
+class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  bool _isHovered = false;
+  bool _isBookmarked = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize animation controller
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    // Trigger entrance animation with staggered delay
+    Future.delayed(Duration(milliseconds: widget.index * 100), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () {
-          context.push('/courses/${course.id}');
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Course Thumbnail
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[300],
-                  image: course.thumbnailUrl != null
-                      ? DecorationImage(
-                          image: NetworkImage(course.thumbnailUrl!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                child: course.thumbnailUrl == null
-                    ? const Icon(Icons.book, size: 40, color: Colors.grey)
-                    : null,
-              ),
-              const SizedBox(width: 16),
+    final gradientColors = _getLevelGradient(widget.course.level);
 
-              // Course Info
-              Expanded(
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _isHovered = true),
+          onTapUp: (_) => setState(() => _isHovered = false),
+          onTapCancel: () => setState(() => _isHovered = false),
+          child: AnimatedScale(
+            scale: _isHovered ? 0.98 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeInOut,
+            child: GlassCard(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: EdgeInsets.zero,
+              child: InkWell(
+                onTap: () {
+                  context.push('/courses/${widget.course.id}');
+                },
+                borderRadius: BorderRadius.circular(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title
-                    Text(
-                      course.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-
-                    // Author
-                    Text(
-                      course.authorName ?? course.author.fullName ?? 'Unknown Author',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Rating and Enrollment
-                    Row(
+                    // Thumbnail with gradient overlay
+                    Stack(
                       children: [
-                        if (course.rating != null) ...[
-                          const Icon(Icons.star, size: 16, color: Colors.amber),
-                          const SizedBox(width: 4),
-                          Text(
-                            course.rating!.toStringAsFixed(1),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          const SizedBox(width: 16),
-                        ],
-                        const Icon(Icons.people, size: 16, color: Colors.grey),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${course.enrollmentCount}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Level and Price
-                    Row(
-                      children: [
+                        // Thumbnail
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          width: double.infinity,
+                          height: 160,
                           decoration: BoxDecoration(
-                            color: _getLevelColor(course.level).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                            gradient: LinearGradient(
+                              colors: gradientColors,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                           ),
-                          child: Text(
-                            _getLevelText(course.level),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: _getLevelColor(course.level),
-                              fontWeight: FontWeight.w500,
+                          child: widget.course.thumbnailUrl != null
+                              ? ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                                  child: Image.network(
+                                    widget.course.thumbnailUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return _buildPlaceholder(context, gradientColors);
+                                    },
+                                  ),
+                                )
+                              : _buildPlaceholder(context, gradientColors),
+                        ),
+
+                        // Gradient overlay
+                        Container(
+                          width: double.infinity,
+                          height: 160,
+                          decoration: BoxDecoration(
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.black.withValues(alpha: 0.0),
+                                Colors.black.withValues(alpha: 0.3),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
                             ),
                           ),
                         ),
-                        const Spacer(),
-                        if (course.price != null) ...[
-                          Text(
-                            '${course.price} ${course.currency ?? 'VNĐ'}',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).primaryColor,
+
+                        // Level badge
+                        Positioned(
+                          top: 12,
+                          right: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: gradientColors),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: gradientColors.first.withValues(alpha: 0.4),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              _getLevelText(widget.course.level),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
-                        ] else ...[
-                          Text(
-                            'Miễn phí',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
+                        ),
+
+                        // Bookmark button
+                        Positioned(
+                          top: 12,
+                          left: 12,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() => _isBookmarked = !_isBookmarked);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: _isBookmarked
+                                    ? gradientColors.first.withValues(alpha: 0.8)
+                                    : Colors.black.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Course Info
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Title
+                          Text(
+                            widget.course.title,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Author
+                          Row(
+                            children: [
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: gradientColors),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  widget.course.authorName ?? widget.course.author.fullName ?? 'Unknown',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Stats row
+                          Row(
+                            children: [
+                              if (widget.course.rating != null) ...[
+                                const Icon(
+                                  Icons.star,
+                                  size: 16,
+                                  color: Colors.amber,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  widget.course.rating!.toStringAsFixed(1),
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                              ],
+                              Icon(
+                                Icons.people_outline,
+                                size: 16,
+                                color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${widget.course.enrollmentCount}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              if (widget.course.moduleCount != null) ...[
+                                const SizedBox(width: 16),
+                                Icon(
+                                  Icons.play_circle_outline,
+                                  size: 16,
+                                  color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${widget.course.moduleCount} modules',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Price and enroll button
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              if (widget.course.price != null && widget.course.price! > 0) ...[
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Giá',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${_formatPrice(widget.course.price!)} ${widget.course.currency ?? 'VNĐ'}',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: gradientColors.first,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ] else ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.themeGreenStart.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: AppTheme.themeGreenStart.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'MIỄN PHÍ',
+                                    style: TextStyle(
+                                      color: AppTheme.themeGreenStart,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              const Spacer(),
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: gradientColors),
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: gradientColors.first.withValues(alpha: 0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    context.push('/courses/${widget.course.id}');
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                  ),
+                                  child: const Text(
+                                    'Xem chi tiết',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Color _getLevelColor(CourseLevel level) {
+  Widget _buildPlaceholder(BuildContext context, List<Color> gradientColors) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.school,
+          size: 60,
+          color: Colors.white.withValues(alpha: 0.7),
+        ),
+      ),
+    );
+  }
+
+  String _formatPrice(double price) {
+    if (price >= 1000000) {
+      return '${(price / 1000000).toStringAsFixed(1)}M';
+    } else if (price >= 1000) {
+      return '${(price / 1000).toStringAsFixed(0)}K';
+    }
+    return price.toStringAsFixed(0);
+  }
+
+  List<Color> _getLevelGradient(CourseLevel level) {
     switch (level) {
       case CourseLevel.beginner:
-        return Colors.green;
+        return [AppTheme.themeGreenStart, AppTheme.themeGreenEnd];
       case CourseLevel.intermediate:
-        return Colors.orange;
+        return [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd];
       case CourseLevel.advanced:
-        return Colors.red;
+        return [AppTheme.themePurpleStart, AppTheme.themePurpleEnd];
     }
   }
 

@@ -13,6 +13,17 @@ enum CourseStatus {
   archived,
 }
 
+extension CourseStatusExtension on CourseStatus {
+  static CourseStatus? fromString(String? value) {
+    if (value == null) return null;
+    final upperValue = value.toUpperCase();
+    return CourseStatus.values.firstWhere(
+      (e) => e.name.toUpperCase() == upperValue,
+      orElse: () => CourseStatus.public,
+    );
+  }
+}
+
 enum CourseLevel {
   @JsonValue('BEGINNER')
   beginner,
@@ -20,6 +31,17 @@ enum CourseLevel {
   intermediate,
   @JsonValue('ADVANCED')
   advanced,
+}
+
+extension CourseLevelExtension on CourseLevel {
+  static CourseLevel? fromString(String? value) {
+    if (value == null) return null;
+    final upperValue = value.toUpperCase();
+    return CourseLevel.values.firstWhere(
+      (e) => e.name.toUpperCase() == upperValue,
+      orElse: () => CourseLevel.beginner,
+    );
+  }
 }
 
 @JsonSerializable()
@@ -80,7 +102,9 @@ class CourseSummaryDto {
   final String title;
   final String? description;
   final String? shortDescription;
+  @JsonKey(unknownEnumValue: CourseLevel.beginner)
   final CourseLevel level;
+  @JsonKey(unknownEnumValue: CourseStatus.public)
   final CourseStatus status;
   final AuthorDto author;
   final String? authorName;
@@ -126,7 +150,7 @@ class CourseSummaryDto {
 
 @JsonSerializable(genericArgumentFactories: true)
 class PageResponse<T> {
-  @JsonKey(name: 'items', defaultValue: [])
+  @JsonKey(name: 'items')
   final List<T>? content;
   @JsonKey(defaultValue: 0)
   final int page;
@@ -145,13 +169,13 @@ class PageResponse<T> {
 
   PageResponse({
     this.content,
-    required this.page,
-    required this.size,
-    required this.totalElements,
-    required this.totalPages,
-    required this.first,
-    required this.last,
-    required this.empty,
+    this.page = 0,
+    this.size = 10,
+    this.totalElements = 0,
+    this.totalPages = 1,
+    this.first = true,
+    this.last = true,
+    this.empty = true,
   });
 
   factory PageResponse.fromJson(Map<String, dynamic> json, T Function(Object?) fromJsonT) =>

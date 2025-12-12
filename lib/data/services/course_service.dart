@@ -15,7 +15,6 @@ class CourseService {
     int page = 0,
     int size = 10,
     String? search,
-    CourseLevel? level,
     CourseStatus? status,
   }) async {
     try {
@@ -23,8 +22,7 @@ class CourseService {
         'page': page,
         'size': size,
       };
-      if (search != null && search.isNotEmpty) queryParams['search'] = search;
-      if (level != null) queryParams['level'] = level.name.toUpperCase();
+      if (search != null && search.isNotEmpty) queryParams['q'] = search;
       if (status != null) queryParams['status'] = status.name.toUpperCase();
 
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
@@ -90,29 +88,19 @@ class CourseService {
     }
   }
 
-  /// Search courses
+  /// Search courses - uses the same endpoint as getCourses with 'q' parameter
   Future<PageResponse<CourseSummaryDto>> searchCourses(
     String query, {
     int page = 0,
     int size = 10,
+    CourseStatus? status,
   }) async {
-    try {
-      final response = await _apiClient.dio.get<Map<String, dynamic>>(
-        '/courses/search',
-        queryParameters: {'q': query, 'page': page, 'size': size},
-      );
-
-      if (response.data == null) {
-        throw ApiException('Không có dữ liệu phản hồi');
-      }
-
-      return PageResponse<CourseSummaryDto>.fromJson(
-        response.data!,
-        (json) => CourseSummaryDto.fromJson(json as Map<String, dynamic>),
-      );
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Tìm kiếm khóa học thất bại: ${e.toString()}');
-    }
+    // Just use getCourses with search parameter
+    return getCourses(
+      page: page,
+      size: size,
+      search: query,
+      status: status,
+    );
   }
 }

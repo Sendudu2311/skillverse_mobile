@@ -11,6 +11,7 @@ import '../pages/courses/courses_page.dart';
 import '../pages/courses/course_detail_page.dart';
 import '../pages/chat/chat_page.dart';
 import '../pages/profile/profile_page.dart';
+import '../pages/portfolio/portfolio_page.dart';
 import '../pages/premium/premium_plans_page.dart';
 import '../pages/payment/payment_history_page.dart';
 import '../pages/splash_page.dart';
@@ -144,6 +145,17 @@ class AppRouter {
           child: const ProfilePage(),
         ),
       ),
+
+      // Portfolio Route
+      GoRoute(
+        path: '/portfolio',
+        name: 'portfolio',
+        builder: (context, state) => MainLayout(
+          currentPath: state.matchedLocation,
+          child: const PortfolioPage(),
+        ),
+      ),
+
       // Profile subroutes (placeholders)
       GoRoute(
         path: '/profile/certificates',
