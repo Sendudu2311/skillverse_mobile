@@ -12,16 +12,21 @@ import 'presentation/providers/roadmap_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/user_provider.dart';
 import 'presentation/app.dart';
+import 'core/utils/storage_helper.dart';
+import 'core/utils/date_time_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Load environment variables
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
     debugPrint('Could not load .env file: $e');
   }
+
+  // Initialize helpers
+  await _initializeHelpers();
   
   runApp(
     MultiProvider(
@@ -43,4 +48,22 @@ void main() async {
       child: const SkillVerseApp(),
     ),
   );
+}
+
+/// Initialize all helper utilities
+///
+/// This should be called in main() before runApp()
+Future<void> _initializeHelpers() async {
+  try {
+    // Initialize StorageHelper (SharedPreferences + FlutterSecureStorage)
+    await StorageHelper.initialize();
+    debugPrint('✅ StorageHelper initialized');
+
+    // Initialize DateTimeHelper (Vietnamese locale for timeago)
+    DateTimeHelper.initialize();
+    debugPrint('✅ DateTimeHelper initialized');
+  } catch (e) {
+    debugPrint('❌ Error initializing helpers: $e');
+    // Continue anyway - helpers will handle errors gracefully
+  }
 }

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/exceptions/api_exception.dart';
 import 'api_client.dart';
@@ -12,11 +13,17 @@ class ChatService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   /// Send a message to the AI career counselor
+  /// AI responses can take longer, so we use extended timeout (60s)
   Future<ChatResponse> sendMessage(ChatRequest request) async {
     try {
       final response = await _apiClient.dio.post<Map<String, dynamic>>(
         '/v1/meowl/chat',
         data: request.toJson(),
+        options: Options(
+          // Extend timeout for AI chat - AI needs time to think and generate response
+          receiveTimeout: const Duration(seconds: 60), // 60s for AI response
+          sendTimeout: const Duration(seconds: 30),     // 30s for sending request
+        ),
       );
 
       if (response.data == null) {

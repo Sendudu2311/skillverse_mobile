@@ -11,6 +11,7 @@ import '../pages/courses/courses_page.dart';
 import '../pages/courses/course_detail_page.dart';
 import '../pages/chat/chat_page.dart';
 import '../pages/profile/profile_page.dart';
+import '../pages/profile/profile_settings_page.dart';
 import '../pages/portfolio/portfolio_page.dart';
 import '../pages/premium/premium_plans_page.dart';
 import '../pages/payment/payment_history_page.dart';
@@ -136,7 +137,7 @@ class AppRouter {
         builder: (context, state) => const PremiumPlansPage(),
       ),
 
-      // Profile Route
+      // Profile Route with subroutes
       GoRoute(
         path: '/profile',
         name: 'profile',
@@ -144,6 +145,34 @@ class AppRouter {
           currentPath: state.matchedLocation,
           child: const ProfilePage(),
         ),
+        routes: [
+          GoRoute(
+            path: 'edit',
+            name: 'profile-edit',
+            builder: (context, state) => const ProfileSettingsPage(),
+          ),
+          GoRoute(
+            path: 'certificates',
+            name: 'profile-certificates',
+            builder: (context, state) => MainLayout(
+              currentPath: state.matchedLocation,
+              child: Scaffold(appBar: AppBar(title: const Text('Chứng chỉ')), body: const Center(child: Text('Certificates placeholder'))),
+            ),
+          ),
+          GoRoute(
+            path: 'payments',
+            name: 'profile-payments',
+            builder: (context, state) => const PaymentHistoryPage(),
+          ),
+          GoRoute(
+            path: 'settings',
+            name: 'profile-settings',
+            builder: (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('Cài đặt')),
+              body: const Center(child: Text('Settings page - Coming soon')),
+            ),
+          ),
+        ],
       ),
 
       // Portfolio Route
@@ -153,29 +182,6 @@ class AppRouter {
         builder: (context, state) => MainLayout(
           currentPath: state.matchedLocation,
           child: const PortfolioPage(),
-        ),
-      ),
-
-      // Profile subroutes (placeholders)
-      GoRoute(
-        path: '/profile/certificates',
-        name: 'profile-certificates',
-        builder: (context, state) => MainLayout(
-          currentPath: state.matchedLocation,
-          child: Scaffold(appBar: AppBar(title: const Text('Chứng chỉ')), body: const Center(child: Text('Certificates placeholder'))),
-        ),
-      ),
-      GoRoute(
-        path: '/profile/payments',
-        name: 'profile-payments',
-        builder: (context, state) => const PaymentHistoryPage(),
-      ),
-      GoRoute(
-        path: '/profile/settings',
-        name: 'profile-settings',
-        builder: (context, state) => MainLayout(
-          currentPath: state.matchedLocation,
-          child: Scaffold(appBar: AppBar(title: const Text('Cài đặt')), body: const Center(child: Text('Settings placeholder'))),
         ),
       ),
     ],

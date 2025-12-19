@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
+import '../../../data/models/portfolio_models.dart';
 
 class CertificateFormPage extends StatefulWidget {
   const CertificateFormPage({super.key});

@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/course_models.dart';
@@ -14,6 +13,8 @@ import 'course_learning_page.dart';
 import '../../widgets/glass_card.dart';
 import '../../themes/app_theme.dart';
 import '../../../core/utils/number_formatter.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../../core/mixins/loading_mixin.dart';
 
 class CourseDetailPage extends StatefulWidget {
   final String courseId;
@@ -24,14 +25,13 @@ class CourseDetailPage extends StatefulWidget {
 }
 
 class _CourseDetailPageState extends State<CourseDetailPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, LoadingStateMixin {
   bool isWishlisted = false;
   String activeTab = 'overview';
   int? expandedModule;
 
   CourseSummaryDto? _course;
   List<ModuleSummaryDto> _modules = [];
-  bool _isLoadingCourse = true;
   bool _isLoadingModules = true;
   bool _isEnrolling = false;
 
@@ -62,8 +62,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
   Future<void> _loadCourseData() async {
     final courseId = int.tryParse(widget.courseId);
     if (courseId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ID khóa học không hợp lệ')),
+      ErrorHandler.showErrorSnackBar(
+        context,
+        'ID khóa học không hợp lệ',
       );
       return;
     }
@@ -72,23 +73,26 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     final enrollmentProvider = context.read<EnrollmentProvider>();
     final authProvider = context.read<AuthProvider>();
 
-    // Load course details
-    setState(() => _isLoadingCourse = true);
-    try {
-      final course = await courseProvider.getCourseById(courseId);
-      setState(() {
-        _course = course;
-        _isLoadingCourse = false;
-      });
-      _animationController.forward();
-    } catch (e) {
-      setState(() => _isLoadingCourse = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi tải khóa học: $e')),
-        );
-      }
-    }
+    // Load course details using LoadingStateMixin
+    await executeAsync(
+      () async {
+        final course = await courseProvider.getCourseById(courseId);
+        if (mounted) {
+          setState(() {
+            _course = course;
+          });
+          _animationController.forward();
+        }
+      },
+      errorMessageBuilder: (e) {
+        if (e.toString().contains('404')) {
+          return 'Không tìm thấy khóa học';
+        } else if (e.toString().contains('timeout')) {
+          return 'Không có kết nối Internet';
+        }
+        return 'Lỗi tải khóa học: ${e.toString()}';
+      },
+    );
 
     // Load modules
     setState(() => _isLoadingModules = true);
@@ -124,8 +128,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     final enrollmentProvider = context.read<EnrollmentProvider>();
 
     if (authProvider.user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng đăng nhập để đăng ký khóa học')),
+      ErrorHandler.showWarningSnackBar(
+        context,
+        'Vui lòng đăng nhập để đăng ký khóa học',
       );
       return;
     }
@@ -145,18 +150,14 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       setState(() => _isEnrolling = false);
 
       if (enrolled && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đăng ký thành công!'),
-            backgroundColor: Colors.green,
-          ),
+        ErrorHandler.showSuccessSnackBar(
+          context,
+          'Đăng ký thành công!',
         );
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(enrollmentProvider.errorMessage ?? 'Đăng ký thất bại'),
-            backgroundColor: Colors.red,
-          ),
+        ErrorHandler.showErrorSnackBar(
+          context,
+          enrollmentProvider.errorMessage ?? 'Đăng ký thất bại',
         );
       }
     } else {
@@ -243,13 +244,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
 
     if (paymentResponse == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán',
-            ),
-            backgroundColor: Colors.red,
-          ),
+        ErrorHandler.showErrorSnackBar(
+          context,
+          paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán',
         );
       }
       return;
@@ -272,11 +269,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     final courseId = int.parse(widget.courseId);
 
     if (result != null && result['success'] == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Thanh toán thành công!'),
-          backgroundColor: Colors.green,
-        ),
+      ErrorHandler.showSuccessSnackBar(
+        context,
+        'Thanh toán thành công!',
       );
 
       // Auto-enroll user after successful payment
@@ -321,12 +316,12 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       }
     } else if (result != null && result['cancelled'] == true) {
       // Payment cancelled by user
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Thanh toán đã bị hủy'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      if (mounted) {
+        ErrorHandler.showWarningSnackBar(
+          context,
+          'Thanh toán đã bị hủy',
+        );
+      }
 
       // Cancel the payment on backend
       if (paymentResponse.transactionReference.isNotEmpty) {
@@ -337,12 +332,12 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       }
     } else {
       // Payment failed or unknown result
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Thanh toán không thành công. Vui lòng thử lại.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Thanh toán không thành công. Vui lòng thử lại.',
+        );
+      }
     }
   }
 
@@ -359,7 +354,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoadingCourse) {
+    if (isLoading) {
       return Scaffold(
         body: Container(
           decoration: const BoxDecoration(
@@ -370,6 +365,44 @@ class _CourseDetailPageState extends State<CourseDetailPage>
             ),
           ),
           child: const Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    if (hasError) {
+      return Scaffold(
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+        ),
+        body: Center(
+          child: GlassCard(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  errorMessage ?? 'Đã xảy ra lỗi',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    clearError();
+                    _loadCourseData();
+                  },
+                  child: const Text('Thử lại'),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }

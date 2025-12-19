@@ -50,10 +50,10 @@ class _RoadmapPageState extends State<RoadmapPage> with SingleTickerProviderStat
             controller: _tabController,
             children: [
               // All Roadmaps Tab
-              _buildRoadmapsList(roadmapProvider.roadmaps, roadmapProvider.isLoading, roadmapProvider.error),
+              _buildRoadmapsList(roadmapProvider.roadmaps, roadmapProvider.isLoading, roadmapProvider.errorMessage),
 
               // My Progress Tab
-              _buildRoadmapsList(roadmapProvider.userRoadmaps, roadmapProvider.isLoading, roadmapProvider.error),
+              _buildRoadmapsList(roadmapProvider.userRoadmaps, roadmapProvider.isLoading, roadmapProvider.errorMessage),
             ],
           );
         },

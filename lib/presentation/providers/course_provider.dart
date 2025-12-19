@@ -1,30 +1,80 @@
 import 'package:flutter/material.dart';
 import '../../data/models/course_models.dart';
 import '../../data/services/course_service.dart';
+import '../../core/utils/pagination_helper.dart';
+import '../../core/mixins/provider_loading_mixin.dart';
 
-class CourseProvider with ChangeNotifier {
+class CourseProvider with ChangeNotifier, LoadingStateProviderMixin {
   final CourseService _courseService = CourseService();
 
-  List<CourseSummaryDto> _courses = [];
-  bool _isLoading = false;
-  String? _error;
-  int _currentPage = 0;
-  bool _hasMorePages = true;
   CourseLevel? _selectedLevel;
+  String? _currentSearchQuery;
+  CourseStatus? _currentStatus;
 
-  List<CourseSummaryDto> get courses {
-    if (_selectedLevel == null) {
-      return _courses;
-    }
-    return _courses.where((course) => course.level == _selectedLevel).toList();
+  // Lazy initialization to avoid LateInitializationError
+  PaginationHelper<CourseSummaryDto>? _paginationHelper;
+
+  PaginationHelper<CourseSummaryDto> get _pagination {
+    _paginationHelper ??= PaginationHelper<CourseSummaryDto>(
+      fetchPage: (page) async {
+        final pageResponse = await _courseService.getCourses(
+          page: page - 1, // API uses 0-based pagination
+          size: 10,
+          search: _currentSearchQuery,
+          status: _currentStatus,
+        );
+
+        return PaginatedResponse<CourseSummaryDto>(
+          data: pageResponse.content ?? [],
+          currentPage: page,
+          totalPages: pageResponse.totalPages,
+          totalItems: pageResponse.totalElements,
+          hasMore: !pageResponse.last,
+        );
+      },
+      onStateChanged: () => notifyListeners(),
+    );
+    return _paginationHelper!;
   }
 
-  List<CourseSummaryDto> get allCourses => _courses;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
-  bool get hasMorePages => _hasMorePages;
+  /// Get courses (filtered by selected level if set)
+  List<CourseSummaryDto> get courses {
+    if (_selectedLevel == null) {
+      return _pagination.items;
+    }
+    return _pagination.items
+        .where((course) => course.level == _selectedLevel)
+        .toList();
+  }
+
+  /// Get all courses (unfiltered)
+  List<CourseSummaryDto> get allCourses => _pagination.items;
+
+  /// Check if has more pages
+  bool get hasMorePages => _pagination.hasMore;
+
+  /// Get selected level filter
   CourseLevel? get selectedLevel => _selectedLevel;
 
+  /// Check if pagination is loading
+  bool get isPaginationLoading => _pagination.isLoading;
+
+  /// Check if pagination is in initial loading state
+  bool get isInitialLoading => _pagination.isInitialLoading;
+
+  /// Check if loading more pages
+  bool get isLoadingMore => _pagination.isLoadingMore;
+
+  /// Check if list is empty
+  bool get isEmpty => _pagination.isEmpty;
+
+  /// Get pagination error
+  String? get paginationError => _pagination.error;
+
+  /// Get pagination helper (for scroll listener)
+  PaginationHelper<CourseSummaryDto> get pagination => _pagination;
+
+  /// Set level filter (client-side filtering)
   void setLevelFilter(CourseLevel? level) {
     _selectedLevel = level;
     notifyListeners();
@@ -36,73 +86,65 @@ class CourseProvider with ChangeNotifier {
     String? search,
     CourseStatus? status,
   }) async {
+    // Update search/status filters
+    _currentSearchQuery = search;
+    _currentStatus = status;
+
     if (refresh) {
-      _currentPage = 0;
-      _courses.clear();
-      _hasMorePages = true;
-    }
-
-    if (!_hasMorePages || _isLoading) return;
-
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final pageResponse = await _courseService.getCourses(
-        page: _currentPage,
-        size: 10,
-        search: search,
-        status: status,
-      );
-
-      // Add null safety check for content
-      if (pageResponse.content != null && pageResponse.content!.isNotEmpty) {
-        _courses.addAll(pageResponse.content!);
-        _currentPage++;
+      await _pagination.loadFirstPage();
+    } else {
+      // Load first page if not initialized
+      if (_pagination.state == PaginationState.initial) {
+        await _pagination.loadFirstPage();
       }
-
-      _hasMorePages = !pageResponse.last;
-    } catch (e) {
-      _error = e.toString();
-      // Ensure we don't get stuck in loading state
-      _isLoading = false;
-      notifyListeners();
-      return;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
+  }
+
+  /// Load next page
+  Future<void> loadNextPage() async {
+    await _pagination.loadNextPage();
   }
 
   /// Search courses
   Future<void> searchCourses(String query) async {
-    // Use loadCourses with search parameter instead of separate endpoint
-    await loadCourses(
-      refresh: true,
-      search: query,
-    );
+    _currentSearchQuery = query;
+    await _pagination.loadFirstPage();
   }
 
-  /// Get course by ID
+  /// Get course by ID (with error handling)
   Future<CourseSummaryDto?> getCourseById(int courseId) async {
-    try {
-      return await _courseService.getCourseById(courseId);
-    } catch (e) {
-      _error = e.toString();
-      notifyListeners();
-      return null;
-    }
-  }
-
-  /// Clear error
-  void clearError() {
-    _error = null;
-    notifyListeners();
+    return await executeAsync(
+      () async {
+        return await _courseService.getCourseById(courseId);
+      },
+      errorMessageBuilder: (error) {
+        if (error.toString().contains('404')) {
+          return 'Không tìm thấy khóa học';
+        } else if (error.toString().contains('timeout')) {
+          return 'Không có kết nối Internet';
+        }
+        return 'Lỗi tải khóa học: ${error.toString()}';
+      },
+    );
   }
 
   /// Refresh courses
   Future<void> refresh() async {
-    await loadCourses(refresh: true);
+    await _pagination.refresh();
+  }
+
+  /// Reset pagination state
+  void reset() {
+    _pagination.reset();
+    _selectedLevel = null;
+    _currentSearchQuery = null;
+    _currentStatus = null;
+    resetState();
+  }
+
+  @override
+  void dispose() {
+    _paginationHelper?.dispose();
+    super.dispose();
   }
 }

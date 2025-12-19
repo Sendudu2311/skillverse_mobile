@@ -6,6 +6,7 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/course_models.dart';
+import '../../../core/utils/pagination_helper.dart';
 
 class CoursesPage extends StatefulWidget {
   const CoursesPage({super.key});
@@ -16,20 +17,31 @@ class CoursesPage extends StatefulWidget {
 
 class _CoursesPageState extends State<CoursesPage> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
   CourseLevel? _selectedLevel;
 
   @override
   void initState() {
     super.initState();
+
+    // Load courses on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CourseProvider>().loadCourses();
+      final provider = context.read<CourseProvider>();
+      provider.loadCourses();
+
+      // Add pagination listener for infinite scroll
+      _scrollController.addPaginationListener(
+        pagination: provider.pagination,
+        onLoadMore: () => provider.loadNextPage(),
+      );
     });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -40,107 +52,117 @@ class _CoursesPageState extends State<CoursesPage> {
     context.read<CourseProvider>().setLevelFilter(level);
   }
 
+  Future<void> _onRefresh() async {
+    await context.read<CourseProvider>().refresh();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<CourseProvider>(
       builder: (context, courseProvider, child) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Search Bar
-              GlassCard(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Tìm kiếm khóa học...',
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+        return RefreshIndicator(
+          onRefresh: _onRefresh,
+          color: AppTheme.themeOrangeStart,
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(16),
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Search Bar
+                GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Tìm kiếm khóa học...',
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                                courseProvider.loadCourses(refresh: true);
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                      ),
                     ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                              courseProvider.loadCourses(refresh: true);
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    hintStyle: TextStyle(
-                      color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
-                    ),
+                    onChanged: (value) {
+                      setState(() => _searchQuery = value);
+                    },
+                    onSubmitted: (value) {
+                      if (value.isNotEmpty) {
+                        courseProvider.searchCourses(value);
+                      } else {
+                        courseProvider.loadCourses(refresh: true);
+                      }
+                    },
+                    textInputAction: TextInputAction.search,
                   ),
-                  onChanged: (value) {
-                    setState(() => _searchQuery = value);
-                  },
-                  onSubmitted: (value) {
-                    if (value.isNotEmpty) {
-                      courseProvider.searchCourses(value);
-                    } else {
-                      courseProvider.loadCourses(refresh: true);
-                    }
-                  },
-                  textInputAction: TextInputAction.search,
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Level Filters
-              SizedBox(
-                height: 80,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _buildLevelChip(
-                      context,
-                      'Tất cả',
-                      Icons.grid_view,
-                      null,
-                      [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
-                    ),
-                    _buildLevelChip(
-                      context,
-                      'Cơ bản',
-                      Icons.school_outlined,
-                      CourseLevel.beginner,
-                      [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
-                    ),
-                    _buildLevelChip(
-                      context,
-                      'Trung cấp',
-                      Icons.trending_up,
-                      CourseLevel.intermediate,
-                      [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
-                    ),
-                    _buildLevelChip(
-                      context,
-                      'Nâng cao',
-                      Icons.workspace_premium,
-                      CourseLevel.advanced,
-                      [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
-                    ),
-                  ],
+                // Level Filters
+                SizedBox(
+                  height: 80,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      _buildLevelChip(
+                        context,
+                        'Tất cả',
+                        Icons.grid_view,
+                        null,
+                        [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+                      ),
+                      _buildLevelChip(
+                        context,
+                        'Cơ bản',
+                        Icons.school_outlined,
+                        CourseLevel.beginner,
+                        [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
+                      ),
+                      _buildLevelChip(
+                        context,
+                        'Trung cấp',
+                        Icons.trending_up,
+                        CourseLevel.intermediate,
+                        [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
+                      ),
+                      _buildLevelChip(
+                        context,
+                        'Nâng cao',
+                        Icons.workspace_premium,
+                        CourseLevel.advanced,
+                        [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Header
-              Text(
-                _searchQuery.isNotEmpty ? 'Kết quả tìm kiếm' : 'Khóa học đề xuất',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+                // Header
+                Text(
+                  _searchQuery.isNotEmpty ? 'Kết quả tìm kiếm' : 'Khóa học đề xuất',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Course List
-              _buildCourseList(courseProvider),
-            ],
+                // Course List
+                _buildCourseList(courseProvider),
+              ],
+            ),
           ),
         );
       },
@@ -230,14 +252,18 @@ class _CoursesPageState extends State<CoursesPage> {
   }
 
   Widget _buildCourseList(CourseProvider courseProvider) {
-    if (courseProvider.isLoading && courseProvider.courses.isEmpty) {
+    // Initial loading state
+    if (courseProvider.isInitialLoading) {
       return Column(
         children: List.generate(
           3,
           (index) => const CourseCardSkeleton(),
         ),
       );
-    } else if (courseProvider.error != null) {
+    }
+
+    // Error state (pagination error)
+    if (courseProvider.paginationError != null && courseProvider.isEmpty) {
       return Center(
         child: GlassCard(
           padding: const EdgeInsets.all(24),
@@ -250,7 +276,7 @@ class _CoursesPageState extends State<CoursesPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Lỗi: ${courseProvider.error}',
+                courseProvider.paginationError!,
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -278,7 +304,10 @@ class _CoursesPageState extends State<CoursesPage> {
           ),
         ),
       );
-    } else if (courseProvider.courses.isEmpty) {
+    }
+
+    // Empty state
+    if (courseProvider.isEmpty) {
       return Center(
         child: GlassCard(
           padding: const EdgeInsets.all(48),
@@ -304,24 +333,46 @@ class _CoursesPageState extends State<CoursesPage> {
           ),
         ),
       );
-    } else {
-      return ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount:
-            courseProvider.courses.length + (courseProvider.hasMorePages ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == courseProvider.courses.length) {
-            courseProvider.loadCourses();
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final course = courseProvider.courses[index];
-          return CourseCard(course: course, index: index);
-        },
-      );
     }
+
+    // Course list with loading more indicator
+    return Column(
+      children: [
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: courseProvider.courses.length,
+          itemBuilder: (context, index) {
+            final course = courseProvider.courses[index];
+            return CourseCard(course: course, index: index);
+          },
+        ),
+
+        // Loading more indicator
+        if (courseProvider.isLoadingMore)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(
+              child: CircularProgressIndicator(
+                color: AppTheme.themeOrangeStart,
+              ),
+            ),
+          ),
+
+        // End of list indicator
+        if (!courseProvider.hasMorePages && courseProvider.courses.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: Text(
+                'Đã hiển thị tất cả khóa học',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.darkTextSecondary,
+                    ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
