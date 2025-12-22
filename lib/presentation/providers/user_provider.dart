@@ -28,185 +28,149 @@ class UserProvider with ChangeNotifier, LoadingStateProviderMixin {
   // ==================== User Registration ====================
 
   Future<bool> registerUser(UserRegistrationRequest request) async {
-    final result = await executeAsync<bool>(
-      () async {
-        final response = await _userService.registerUser(request);
-        return response.success;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      final response = await _userService.registerUser(request);
+      return response.success;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   Future<bool> registerMentor(MentorRegistrationRequest request) async {
-    final result = await executeAsync<bool>(
-      () async {
-        final response = await _userService.registerMentor(request);
-        return response.success;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      final response = await _userService.registerMentor(request);
+      return response.success;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   Future<bool> registerBusiness(BusinessRegistrationRequest request) async {
-    final result = await executeAsync<bool>(
-      () async {
-        final response = await _userService.registerBusiness(request);
-        return response.success;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      final response = await _userService.registerBusiness(request);
+      return response.success;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   // ==================== User Profile ====================
 
   Future<bool> loadUserProfile({int? userId}) async {
-    final result = await executeAsync<bool>(
-      () async {
-        if (userId != null) {
-          _userProfile = await _userService.getUserProfile(userId);
-        } else {
-          _userProfile = await _userService.getMyProfile();
-        }
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      if (userId != null) {
+        _userProfile = await _userService.getUserProfile(userId);
+      } else {
+        _userProfile = await _userService.getMyProfile();
+      }
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   Future<bool> updateUserProfile(Map<String, dynamic> updateData) async {
-    final result = await executeAsync<bool>(
-      () async {
-        _userProfile = await _userService.updateUserProfile(updateData);
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      _userProfile = await _userService.updateUserProfile(updateData);
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   // ==================== User Skills ====================
 
   Future<bool> loadUserSkills(int userId) async {
-    final result = await executeAsync<bool>(
-      () async {
-        _userSkills = await _userService.getUserSkills(userId);
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      _userSkills = await _userService.getUserSkills(userId);
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   Future<bool> addUserSkill(Map<String, dynamic> skillData) async {
-    final result = await executeAsync<bool>(
-      () async {
-        final newSkill = await _userService.addUserSkill(skillData);
-        _userSkills.add(newSkill);
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      final newSkill = await _userService.addUserSkill(skillData);
+      _userSkills.add(newSkill);
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
-  Future<bool> updateUserSkill(int skillId, Map<String, dynamic> skillData) async {
-    final result = await executeAsync<bool>(
-      () async {
-        final updatedSkill = await _userService.updateUserSkill(skillId, skillData);
-        final index = _userSkills.indexWhere((skill) => skill.id == skillId);
-        if (index != -1) {
-          _userSkills[index] = updatedSkill;
-        }
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+  Future<bool> updateUserSkill(
+    int skillId,
+    Map<String, dynamic> skillData,
+  ) async {
+    final result = await executeAsync<bool>(() async {
+      final updatedSkill = await _userService.updateUserSkill(
+        skillId,
+        skillData,
+      );
+      final index = _userSkills.indexWhere((skill) => skill.id == skillId);
+      if (index != -1) {
+        _userSkills[index] = updatedSkill;
+      }
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   Future<bool> deleteUserSkill(int skillId) async {
-    final result = await executeAsync<bool>(
-      () async {
-        await _userService.deleteUserSkill(skillId);
-        _userSkills.removeWhere((skill) => skill.id == skillId);
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      await _userService.deleteUserSkill(skillId);
+      _userSkills.removeWhere((skill) => skill.id == skillId);
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   // ==================== Location Data ====================
 
   Future<bool> loadProvinces() async {
-    final result = await executeAsync<bool>(
-      () async {
-        _provinces = await _userService.getProvinces();
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      _provinces = await _userService.getProvinces();
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   Future<bool> loadDistrictsByProvince(String provinceCode) async {
-    final result = await executeAsync<bool>(
-      () async {
-        _districts = await _userService.getDistrictsByProvince(provinceCode);
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      _districts = await _userService.getDistrictsByProvince(provinceCode);
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   // ==================== Profiles ====================
 
   Future<bool> loadMentorProfile(int mentorId) async {
-    final result = await executeAsync<bool>(
-      () async {
-        _mentorProfile = await _userService.getMentorProfile(mentorId);
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      _mentorProfile = await _userService.getMentorProfile(mentorId);
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   Future<bool> loadBusinessProfile(int businessId) async {
-    final result = await executeAsync<bool>(
-      () async {
-        _businessProfile = await _userService.getBusinessProfile(businessId);
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      _businessProfile = await _userService.getBusinessProfile(businessId);
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   Future<bool> loadApplicationStatus() async {
-    final result = await executeAsync<bool>(
-      () async {
-        _applicationStatus = await _userService.getApplicationStatus();
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
-    );
+    final result = await executeAsync<bool>(() async {
+      _applicationStatus = await _userService.getApplicationStatus();
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 

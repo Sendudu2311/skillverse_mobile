@@ -16,7 +16,8 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
+class _ProfilePageState extends State<ProfilePage>
+    with SingleTickerProviderStateMixin {
   AnimationController? _animationController;
   Animation<double>? _fadeAnimation;
   Animation<Offset>? _slideAnimation;
@@ -31,21 +32,17 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController!,
-      curve: Curves.easeOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController!, curve: Curves.easeOut),
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController!,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController!,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     // Load user profile and start animation
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -139,7 +136,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             width: double.infinity,
             height: 200,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.surface.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16),
             ),
           ),
@@ -153,7 +152,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   height: 100,
                   margin: EdgeInsets.only(right: index < 2 ? 12 : 0),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.3),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -165,7 +166,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context, dynamic user, dynamic userProfile) {
+  Widget _buildProfileHeader(
+    BuildContext context,
+    dynamic user,
+    dynamic userProfile,
+  ) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -238,7 +243,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
                 // User Info
                 Text(
-                  userProfile?.fullName ?? user?.fullName ?? 'Học viên SkillVerse',
+                  userProfile?.fullName ??
+                      user?.fullName ??
+                      'Học viên SkillVerse',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -273,7 +280,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
                 // Role Badge with better styling
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(24),
@@ -285,11 +295,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.verified_user,
-                        size: 16,
-                        color: Colors.white,
-                      ),
+                      Icon(Icons.verified_user, size: 16, color: Colors.white),
                       const SizedBox(width: 6),
                       Text(
                         user?.roles?.isNotEmpty == true
@@ -309,7 +315,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 if (userProfile?.emailVerified == true) ...[
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.successColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
@@ -320,11 +329,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.check_circle,
-                          size: 14,
-                          color: Colors.white,
-                        ),
+                        Icon(Icons.check_circle, size: 14, color: Colors.white),
                         const SizedBox(width: 4),
                         Text(
                           'Email đã xác thực',
@@ -354,7 +359,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             title: 'Khóa học',
             value: '3',
             icon: Icons.school,
-            gradientColors: const [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+            gradientColors: const [
+              AppTheme.themeBlueStart,
+              AppTheme.themeBlueEnd,
+            ],
             onTap: () => context.go('/courses'),
           ),
         ),
@@ -364,7 +372,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             title: 'Chứng chỉ',
             value: '2',
             icon: Icons.card_membership,
-            gradientColors: const [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
+            gradientColors: const [
+              AppTheme.themeOrangeStart,
+              AppTheme.themeOrangeEnd,
+            ],
             onTap: () => context.push('/portfolio'),
           ),
         ),
@@ -374,7 +385,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             title: 'Điểm',
             value: '1,250',
             icon: Icons.star,
-            gradientColors: const [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
+            gradientColors: const [
+              AppTheme.themePurpleStart,
+              AppTheme.themePurpleEnd,
+            ],
           ),
         ),
       ],
@@ -394,7 +408,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -409,11 +425,6 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ],
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => context.push('/profile/edit'),
-                tooltip: 'Chỉnh sửa',
               ),
             ],
           ),
@@ -455,7 +466,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
@@ -499,7 +512,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           context,
           'Khóa học của tôi',
           Icons.school_outlined,
-          () => context.go('/courses'),
+          () => context.push('/my-courses'),
         ),
         _buildMenuItem(
           context,
@@ -566,7 +579,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(
@@ -590,9 +605,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -660,7 +675,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -678,10 +695,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                     ),
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right,
-                  color: Theme.of(context).hintColor,
-                ),
+                Icon(Icons.chevron_right, color: Theme.of(context).hintColor),
               ],
             ),
           ),
@@ -707,7 +721,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -720,15 +736,12 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             Expanded(
               child: Text(
                 title,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
               ),
             ),
-            Switch(
-              value: value,
-              onChanged: onChanged,
-            ),
+            Switch(value: value, onChanged: onChanged),
           ],
         ),
       ),
@@ -762,10 +775,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         return AlertDialog(
           title: Row(
             children: [
-              Icon(
-                Icons.logout,
-                color: AppTheme.errorColor,
-              ),
+              Icon(Icons.logout, color: AppTheme.errorColor),
               const SizedBox(width: 12),
               const Text('Đăng xuất'),
             ],

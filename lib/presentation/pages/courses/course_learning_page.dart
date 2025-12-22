@@ -4,9 +4,11 @@ import '../../../data/models/module_models.dart';
 import '../../../data/models/lesson_models.dart';
 import '../../../data/services/module_service.dart';
 import '../../../data/services/lesson_service.dart';
+import '../../../data/services/quiz_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/video_lesson_player.dart';
 import '../../widgets/reading_lesson_content.dart';
+import '../../widgets/quiz_lesson_widget.dart';
 
 class CourseLearningPage extends StatefulWidget {
   final String courseId;
@@ -22,6 +24,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
 
   List<ModuleSummaryDto> _modules = [];
   Map<int, List<LessonBriefDto>> _moduleLessons = {};
+  Map<int, int> _moduleQuizIds = {}; // ModuleId -> QuizId
 
   int? _activeModuleId;
   int? _activeLessonId;
@@ -53,15 +56,18 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       if (_modules.isNotEmpty) {
         await _loadLessonsForModule(_modules[0].id);
         if (_moduleLessons[_modules[0].id]?.isNotEmpty ?? false) {
-          await _selectLesson(_modules[0].id, _moduleLessons[_modules[0].id]![0].id);
+          await _selectLesson(
+            _modules[0].id,
+            _moduleLessons[_modules[0].id]![0].id,
+          );
         }
       }
     } catch (e) {
       setState(() => _isLoadingModules = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi tải modules: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi tải modules: $e')));
       }
     }
   }
@@ -76,6 +82,19 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       });
     } catch (e) {
       debugPrint('Error loading lessons for module $moduleId: $e');
+    }
+
+    // Also load quizzes for this module
+    try {
+      final quizService = QuizService();
+      final quizzes = await quizService.getQuizzesByModule(moduleId);
+      if (quizzes.isNotEmpty) {
+        setState(() {
+          _moduleQuizIds[moduleId] = quizzes.first.id;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading quizzes for module $moduleId: $e');
     }
   }
 
@@ -95,9 +114,9 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     } catch (e) {
       setState(() => _isLoadingLesson = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi tải bài học: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi tải bài học: $e')));
       }
     }
   }
@@ -118,9 +137,9 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã hoàn thành bài học!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã hoàn thành bài học!')));
       }
 
       // Move to next lesson
@@ -128,9 +147,9 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     } catch (e) {
       debugPrint('Error marking lesson complete: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi đánh dấu hoàn thành: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi đánh dấu hoàn thành: $e')));
       }
     } finally {
       setState(() => _isMarkingComplete = false);
@@ -150,7 +169,9 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         await _selectLesson(_activeModuleId!, nextLesson.id);
       } else {
         // No next lesson in current module, try next module
-        final currentModuleIndex = _modules.indexWhere((m) => m.id == _activeModuleId);
+        final currentModuleIndex = _modules.indexWhere(
+          (m) => m.id == _activeModuleId,
+        );
         if (currentModuleIndex < _modules.length - 1) {
           final nextModule = _modules[currentModuleIndex + 1];
           await _loadLessonsForModule(nextModule.id);
@@ -190,7 +211,9 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         await _selectLesson(_activeModuleId!, prevLesson.id);
       } else {
         // No previous lesson in current module, try previous module
-        final currentModuleIndex = _modules.indexWhere((m) => m.id == _activeModuleId);
+        final currentModuleIndex = _modules.indexWhere(
+          (m) => m.id == _activeModuleId,
+        );
         if (currentModuleIndex > 0) {
           final prevModule = _modules[currentModuleIndex - 1];
           await _loadLessonsForModule(prevModule.id);
@@ -227,9 +250,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(currentModule.title),
-      ),
+      appBar: AppBar(title: Text(currentModule.title)),
       body: Row(
         children: [
           // Sidebar - Module & Lesson List
@@ -272,9 +293,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                     if (lessons == null)
                       const Padding(
                         padding: EdgeInsets.all(16.0),
-                        child: Center(
-                          child: CircularProgressIndicator(),
-                        ),
+                        child: Center(child: CircularProgressIndicator()),
                       )
                     else if (lessons.isEmpty)
                       const Padding(
@@ -296,8 +315,9 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                               ? Text(_formatDuration(lesson.durationSec!))
                               : null,
                           selected: isActive,
-                          selectedTileColor:
-                              Theme.of(context).colorScheme.primaryContainer,
+                          selectedTileColor: Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer,
                           onTap: () => _selectLesson(module.id, lesson.id),
                         );
                       }),
@@ -308,9 +328,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
           ),
 
           // Main Content Area
-          Expanded(
-            child: _buildMainContent(),
-          ),
+          Expanded(child: _buildMainContent()),
         ],
       ),
     );
@@ -331,9 +349,9 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
           // Lesson Title
           Text(
             lesson.title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
 
@@ -360,9 +378,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
           const SizedBox(height: 16),
 
           // Lesson Content
-          Expanded(
-            child: _buildLessonContent(lesson),
-          ),
+          Expanded(child: _buildLessonContent(lesson)),
 
           const SizedBox(height: 16),
 
@@ -406,21 +422,20 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
           lessonId: lesson.id,
         );
       case LessonType.reading:
-        return ReadingLessonContent(
-          content: lesson.contentText,
-        );
+        return ReadingLessonContent(content: lesson.contentText);
       case LessonType.quiz:
-        return const Center(
-          child: Text('Quiz sẽ được triển khai sau'),
+        final quizId = _moduleQuizIds[_activeModuleId];
+        if (quizId == null) {
+          return const Center(child: Text('Không tìm thấy bài kiểm tra'));
+        }
+        return QuizLessonWidget(
+          quizId: quizId,
+          onCompleted: _markLessonComplete,
         );
       case LessonType.assignment:
-        return const Center(
-          child: Text('Assignment sẽ được triển khai sau'),
-        );
+        return const Center(child: Text('Assignment sẽ được triển khai sau'));
       case LessonType.codelab:
-        return const Center(
-          child: Text('Codelab không khả dụng trên mobile'),
-        );
+        return const Center(child: Text('Codelab không khả dụng trên mobile'));
     }
   }
 

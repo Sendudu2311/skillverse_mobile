@@ -48,6 +48,7 @@ class AuthProvider extends ChangeNotifier {
       final request = LoginRequest(email: email, password: password);
       final response = await _authService.login(request);
       _user = response.user;
+      _apiClient.setAuthToken(response.accessToken);
       _setLoading(false);
       return true;
     } catch (e) {
@@ -74,7 +75,9 @@ class AuthProvider extends ChangeNotifier {
         fullName: fullName,
         phoneNumber: phoneNumber,
       );
-      await _authService.register(request);
+      final response = await _authService.register(request);
+      _apiClient.setAuthToken(response.accessToken);
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -92,6 +95,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final response = await _authService.signInWithGoogle();
       _user = response.user;
+      _apiClient.setAuthToken(response.accessToken);
       _setLoading(false);
       return true;
     } catch (e) {

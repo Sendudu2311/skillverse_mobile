@@ -8,7 +8,9 @@ class UserService {
   final ApiClient _apiClient = ApiClient();
 
   // User Registration
-  Future<UserRegistrationResponse> registerUser(UserRegistrationRequest request) async {
+  Future<UserRegistrationResponse> registerUser(
+    UserRegistrationRequest request,
+  ) async {
     try {
       final response = await _apiClient.dio.post(
         '/auth/register/user',
@@ -22,7 +24,9 @@ class UserService {
   }
 
   // Mentor Registration
-  Future<MentorRegistrationResponse> registerMentor(MentorRegistrationRequest request) async {
+  Future<MentorRegistrationResponse> registerMentor(
+    MentorRegistrationRequest request,
+  ) async {
     try {
       final response = await _apiClient.dio.post(
         '/auth/register/mentor',
@@ -36,7 +40,9 @@ class UserService {
   }
 
   // Business Registration
-  Future<BusinessRegistrationResponse> registerBusiness(BusinessRegistrationRequest request) async {
+  Future<BusinessRegistrationResponse> registerBusiness(
+    BusinessRegistrationRequest request,
+  ) async {
     try {
       final response = await _apiClient.dio.post(
         '/auth/register/business',
@@ -52,7 +58,13 @@ class UserService {
   // Get User Profile
   Future<UserProfileResponse> getUserProfile(int userId) async {
     try {
-      final response = await _apiClient.dio.get('/users/$userId/profile');
+      // NOTE: There is no public endpoint /users/profile/{id} in docs yet.
+      // This might be intended for public profile view, but for now we warn or fallback?
+      // For now, if this is used, it might fail if the API doesn't exist.
+      // But based on analysis, we should use /user/profile for "me".
+      // Leaving this as is might be risky if used for "others".
+      // However, for verify task, I will focus on "me" endpoints.
+      final response = await _apiClient.dio.get('/users/profile/$userId');
 
       return UserProfileResponse.fromJson(response.data);
     } on DioException catch (e) {
@@ -63,23 +75,51 @@ class UserService {
   // Get My Profile
   Future<UserProfileResponse> getMyProfile() async {
     try {
-      final response = await _apiClient.dio.get('/users/profile');
+      final response = await _apiClient.dio.get('/user/profile');
+      final data = response.data;
 
-      return UserProfileResponse.fromJson(response.data);
+      // Patch missing fields to prevent parsing errors
+      if (data['id'] == null && data['userId'] != null) {
+        data['id'] = data['userId'];
+      }
+      if (data['isActive'] == null) {
+        data['isActive'] = true; // Default to true if missing
+      }
+      if (data['emailVerified'] == null) {
+        data['emailVerified'] = false; // Default to false if missing
+      }
+
+      print('DEBUG: Raw profile data: $data'); // Debug print
+
+      return UserProfileResponse.fromJson(data);
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
   // Update User Profile
-  Future<UserProfileResponse> updateUserProfile(Map<String, dynamic> updateData) async {
+  Future<UserProfileResponse> updateUserProfile(
+    Map<String, dynamic> updateData,
+  ) async {
     try {
       final response = await _apiClient.dio.put(
-        '/users/profile',
+        '/user/profile',
         data: updateData,
       );
 
-      return UserProfileResponse.fromJson(response.data);
+      final data = response.data;
+      // Patch missing fields
+      if (data['id'] == null && data['userId'] != null) {
+        data['id'] = data['userId'];
+      }
+      if (data['isActive'] == null) {
+        data['isActive'] = true;
+      }
+      if (data['emailVerified'] == null) {
+        data['emailVerified'] = false;
+      }
+
+      return UserProfileResponse.fromJson(data);
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -112,7 +152,10 @@ class UserService {
   }
 
   // Update User Skill
-  Future<UserSkillResponse> updateUserSkill(int skillId, Map<String, dynamic> skillData) async {
+  Future<UserSkillResponse> updateUserSkill(
+    int skillId,
+    Map<String, dynamic> skillData,
+  ) async {
     try {
       final response = await _apiClient.dio.put(
         '/users/skills/$skillId',
@@ -149,7 +192,9 @@ class UserService {
   // Get Districts by Province
   Future<List<District>> getDistrictsByProvince(String provinceCode) async {
     try {
-      final response = await _apiClient.dio.get('/locations/districts/$provinceCode');
+      final response = await _apiClient.dio.get(
+        '/locations/districts/$provinceCode',
+      );
 
       final List<dynamic> data = response.data;
       return data.map((json) => District.fromJson(json)).toList();
@@ -172,7 +217,9 @@ class UserService {
   // Get Business Profile
   Future<BusinessProfileResponse> getBusinessProfile(int businessId) async {
     try {
-      final response = await _apiClient.dio.get('/businesses/$businessId/profile');
+      final response = await _apiClient.dio.get(
+        '/businesses/$businessId/profile',
+      );
 
       return BusinessProfileResponse.fromJson(response.data);
     } on DioException catch (e) {

@@ -4,6 +4,7 @@ import '../../providers/course_provider.dart';
 import '../../widgets/course_card.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/shimmer_loading.dart';
+import '../../widgets/common_loading.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/course_models.dart';
 import '../../../core/utils/pagination_helper.dart';
@@ -72,14 +73,19 @@ class _CoursesPageState extends State<CoursesPage> {
               children: [
                 // Search Bar
                 GlassCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Tìm kiếm khóa học...',
                       prefixIcon: Icon(
                         Icons.search,
-                        color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+                        color: Theme.of(
+                          context,
+                        ).iconTheme.color?.withValues(alpha: 0.6),
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
@@ -93,7 +99,9 @@ class _CoursesPageState extends State<CoursesPage> {
                           : null,
                       border: InputBorder.none,
                       hintStyle: TextStyle(
-                        color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                        color: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                       ),
                     ),
                     onChanged: (value) {
@@ -152,10 +160,12 @@ class _CoursesPageState extends State<CoursesPage> {
 
                 // Header
                 Text(
-                  _searchQuery.isNotEmpty ? 'Kết quả tìm kiếm' : 'Khóa học đề xuất',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  _searchQuery.isNotEmpty
+                      ? 'Kết quả tìm kiếm'
+                      : 'Khóa học đề xuất',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
 
@@ -233,12 +243,14 @@ class _CoursesPageState extends State<CoursesPage> {
                     Text(
                       label,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isSelected
-                                ? Colors.white
-                                : Theme.of(context).textTheme.bodySmall?.color,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                            fontSize: 11,
-                          ),
+                        color: isSelected
+                            ? Colors.white
+                            : Theme.of(context).textTheme.bodySmall?.color,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        fontSize: 11,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -252,12 +264,16 @@ class _CoursesPageState extends State<CoursesPage> {
   }
 
   Widget _buildCourseList(CourseProvider courseProvider) {
-    // Initial loading state
-    if (courseProvider.isInitialLoading) {
+    // Show skeleton during initial loading OR refreshing
+    if (courseProvider.isInitialLoading ||
+        courseProvider.pagination.isRefreshing) {
       return Column(
         children: List.generate(
-          3,
-          (index) => const CourseCardSkeleton(),
+          5,
+          (index) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: const CourseCardSkeleton(),
+          ),
         ),
       );
     }
@@ -316,18 +332,18 @@ class _CoursesPageState extends State<CoursesPage> {
               Icon(
                 Icons.search_off,
                 size: 64,
-                color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.3),
+                color: Theme.of(
+                  context,
+                ).iconTheme.color?.withValues(alpha: 0.3),
               ),
               const SizedBox(height: 16),
               Text(
                 'Không tìm thấy khóa học',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.color
-                          ?.withValues(alpha: 0.6),
-                    ),
+                  color: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                ),
               ),
             ],
           ),
@@ -350,13 +366,9 @@ class _CoursesPageState extends State<CoursesPage> {
 
         // Loading more indicator
         if (courseProvider.isLoadingMore)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(
-              child: CircularProgressIndicator(
-                color: AppTheme.themeOrangeStart,
-              ),
-            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: CommonLoading.small(color: AppTheme.themeOrangeStart),
           ),
 
         // End of list indicator
@@ -367,8 +379,8 @@ class _CoursesPageState extends State<CoursesPage> {
               child: Text(
                 'Đã hiển thị tất cả khóa học',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.darkTextSecondary,
-                    ),
+                  color: AppTheme.darkTextSecondary,
+                ),
               ),
             ),
           ),

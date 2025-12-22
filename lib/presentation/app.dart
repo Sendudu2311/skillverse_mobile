@@ -14,6 +14,7 @@ import 'pages/dashboard/dashboard_page.dart';
 import 'pages/courses/courses_page.dart';
 import 'pages/courses/course_detail_page.dart';
 import 'pages/courses/course_learning_page.dart';
+import 'pages/courses/my_courses_page.dart';
 import 'pages/jobs/jobs_page.dart';
 import 'pages/help/help_center_page.dart';
 import 'pages/portfolio/portfolio_page.dart';
@@ -21,6 +22,7 @@ import 'pages/legal/privacy_policy_page.dart';
 import 'pages/terms/terms_of_service_page.dart';
 import 'pages/roadmap/roadmap_page.dart';
 import 'pages/profile/profile_page.dart';
+import 'pages/profile/profile_settings_page.dart';
 import 'pages/chat/chat_page.dart';
 import 'pages/premium/premium_plans_page.dart';
 import 'pages/payment/payment_history_page.dart';
@@ -52,13 +54,11 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
 
     return GoRouter(
       initialLocation: '/',
-      refreshListenable: authProvider, // Listen to auth changes for auto-redirect
+      refreshListenable:
+          authProvider, // Listen to auth changes for auto-redirect
       routes: [
         // Splash
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const SplashPage(),
-        ),
+        GoRoute(path: '/', builder: (context, state) => const SplashPage()),
 
         // Auth routes
         GoRoute(
@@ -124,17 +124,46 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
           },
         ),
         GoRoute(
+          path: '/my-courses',
+          builder: (context, state) => MainLayout(
+            currentPath: state.matchedLocation,
+            child: const MyCoursesPage(),
+          ),
+        ),
+        GoRoute(
           path: AppConstants.profileRoute,
           builder: (context, state) => MainLayout(
             currentPath: state.matchedLocation,
             child: const ProfilePage(),
           ),
+          routes: [
+            GoRoute(
+              path: 'edit',
+              builder: (context, state) => const ProfileSettingsPage(),
+            ),
+
+            GoRoute(
+              path: 'courses/:id',
+              builder: (context, state) => const ProfileSettingsPage(),
+            ),
+            GoRoute(
+              path: 'settings',
+              builder: (context, state) => Scaffold(
+                appBar: AppBar(title: const Text('Cài đặt')),
+                body: const Center(child: Text('Settings page - Coming soon')),
+              ),
+            ),
+            GoRoute(
+              path: 'payments',
+              builder: (context, state) => const PaymentHistoryPage(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/chat',
           builder: (context, state) => MainLayout(
             currentPath: state.matchedLocation,
-              child: const ChatPage(),
+            child: const ChatPage(),
           ),
         ),
         GoRoute(
@@ -208,7 +237,9 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
 
         // After loading finished on splash, redirect appropriately
         if (!isLoading && state.matchedLocation == '/') {
-          return isAuthenticated ? AppConstants.dashboardRoute : AppConstants.loginRoute;
+          return isAuthenticated
+              ? AppConstants.dashboardRoute
+              : AppConstants.loginRoute;
         }
 
         // If not authenticated and not on auth route, go to login
@@ -231,9 +262,7 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
     // Show loading if router not ready yet
     if (_router == null) {
       return MaterialApp(
-        home: const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
+        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
         theme: AppTheme.lightTheme,
       );
     }
