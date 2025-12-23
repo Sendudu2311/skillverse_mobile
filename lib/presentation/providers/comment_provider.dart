@@ -84,15 +84,16 @@ class CommentProvider with ChangeNotifier, LoadingStateProviderMixin {
 
   /// Add new comment
   Future<Comment?> addComment(int postId, String content) async {
-    return await executeAsync(() async {
-      final comment = await _postService.addComment(postId, content);
-
-      // Add to beginning of list
-      _pagination.items.insert(0, comment);
-      notifyListeners();
-
-      return comment;
+    final comment = await executeAsync(() async {
+      return await _postService.addComment(postId, content);
     }, errorMessageBuilder: (e) => 'Lỗi thêm bình luận: ${e.toString()}');
+
+    if (comment != null) {
+      // Add to beginning of list using PaginationHelper method
+      _pagination.insertItem(comment);
+    }
+
+    return comment;
   }
 
   /// Hide comment

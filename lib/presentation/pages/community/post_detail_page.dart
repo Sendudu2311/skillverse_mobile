@@ -9,6 +9,7 @@ import '../../widgets/glass_card.dart';
 import '../../../data/models/post_models.dart';
 import '../../../core/utils/date_time_helper.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../../core/utils/html_helper.dart';
 import '../../themes/app_theme.dart';
 
 class PostDetailPage extends StatefulWidget {
@@ -213,7 +214,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
           // Title
           if (_post!.title != null && _post!.title!.isNotEmpty) ...[
             Text(
-              _post!.title!,
+              HtmlHelper.cleanHtml(_post!.title!),
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
@@ -222,8 +223,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
           ],
 
           // Content
-          Text(_post!.content, style: Theme.of(context).textTheme.bodyLarge),
-
+          Text(
+            HtmlHelper.cleanHtml(_post!.content),
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
           const SizedBox(height: 20),
 
           // Action buttons
@@ -380,12 +383,16 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        comment.authorName ?? 'Unknown',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          comment.authorName ?? 'Unknown',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         DateTimeHelper.formatRelativeTime(comment.createdAt),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(

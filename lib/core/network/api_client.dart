@@ -9,51 +9,76 @@ class ApiClient {
   ApiClient._internal();
 
   late final Dio _dio;
+  String? _authToken;
 
   void initialize() {
-    _dio = Dio(BaseOptions(
-      baseUrl: Environment.backendUrl,
-      connectTimeout: Duration(milliseconds: Environment.apiTimeout),
-      receiveTimeout: Duration(milliseconds: Environment.apiTimeout),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: Environment.backendUrl,
+        connectTimeout: Duration(milliseconds: Environment.apiTimeout),
+        receiveTimeout: Duration(milliseconds: Environment.apiTimeout),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
 
     if (Environment.isDebug) {
-      _dio.interceptors.add(LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        logPrint: (obj) => debugPrint(obj.toString()),
-      ));
+      _dio.interceptors.add(
+        LogInterceptor(
+          requestBody: true,
+          responseBody: true,
+          logPrint: (obj) => debugPrint(obj.toString()),
+        ),
+      );
     }
 
     // Add auth interceptor
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        // Add auth token if available
-        final token = await _getAuthToken();
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        handler.next(options);
-      },
-      onError: (error, handler) {
-        final appException = _handleError(error);
-        handler.reject(DioException(
-          requestOptions: error.requestOptions,
-          error: appException,
-        ));
-      },
-    ));
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          // Add auth token if available
+          final token = await _getAuthToken();
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          handler.next(options);
+        },
+        onError: (error, handler) {
+          final appException = _handleError(error);
+          handler.reject(
+            DioException(
+              requestOptions: error.requestOptions,
+              error: appException,
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Dio get dio => _dio;
 
+  /// Set authentication token
+  void setAuthToken(String? token) {
+    _authToken = token;
+    debugPrint(
+      '🔐 Token set: ${token != null ? "YES (${token.substring(0, 20)}...)" : "NO"}',
+    );
+  }
+
+  /// Clear authentication token
+  void clearAuthToken() {
+    _authToken = null;
+    debugPrint('🔓 Token cleared');
+  }
+
   Future<String?> _getAuthToken() async {
-    // TODO: Implement token retrieval from secure storage
-    return null;
+    debugPrint(
+      '🔍 Getting token: ${_authToken != null ? "Found" : "Not found"}',
+    );
+    return _authToken;
   }
 
   AppException _handleError(DioException error) {

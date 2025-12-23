@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/models/post_models.dart';
 import '../themes/app_theme.dart';
 import '../../core/utils/date_time_helper.dart';
+import '../../core/utils/html_helper.dart';
 
 class PostCard extends StatelessWidget {
   final Post post;
@@ -41,7 +42,7 @@ class PostCard extends StatelessWidget {
               // Post title (if available)
               if (post.title != null && post.title!.isNotEmpty) ...[
                 Text(
-                  post.title!,
+                  HtmlHelper.cleanHtml(post.title!),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -53,7 +54,7 @@ class PostCard extends StatelessWidget {
 
               // Post content preview
               Text(
-                post.content,
+                HtmlHelper.cleanHtml(post.content),
                 style: Theme.of(context).textTheme.bodyMedium,
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
@@ -148,12 +149,16 @@ class PostCard extends StatelessWidget {
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               Text(
                 DateTimeHelper.formatRelativeTime(post.createdAt),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).hintColor,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

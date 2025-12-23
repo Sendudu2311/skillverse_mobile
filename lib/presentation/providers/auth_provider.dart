@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../data/models/auth_models.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/api_client.dart';
+import '../../core/network/api_client.dart';
 import '../../core/exceptions/api_exception.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -160,7 +160,8 @@ class AuthProvider extends ChangeNotifier {
       final newToken = await _authService.refreshAccessToken();
       if (newToken == null) return false;
 
-      // Token đã được cập nhật trong service
+      // Set new token to ApiClient
+      _apiClient.setAuthToken(newToken);
       return true;
     } catch (e) {
       await logout(); // If refresh fails, logout user
