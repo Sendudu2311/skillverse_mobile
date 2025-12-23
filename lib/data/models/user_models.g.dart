@@ -390,3 +390,37 @@ Map<String, dynamic> _$ApplicationStatusResponseToJson(
   'reviewedAt': instance.reviewedAt,
   'reviewerComments': instance.reviewerComments,
 };
+
+PublicUserProfile _$PublicUserProfileFromJson(Map<String, dynamic> json) =>
+    PublicUserProfile(
+      userId: (json['userId'] as num).toInt(),
+      email: json['email'] as String?,
+      fullName: json['fullName'] as String?,
+      avatarMediaId: (json['avatarMediaId'] as num?)?.toInt(),
+      avatarMediaUrl: json['avatarMediaUrl'] as String?,
+      avatarPosition: json['avatarPosition'] as String?,
+      bio: json['bio'] as String?,
+      phone: json['phone'] as String?,
+      address: json['address'] as String?,
+      createdAt: json['createdAt'] == null
+          ? null
+          : DateTime.parse(json['createdAt'] as String),
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.parse(json['updatedAt'] as String),
+    );
+
+Map<String, dynamic> _$PublicUserProfileToJson(PublicUserProfile instance) =>
+    <String, dynamic>{
+      'userId': instance.userId,
+      'email': instance.email,
+      'fullName': instance.fullName,
+      'avatarMediaId': instance.avatarMediaId,
+      'avatarMediaUrl': instance.avatarMediaUrl,
+      'avatarPosition': instance.avatarPosition,
+      'bio': instance.bio,
+      'phone': instance.phone,
+      'address': instance.address,
+      'createdAt': instance.createdAt?.toIso8601String(),
+      'updatedAt': instance.updatedAt?.toIso8601String(),
+    };

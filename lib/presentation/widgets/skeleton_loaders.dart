@@ -411,3 +411,82 @@ class CommentSkeleton extends StatelessWidget {
     );
   }
 }
+
+/// Post card skeleton (for community/social feed)
+class PostCardSkeleton extends StatelessWidget {
+  const PostCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Author header
+            Row(
+              children: [
+                const ShimmerBox(width: 40, height: 40, borderRadius: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ShimmerBox(
+                        width: MediaQuery.of(context).size.width * 0.3,
+                        height: 14,
+                        margin: const EdgeInsets.only(bottom: 4),
+                      ),
+                      ShimmerBox(
+                        width: MediaQuery.of(context).size.width * 0.2,
+                        height: 12,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Post content
+            const ShimmerBox(
+              width: double.infinity,
+              height: 16,
+              margin: EdgeInsets.only(bottom: 8),
+            ),
+            const ShimmerBox(
+              width: double.infinity,
+              height: 14,
+              margin: EdgeInsets.only(bottom: 8),
+            ),
+            ShimmerBox(
+              width: MediaQuery.of(context).size.width * 0.6,
+              height: 14,
+              margin: const EdgeInsets.only(bottom: 16),
+            ),
+
+            // Action buttons
+            Row(
+              children: [
+                const ShimmerBox(width: 60, height: 32, borderRadius: 16),
+                const SizedBox(width: 12),
+                const ShimmerBox(width: 60, height: 32, borderRadius: 16),
+                const SizedBox(width: 12),
+                const ShimmerBox(width: 60, height: 32, borderRadius: 16),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

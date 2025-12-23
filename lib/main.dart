@@ -11,9 +11,12 @@ import 'presentation/providers/premium_provider.dart';
 import 'presentation/providers/roadmap_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/user_provider.dart';
+import 'presentation/providers/post_provider.dart';
+import 'presentation/providers/comment_provider.dart';
 import 'presentation/app.dart';
 import 'core/utils/storage_helper.dart';
 import 'core/utils/date_time_helper.dart';
+import 'core/network/api_client.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,15 +30,17 @@ void main() async {
 
   // Initialize helpers
   await _initializeHelpers();
-  
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
-          create: (context) => ChatProvider(Provider.of<AuthProvider>(context, listen: false)),
-          update: (context, authProvider, previous) => previous ?? ChatProvider(authProvider),
+          create: (context) =>
+              ChatProvider(Provider.of<AuthProvider>(context, listen: false)),
+          update: (context, authProvider, previous) =>
+              previous ?? ChatProvider(authProvider),
         ),
         ChangeNotifierProvider(create: (_) => CourseProvider()),
         ChangeNotifierProvider(create: (_) => EnrollmentProvider()),
@@ -44,6 +49,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => PremiumProvider()),
         ChangeNotifierProvider(create: (_) => RoadmapProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => PostProvider()),
+        ChangeNotifierProvider(create: (_) => CommentProvider()),
       ],
       child: const SkillVerseApp(),
     ),
@@ -62,6 +69,10 @@ Future<void> _initializeHelpers() async {
     // Initialize DateTimeHelper (Vietnamese locale for timeago)
     DateTimeHelper.initialize();
     debugPrint('✅ DateTimeHelper initialized');
+
+    // Initialize ApiClient
+    ApiClient().initialize();
+    debugPrint('✅ ApiClient initialized');
   } catch (e) {
     debugPrint('❌ Error initializing helpers: $e');
     // Continue anyway - helpers will handle errors gracefully

@@ -26,6 +26,9 @@ import 'pages/profile/profile_settings_page.dart';
 import 'pages/chat/chat_page.dart';
 import 'pages/premium/premium_plans_page.dart';
 import 'pages/payment/payment_history_page.dart';
+import 'pages/community/community_page.dart';
+import 'pages/community/post_detail_page.dart';
+import 'pages/community/post_form_page.dart';
 import 'widgets/main_layout.dart';
 import 'themes/app_theme.dart';
 
@@ -208,6 +211,34 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
             child: const JobsPage(),
           ),
         ),
+
+        // Community Routes
+        GoRoute(
+          path: '/community',
+          builder: (context, state) => MainLayout(
+            currentPath: state.matchedLocation,
+            child: const CommunityPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/community/create',
+          builder: (context, state) => const PostFormPage(),
+        ),
+        GoRoute(
+          path: '/community/:postId',
+          builder: (context, state) {
+            final postId = int.parse(state.pathParameters['postId']!);
+            return PostDetailPage(postId: postId);
+          },
+        ),
+        GoRoute(
+          path: '/community/:postId/edit',
+          builder: (context, state) {
+            final postId = int.parse(state.pathParameters['postId']!);
+            return PostFormPage(postId: postId);
+          },
+        ),
+
         // Premium subscription page
         GoRoute(
           path: '/premium',

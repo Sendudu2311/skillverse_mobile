@@ -15,6 +15,9 @@ import '../pages/profile/profile_settings_page.dart';
 import '../pages/portfolio/portfolio_page.dart';
 import '../pages/premium/premium_plans_page.dart';
 import '../pages/payment/payment_history_page.dart';
+import '../pages/community/community_page.dart';
+import '../pages/community/post_detail_page.dart';
+import '../pages/community/post_form_page.dart';
 import '../pages/splash_page.dart';
 import '../widgets/main_layout.dart';
 import '../providers/auth_provider.dart';
@@ -35,7 +38,12 @@ class AppRouter {
 
       // Redirect to login if not authenticated (except for auth pages)
       if (!isAuthenticated) {
-        final authPages = ['/login', '/register', '/verify-email', '/forgot-password'];
+        final authPages = [
+          '/login',
+          '/register',
+          '/verify-email',
+          '/forgot-password',
+        ];
         if (!authPages.contains(state.matchedLocation)) {
           return '/login';
         }
@@ -43,7 +51,13 @@ class AppRouter {
 
       // Redirect to dashboard if authenticated and on auth pages
       if (isAuthenticated) {
-        final authPages = ['/login', '/register', '/verify-email', '/forgot-password', '/splash'];
+        final authPages = [
+          '/login',
+          '/register',
+          '/verify-email',
+          '/forgot-password',
+          '/splash',
+        ];
         if (authPages.contains(state.matchedLocation)) {
           return '/dashboard';
         }
@@ -130,6 +144,37 @@ class AppRouter {
         ),
       ),
 
+      // Community Routes
+      GoRoute(
+        path: '/community',
+        name: 'community',
+        builder: (context, state) => MainLayout(
+          currentPath: state.matchedLocation,
+          child: const CommunityPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/community/create',
+        name: 'community-create',
+        builder: (context, state) => const PostFormPage(),
+      ),
+      GoRoute(
+        path: '/community/:postId',
+        name: 'community-detail',
+        builder: (context, state) {
+          final postId = int.parse(state.pathParameters['postId']!);
+          return PostDetailPage(postId: postId);
+        },
+      ),
+      GoRoute(
+        path: '/community/:postId/edit',
+        name: 'community-edit',
+        builder: (context, state) {
+          final postId = int.parse(state.pathParameters['postId']!);
+          return PostFormPage(postId: postId);
+        },
+      ),
+
       // Premium Route
       GoRoute(
         path: '/premium',
@@ -156,7 +201,10 @@ class AppRouter {
             name: 'profile-certificates',
             builder: (context, state) => MainLayout(
               currentPath: state.matchedLocation,
-              child: Scaffold(appBar: AppBar(title: const Text('Chứng chỉ')), body: const Center(child: Text('Certificates placeholder'))),
+              child: Scaffold(
+                appBar: AppBar(title: const Text('Chứng chỉ')),
+                body: const Center(child: Text('Certificates placeholder')),
+              ),
             ),
           ),
           GoRoute(

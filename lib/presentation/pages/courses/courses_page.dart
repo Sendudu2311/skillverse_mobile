@@ -29,6 +29,7 @@ class _CoursesPageState extends State<CoursesPage> {
     // Load courses on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<CourseProvider>();
+      provider.reset(); // Reset filters and previous state
       provider.loadCourses();
 
       // Add pagination listener for infinite scroll

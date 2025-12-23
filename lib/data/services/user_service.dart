@@ -97,6 +97,16 @@ class UserService {
     }
   }
 
+  // Get Public Profile
+  Future<PublicUserProfile> getPublicProfile(int userId) async {
+    try {
+      final response = await _apiClient.dio.get('/user/profile/public/$userId');
+      return PublicUserProfile.fromJson(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   // Update User Profile
   Future<UserProfileResponse> updateUserProfile(
     Map<String, dynamic> updateData,

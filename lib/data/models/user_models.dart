@@ -401,3 +401,37 @@ class ApplicationStatusResponse {
       _$ApplicationStatusResponseFromJson(json);
   Map<String, dynamic> toJson() => _$ApplicationStatusResponseToJson(this);
 }
+
+// Public User Profile
+@JsonSerializable()
+class PublicUserProfile {
+  final int userId;
+  final String? email;
+  final String? fullName;
+  final int? avatarMediaId;
+  final String? avatarMediaUrl;
+  final String? avatarPosition;
+  final String? bio;
+  final String? phone;
+  final String? address;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  PublicUserProfile({
+    required this.userId,
+    this.email,
+    this.fullName,
+    this.avatarMediaId,
+    this.avatarMediaUrl,
+    this.avatarPosition,
+    this.bio,
+    this.phone,
+    this.address,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory PublicUserProfile.fromJson(Map<String, dynamic> json) =>
+      _$PublicUserProfileFromJson(json);
+  Map<String, dynamic> toJson() => _$PublicUserProfileToJson(this);
+}
