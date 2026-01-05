@@ -254,6 +254,13 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
           _progressMap.remove(questId);
         }
 
+        // Update current roadmap object with new progress
+        if (_currentRoadmap != null) {
+          _currentRoadmap = _currentRoadmap!.copyWith(
+            progress: Map.from(_progressMap),
+          );
+        }
+
         // Update roadmap list item progress
         final index = _roadmaps.indexWhere((r) => r.sessionId == sessionId);
         if (index != -1) {

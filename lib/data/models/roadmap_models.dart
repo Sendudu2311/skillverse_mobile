@@ -273,6 +273,28 @@ class RoadmapResponse {
   bool isQuestCompleted(String questId) {
     return progress?[questId]?.isCompleted ?? false;
   }
+
+  RoadmapResponse copyWith({
+    int? sessionId,
+    RoadmapMetadata? metadata,
+    List<RoadmapNode>? roadmap,
+    RoadmapStatistics? statistics,
+    List<String>? learningTips,
+    List<String>? warnings,
+    String? createdAt,
+    Map<String, QuestProgress>? progress,
+  }) {
+    return RoadmapResponse(
+      sessionId: sessionId ?? this.sessionId,
+      metadata: metadata ?? this.metadata,
+      roadmap: roadmap ?? this.roadmap,
+      statistics: statistics ?? this.statistics,
+      learningTips: learningTips ?? this.learningTips,
+      warnings: warnings ?? this.warnings,
+      createdAt: createdAt ?? this.createdAt,
+      progress: progress ?? this.progress,
+    );
+  }
 }
 
 /// Summary of a roadmap session (for list view) - V2 Fields

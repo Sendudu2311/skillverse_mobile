@@ -59,6 +59,11 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -274,11 +279,13 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
   }
 
   Widget _buildGoalInput(BuildContext context, bool isDark) {
+    final isSkillBased = _tabController.index == 0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Mục tiêu học tập',
+          isSkillBased ? 'Kỹ năng muốn học' : 'Mục tiêu nghề nghiệp',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
             color: isDark
@@ -296,8 +303,9 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
                 : AppTheme.lightTextPrimary,
           ),
           decoration: InputDecoration(
-            hintText:
-                'Ví dụ: Học Python làm Data Science, Trở thành Frontend Developer, Học IELTS 7.0...',
+            hintText: isSkillBased
+                ? 'Ví dụ: Python, ReactJS, IELTS, Graphic Design...'
+                : 'Ví dụ: Data Scientist, Frontend Developer, Product Manager...',
             hintStyle: TextStyle(
               color: isDark
                   ? AppTheme.darkTextSecondary
@@ -323,7 +331,7 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
             if (value == null || value.trim().isEmpty) {
               return 'Vui lòng nhập mục tiêu học tập';
             }
-            if (value.trim().length < 10) {
+            if (value.trim().length < 2) {
               return 'Mục tiêu quá ngắn, vui lòng mô tả chi tiết hơn';
             }
             return null;
@@ -738,6 +746,11 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
       dailyTime: _dailyTime,
       background: _background,
       targetEnvironment: _targetEnvironment,
+      // Map goal to specific fields based on mode
+      skillName: _tabController.index == 0 ? _goalController.text.trim() : null,
+      targetRole: _tabController.index == 1
+          ? _goalController.text.trim()
+          : null,
     );
 
     // Pre-validate

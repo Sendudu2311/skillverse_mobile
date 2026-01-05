@@ -4,6 +4,8 @@ import '../../providers/roadmap_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/roadmap_models.dart';
 import 'package:go_router/go_router.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/painters/grid_painter.dart';
 
 class RoadmapDetailPage extends StatefulWidget {
   final int sessionId;
@@ -200,65 +202,123 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
     RoadmapResponse roadmap,
     bool isDark,
   ) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 80, 20, 20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: isDark
-              ? [AppTheme.galaxyDark, AppTheme.galaxyDarkest]
-              : [
-                  AppTheme.primaryBlue.withValues(alpha: 0.1),
-                  Colors.transparent,
-                ],
+    return Stack(
+      children: [
+        // Background Image/Gradient
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? [
+                      Color(0xFF1E1B4B), // Indigo 950
+                      Color(0xFF312E81), // Indigo 900
+                      Color(0xFF0F172A), // Slate 900
+                    ]
+                  : [
+                      Color(0xFFE0E7FF), // Indigo 100
+                      Color(0xFFF3F4F6), // Gray 100
+                    ],
+            ),
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Tags row
-          Row(
+
+        // Grid texture (optional)
+        if (isDark)
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.1,
+              child: CustomPaint(painter: GridPainter()),
+            ),
+          ),
+
+        // Gradient overlay for text readability
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+              stops: const [0.6, 1.0],
+            ),
+          ),
+        ),
+
+        // Content
+        Positioned(
+          left: 20,
+          right: 20,
+          bottom: 20,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              _buildTag(
-                'System Online',
-                AppTheme.successColor,
-                Icons.circle,
-                isDark,
+              // Tags row
+              Row(
+                children: [
+                  _buildTag(
+                    'System Online',
+                    AppTheme.successColor,
+                    Icons.circle,
+                    isDark,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildTag(
+                    roadmap.metadata.roadmapMode == RoadmapMode.careerBased
+                        ? 'Career Protocol'
+                        : 'Skill Protocol',
+                    const Color(0xFF60A5FA), // Blue 400
+                    Icons.schema,
+                    isDark,
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              _buildTag(
-                roadmap.metadata.roadmapMode == RoadmapMode.careerBased
-                    ? 'Career Protocol'
-                    : 'Skill Protocol',
-                AppTheme.primaryBlueDark,
-                null,
-                isDark,
+              const SizedBox(height: 12),
+
+              // Title
+              Text(
+                roadmap.metadata.title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      offset: const Offset(0, 2),
+                      blurRadius: 4,
+                      color: Colors.black.withOpacity(0.5),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: 8),
-              _buildTag(
-                roadmap.metadata.experienceLevel,
-                AppTheme.themeOrangeStart,
-                null,
-                isDark,
+              const SizedBox(height: 8),
+
+              // Subtitle/Experience level
+              Row(
+                children: [
+                  Icon(
+                    Icons.signal_cellular_alt,
+                    size: 16,
+                    color: Colors.white70,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    roadmap.metadata.experienceLevel,
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(Icons.timer_outlined, size: 16, color: Colors.white70),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Updated: V2.1',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
-
-          // Title
-          Text(
-            roadmap.metadata.title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isDark
-                  ? AppTheme.darkTextPrimary
-                  : AppTheme.lightTextPrimary,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -297,52 +357,55 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
   ) {
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildStatCard(
-              context,
-              icon: Icons.schedule_outlined,
-              label: 'Thời lượng',
-              value: roadmap.metadata.duration,
-              subValue: 'Ước tính: ${roadmap.statistics.totalEstimatedHours}h',
-              isDark: isDark,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                context,
+                icon: Icons.schedule_outlined,
+                label: 'Thời lượng',
+                value: roadmap.metadata.duration,
+                subValue: '${roadmap.statistics.totalEstimatedHours}h',
+                isDark: isDark,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard(
-              context,
-              icon: Icons.layers_outlined,
-              label: 'Tổng bước',
-              value: '${roadmap.statistics.totalNodes}',
-              subValue: 'Modules',
-              isDark: isDark,
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildStatCard(
+                context,
+                icon: Icons.layers_outlined,
+                label: 'Tổng bước',
+                value: '${roadmap.statistics.totalNodes}',
+                subValue: 'Modules',
+                isDark: isDark,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard(
-              context,
-              icon: Icons.star_outline,
-              label: 'Nhiệm vụ chính',
-              value: '${roadmap.statistics.mainNodes}',
-              subValue: null,
-              isDark: isDark,
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildStatCard(
+                context,
+                icon: Icons.star_outline,
+                label: 'Nhiệm vụ',
+                value: '${roadmap.statistics.mainNodes}',
+                subValue: 'Chính',
+                isDark: isDark,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard(
-              context,
-              icon: Icons.tag,
-              label: 'Nhiệm vụ phụ',
-              value: '${roadmap.statistics.sideNodes}',
-              subValue: null,
-              isDark: isDark,
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildStatCard(
+                context,
+                icon: Icons.tag,
+                label: 'Nhiệm vụ',
+                value: '${roadmap.statistics.sideNodes}',
+                subValue: 'Phụ',
+                isDark: isDark,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -355,47 +418,63 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
     String? subValue,
     required bool isDark,
   }) {
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.darkCardBackground
-            : AppTheme.lightCardBackground,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-        ),
-      ),
+      borderRadius: 16,
+      backgroundColor: isDark
+          ? const Color(0xFF1E293B).withOpacity(0.6)
+          : Colors.white.withOpacity(0.7),
+      borderColor: isDark
+          ? Colors.white.withOpacity(0.1)
+          : Colors.black.withOpacity(0.05),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
               color: isDark
-                  ? AppTheme.darkTextPrimary
-                  : AppTheme.lightTextPrimary,
+                  ? AppTheme.primaryBlue.withOpacity(0.2)
+                  : AppTheme.primaryBlue.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
             ),
           ),
-          if (subValue != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              subValue,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
-                fontSize: 10,
+          const SizedBox(height: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                ),
               ),
-            ),
-          ],
+              if (subValue != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subValue,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ],
+          ),
           const SizedBox(height: 4),
           Text(
             label,
@@ -420,19 +499,12 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppTheme.darkCardBackground
-              : AppTheme.lightCardBackground,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark
-                ? AppTheme.darkBorderColor
-                : AppTheme.lightBorderColor,
-          ),
-        ),
+      child: GlassCard(
+        padding: const EdgeInsets.all(20),
+        borderRadius: 16,
+        backgroundColor: isDark
+            ? const Color(0xFF1E293B).withOpacity(0.6)
+            : Colors.white.withOpacity(0.7),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -440,14 +512,25 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.flag_outlined,
-                  size: 18,
-                  color: isDark
-                      ? AppTheme.primaryBlueDark
-                      : AppTheme.primaryBlue,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color:
+                        (isDark
+                                ? AppTheme.primaryBlueDark
+                                : AppTheme.primaryBlue)
+                            .withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.flag_rounded,
+                    size: 20,
+                    color: isDark
+                        ? AppTheme.primaryBlueDark
+                        : AppTheme.primaryBlue,
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,15 +542,17 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
                               ? AppTheme.primaryBlueDark
                               : AppTheme.primaryBlue,
                           fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       Text(
                         metadata.validatedGoal ?? metadata.originalGoal,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: isDark
                               ? AppTheme.darkTextPrimary
                               : AppTheme.lightTextPrimary,
+                          height: 1.5,
                         ),
                       ),
                     ],
@@ -475,14 +560,19 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            const Divider(height: 1),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            Divider(
+              height: 1,
+              color: isDark
+                  ? Colors.white.withOpacity(0.1)
+                  : Colors.black.withOpacity(0.05),
+            ),
+            const SizedBox(height: 24),
 
             // Grid of metadata items
             Wrap(
               spacing: 24,
-              runSpacing: 16,
+              runSpacing: 24,
               children: [
                 if (metadata.target != null)
                   _buildMetadataItem(

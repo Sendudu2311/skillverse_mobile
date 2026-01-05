@@ -21,6 +21,8 @@ import 'pages/portfolio/portfolio_page.dart';
 import 'pages/legal/privacy_policy_page.dart';
 import 'pages/terms/terms_of_service_page.dart';
 import 'pages/roadmap/roadmap_page.dart';
+import 'pages/roadmap/roadmap_generate_page.dart';
+import 'pages/roadmap/roadmap_detail_page.dart';
 import 'pages/profile/profile_page.dart';
 import 'pages/profile/profile_settings_page.dart';
 import 'pages/chat/chat_page.dart';
@@ -203,6 +205,17 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
             currentPath: state.matchedLocation,
             child: const RoadmapPage(),
           ),
+        ),
+        GoRoute(
+          path: '/roadmap/generate',
+          builder: (context, state) => const RoadmapGeneratePage(),
+        ),
+        GoRoute(
+          path: '/roadmap/:sessionId',
+          builder: (context, state) {
+            final sessionId = int.parse(state.pathParameters['sessionId']!);
+            return RoadmapDetailPage(sessionId: sessionId);
+          },
         ),
         GoRoute(
           path: '/jobs',
