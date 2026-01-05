@@ -1,5 +1,5 @@
 import '../models/lesson_models.dart';
-import 'api_client.dart';
+import '../../core/network/api_client.dart';
 
 class LessonService {
   static final LessonService _instance = LessonService._internal();

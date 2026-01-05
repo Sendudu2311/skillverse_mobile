@@ -13,7 +13,8 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> with TickerProviderStateMixin {
+class _DashboardPageState extends State<DashboardPage>
+    with TickerProviderStateMixin {
   late AnimationController _welcomeController;
   late AnimationController _statsController;
   late AnimationController _coursesController;
@@ -98,7 +99,9 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.themeBlueStart.withValues(alpha: 0.4),
+                              color: AppTheme.themeBlueStart.withValues(
+                                alpha: 0.4,
+                              ),
                               blurRadius: 20,
                               offset: const Offset(0, 8),
                             ),
@@ -111,21 +114,30 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Xin chào,',
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          color: Colors.white.withValues(alpha: 0.9),
-                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.9,
+                                              ),
+                                            ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         user?.fullName ?? 'Learner',
-                                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .headlineMedium
+                                            ?.copyWith(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -146,7 +158,10 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                             ),
                             const SizedBox(height: 16),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
@@ -162,10 +177,15 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                                   Expanded(
                                     child: Text(
                                       'Hôm nay bạn muốn học gì?',
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                        color: Colors.white.withValues(alpha: 0.95),
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.copyWith(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.95,
+                                            ),
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                     ),
                                   ),
                                 ],
@@ -184,9 +204,9 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
               // Stats Section
               Text(
                 'Thống kê học tập',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
 
@@ -197,7 +217,10 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                       title: 'Khóa học',
                       value: '3',
                       icon: Icons.book_outlined,
-                      gradientColors: const [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+                      gradientColors: const [
+                        AppTheme.themeBlueStart,
+                        AppTheme.themeBlueEnd,
+                      ],
                       onTap: () => context.go('/courses'),
                     ),
                   ),
@@ -207,7 +230,10 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                       title: 'Hoàn thành',
                       value: '65%',
                       icon: Icons.trending_up_outlined,
-                      gradientColors: const [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
+                      gradientColors: const [
+                        AppTheme.themeGreenStart,
+                        AppTheme.themeGreenEnd,
+                      ],
                     ),
                   ),
                 ],
@@ -222,7 +248,10 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                       title: 'Streak',
                       value: '7',
                       icon: Icons.local_fire_department_outlined,
-                      gradientColors: const [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
+                      gradientColors: const [
+                        AppTheme.themeOrangeStart,
+                        AppTheme.themeOrangeEnd,
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -231,7 +260,77 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                       title: 'Điểm',
                       value: '1,250',
                       icon: Icons.star_outline,
-                      gradientColors: const [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
+                      gradientColors: const [
+                        AppTheme.themePurpleStart,
+                        AppTheme.themePurpleEnd,
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Quick Actions Section
+              Text(
+                'Truy cập nhanh',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      context,
+                      'AI Roadmap',
+                      Icons.map_outlined,
+                      const [
+                        AppTheme.themePurpleStart,
+                        AppTheme.themePurpleEnd,
+                      ],
+                      () => context.push('/roadmap'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      context,
+                      'Khóa học',
+                      Icons.school_outlined,
+                      const [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+                      () => context.go('/courses'),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      context,
+                      'AI Chat',
+                      Icons.chat_bubble_outline,
+                      const [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
+                      () => context.go('/chat'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      context,
+                      'Cộng đồng',
+                      Icons.people_outline,
+                      const [
+                        AppTheme.themeOrangeStart,
+                        AppTheme.themeOrangeEnd,
+                      ],
+                      () => context.go('/community'),
                     ),
                   ),
                 ],
@@ -242,9 +341,9 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
               // Recent Courses
               Text(
                 'Khóa học gần đây',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
 
@@ -271,9 +370,9 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
               // Learning Goals
               Text(
                 'Mục tiêu học tập',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
 
@@ -298,6 +397,62 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
           ),
         );
       },
+    );
+  }
+
+  Widget _buildQuickActionCard(
+    BuildContext context,
+    String title,
+    IconData icon,
+    List<Color> gradientColors,
+    VoidCallback onTap,
+  ) {
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradientColors
+                  .map((c) => c.withValues(alpha: 0.1))
+                  .toList(),
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: gradientColors),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: gradientColors.first.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 28),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -344,7 +499,9 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
           Text(
             status,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+              color: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
             ),
           ),
           if (progress > 0) ...[
@@ -413,7 +570,9 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                 Text(
                   deadline,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                   ),
                 ),
               ],

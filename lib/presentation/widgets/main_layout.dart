@@ -124,6 +124,8 @@ class _MainLayoutState extends State<MainLayout> {
         return 'Hồ sơ';
       case '/portfolio':
         return 'Portfolio';
+      case '/roadmap':
+        return 'AI Roadmap';
       default:
         return 'SkillVerse';
     }

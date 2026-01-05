@@ -3,7 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:convert';
 import '../../core/constants/app_constants.dart';
 import '../../core/exceptions/api_exception.dart';
-import 'api_client.dart';
+import '../../core/network/api_client.dart';
 import '../models/auth_models.dart';
 
 class AuthService {

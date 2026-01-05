@@ -3,32 +3,57 @@ import 'package:html/parser.dart' as html_parser;
 class HtmlHelper {
   /// Remove HTML tags and decode HTML entities
   static String stripHtml(String htmlString) {
-    // Parse HTML
-    final document = html_parser.parse(htmlString);
+    if (htmlString.isEmpty) return '';
 
-    // Get text content (this automatically decodes entities)
-    final String parsedString = document.body?.text ?? '';
+    try {
+      // Parse HTML
+      final document = html_parser.parse(htmlString);
 
-    return parsedString.trim();
+      // Get text content (this automatically decodes entities)
+      final String parsedString = document.body?.text ?? '';
+
+      return parsedString.trim();
+    } catch (e) {
+      return htmlString;
+    }
   }
 
   /// Decode HTML entities only (keep tags)
   static String decodeHtmlEntities(String htmlString) {
-    final document = html_parser.parse(htmlString);
-    return document.documentElement?.text ?? htmlString;
+    if (htmlString.isEmpty) return '';
+
+    try {
+      final document = html_parser.parse(htmlString);
+      return document.documentElement?.text ?? htmlString;
+    } catch (e) {
+      return htmlString;
+    }
   }
 
-  /// Clean HTML for display (remove unwanted tags but keep formatting)
+  /// Clean HTML for display (remove all tags and decode entities)
   static String cleanHtml(String htmlString) {
-    // Remove Microsoft Word specific tags
-    htmlString = htmlString.replaceAll(RegExp(r'<o:p>.*?</o:p>'), '');
-    htmlString = htmlString.replaceAll(RegExp(r'</?o:p>'), '');
+    if (htmlString.isEmpty) return '';
 
-    // Remove class attributes
-    htmlString = htmlString.replaceAll(RegExp(r'\s*class="[^"]*"'), '');
+    try {
+      // Parse HTML - this handles all tags including <p>, <i>, <b>, <o:p>, etc.
+      final document = html_parser.parse(htmlString);
 
-    // Parse and get text
-    final document = html_parser.parse(htmlString);
-    return document.body?.text ?? '';
+      // Extract text content - automatically:
+      // 1. Removes ALL HTML tags (including <p>, <i>, <b>, <o:p>, etc.)
+      // 2. Decodes HTML entities (&ndash; -> –, &ocirc; -> ô, etc.)
+      // 3. Preserves text content
+      String text = document.body?.text ?? '';
+
+      // Clean up whitespace
+      text = text
+          .replaceAll(RegExp(r'\s+'), ' ') // Multiple spaces to single space
+          .replaceAll(RegExp(r'\n\s*\n+'), '\n\n') // Multiple newlines to max 2
+          .trim();
+
+      return text;
+    } catch (e) {
+      // Fallback: if parsing fails, return original
+      return htmlString;
+    }
   }
 }

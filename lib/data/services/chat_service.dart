@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/exceptions/api_exception.dart';
-import 'api_client.dart';
+import '../../core/network/api_client.dart';
 import '../models/chat_models.dart';
 
 class ChatService {

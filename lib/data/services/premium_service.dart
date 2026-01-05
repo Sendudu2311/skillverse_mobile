@@ -1,5 +1,5 @@
 import '../models/premium_models.dart';
-import 'api_client.dart';
+import '../../core/network/api_client.dart';
 
 class PremiumService {
   static final PremiumService _instance = PremiumService._internal();

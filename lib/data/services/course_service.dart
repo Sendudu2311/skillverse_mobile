@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../core/exceptions/api_exception.dart';
-import 'api_client.dart';
+import '../../core/network/api_client.dart';
 import '../models/course_models.dart';
 
 class CourseService {

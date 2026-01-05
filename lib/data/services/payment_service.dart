@@ -1,5 +1,5 @@
 import '../models/payment_models.dart';
-import 'api_client.dart';
+import '../../core/network/api_client.dart';
 
 class PaymentService {
   static final PaymentService _instance = PaymentService._internal();

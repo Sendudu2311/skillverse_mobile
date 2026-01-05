@@ -1,5 +1,5 @@
 import '../models/portfolio_models.dart';
-import 'api_client.dart';
+import '../../core/network/api_client.dart';
 
 class PortfolioService {
   static final PortfolioService _instance = PortfolioService._internal();
@@ -78,7 +78,9 @@ class PortfolioService {
   /// GET /api/portfolio/profile/slug/{slug}
   Future<CompletePortfolioDto> getProfileBySlug(String slug) async {
     try {
-      final response = await _apiClient.dio.get('/portfolio/profile/slug/$slug');
+      final response = await _apiClient.dio.get(
+        '/portfolio/profile/slug/$slug',
+      );
       return CompletePortfolioDto.fromJson(response.data);
     } catch (e) {
       rethrow;
@@ -220,9 +222,7 @@ class PortfolioService {
 
   /// Generate CV
   /// POST /api/portfolio/cv/generate
-  Future<CVDto> generateCV({
-    GenerateCVRequest? request,
-  }) async {
+  Future<CVDto> generateCV({GenerateCVRequest? request}) async {
     try {
       final response = await _apiClient.dio.post(
         '/portfolio/cv/generate',

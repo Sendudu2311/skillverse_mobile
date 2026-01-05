@@ -18,6 +18,9 @@ import '../pages/payment/payment_history_page.dart';
 import '../pages/community/community_page.dart';
 import '../pages/community/post_detail_page.dart';
 import '../pages/community/post_form_page.dart';
+import '../pages/roadmap/roadmap_page.dart';
+import '../pages/roadmap/roadmap_generate_page.dart';
+import '../pages/roadmap/roadmap_detail_page.dart';
 import '../pages/splash_page.dart';
 import '../widgets/main_layout.dart';
 import '../providers/auth_provider.dart';
@@ -172,6 +175,26 @@ class AppRouter {
         builder: (context, state) {
           final postId = int.parse(state.pathParameters['postId']!);
           return PostFormPage(postId: postId);
+        },
+      ),
+
+      // Roadmap Routes
+      GoRoute(
+        path: '/roadmap',
+        name: 'roadmap',
+        builder: (context, state) => const RoadmapPage(),
+      ),
+      GoRoute(
+        path: '/roadmap/generate',
+        name: 'roadmap-generate',
+        builder: (context, state) => const RoadmapGeneratePage(),
+      ),
+      GoRoute(
+        path: '/roadmap/:sessionId',
+        name: 'roadmap-detail',
+        builder: (context, state) {
+          final sessionId = int.parse(state.pathParameters['sessionId']!);
+          return RoadmapDetailPage(sessionId: sessionId);
         },
       ),
 

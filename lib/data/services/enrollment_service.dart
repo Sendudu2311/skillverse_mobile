@@ -1,6 +1,6 @@
 import '../models/enrollment_models.dart';
 import '../models/course_models.dart';
-import 'api_client.dart';
+import '../../core/network/api_client.dart';
 
 class EnrollmentService {
   static final EnrollmentService _instance = EnrollmentService._internal();

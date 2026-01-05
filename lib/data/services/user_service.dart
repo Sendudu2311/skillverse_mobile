@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../../core/exceptions/api_exception.dart';
 import '../models/user_models.dart';
-import 'api_client.dart';
+import '../../core/network/api_client.dart';
 
 class UserService {
   final ApiClient _apiClient = ApiClient();

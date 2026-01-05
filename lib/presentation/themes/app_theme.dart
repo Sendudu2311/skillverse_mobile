@@ -11,16 +11,25 @@ class AppTheme {
   static const Color lightBackgroundSecondary = Color(0xFFE2E8F0); // #e2e8f0
   static const Color lightTextPrimary = Color(0xFF1E293B); // #1e293b
   static const Color lightTextSecondary = Color(0xFF64748B); // #64748b
-  static const Color lightBorderColor = Color(0x3394A3B8); // rgba(148, 163, 184, 0.2)
-  static const Color lightCardBackground = Color(0xDDFFFFFF); // rgba(255, 255, 255, 0.87) - more opaque for galaxy
+  static const Color lightBorderColor = Color(
+    0x3394A3B8,
+  ); // rgba(148, 163, 184, 0.2)
+  static const Color lightCardBackground = Color(
+    0xDDFFFFFF,
+  ); // rgba(255, 255, 255, 0.87) - more opaque for galaxy
 
   // Dark/Galaxy Theme Colors (matching web [data-theme="dark"] + galaxy)
-  static const Color darkBackgroundPrimary = galaxyDarkest; // Deep space background
+  static const Color darkBackgroundPrimary =
+      galaxyDarkest; // Deep space background
   static const Color darkBackgroundSecondary = galaxyDark; // #0f172a
   static const Color darkTextPrimary = Color(0xFFF8FAFC); // #f8fafc
   static const Color darkTextSecondary = Color(0xFF94A3B8); // #94a3b8
-  static const Color darkBorderColor = Color(0x2694A3B8); // rgba(148, 163, 184, 0.15) - slightly more visible
-  static const Color darkCardBackground = Color(0xDD1E293B); // rgba(30, 41, 59, 0.87) - more opaque for better readability
+  static const Color darkBorderColor = Color(
+    0x2694A3B8,
+  ); // rgba(148, 163, 184, 0.15) - slightly more visible
+  static const Color darkCardBackground = Color(
+    0xDD1E293B,
+  ); // rgba(30, 41, 59, 0.87) - more opaque for better readability
 
   // Primary Colors (from index.css)
   static const Color primaryBlue = Color(0xFF4F46E5); // #4f46e5 (light)
@@ -78,9 +87,7 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           fontFamily: '-apple-system',
         ),
-        iconTheme: const IconThemeData(
-          color: lightTextPrimary,
-        ),
+        iconTheme: const IconThemeData(color: lightTextPrimary),
       ),
 
       // Text theme - matching web font stack
@@ -89,66 +96,70 @@ class AppTheme {
           fontSize: 32,
           fontWeight: FontWeight.bold,
           color: lightTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
         headlineMedium: TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.bold,
           color: lightTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
         headlineSmall: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.w600,
           color: lightTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
         titleLarge: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: lightTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
         titleMedium: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
           color: lightTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
         bodyLarge: TextStyle(
           fontSize: 16,
           color: lightTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
           height: 1.5,
         ),
         bodyMedium: TextStyle(
           fontSize: 14,
           color: lightTextSecondary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
           height: 1.5,
         ),
         bodySmall: TextStyle(
           fontSize: 12,
           color: lightTextSecondary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
           height: 1.5,
         ),
       ),
 
-      // Elevated Button - matching web button styles
+      // Elevated Button - HUD style with border
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlue,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: primaryBlue.withValues(alpha: 0.5),
+              width: 1,
+            ),
           ),
           textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            fontFamily: '-apple-system',
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'monospace',
           ),
         ),
       ),
@@ -161,24 +172,23 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            fontFamily: '-apple-system',
+            fontFamily: 'monospace',
           ),
         ),
       ),
 
-      // Outlined Button
+      // Outlined Button - matching "Quay lại" button style
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primaryBlue,
-          side: const BorderSide(color: lightBorderColor),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          backgroundColor: Colors.transparent,
+          side: BorderSide(color: primaryBlue.withValues(alpha: 0.3), width: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: const TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: FontWeight.w500,
-            fontFamily: '-apple-system',
+            fontFamily: 'monospace',
           ),
         ),
       ),
@@ -203,7 +213,10 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: errorColor),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         hintStyle: const TextStyle(
           color: lightTextSecondary,
           fontFamily: '-apple-system',
@@ -271,11 +284,9 @@ class AppTheme {
         selectedColor: primaryBlue,
         labelStyle: const TextStyle(
           color: lightTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -313,11 +324,9 @@ class AppTheme {
           color: darkTextPrimary,
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
-        iconTheme: const IconThemeData(
-          color: darkTextPrimary,
-        ),
+        iconTheme: const IconThemeData(color: darkTextPrimary),
       ),
 
       // Text theme
@@ -326,66 +335,70 @@ class AppTheme {
           fontSize: 32,
           fontWeight: FontWeight.bold,
           color: darkTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
         headlineMedium: TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.bold,
           color: darkTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
         headlineSmall: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.w600,
           color: darkTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
         titleLarge: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: darkTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
         titleMedium: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
           color: darkTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
         ),
         bodyLarge: TextStyle(
           fontSize: 16,
           color: darkTextPrimary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
           height: 1.5,
         ),
         bodyMedium: TextStyle(
           fontSize: 14,
           color: darkTextSecondary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
           height: 1.5,
         ),
         bodySmall: TextStyle(
           fontSize: 12,
           color: darkTextSecondary,
-          fontFamily: '-apple-system',
+          fontFamily: 'monospace',
           height: 1.5,
         ),
       ),
 
-      // Elevated Button
+      // Elevated Button - HUD style with border
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlueDark,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: primaryBlueDark.withValues(alpha: 0.7),
+              width: 1,
+            ),
           ),
           textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            fontFamily: '-apple-system',
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'monospace',
           ),
         ),
       ),
@@ -398,24 +411,26 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            fontFamily: '-apple-system',
+            fontFamily: 'monospace',
           ),
         ),
       ),
 
-      // Outlined Button
+      // Outlined Button - matching "Quay lại" button style
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primaryBlueDark,
-          side: const BorderSide(color: darkBorderColor),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+          backgroundColor: Colors.transparent,
+          side: BorderSide(
+            color: primaryBlueDark.withValues(alpha: 0.5),
+            width: 1,
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: const TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: FontWeight.w500,
-            fontFamily: '-apple-system',
+            fontFamily: 'monospace',
           ),
         ),
       ),
@@ -440,7 +455,10 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: errorColor),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         hintStyle: const TextStyle(
           color: darkTextSecondary,
           fontFamily: '-apple-system',
@@ -510,9 +528,7 @@ class AppTheme {
           color: darkTextPrimary,
           fontFamily: '-apple-system',
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }

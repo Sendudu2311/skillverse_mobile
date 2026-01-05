@@ -1,6 +1,6 @@
 import '../models/module_models.dart';
 import '../models/lesson_models.dart';
-import 'api_client.dart';
+import '../../core/network/api_client.dart';
 
 class ModuleService {
   static final ModuleService _instance = ModuleService._internal();

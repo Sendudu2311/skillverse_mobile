@@ -15,10 +15,25 @@ class _JobsPageState extends State<JobsPage> {
 
   final List<Map<String, dynamic>> _categories = [
     {'id': 'all', 'name': 'Tất Cả', 'icon': Icons.work_outline, 'count': 89},
-    {'id': 'design', 'name': 'Thiết Kế', 'icon': Icons.palette_outlined, 'count': 18},
-    {'id': 'writing', 'name': 'Viết Lách', 'icon': Icons.edit_outlined, 'count': 15},
+    {
+      'id': 'design',
+      'name': 'Thiết Kế',
+      'icon': Icons.palette_outlined,
+      'count': 18,
+    },
+    {
+      'id': 'writing',
+      'name': 'Viết Lách',
+      'icon': Icons.edit_outlined,
+      'count': 15,
+    },
     {'id': 'development', 'name': 'Lập Trình', 'icon': Icons.code, 'count': 25},
-    {'id': 'marketing', 'name': 'Marketing', 'icon': Icons.trending_up, 'count': 20},
+    {
+      'id': 'marketing',
+      'name': 'Marketing',
+      'icon': Icons.trending_up,
+      'count': 20,
+    },
   ];
 
   final List<Map<String, dynamic>> _jobs = [
@@ -31,7 +46,8 @@ class _JobsPageState extends State<JobsPage> {
       'duration': '1-2 tuần',
       'type': 'remote',
       'level': 'Trung cấp',
-      'description': 'Tìm designer có kinh nghiệm thiết kế logo và brand identity cho startup công nghệ.',
+      'description':
+          'Tìm designer có kinh nghiệm thiết kế logo và brand identity cho startup công nghệ.',
       'skills': ['Adobe Illustrator', 'Photoshop', 'Brand Design'],
       'gradientColors': [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
     },
@@ -44,7 +60,8 @@ class _JobsPageState extends State<JobsPage> {
       'duration': '2-3 tháng',
       'type': 'hybrid',
       'level': 'Senior',
-      'description': 'Phát triển web application với React frontend và Node.js backend.',
+      'description':
+          'Phát triển web application với React frontend và Node.js backend.',
       'skills': ['React', 'Node.js', 'MongoDB', 'TypeScript'],
       'gradientColors': [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
     },
@@ -57,7 +74,8 @@ class _JobsPageState extends State<JobsPage> {
       'duration': '1 tháng',
       'type': 'remote',
       'level': 'Mới bắt đầu',
-      'description': 'Viết content cho blog và quản lý social media về năng lượng xanh.',
+      'description':
+          'Viết content cho blog và quản lý social media về năng lượng xanh.',
       'skills': ['Content Writing', 'SEO', 'Social Media'],
       'gradientColors': [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
     },
@@ -70,7 +88,8 @@ class _JobsPageState extends State<JobsPage> {
       'duration': '3 tháng',
       'type': 'remote',
       'level': 'Trung cấp',
-      'description': 'Quản lý campaigns marketing trên Google Ads và Facebook Ads.',
+      'description':
+          'Quản lý campaigns marketing trên Google Ads và Facebook Ads.',
       'skills': ['Google Ads', 'Facebook Ads', 'Analytics'],
       'gradientColors': [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
     },
@@ -83,7 +102,8 @@ class _JobsPageState extends State<JobsPage> {
       'duration': '3-4 tháng',
       'type': 'remote',
       'level': 'Senior',
-      'description': 'Phát triển ứng dụng di động cho nền tảng FinTech sử dụng Flutter.',
+      'description':
+          'Phát triển ứng dụng di động cho nền tảng FinTech sử dụng Flutter.',
       'skills': ['Flutter', 'Dart', 'Firebase', 'REST API'],
       'gradientColors': [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
     },
@@ -96,7 +116,8 @@ class _JobsPageState extends State<JobsPage> {
       'duration': '1-2 tháng',
       'type': 'hybrid',
       'level': 'Trung cấp',
-      'description': 'Thiết kế giao diện cho website và mobile app thương mại điện tử thời trang.',
+      'description':
+          'Thiết kế giao diện cho website và mobile app thương mại điện tử thời trang.',
       'skills': ['Figma', 'User Research', 'Wireframing', 'Prototyping'],
       'gradientColors': [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
     },
@@ -105,9 +126,11 @@ class _JobsPageState extends State<JobsPage> {
   @override
   Widget build(BuildContext context) {
     final filtered = _jobs.where((j) {
-      final matchesSearch = j['title'].toString().toLowerCase().contains(_search.toLowerCase()) ||
-                           j['company'].toString().toLowerCase().contains(_search.toLowerCase());
-      final matchesCategory = _selectedCategory == 'all' || j['category'] == _selectedCategory;
+      final matchesSearch =
+          j['title'].toString().toLowerCase().contains(_search.toLowerCase()) ||
+          j['company'].toString().toLowerCase().contains(_search.toLowerCase());
+      final matchesCategory =
+          _selectedCategory == 'all' || j['category'] == _selectedCategory;
       return matchesSearch && matchesCategory;
     }).toList();
 
@@ -123,12 +146,16 @@ class _JobsPageState extends State<JobsPage> {
               decoration: InputDecoration(
                 prefixIcon: Icon(
                   Icons.search,
-                  color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+                  color: Theme.of(
+                    context,
+                  ).iconTheme.color?.withValues(alpha: 0.6),
                 ),
                 hintText: 'Tìm kiếm việc làm...',
                 border: InputBorder.none,
                 hintStyle: TextStyle(
-                  color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                  color: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                 ),
               ),
               onChanged: (v) => setState(() => _search = v),
@@ -150,31 +177,42 @@ class _JobsPageState extends State<JobsPage> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: GestureDetector(
-                    onTap: () => setState(() => _selectedCategory = category['id'] as String),
+                    onTap: () => setState(
+                      () => _selectedCategory = category['id'] as String,
+                    ),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       width: 85,
                       decoration: BoxDecoration(
-                        gradient: isSelected ? const LinearGradient(
-                          colors: [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ) : null,
+                        gradient: isSelected
+                            ? const LinearGradient(
+                                colors: [
+                                  AppTheme.themeBlueStart,
+                                  AppTheme.themeBlueEnd,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
                         color: isSelected ? null : Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isSelected
-                            ? AppTheme.themeBlueStart
-                            : Theme.of(context).dividerColor,
+                              ? AppTheme.themeBlueStart
+                              : Theme.of(context).dividerColor,
                           width: isSelected ? 2 : 1,
                         ),
-                        boxShadow: isSelected ? [
-                          BoxShadow(
-                            color: AppTheme.themeBlueStart.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ] : null,
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppTheme.themeBlueStart.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -182,20 +220,25 @@ class _JobsPageState extends State<JobsPage> {
                           Icon(
                             category['icon'] as IconData,
                             color: isSelected
-                              ? Colors.white
-                              : Theme.of(context).iconTheme.color,
+                                ? Colors.white
+                                : Theme.of(context).iconTheme.color,
                             size: 24,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             category['name'] as String,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: isSelected
-                                ? Colors.white
-                                : Theme.of(context).textTheme.bodySmall?.color,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                              fontSize: 11,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall?.color,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                  fontSize: 11,
+                                ),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -212,9 +255,9 @@ class _JobsPageState extends State<JobsPage> {
           // Jobs List Header
           Text(
             filtered.isEmpty ? 'Không tìm thấy' : '${filtered.length} việc làm',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
 
@@ -227,13 +270,17 @@ class _JobsPageState extends State<JobsPage> {
                     Icon(
                       Icons.work_off_outlined,
                       size: 64,
-                      color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.3),
+                      color: Theme.of(
+                        context,
+                      ).iconTheme.color?.withValues(alpha: 0.3),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Không tìm thấy việc làm phù hợp',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                        color: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -306,7 +353,9 @@ class _JobsPageState extends State<JobsPage> {
                     Text(
                       job['company'] as String,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                        color: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -315,7 +364,9 @@ class _JobsPageState extends State<JobsPage> {
               IconButton(
                 icon: const Icon(Icons.bookmark_border),
                 onPressed: () {},
-                color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).iconTheme.color?.withValues(alpha: 0.6),
               ),
             ],
           ),
@@ -326,7 +377,9 @@ class _JobsPageState extends State<JobsPage> {
           Text(
             job['description'] as String,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
+              color: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -340,7 +393,10 @@ class _JobsPageState extends State<JobsPage> {
             runSpacing: 8,
             children: (job['skills'] as List<String>).map((skill) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: gradientColors.first.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -388,7 +444,11 @@ class _JobsPageState extends State<JobsPage> {
               _buildInfoChip(
                 context,
                 Icons.location_on_outlined,
-                job['type'] == 'remote' ? 'Remote' : job['type'] == 'hybrid' ? 'Hybrid' : 'Onsite',
+                job['type'] == 'remote'
+                    ? 'Remote'
+                    : job['type'] == 'hybrid'
+                    ? 'Hybrid'
+                    : 'Onsite',
               ),
               const SizedBox(width: 12),
               _buildInfoChip(
@@ -404,36 +464,16 @@ class _JobsPageState extends State<JobsPage> {
           // Apply Button
           SizedBox(
             width: double.infinity,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: gradientColors,
+            child: OutlinedButton(
+              onPressed: () {},
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: gradientColors.first.withValues(alpha: 0.5),
                 ),
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: gradientColors.first.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                foregroundColor: gradientColors.first,
+                minimumSize: const Size(double.infinity, 48),
               ),
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: const Text(
-                  'Ứng tuyển ngay',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
+              child: const Text('Ứng tuyển ngay'),
             ),
           ),
         ],
@@ -454,7 +494,9 @@ class _JobsPageState extends State<JobsPage> {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+            color: Theme.of(
+              context,
+            ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
             fontSize: 12,
           ),
         ),

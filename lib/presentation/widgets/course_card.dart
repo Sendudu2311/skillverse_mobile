@@ -14,7 +14,8 @@ class CourseCard extends StatefulWidget {
   State<CourseCard> createState() => _CourseCardState();
 }
 
-class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateMixin {
+class _CourseCardState extends State<CourseCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -31,9 +32,10 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
@@ -87,7 +89,9 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                           width: double.infinity,
                           height: 160,
                           decoration: BoxDecoration(
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
                             gradient: LinearGradient(
                               colors: gradientColors,
                               begin: Alignment.topLeft,
@@ -96,12 +100,17 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                           ),
                           child: widget.course.thumbnailUrl != null
                               ? ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(16),
+                                  ),
                                   child: Image.network(
                                     widget.course.thumbnailUrl!,
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) {
-                                      return _buildPlaceholder(context, gradientColors);
+                                      return _buildPlaceholder(
+                                        context,
+                                        gradientColors,
+                                      );
                                     },
                                   ),
                                 )
@@ -113,7 +122,9 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                           width: double.infinity,
                           height: 160,
                           decoration: BoxDecoration(
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
                             gradient: LinearGradient(
                               colors: [
                                 Colors.black.withValues(alpha: 0.0),
@@ -130,13 +141,18 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                           top: 12,
                           right: 12,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(colors: gradientColors),
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: gradientColors.first.withValues(alpha: 0.4),
+                                  color: gradientColors.first.withValues(
+                                    alpha: 0.4,
+                                  ),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -166,12 +182,16 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 color: _isBookmarked
-                                    ? gradientColors.first.withValues(alpha: 0.8)
+                                    ? gradientColors.first.withValues(
+                                        alpha: 0.8,
+                                      )
                                     : Colors.black.withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
-                                _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                                _isBookmarked
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
                                 color: Colors.white,
                                 size: 20,
                               ),
@@ -190,9 +210,8 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                           // Title
                           Text(
                             widget.course.title,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -205,7 +224,9 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                                 width: 24,
                                 height: 24,
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(colors: gradientColors),
+                                  gradient: LinearGradient(
+                                    colors: gradientColors,
+                                  ),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -217,10 +238,17 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  widget.course.authorName ?? widget.course.author.fullName ?? 'Unknown',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
-                                  ),
+                                  widget.course.authorName ??
+                                      widget.course.author.fullName ??
+                                      'Unknown',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.color
+                                            ?.withValues(alpha: 0.7),
+                                      ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -241,16 +269,17 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                                 const SizedBox(width: 4),
                                 Text(
                                   widget.course.rating!.toStringAsFixed(1),
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(fontWeight: FontWeight.w600),
                                 ),
                                 const SizedBox(width: 16),
                               ],
                               Icon(
                                 Icons.people_outline,
                                 size: 16,
-                                color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+                                color: Theme.of(
+                                  context,
+                                ).iconTheme.color?.withValues(alpha: 0.6),
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -262,7 +291,9 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                                 Icon(
                                   Icons.play_circle_outline,
                                   size: 16,
-                                  color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+                                  color: Theme.of(
+                                    context,
+                                  ).iconTheme.color?.withValues(alpha: 0.6),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -278,34 +309,51 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              if (widget.course.price != null && widget.course.price! > 0) ...[
+                              if (widget.course.price != null &&
+                                  widget.course.price! > 0) ...[
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       'Giá',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.color
+                                                ?.withValues(alpha: 0.6),
+                                          ),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '${_formatPrice(widget.course.price!)} ${widget.course.currency ?? 'VNĐ'}',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: gradientColors.first,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: gradientColors.first,
+                                          ),
                                     ),
                                   ],
                                 ),
                               ] else ...[
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.themeGreenStart.withValues(alpha: 0.1),
+                                    color: AppTheme.themeGreenStart.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: AppTheme.themeGreenStart.withValues(alpha: 0.3),
+                                      color: AppTheme.themeGreenStart
+                                          .withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: const Text(
@@ -319,35 +367,19 @@ class _CourseCardState extends State<CourseCard> with SingleTickerProviderStateM
                                 ),
                               ],
                               const Spacer(),
-                              Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(colors: gradientColors),
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: gradientColors.first.withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    context.push('/courses/${widget.course.id}');
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                  ),
-                                  child: const Text(
-                                    'Xem chi tiết',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
+                              OutlinedButton(
+                                onPressed: () {
+                                  context.push('/courses/${widget.course.id}');
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: gradientColors.first.withValues(
+                                      alpha: 0.5,
                                     ),
                                   ),
+                                  foregroundColor: gradientColors.first,
                                 ),
+                                child: const Text('Xem chi tiết'),
                               ),
                             ],
                           ),

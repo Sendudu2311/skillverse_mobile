@@ -1,5 +1,5 @@
 import '../../core/exceptions/api_exception.dart';
-import 'api_client.dart';
+import '../../core/network/api_client.dart';
 import '../models/quiz_models.dart';
 
 class QuizService {
