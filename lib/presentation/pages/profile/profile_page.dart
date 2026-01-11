@@ -522,6 +522,12 @@ class _ProfilePageState extends State<ProfilePage>
         ),
         _buildMenuItem(
           context,
+          'Meowl Skin Shop',
+          Icons.pets,
+          () => context.go('/skins'),
+        ),
+        _buildMenuItem(
+          context,
           'Lịch sử thanh toán',
           Icons.payment_outlined,
           () => context.push('/profile/payments'),

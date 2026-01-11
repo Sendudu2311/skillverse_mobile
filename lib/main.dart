@@ -13,6 +13,8 @@ import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/user_provider.dart';
 import 'presentation/providers/post_provider.dart';
 import 'presentation/providers/comment_provider.dart';
+import 'presentation/providers/mentor_provider.dart';
+import 'presentation/providers/skin_provider.dart';
 import 'presentation/app.dart';
 import 'core/utils/storage_helper.dart';
 import 'core/utils/date_time_helper.dart';
@@ -51,6 +53,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => PostProvider()),
         ChangeNotifierProvider(create: (_) => CommentProvider()),
+        ChangeNotifierProvider(create: (_) => MentorProvider()),
+        ChangeNotifierProvider(create: (_) => SkinProvider()),
       ],
       child: const SkillVerseApp(),
     ),

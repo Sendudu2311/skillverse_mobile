@@ -126,6 +126,12 @@ class _MainLayoutState extends State<MainLayout> {
         return 'Portfolio';
       case '/roadmap':
         return 'AI Roadmap';
+      case '/mentors':
+        return 'Mentor Network';
+      case '/my-bookings':
+        return 'Lịch hẹn';
+      case '/skins':
+        return 'Meowl Skin Shop';
       default:
         return 'SkillVerse';
     }
@@ -159,6 +165,21 @@ class _MainLayoutState extends State<MainLayout> {
 
   bool _shouldShowBackButton() {
     // Show back button for sub-pages (not main navigation items)
+    // Special pages that need back button
+    final pagesWithBackButton = [
+      '/portfolio',
+      '/mentors',
+      '/my-bookings',
+      '/roadmap',
+      '/skins',
+    ];
+
+    if (pagesWithBackButton.any(
+      (path) => widget.currentPath.startsWith(path),
+    )) {
+      return true;
+    }
+
     return !_navigationItems.any((item) => item.route == widget.currentPath);
   }
 

@@ -31,6 +31,10 @@ import 'pages/payment/payment_history_page.dart';
 import 'pages/community/community_page.dart';
 import 'pages/community/post_detail_page.dart';
 import 'pages/community/post_form_page.dart';
+import 'pages/mentor/mentor_list_page.dart';
+import 'pages/mentor/mentor_detail_page.dart';
+import 'pages/mentor/my_bookings_page.dart';
+import 'pages/skin/skin_shop_page.dart';
 import 'widgets/main_layout.dart';
 import 'themes/app_theme.dart';
 
@@ -250,6 +254,38 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
             final postId = int.parse(state.pathParameters['postId']!);
             return PostFormPage(postId: postId);
           },
+        ),
+
+        // Mentor Routes
+        GoRoute(
+          path: '/mentors',
+          builder: (context, state) => MainLayout(
+            currentPath: state.matchedLocation,
+            child: const MentorListPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/mentors/:mentorId',
+          builder: (context, state) {
+            final mentorId = int.parse(state.pathParameters['mentorId']!);
+            return MentorDetailPage(mentorId: mentorId);
+          },
+        ),
+        GoRoute(
+          path: '/my-bookings',
+          builder: (context, state) => MainLayout(
+            currentPath: state.matchedLocation,
+            child: const MyBookingsPage(),
+          ),
+        ),
+
+        // Skins Shop
+        GoRoute(
+          path: '/skins',
+          builder: (context, state) => MainLayout(
+            currentPath: state.matchedLocation,
+            child: const SkinShopPage(),
+          ),
         ),
 
         // Premium subscription page

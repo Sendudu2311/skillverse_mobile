@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../error/exceptions.dart';
 
 /// Centralized error handling utility for the application
 class ErrorHandler {
@@ -8,6 +9,11 @@ class ErrorHandler {
   static String getErrorMessage(dynamic error) {
     if (error == null) {
       return 'Đã xảy ra lỗi không xác định';
+    }
+
+    // Handle AppException first (from ApiClient)
+    if (error is AppException) {
+      return error.message;
     }
 
     if (error is DioException) {
@@ -101,19 +107,14 @@ class ErrorHandler {
             const Icon(Icons.error_outline, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white),
-              ),
+              child: Text(message, style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
         backgroundColor: const Color(0xFFDC2626), // Red-600
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -127,19 +128,14 @@ class ErrorHandler {
             const Icon(Icons.check_circle_outline, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white),
-              ),
+              child: Text(message, style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
         backgroundColor: const Color(0xFF10B981), // Green-500
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -153,19 +149,14 @@ class ErrorHandler {
             const Icon(Icons.warning_amber_outlined, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white),
-              ),
+              child: Text(message, style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
         backgroundColor: const Color(0xFFF59E0B), // Orange-500
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -258,10 +249,7 @@ class ErrorHandler {
   }
 
   /// Validate date range
-  static String? validateDateRange(
-    DateTime? startDate,
-    DateTime? endDate,
-  ) {
+  static String? validateDateRange(DateTime? startDate, DateTime? endDate) {
     if (startDate != null && endDate != null) {
       if (endDate.isBefore(startDate)) {
         return 'Ngày kết thúc phải sau ngày bắt đầu';

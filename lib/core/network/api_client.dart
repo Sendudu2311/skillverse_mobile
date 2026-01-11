@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../constants/environment.dart';
@@ -91,7 +92,27 @@ class ApiClient {
         return NetworkException('Không thể kết nối đến máy chủ');
       case DioExceptionType.badResponse:
         final statusCode = error.response?.statusCode;
-        final message = error.response?.data?['message'] ?? 'Lỗi từ máy chủ';
+        String message = 'Lỗi từ máy chủ';
+
+        // Try to extract message from response
+        final responseData = error.response?.data;
+        if (responseData != null) {
+          if (responseData is Map) {
+            message = responseData['message'] ?? message;
+          } else if (responseData is String) {
+            // Try to parse JSON from String
+            try {
+              final jsonData = jsonDecode(responseData);
+              if (jsonData is Map && jsonData['message'] != null) {
+                message = jsonData['message'];
+              }
+            } catch (_) {
+              // If not JSON, use the string as is
+              message = responseData;
+            }
+          }
+        }
+
         return ServerException(message, statusCode: statusCode);
       case DioExceptionType.cancel:
         return NetworkException('Yêu cầu đã bị hủy');

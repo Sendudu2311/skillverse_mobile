@@ -21,6 +21,10 @@ import '../pages/community/post_form_page.dart';
 import '../pages/roadmap/roadmap_page.dart';
 import '../pages/roadmap/roadmap_generate_page.dart';
 import '../pages/roadmap/roadmap_detail_page.dart';
+import '../pages/mentor/mentor_list_page.dart';
+import '../pages/mentor/mentor_detail_page.dart';
+import '../pages/mentor/my_bookings_page.dart';
+import '../pages/skin/skin_shop_page.dart';
 import '../pages/splash_page.dart';
 import '../widgets/main_layout.dart';
 import '../providers/auth_provider.dart';
@@ -196,6 +200,39 @@ class AppRouter {
           final sessionId = int.parse(state.pathParameters['sessionId']!);
           return RoadmapDetailPage(sessionId: sessionId);
         },
+      ),
+
+      // Mentor Routes
+      GoRoute(
+        path: '/mentors',
+        name: 'mentors',
+        builder: (context, state) => const MentorListPage(),
+      ),
+      GoRoute(
+        path: '/mentors/:mentorId',
+        name: 'mentor-detail',
+        builder: (context, state) {
+          final mentorId = int.parse(state.pathParameters['mentorId']!);
+          return MentorDetailPage(mentorId: mentorId);
+        },
+      ),
+      GoRoute(
+        path: '/my-bookings',
+        name: 'my-bookings',
+        builder: (context, state) => MainLayout(
+          currentPath: state.matchedLocation,
+          child: const MyBookingsPage(),
+        ),
+      ),
+
+      // Skin Shop Route
+      GoRoute(
+        path: '/skins',
+        name: 'skins',
+        builder: (context, state) => MainLayout(
+          currentPath: state.matchedLocation,
+          child: const SkinShopPage(),
+        ),
       ),
 
       // Premium Route

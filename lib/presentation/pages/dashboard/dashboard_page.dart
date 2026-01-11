@@ -336,6 +336,32 @@ class _DashboardPageState extends State<DashboardPage>
                 ],
               ),
 
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      context,
+                      'Mentor 1:1',
+                      Icons.person_outline,
+                      const [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      () => context.go('/mentors'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildQuickActionCard(
+                      context,
+                      'Portfolio',
+                      Icons.work_outline,
+                      const [Color(0xFFEC4899), Color(0xFFF43F5E)],
+                      () => context.go('/portfolio'),
+                    ),
+                  ),
+                ],
+              ),
+
               const SizedBox(height: 24),
 
               // Recent Courses
