@@ -35,6 +35,11 @@ import 'pages/mentor/mentor_list_page.dart';
 import 'pages/mentor/mentor_detail_page.dart';
 import 'pages/mentor/my_bookings_page.dart';
 import 'pages/skin/skin_shop_page.dart';
+import 'pages/task_board/task_board_page.dart';
+import 'pages/expert_chat/expert_chat_landing_page.dart';
+import 'pages/expert_chat/domain_selection_page.dart';
+import 'pages/expert_chat/role_selection_page.dart';
+import 'pages/expert_chat/expert_chat_page.dart';
 import 'widgets/main_layout.dart';
 import 'themes/app_theme.dart';
 
@@ -286,6 +291,33 @@ class _SkillVerseAppState extends State<SkillVerseApp> {
             currentPath: state.matchedLocation,
             child: const SkinShopPage(),
           ),
+        ),
+
+        // Task Board - Mission Control
+        GoRoute(
+          path: '/task-board',
+          builder: (context, state) => const TaskBoardPage(),
+        ),
+
+        // Expert Chat Routes
+        GoRoute(
+          path: '/expert-chat',
+          builder: (context, state) => MainLayout(
+            currentPath: state.matchedLocation,
+            child: const ExpertChatLandingPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/expert-chat/domains',
+          builder: (context, state) => const DomainSelectionPage(),
+        ),
+        GoRoute(
+          path: '/expert-chat/roles',
+          builder: (context, state) => const RoleSelectionPage(),
+        ),
+        GoRoute(
+          path: '/expert-chat/conversation',
+          builder: (context, state) => const ExpertChatPage(),
         ),
 
         // Premium subscription page

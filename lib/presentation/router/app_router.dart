@@ -25,6 +25,7 @@ import '../pages/mentor/mentor_list_page.dart';
 import '../pages/mentor/mentor_detail_page.dart';
 import '../pages/mentor/my_bookings_page.dart';
 import '../pages/skin/skin_shop_page.dart';
+import '../pages/task_board/task_board_page.dart';
 import '../pages/splash_page.dart';
 import '../widgets/main_layout.dart';
 import '../providers/auth_provider.dart';
@@ -121,6 +122,13 @@ class AppRouter {
           currentPath: state.matchedLocation,
           child: const DashboardPage(),
         ),
+      ),
+
+      // Task Board Route
+      GoRoute(
+        path: '/task-board',
+        name: 'task-board',
+        builder: (context, state) => const TaskBoardPage(),
       ),
 
       // Courses Routes

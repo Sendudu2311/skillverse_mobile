@@ -522,9 +522,21 @@ class _ProfilePageState extends State<ProfilePage>
         ),
         _buildMenuItem(
           context,
+          'Mission Control',
+          Icons.satellite_alt,
+          () => context.push('/task-board'),
+        ),
+        _buildMenuItem(
+          context,
           'Meowl Skin Shop',
           Icons.pets,
           () => context.go('/skins'),
+        ),
+        _buildMenuItem(
+          context,
+          'Chuyên gia AI',
+          Icons.psychology,
+          () => context.push('/expert-chat'),
         ),
         _buildMenuItem(
           context,

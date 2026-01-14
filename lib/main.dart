@@ -15,6 +15,8 @@ import 'presentation/providers/post_provider.dart';
 import 'presentation/providers/comment_provider.dart';
 import 'presentation/providers/mentor_provider.dart';
 import 'presentation/providers/skin_provider.dart';
+import 'presentation/providers/task_board_provider.dart';
+import 'presentation/providers/expert_chat_provider.dart';
 import 'presentation/app.dart';
 import 'core/utils/storage_helper.dart';
 import 'core/utils/date_time_helper.dart';
@@ -55,6 +57,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CommentProvider()),
         ChangeNotifierProvider(create: (_) => MentorProvider()),
         ChangeNotifierProvider(create: (_) => SkinProvider()),
+        ChangeNotifierProvider(create: (_) => TaskBoardProvider()),
+        ChangeNotifierProvider(create: (_) => ExpertChatProvider()),
       ],
       child: const SkillVerseApp(),
     ),
