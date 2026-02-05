@@ -10,7 +10,7 @@ class EnrollmentService {
   final ApiClient _apiClient = ApiClient();
 
   /// Enroll a user in a course
-  /// POST /api/enrollments?userId={userId}
+  /// POST /enrollments?userId={userId}
   /// Body: {courseId: xxx}
   Future<EnrollmentDetailDto> enrollUser({
     required int courseId,
@@ -18,7 +18,7 @@ class EnrollmentService {
   }) async {
     try {
       final response = await _apiClient.dio.post(
-        '/api/enrollments',
+        '/enrollments',
         queryParameters: {'userId': userId},
         data: EnrollRequestDto(courseId: courseId).toJson(),
       );
@@ -29,29 +29,27 @@ class EnrollmentService {
   }
 
   /// Unenroll a user from a course
-  /// DELETE /api/enrollments/course/{courseId}/user/{userId}
+  /// DELETE /enrollments/course/{courseId}/user/{userId}
   Future<void> unenrollUser({
     required int courseId,
     required int userId,
   }) async {
     try {
-      await _apiClient.dio.delete(
-        '/api/enrollments/course/$courseId/user/$userId',
-      );
+      await _apiClient.dio.delete('/enrollments/course/$courseId/user/$userId');
     } catch (e) {
       rethrow;
     }
   }
 
   /// Get enrollment details
-  /// GET /api/enrollments/course/{courseId}/user/{userId}
+  /// GET /enrollments/course/{courseId}/user/{userId}
   Future<EnrollmentDetailDto> getEnrollment({
     required int courseId,
     required int userId,
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/enrollments/course/$courseId/user/$userId',
+        '/enrollments/course/$courseId/user/$userId',
       );
       return EnrollmentDetailDto.fromJson(response.data);
     } catch (e) {
@@ -60,7 +58,7 @@ class EnrollmentService {
   }
 
   /// Check if user is enrolled in course
-  /// GET /api/enrollments/course/{courseId}/user/{userId}/status
+  /// GET /enrollments/course/{courseId}/user/{userId}/status
   /// Returns: {enrolled: true/false}
   Future<bool> checkEnrollmentStatus({
     required int courseId,
@@ -68,7 +66,7 @@ class EnrollmentService {
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/enrollments/course/$courseId/user/$userId/status',
+        '/enrollments/course/$courseId/user/$userId/status',
       );
       final statusDto = EnrollmentStatusDto.fromJson(response.data);
       return statusDto.enrolled;
@@ -79,7 +77,7 @@ class EnrollmentService {
   }
 
   /// List enrollments for a user
-  /// GET /api/enrollments/user/{userId}?page=0&size=20
+  /// GET /enrollments/user/{userId}?page=0&size=20
   Future<PageResponse<EnrollmentDetailDto>> getUserEnrollments({
     required int userId,
     int page = 0,
@@ -87,11 +85,8 @@ class EnrollmentService {
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/enrollments/user/$userId',
-        queryParameters: {
-          'page': page,
-          'size': size,
-        },
+        '/enrollments/user/$userId',
+        queryParameters: {'page': page, 'size': size},
       );
 
       return PageResponse<EnrollmentDetailDto>.fromJson(
@@ -104,7 +99,7 @@ class EnrollmentService {
   }
 
   /// Update course completion status
-  /// PUT /api/enrollments/course/{courseId}/user/{userId}/completion?completed=true
+  /// PUT /enrollments/course/{courseId}/user/{userId}/completion?completed=true
   Future<void> updateCompletionStatus({
     required int courseId,
     required int userId,
@@ -112,7 +107,7 @@ class EnrollmentService {
   }) async {
     try {
       await _apiClient.dio.put(
-        '/api/enrollments/course/$courseId/user/$userId/completion',
+        '/enrollments/course/$courseId/user/$userId/completion',
         queryParameters: {'completed': completed},
       );
     } catch (e) {
@@ -121,7 +116,7 @@ class EnrollmentService {
   }
 
   /// Update enrollment progress percentage
-  /// PUT /api/enrollments/course/{courseId}/user/{userId}/progress?progressPercentage=50
+  /// PUT /enrollments/course/{courseId}/user/{userId}/progress?progressPercentage=50
   Future<void> updateProgress({
     required int courseId,
     required int userId,
@@ -129,7 +124,7 @@ class EnrollmentService {
   }) async {
     try {
       await _apiClient.dio.put(
-        '/api/enrollments/course/$courseId/user/$userId/progress',
+        '/enrollments/course/$courseId/user/$userId/progress',
         queryParameters: {'progressPercentage': progressPercentage},
       );
     } catch (e) {
@@ -138,14 +133,14 @@ class EnrollmentService {
   }
 
   /// Get enrollment statistics for a course (instructor/admin only)
-  /// GET /api/enrollments/course/{courseId}/stats?actorId={actorId}
+  /// GET /enrollments/course/{courseId}/stats?actorId={actorId}
   Future<EnrollmentStatsDto> getEnrollmentStats({
     required int courseId,
     required int actorId,
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/enrollments/course/$courseId/stats',
+        '/enrollments/course/$courseId/stats',
         queryParameters: {'actorId': actorId},
       );
       return EnrollmentStatsDto.fromJson(response.data);
@@ -155,7 +150,7 @@ class EnrollmentService {
   }
 
   /// Get recent enrollments (admin only)
-  /// GET /api/enrollments/recent?actorId={actorId}&page=0&size=20
+  /// GET /enrollments/recent?actorId={actorId}&page=0&size=20
   Future<PageResponse<EnrollmentDetailDto>> getRecentEnrollments({
     required int actorId,
     int page = 0,
@@ -163,12 +158,8 @@ class EnrollmentService {
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/enrollments/recent',
-        queryParameters: {
-          'actorId': actorId,
-          'page': page,
-          'size': size,
-        },
+        '/enrollments/recent',
+        queryParameters: {'actorId': actorId, 'page': page, 'size': size},
       );
 
       return PageResponse<EnrollmentDetailDto>.fromJson(

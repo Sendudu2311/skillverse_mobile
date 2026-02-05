@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/chat_provider.dart';
 import 'presentation/providers/course_provider.dart';
+import 'presentation/providers/dashboard_provider.dart';
 import 'presentation/providers/enrollment_provider.dart';
 import 'presentation/providers/payment_provider.dart';
 import 'presentation/providers/portfolio_provider.dart';
@@ -15,6 +16,7 @@ import 'presentation/providers/post_provider.dart';
 import 'presentation/providers/comment_provider.dart';
 import 'presentation/providers/mentor_provider.dart';
 import 'presentation/providers/skin_provider.dart';
+import 'presentation/providers/subscription_provider.dart';
 import 'presentation/providers/task_board_provider.dart';
 import 'presentation/providers/expert_chat_provider.dart';
 import 'presentation/app.dart';
@@ -47,6 +49,7 @@ void main() async {
               previous ?? ChatProvider(authProvider),
         ),
         ChangeNotifierProvider(create: (_) => CourseProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => EnrollmentProvider()),
         ChangeNotifierProvider(create: (_) => PaymentProvider()),
         ChangeNotifierProvider(create: (_) => PortfolioProvider()),
@@ -57,6 +60,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CommentProvider()),
         ChangeNotifierProvider(create: (_) => MentorProvider()),
         ChangeNotifierProvider(create: (_) => SkinProvider()),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
         ChangeNotifierProvider(create: (_) => TaskBoardProvider()),
         ChangeNotifierProvider(create: (_) => ExpertChatProvider()),
       ],

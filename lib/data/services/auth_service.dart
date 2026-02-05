@@ -36,16 +36,16 @@ class AuthService {
 
       // Debug: In ra cấu trúc response để debug
       print('Login response data: ${response.data}');
-      
+
       final authResponse = AuthResponse.fromJson(response.data!);
-      
+
       // Lưu tokens và user data
       await _saveTokens(authResponse.accessToken, authResponse.refreshToken);
       await _saveUserData(authResponse.user);
-      
+
       // Set auth token cho các request tiếp theo
       _apiClient.setAuthToken(authResponse.accessToken);
-      
+
       return authResponse;
     } catch (e) {
       print('Login error: $e');
@@ -84,7 +84,8 @@ class AuthService {
       }
 
       // Get authentication details
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       // WORKAROUND: On Android, idToken may be null due to OAuth client config issues
       // Backend supports receiving accessToken in the idToken field (see AuthService.java line 510)
@@ -99,7 +100,8 @@ class AuthService {
       final response = await _apiClient.dio.post<Map<String, dynamic>>(
         '/auth/google',
         data: {
-          'idToken': tokenToSend,  // Backend will accept either idToken or accessToken
+          'idToken':
+              tokenToSend, // Backend will accept either idToken or accessToken
         },
       );
 
@@ -221,10 +223,46 @@ class AuthService {
     }
   }
 
+  /// Kiểm tra token có hết hạn không
+  bool _isTokenExpired(String token) {
+    try {
+      // Decode JWT token (format: header.payload.signature)
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+
+      // Decode payload (base64)
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final payloadMap = json.decode(decoded) as Map<String, dynamic>;
+
+      // Check exp claim
+      if (payloadMap['exp'] != null) {
+        final exp = payloadMap['exp'] as int;
+        final expiryDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+        return DateTime.now().isAfter(expiryDate);
+      }
+
+      return true; // No exp claim = expired
+    } catch (e) {
+      print('Error checking token expiration: $e');
+      return true; // Error = treat as expired
+    }
+  }
+
   /// Kiểm tra trạng thái đăng nhập
   Future<bool> isAuthenticated() async {
     final token = await getAccessToken();
-    return token != null;
+    if (token == null) return false;
+
+    // Check if token is expired
+    if (_isTokenExpired(token)) {
+      // Try to refresh token
+      final newToken = await refreshAccessToken();
+      return newToken != null;
+    }
+
+    return true;
   }
 
   /// Lấy access token
@@ -253,9 +291,15 @@ class AuthService {
 
   /// Lưu tokens
   Future<void> _saveTokens(String accessToken, String? refreshToken) async {
-    await _secureStorage.write(key: AppConstants.accessTokenKey, value: accessToken);
+    await _secureStorage.write(
+      key: AppConstants.accessTokenKey,
+      value: accessToken,
+    );
     if (refreshToken != null) {
-      await _secureStorage.write(key: AppConstants.refreshTokenKey, value: refreshToken);
+      await _secureStorage.write(
+        key: AppConstants.refreshTokenKey,
+        value: refreshToken,
+      );
     }
   }
 

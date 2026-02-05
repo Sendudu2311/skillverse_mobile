@@ -66,7 +66,8 @@ class AuthorDto {
     this.googleLinked,
   });
 
-  factory AuthorDto.fromJson(Map<String, dynamic> json) => _$AuthorDtoFromJson(json);
+  factory AuthorDto.fromJson(Map<String, dynamic> json) =>
+      _$AuthorDtoFromJson(json);
   Map<String, dynamic> toJson() => _$AuthorDtoToJson(this);
 }
 
@@ -92,7 +93,8 @@ class MediaDto {
     this.uploadedAt,
   });
 
-  factory MediaDto.fromJson(Map<String, dynamic> json) => _$MediaDtoFromJson(json);
+  factory MediaDto.fromJson(Map<String, dynamic> json) =>
+      _$MediaDtoFromJson(json);
   Map<String, dynamic> toJson() => _$MediaDtoToJson(this);
 }
 
@@ -112,6 +114,7 @@ class CourseSummaryDto {
   final String? thumbnailUrl;
   final int enrollmentCount;
   final int? moduleCount;
+  final int? lessonCount;
   final double? price;
   final String? currency;
   final double? rating;
@@ -134,6 +137,7 @@ class CourseSummaryDto {
     this.thumbnailUrl,
     required this.enrollmentCount,
     this.moduleCount,
+    this.lessonCount,
     this.price,
     this.currency,
     this.rating,
@@ -144,7 +148,8 @@ class CourseSummaryDto {
     this.publishedDate,
   });
 
-  factory CourseSummaryDto.fromJson(Map<String, dynamic> json) => _$CourseSummaryDtoFromJson(json);
+  factory CourseSummaryDto.fromJson(Map<String, dynamic> json) =>
+      _$CourseSummaryDtoFromJson(json);
   Map<String, dynamic> toJson() => _$CourseSummaryDtoToJson(this);
 }
 
@@ -178,9 +183,12 @@ class PageResponse<T> {
     this.empty = true,
   });
 
-  factory PageResponse.fromJson(Map<String, dynamic> json, T Function(Object?) fromJsonT) =>
-      _$PageResponseFromJson(json, fromJsonT);
-  Map<String, dynamic> toJson(Object? Function(T) toJsonT) => _$PageResponseToJson(this, toJsonT);
+  factory PageResponse.fromJson(
+    Map<String, dynamic> json,
+    T Function(Object?) fromJsonT,
+  ) => _$PageResponseFromJson(json, fromJsonT);
+  Map<String, dynamic> toJson(Object? Function(T) toJsonT) =>
+      _$PageResponseToJson(this, toJsonT);
 }
 
 @JsonSerializable()
@@ -197,6 +205,10 @@ class CourseDetailDto {
   final String? authorName;
   final String? thumbnailUrl;
   final int enrollmentCount;
+  final int? moduleCount;
+  final int? lessonCount;
+  final double? rating;
+  final int? reviewCount;
   final String? createdAt;
   final String? updatedAt;
   final String? submittedDate;
@@ -215,12 +227,17 @@ class CourseDetailDto {
     this.authorName,
     this.thumbnailUrl,
     required this.enrollmentCount,
+    this.moduleCount,
+    this.lessonCount,
+    this.rating,
+    this.reviewCount,
     this.createdAt,
     this.updatedAt,
     this.submittedDate,
     this.publishedDate,
   });
 
-  factory CourseDetailDto.fromJson(Map<String, dynamic> json) => _$CourseDetailDtoFromJson(json);
+  factory CourseDetailDto.fromJson(Map<String, dynamic> json) =>
+      _$CourseDetailDtoFromJson(json);
   Map<String, dynamic> toJson() => _$CourseDetailDtoToJson(this);
 }

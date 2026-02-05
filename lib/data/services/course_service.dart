@@ -16,14 +16,13 @@ class CourseService {
     int size = 10,
     String? search,
     CourseStatus? status,
+    CourseLevel? level,
   }) async {
     try {
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'size': size,
-      };
+      final queryParams = <String, dynamic>{'page': page, 'size': size};
       if (search != null && search.isNotEmpty) queryParams['q'] = search;
       if (status != null) queryParams['status'] = status.name.toUpperCase();
+      if (level != null) queryParams['level'] = level.name.toUpperCase();
 
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
         '/courses',
@@ -96,11 +95,6 @@ class CourseService {
     CourseStatus? status,
   }) async {
     // Just use getCourses with search parameter
-    return getCourses(
-      page: page,
-      size: size,
-      search: query,
-      status: status,
-    );
+    return getCourses(page: page, size: size, search: query, status: status);
   }
 }

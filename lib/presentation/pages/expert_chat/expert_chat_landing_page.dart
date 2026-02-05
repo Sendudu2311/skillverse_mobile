@@ -28,6 +28,10 @@ class _ExpertChatLandingPageState extends State<ExpertChatLandingPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/profile'),
+        ),
         title: Row(
           children: [
             Icon(Icons.psychology, color: AppTheme.primaryBlueDark, size: 28),

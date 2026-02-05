@@ -3,11 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/subscription_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_theme.dart';
-import '../../widgets/stat_card.dart';
-import '../../widgets/premium_card.dart';
-import '../../widgets/glass_card.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -16,151 +14,62 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage>
-    with SingleTickerProviderStateMixin {
-  AnimationController? _animationController;
-  Animation<double>? _fadeAnimation;
-  Animation<Offset>? _slideAnimation;
-
+class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-
-    // Setup animations
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController!, curve: Curves.easeOut),
-    );
-
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _animationController!,
-            curve: Curves.easeOutCubic,
-          ),
-        );
-
-    // Load user profile and start animation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<UserProvider>().loadUserProfile();
-      _animationController?.forward();
+      context.read<SubscriptionProvider>().loadSubscription();
     });
   }
 
   @override
-  void dispose() {
-    _animationController?.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Consumer2<AuthProvider, UserProvider>(
-      builder: (context, authProvider, userProvider, child) {
-        final user = authProvider.user;
-        final userProfile = userProvider.userProfile;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final userProvider = context.watch<UserProvider>();
+    final subscriptionProvider = context.watch<SubscriptionProvider>();
+    final authProvider = context.watch<AuthProvider>();
 
-        if (userProvider.isLoading && userProfile == null) {
-          return _buildLoadingSkeleton(context);
-        }
+    if (userProvider.isLoading || subscriptionProvider.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-        // Safe check for animations
-        if (_fadeAnimation == null || _slideAnimation == null) {
-          return _buildLoadingSkeleton(context);
-        }
+    final user = authProvider.user;
+    final userProfile = userProvider.userProfile;
+    final subscription = subscriptionProvider.subscription;
 
-        return FadeTransition(
-          opacity: _fadeAnimation!,
-          child: SlideTransition(
-            position: _slideAnimation!,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Profile Header with improved design
-                  _buildProfileHeader(context, user, userProfile),
-
-                  const SizedBox(height: 24),
-
-                  // Learning Stats
-                  _buildStatsRow(context),
-
-                  const SizedBox(height: 24),
-
-                  // Premium Banner
-                  PremiumCard(
-                    title: 'Nâng cấp Premium',
-                    subtitle: 'Truy cập không giới hạn tất cả khóa học',
-                    icon: Icons.workspace_premium,
-                    onTap: () => context.push('/premium'),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Profile Information Section
-                  if (userProfile != null) ...[
-                    _buildProfileInfoCard(context, userProfile),
-                    const SizedBox(height: 24),
-                  ],
-
-                  // Menu Items
-                  _buildMenuSection(context),
-
-                  const SizedBox(height: 24),
-
-                  // Logout Button
-                  _buildLogoutButton(context, authProvider),
-
-                  const SizedBox(height: 32),
-                ],
-              ),
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          // Profile Header with Avatar
+          SliverToBoxAdapter(
+            child: _buildProfileHeader(
+              context,
+              user,
+              userProfile,
+              subscription,
+              isDark,
             ),
           ),
-        );
-      },
-    );
-  }
 
-  Widget _buildLoadingSkeleton(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Header skeleton
-          Container(
-            width: double.infinity,
-            height: 200,
-            decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.surface.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(16),
+          // Personal Info Section
+          SliverToBoxAdapter(
+            child: _buildPersonalInfoSection(context, userProfile, isDark),
+          ),
+
+          // Menu Items
+          SliverToBoxAdapter(child: _buildMenuSection(context, isDark)),
+
+          // Logout Button
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: _buildLogoutButton(context, authProvider, isDark),
             ),
           ),
-          const SizedBox(height: 24),
-          // Stats skeleton
-          Row(
-            children: List.generate(
-              3,
-              (index) => Expanded(
-                child: Container(
-                  height: 100,
-                  margin: EdgeInsets.only(right: index < 2 ? 12 : 0),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surface.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
       ),
     );
@@ -170,506 +79,391 @@ class _ProfilePageState extends State<ProfilePage>
     BuildContext context,
     dynamic user,
     dynamic userProfile,
+    dynamic subscription,
+    bool isDark,
   ) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.85),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Background pattern
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _CirclePatternPainter(
-                color: Colors.white.withValues(alpha: 0.05),
-              ),
-            ),
-          ),
+    final displayName = userProfile?.fullName ?? user?.fullName ?? 'User';
+    final avatarUrl = subscription?.userAvatarUrl;
 
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                // Avatar with shadow
+    // Get subscription info
+    final planName = subscription?.plan.displayName ?? 'Cadet';
+    final planType = subscription?.plan.planType ?? 'FREE';
+    final level = 0; // TODO: Get from user stats
+    final xp = 0; // TODO: Get from user stats
+    final credits = 0; // TODO: Get from wallet
+    final status = subscription?.status ?? 'ACTIVE';
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCardBackground : AppTheme.primaryBlueDark,
+      ),
+      child: Column(
+        children: [
+          // Avatar with Premium Ring
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              // Premium ring
+              if (subscription != null)
                 Container(
+                  width: 140,
+                  height: 140,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _getPremiumRingColor(planType),
+                      width: 4,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
+                        color: _getPremiumRingColor(
+                          planType,
+                        ).withValues(alpha: 0.5),
                         blurRadius: 20,
-                        offset: const Offset(0, 8),
+                        spreadRadius: 2,
                       ),
                     ],
                   ),
-                  child: CircleAvatar(
-                    radius: 56,
-                    backgroundColor: Colors.white,
-                    child: CircleAvatar(
-                      radius: 52,
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        user?.fullName?.isNotEmpty == true
-                            ? user!.fullName![0].toUpperCase()
-                            : user?.email[0].toUpperCase() ?? 'U',
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
+                ),
+              // Avatar
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.themePurpleStart,
+                      AppTheme.themePurpleEnd,
+                    ],
+                  ),
+                ),
+                child: avatarUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          avatarUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              _buildDefaultAvatar(displayName),
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // User Info
-                Text(
-                  userProfile?.fullName ??
-                      user?.fullName ??
-                      'Học viên SkillVerse',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 8),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.email_outlined,
-                      size: 16,
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      user?.email ?? '',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // Role Badge with better styling
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
+                      )
+                    : _buildDefaultAvatar(displayName),
+              ),
+              // Camera button
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
+                    color: AppTheme.primaryBlueDark,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.verified_user, size: 16, color: Colors.white),
-                      const SizedBox(width: 6),
-                      Text(
-                        user?.roles?.isNotEmpty == true
-                            ? _formatRole(user!.roles!.first)
-                            : 'Học viên',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 16,
                   ),
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
 
-                // Verified badge if email verified
-                if (userProfile?.emailVerified == true) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.successColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle, size: 14, color: Colors.white),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Email đã xác thực',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+          // Name
+          Text(
+            displayName.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontFamily: 'monospace',
+              letterSpacing: 2,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+
+          // Level and Plan badges
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildBadge('Level $level', AppTheme.themeBlueStart),
+              const SizedBox(width: 12),
+              _buildBadge(planName, _getPlanColor(planType)),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Stats Row
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatItem('CREDITS', credits.toString(), isDark),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.white.withValues(alpha: 0.3),
+                ),
+                _buildStatItem('XP', xp.toString(), isDark),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.white.withValues(alpha: 0.3),
+                ),
+                _buildStatItem('STATUS', status, isDark),
               ],
             ),
           ),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Widget _buildStatsRow(BuildContext context) {
-    return Row(
+  Widget _buildDefaultAvatar(String name) {
+    return Center(
+      child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : 'U',
+        style: const TextStyle(
+          fontSize: 48,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'monospace',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, bool isDark) {
+    return Column(
       children: [
-        Expanded(
-          child: StatCard(
-            title: 'Khóa học',
-            value: '3',
-            icon: Icons.school,
-            gradientColors: const [
-              AppTheme.themeBlueStart,
-              AppTheme.themeBlueEnd,
-            ],
-            onTap: () => context.go('/courses'),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.white.withValues(alpha: 0.7),
+            fontFamily: 'monospace',
+            letterSpacing: 1,
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: StatCard(
-            title: 'Chứng chỉ',
-            value: '2',
-            icon: Icons.card_membership,
-            gradientColors: const [
-              AppTheme.themeOrangeStart,
-              AppTheme.themeOrangeEnd,
-            ],
-            onTap: () => context.push('/portfolio'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: StatCard(
-            title: 'Điểm',
-            value: '1,250',
-            icon: Icons.star,
-            gradientColors: const [
-              AppTheme.themePurpleStart,
-              AppTheme.themePurpleEnd,
-            ],
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontFamily: 'monospace',
           ),
         ),
       ],
     );
   }
 
-  Widget _buildProfileInfoCard(BuildContext context, dynamic userProfile) {
-    return GlassCard(
+  Widget _buildPersonalInfoSection(
+    BuildContext context,
+    dynamic userProfile,
+    bool isDark,
+  ) {
+    return Container(
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF00D4FF).withValues(alpha: 0.3),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.person_outline,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
+              Container(
+                width: 4,
+                height: 24,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.primaryBlueDark, Color(0xFF00D4FF)],
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Thông tin cá nhân',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'THÔNG TIN CÁ NHÂN',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF00D4FF),
+                    fontFamily: 'monospace',
+                    letterSpacing: 1.5,
                   ),
-                ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: () => context.push('/profile/edit'),
+                color: const Color(0xFF00D4FF),
+                tooltip: 'Chỉnh sửa',
               ),
             ],
           ),
+          const SizedBox(height: 20),
+          _buildInfoRow(
+            'HỌ VÀ TÊN',
+            userProfile?.fullName ?? 'N/A',
+            Icons.person_outline,
+            isDark,
+          ),
           const Divider(height: 24),
-
-          if (userProfile.phone != null)
-            _buildInfoRow(
-              context,
-              Icons.phone_outlined,
-              'Số điện thoại',
-              userProfile.phone!,
-            ),
-          if (userProfile.birthday != null)
-            _buildInfoRow(
-              context,
-              Icons.cake_outlined,
-              'Ngày sinh',
-              _formatDate(userProfile.birthday!),
-            ),
-          if (userProfile.gender != null)
-            _buildInfoRow(
-              context,
-              Icons.wc_outlined,
-              'Giới tính',
-              _formatGender(userProfile.gender!),
-            ),
-          if (userProfile.province != null)
-            _buildInfoRow(
-              context,
-              Icons.location_on_outlined,
-              'Khu vực',
-              '${userProfile.province}${userProfile.district != null ? ', ${userProfile.district}' : ''}',
-            ),
-          if (userProfile.bio != null && userProfile.bio!.isNotEmpty) ...[
-            const Divider(height: 24),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(
-                    Icons.info_outline,
-                    size: 18,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Giới thiệu',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).hintColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        userProfile.bio!,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
+          _buildInfoRow(
+            'LIÊN LẠC',
+            userProfile?.phone ?? 'N/A',
+            Icons.phone_outlined,
+            isDark,
+          ),
+          const Divider(height: 24),
+          _buildInfoRow(
+            'ĐỊA CHỈ',
+            userProfile?.address ?? 'N/A',
+            Icons.location_on_outlined,
+            isDark,
+          ),
+          const Divider(height: 24),
+          _buildInfoRow(
+            'EMAIL',
+            userProfile?.email ?? 'N/A',
+            Icons.email_outlined,
+            isDark,
+          ),
+          const Divider(height: 24),
+          _buildInfoRow(
+            'GIỚI THIỆU / NHẬT KÝ',
+            userProfile?.bio ?? 'N/A',
+            Icons.description_outlined,
+            isDark,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMenuSection(BuildContext context) {
-    return Column(
+  Widget _buildInfoRow(String label, String value, IconData icon, bool isDark) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildMenuItem(
-          context,
-          'Khóa học của tôi',
-          Icons.school_outlined,
-          () => context.push('/my-courses'),
-        ),
-        _buildMenuItem(
-          context,
-          'Portfolio & Chứng chỉ',
-          Icons.work_history_outlined,
-          () => context.push('/portfolio'),
-        ),
-        _buildMenuItem(
-          context,
-          'Mission Control',
-          Icons.satellite_alt,
-          () => context.push('/task-board'),
-        ),
-        _buildMenuItem(
-          context,
-          'Meowl Skin Shop',
-          Icons.pets,
-          () => context.go('/skins'),
-        ),
-        _buildMenuItem(
-          context,
-          'Chuyên gia AI',
-          Icons.psychology,
-          () => context.push('/expert-chat'),
-        ),
-        _buildMenuItem(
-          context,
-          'Lịch sử thanh toán',
-          Icons.payment_outlined,
-          () => context.push('/profile/payments'),
-        ),
-        _buildMenuItem(
-          context,
-          'Chỉnh sửa hồ sơ',
-          Icons.edit_outlined,
-          () => context.push('/profile/edit'),
-        ),
-        _buildMenuItem(
-          context,
-          'Cài đặt',
-          Icons.settings_outlined,
-          () => context.push('/profile/settings'),
-        ),
-        // Dark Mode Toggle
-        Consumer<ThemeProvider>(
-          builder: (context, themeProvider, _) {
-            return _buildMenuItemWithSwitch(
-              context,
-              'Chế độ tối',
-              Icons.dark_mode_outlined,
-              themeProvider.isDarkMode,
-              (value) => themeProvider.toggleTheme(),
-            );
-          },
-        ),
-        _buildMenuItem(
-          context,
-          'Hỗ trợ',
-          Icons.help_outline,
-          () => context.go('/help'),
-        ),
-        _buildMenuItem(
-          context,
-          'Điều khoản sử dụng',
-          Icons.description_outlined,
-          () => context.go('/terms'),
+        Icon(icon, size: 20, color: AppTheme.primaryBlueDark),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                  fontFamily: 'monospace',
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildInfoRow(
-    BuildContext context,
-    IconData icon,
-    String label,
-    String value,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
+  Widget _buildMenuSection(BuildContext context, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+          _buildMenuItem(
+            context,
+            'Cài đặt tài khoản',
+            Icons.settings_outlined,
+            () => context.push('/profile/settings'),
+            isDark,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).hintColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
+          _buildMenuItem(
+            context,
+            'Gói Premium',
+            Icons.workspace_premium_outlined,
+            () => context.push('/premium'),
+            isDark,
+          ),
+          _buildMenuItem(
+            context,
+            'Lịch sử thanh toán',
+            Icons.receipt_long_outlined,
+            () => context.push('/payment-history'),
+            isDark,
+          ),
+          _buildMenuItem(
+            context,
+            'Trung tâm trợ giúp',
+            Icons.help_outline,
+            () => context.push('/help'),
+            isDark,
+          ),
+          _buildMenuItemWithSwitch(
+            context,
+            'Chế độ tối',
+            Icons.dark_mode_outlined,
+            context.watch<ThemeProvider>().isDarkMode,
+            (value) => context.read<ThemeProvider>().toggleTheme(),
+            isDark,
           ),
         ],
       ),
     );
-  }
-
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (e) {
-      return dateStr;
-    }
-  }
-
-  String _formatGender(String gender) {
-    switch (gender.toUpperCase()) {
-      case 'MALE':
-        return 'Nam';
-      case 'FEMALE':
-        return 'Nữ';
-      case 'OTHER':
-        return 'Khác';
-      default:
-        return gender;
-    }
-  }
-
-  String _formatRole(String role) {
-    switch (role.toUpperCase()) {
-      case 'USER':
-        return 'Học viên';
-      case 'MENTOR':
-        return 'Mentor';
-      case 'BUSINESS':
-        return 'Doanh nghiệp';
-      case 'ADMIN':
-        return 'Quản trị viên';
-      default:
-        return role;
-    }
   }
 
   Widget _buildMenuItem(
@@ -677,47 +471,37 @@ class _ProfilePageState extends State<ProfilePage>
     String title,
     IconData icon,
     VoidCallback onTap,
+    bool isDark,
   ) {
-    return GlassCard(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: Theme.of(context).hintColor),
-              ],
-            ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+        ),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: AppTheme.primaryBlueDark),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isDark
+                ? AppTheme.darkTextPrimary
+                : AppTheme.lightTextPrimary,
+            fontWeight: FontWeight.w500,
           ),
         ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: isDark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
+        ),
+        onTap: onTap,
       ),
     );
   }
@@ -728,60 +512,67 @@ class _ProfilePageState extends State<ProfilePage>
     IconData icon,
     bool value,
     ValueChanged<bool> onChanged,
+    bool isDark,
   ) {
-    return GlassCard(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                size: 20,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                title,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
-              ),
-            ),
-            Switch(value: value, onChanged: onChanged),
-          ],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+        ),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: AppTheme.primaryBlueDark),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isDark
+                ? AppTheme.darkTextPrimary
+                : AppTheme.lightTextPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        trailing: Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: AppTheme.primaryBlueDark,
         ),
       ),
     );
   }
 
-  Widget _buildLogoutButton(BuildContext context, AuthProvider authProvider) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () => _showLogoutDialog(context, authProvider),
-        icon: const Icon(Icons.logout),
-        label: const Text('Đăng xuất'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.errorColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+  Widget _buildLogoutButton(
+    BuildContext context,
+    AuthProvider authProvider,
+    bool isDark,
+  ) {
+    return ElevatedButton(
+      onPressed: () => _showLogoutDialog(context, authProvider),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.logout),
+          SizedBox(width: 8),
+          Text(
+            'ĐĂNG XUẤT',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+              letterSpacing: 1.5,
+            ),
           ),
-          elevation: 0,
-        ),
+        ],
       ),
     );
   }
@@ -789,71 +580,57 @@ class _ProfilePageState extends State<ProfilePage>
   void _showLogoutDialog(BuildContext context, AuthProvider authProvider) {
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
+      builder: (BuildContext context) {
         return AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.logout, color: AppTheme.errorColor),
-              const SizedBox(width: 12),
-              const Text('Đăng xuất'),
-            ],
-          ),
+          title: const Text('Đăng xuất'),
           content: const Text('Bạn có chắc chắn muốn đăng xuất?'),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text('Hủy'),
             ),
-            ElevatedButton(
+            TextButton(
               onPressed: () async {
-                Navigator.of(dialogContext).pop();
+                Navigator.of(context).pop();
                 await authProvider.logout();
                 if (context.mounted) {
                   context.go('/login');
                 }
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.errorColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+              child: const Text(
+                'Đăng xuất',
+                style: TextStyle(color: Colors.red),
               ),
-              child: const Text('Đăng xuất'),
             ),
           ],
         );
       },
     );
   }
-}
 
-// Custom painter for background pattern
-class _CirclePatternPainter extends CustomPainter {
-  final Color color;
-
-  _CirclePatternPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    // Draw circles in pattern
-    const spacing = 40.0;
-    const radius = 3.0;
-
-    for (double x = 0; x < size.width + spacing; x += spacing) {
-      for (double y = 0; y < size.height + spacing; y += spacing) {
-        canvas.drawCircle(Offset(x, y), radius, paint);
-      }
+  Color _getPremiumRingColor(String planType) {
+    switch (planType) {
+      case 'PREMIUM_PLUS':
+        return const Color(0xFF00D4FF); // Diamond
+      case 'PREMIUM':
+        return const Color(0xFFFFD700); // Gold
+      case 'BASIC':
+        return const Color(0xFFC0C0C0); // Silver
+      default:
+        return Colors.grey;
     }
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Color _getPlanColor(String planType) {
+    switch (planType) {
+      case 'PREMIUM_PLUS':
+        return const Color(0xFF00D4FF);
+      case 'PREMIUM':
+        return const Color(0xFFFFD700);
+      case 'BASIC':
+        return AppTheme.themeGreenStart;
+      default:
+        return Colors.grey;
+    }
+  }
 }

@@ -62,10 +62,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
   Future<void> _loadCourseData() async {
     final courseId = int.tryParse(widget.courseId);
     if (courseId == null) {
-      ErrorHandler.showErrorSnackBar(
-        context,
-        'ID khóa học không hợp lệ',
-      );
+      ErrorHandler.showErrorSnackBar(context, 'ID khóa học không hợp lệ');
       return;
     }
 
@@ -150,10 +147,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       setState(() => _isEnrolling = false);
 
       if (enrolled && mounted) {
-        ErrorHandler.showSuccessSnackBar(
-          context,
-          'Đăng ký thành công!',
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Đăng ký thành công!');
       } else if (mounted) {
         ErrorHandler.showErrorSnackBar(
           context,
@@ -221,9 +215,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     final paymentProvider = context.read<PaymentProvider>();
@@ -257,9 +249,8 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
-        builder: (context) => PaymentWebViewPage(
-          checkoutUrl: paymentResponse.checkoutUrl,
-        ),
+        builder: (context) =>
+            PaymentWebViewPage(checkoutUrl: paymentResponse.checkoutUrl),
       ),
     );
 
@@ -269,10 +260,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     final courseId = int.parse(widget.courseId);
 
     if (result != null && result['success'] == true && mounted) {
-      ErrorHandler.showSuccessSnackBar(
-        context,
-        'Thanh toán thành công!',
-      );
+      ErrorHandler.showSuccessSnackBar(context, 'Thanh toán thành công!');
 
       // Auto-enroll user after successful payment
       final enrolled = await enrollmentProvider.enrollInCourse(
@@ -317,10 +305,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     } else if (result != null && result['cancelled'] == true) {
       // Payment cancelled by user
       if (mounted) {
-        ErrorHandler.showWarningSnackBar(
-          context,
-          'Thanh toán đã bị hủy',
-        );
+        ErrorHandler.showWarningSnackBar(context, 'Thanh toán đã bị hủy');
       }
 
       // Cancel the payment on backend
@@ -371,10 +356,6 @@ class _CourseDetailPageState extends State<CourseDetailPage>
 
     if (hasError) {
       return Scaffold(
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-        ),
         body: Center(
           child: GlassCard(
             padding: const EdgeInsets.all(24),
@@ -409,17 +390,14 @@ class _CourseDetailPageState extends State<CourseDetailPage>
 
     if (_course == null) {
       return Scaffold(
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-        ),
         body: const Center(child: Text('Không tìm thấy khóa học')),
       );
     }
 
     final enrollmentProvider = context.watch<EnrollmentProvider>();
-    final isEnrolled =
-        enrollmentProvider.isEnrolled(int.parse(widget.courseId));
+    final isEnrolled = enrollmentProvider.isEnrolled(
+      int.parse(widget.courseId),
+    );
     final gradientColors = _getLevelGradient(_course!.level);
 
     return Scaffold(
@@ -461,13 +439,19 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 width: double.infinity,
                                 errorBuilder: (context, error, stackTrace) =>
                                     const Center(
-                                  child: Icon(Icons.play_circle_fill,
-                                      size: 72, color: Colors.white),
-                                ),
+                                      child: Icon(
+                                        Icons.play_circle_fill,
+                                        size: 72,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                               )
                             : const Center(
-                                child: Icon(Icons.play_circle_fill,
-                                    size: 72, color: Colors.white),
+                                child: Icon(
+                                  Icons.play_circle_fill,
+                                  size: 72,
+                                  color: Colors.white,
+                                ),
                               ),
                       ),
                       // Gradient Overlay - only at bottom
@@ -489,6 +473,66 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           ),
                         ),
                       ),
+                      // Back button
+                      Positioned(
+                        top: MediaQuery.of(context).padding.top + 8,
+                        left: 16,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                      ),
+                      // Save & Share buttons
+                      Positioned(
+                        top: MediaQuery.of(context).padding.top + 8,
+                        right: 16,
+                        child: Row(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: IconButton(
+                                icon: Icon(
+                                  isWishlisted
+                                      ? Icons.bookmark
+                                      : Icons.bookmark_border,
+                                  color: isWishlisted
+                                      ? AppTheme.themeOrangeStart
+                                      : Colors.white,
+                                ),
+                                onPressed: toggleWishlist,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.share,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () {
+                                  // TODO: Implement share functionality
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
 
@@ -502,13 +546,19 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: gradientColors),
+                                gradient: LinearGradient(
+                                  colors: gradientColors,
+                                ),
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: gradientColors[0].withValues(alpha: 0.4),
+                                    color: gradientColors[0].withValues(
+                                      alpha: 0.4,
+                                    ),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
@@ -517,8 +567,11 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.school,
-                                      color: Colors.white, size: 16),
+                                  const Icon(
+                                    Icons.school,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
                                   const SizedBox(width: 6),
                                   Text(
                                     _course!.level.name.toUpperCase(),
@@ -533,16 +586,19 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               ),
                             ),
                             // Only show MIỄN PHÍ badge for free courses
-                            if (_course!.price == null || _course!.price == 0) ...[
+                            if (_course!.price == null ||
+                                _course!.price == 0) ...[
                               const SizedBox(width: 12),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
                                     colors: [
                                       AppTheme.themeGreenStart,
-                                      AppTheme.themeGreenEnd
+                                      AppTheme.themeGreenEnd,
                                     ],
                                   ),
                                   borderRadius: BorderRadius.circular(20),
@@ -558,8 +614,11 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: const [
-                                    Icon(Icons.card_giftcard,
-                                        color: Colors.white, size: 16),
+                                    Icon(
+                                      Icons.card_giftcard,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
                                     SizedBox(width: 6),
                                     Text(
                                       'MIỄN PHÍ',
@@ -581,9 +640,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                         // Title
                         Text(
                           _course!.title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
+                          style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -597,18 +654,17 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                             CircleAvatar(
                               radius: 16,
                               backgroundColor: gradientColors[0],
-                              child: const Icon(Icons.person,
-                                  size: 18, color: Colors.white),
+                              child: const Icon(
+                                Icons.person,
+                                size: 18,
+                                color: Colors.white,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               _course!.authorName ?? 'Unknown',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: AppTheme.darkTextSecondary,
-                                  ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: AppTheme.darkTextSecondary),
                             ),
                           ],
                         ),
@@ -646,7 +702,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 _StatItem(
                                   icon: Icons.star_outline,
                                   label: 'Đánh giá',
-                                  value: NumberFormatter.formatRating(_course!.rating!),
+                                  value: NumberFormatter.formatRating(
+                                    _course!.rating!,
+                                  ),
                                   color: Colors.amber,
                                 ),
                               ],
@@ -678,10 +736,13 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                     ShaderMask(
                                       shaderCallback: (bounds) =>
                                           LinearGradient(
-                                        colors: gradientColors,
-                                      ).createShader(bounds),
+                                            colors: gradientColors,
+                                          ).createShader(bounds),
                                       child: Text(
-                                        NumberFormatter.formatCurrency(_course!.price!, currency: _course!.currency ?? 'VND'),
+                                        NumberFormatter.formatCurrency(
+                                          _course!.price!,
+                                          currency: _course!.currency ?? 'VND',
+                                        ),
                                         style: const TextStyle(
                                           fontSize: 24,
                                           fontWeight: FontWeight.bold,
@@ -704,8 +765,11 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.description_outlined,
-                                      color: gradientColors[0], size: 20),
+                                  Icon(
+                                    Icons.description_outlined,
+                                    color: gradientColors[0],
+                                    size: 20,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Mô tả',
@@ -719,9 +783,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               const SizedBox(height: 12),
                               Text(
                                 _course!.description ?? 'Không có mô tả',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
+                                style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(
                                       color: AppTheme.darkTextSecondary,
                                       height: 1.6,
@@ -740,8 +802,11 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.verified_outlined,
-                                      color: gradientColors[0], size: 20),
+                                  Icon(
+                                    Icons.verified_outlined,
+                                    color: gradientColors[0],
+                                    size: 20,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Khóa học bao gồm:',
@@ -783,8 +848,11 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.list_alt,
-                                      color: gradientColors[0], size: 20),
+                                  Icon(
+                                    Icons.list_alt,
+                                    color: gradientColors[0],
+                                    size: 20,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Nội dung khóa học',
@@ -802,7 +870,8 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 const Text(
                                   'Chưa có nội dung khóa học',
                                   style: TextStyle(
-                                      color: AppTheme.darkTextSecondary),
+                                    color: AppTheme.darkTextSecondary,
+                                  ),
                                 )
                               else
                                 ListView.builder(
@@ -840,10 +909,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
         decoration: BoxDecoration(
           color: AppTheme.darkCardBackground,
           border: Border(
-            top: BorderSide(
-              color: AppTheme.darkBorderColor,
-              width: 1,
-            ),
+            top: BorderSide(color: AppTheme.darkBorderColor, width: 1),
           ),
         ),
         child: SafeArea(
@@ -878,8 +944,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.play_circle_filled,
-                                color: Colors.white),
+                            Icon(Icons.play_circle_filled, color: Colors.white),
                             SizedBox(width: 12),
                             Text(
                               'Tiếp tục học',
@@ -929,8 +994,10 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.add_circle_outline,
-                                      color: Colors.white),
+                                  const Icon(
+                                    Icons.add_circle_outline,
+                                    color: Colors.white,
+                                  ),
                                   const SizedBox(width: 12),
                                   Text(
                                     _course!.price == null ||
@@ -1029,7 +1096,11 @@ class _BenefitItem extends StatelessWidget {
             ),
           ),
         ),
-        const Icon(Icons.check_circle, color: AppTheme.themeGreenStart, size: 20),
+        const Icon(
+          Icons.check_circle,
+          color: AppTheme.themeGreenStart,
+          size: 20,
+        ),
       ],
     );
   }

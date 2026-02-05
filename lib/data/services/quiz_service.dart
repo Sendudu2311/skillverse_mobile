@@ -12,7 +12,7 @@ class QuizService {
   /// Get quiz details by ID
   Future<QuizDetailDto> getQuiz(int quizId) async {
     try {
-      final response = await _apiClient.dio.get('/api/quizzes/$quizId');
+      final response = await _apiClient.dio.get('/quizzes/$quizId');
       return QuizDetailDto.fromJson(response.data);
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -26,7 +26,7 @@ class QuizService {
   Future<List<QuizSummaryDto>> getQuizzesByModule(int moduleId) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/quizzes/modules/$moduleId/quizzes',
+        '/quizzes/modules/$moduleId/quizzes',
       );
       return (response.data as List)
           .map((json) => QuizSummaryDto.fromJson(json as Map<String, dynamic>))
@@ -49,7 +49,7 @@ class QuizService {
   }) async {
     try {
       final response = await _apiClient.dio.post(
-        '/api/quizzes/$quizId/submit',
+        '/quizzes/$quizId/submit',
         queryParameters: {'userId': userId},
         data: submitData.toJson(),
       );
@@ -80,7 +80,7 @@ class QuizService {
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/quizzes/$quizId/attempts',
+        '/quizzes/$quizId/attempts',
         queryParameters: {'userId': userId},
       );
 

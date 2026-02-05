@@ -36,11 +36,79 @@ class _RoadmapPageState extends State<RoadmapPage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return SafeArea(
-      child: Column(
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/dashboard'),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.satellite_alt,
+              color: AppTheme.primaryBlueDark,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [AppTheme.primaryBlueDark, Color(0xFF00D4FF)],
+              ).createShader(bounds),
+              child: const Text(
+                'NAVIGATION CONTROL',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  color: Colors.white,
+                  letterSpacing: 2,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Column(
         children: [
-          // Header
-          _buildHeader(context, isDark),
+          // Description and Create Button
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark
+                      ? AppTheme.darkBorderColor
+                      : AppTheme.lightBorderColor,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  '>> ',
+                  style: TextStyle(
+                    color: AppTheme.primaryBlueDark,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'Hệ thống định vị lộ trình học tập AI',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           // Search & Filters
           _buildSearchAndFilters(context, isDark),
@@ -69,37 +137,10 @@ class _RoadmapPageState extends State<RoadmapPage> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title with HUD style
-          Text(
-            'NAVIGATION CONTROL DECK',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
-              letterSpacing: 2,
-              fontFamily: 'monospace',
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Hệ thống định vị lộ trình học tập AI',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-            ),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/roadmap/generate'),
+        icon: const Icon(Icons.add),
+        label: const Text('Tạo lộ trình mới'),
       ),
     );
   }

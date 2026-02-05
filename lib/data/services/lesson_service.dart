@@ -15,7 +15,7 @@ class LessonService {
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/lessons/$lessonId',
+        '/lessons/$lessonId',
       );
       return LessonDetailDto.fromJson(response.data);
     } catch (e) {
@@ -30,7 +30,7 @@ class LessonService {
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/lessons/modules/$moduleId/lessons',
+        '/lessons/modules/$moduleId/lessons',
       );
 
       final List<dynamic> data = response.data as List<dynamic>;
@@ -50,7 +50,7 @@ class LessonService {
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/lessons/modules/$moduleId/lessons/$lessonId/next',
+        '/lessons/modules/$moduleId/lessons/$lessonId/next',
       );
       return LessonBriefDto.fromJson(response.data);
     } catch (e) {
@@ -67,7 +67,7 @@ class LessonService {
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/api/lessons/modules/$moduleId/lessons/$lessonId/prev',
+        '/lessons/modules/$moduleId/lessons/$lessonId/prev',
       );
       return LessonBriefDto.fromJson(response.data);
     } catch (e) {
@@ -85,7 +85,7 @@ class LessonService {
   }) async {
     try {
       await _apiClient.dio.put(
-        '/api/lessons/modules/$moduleId/lessons/$lessonId/complete',
+        '/lessons/modules/$moduleId/lessons/$lessonId/complete',
         queryParameters: {'userId': userId},
       );
     } catch (e) {

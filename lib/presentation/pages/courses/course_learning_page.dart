@@ -228,6 +228,143 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     }
   }
 
+  void _showModuleList() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Title
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Nội dung khóa học',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Module list
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _modules.length,
+                  itemBuilder: (context, index) {
+                    final module = _modules[index];
+                    final lessons = _moduleLessons[module.id];
+                    final isExpanded = module.id == _activeModuleId;
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ExpansionTile(
+                        initiallyExpanded: isExpanded,
+                        title: Text(
+                          module.title,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: module.description != null
+                            ? Text(
+                                module.description!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              )
+                            : null,
+                        onExpansionChanged: (expanded) {
+                          if (expanded) {
+                            _loadLessonsForModule(module.id);
+                          }
+                        },
+                        children: [
+                          if (lessons == null)
+                            const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Center(child: CircularProgressIndicator()),
+                            )
+                          else if (lessons.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Text('Chưa có bài học'),
+                            )
+                          else
+                            ...lessons.map((lesson) {
+                              final isActive = lesson.id == _activeLessonId;
+                              return ListTile(
+                                leading: Icon(
+                                  _getLessonIcon(lesson.type),
+                                  color: isActive
+                                      ? Theme.of(context).colorScheme.primary
+                                      : null,
+                                ),
+                                title: Text(
+                                  lesson.title,
+                                  style: TextStyle(
+                                    fontWeight: isActive
+                                        ? FontWeight.bold
+                                        : null,
+                                  ),
+                                ),
+                                subtitle: lesson.durationSec != null
+                                    ? Text(_formatDuration(lesson.durationSec!))
+                                    : null,
+                                selected: isActive,
+                                selectedTileColor: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer.withOpacity(0.3),
+                                onTap: () {
+                                  _selectLesson(module.id, lesson.id);
+                                  Navigator.pop(context);
+                                },
+                              );
+                            }),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoadingModules) {
@@ -250,87 +387,32 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(currentModule.title)),
-      body: Row(
-        children: [
-          // Sidebar - Module & Lesson List
-          Container(
-            width: 320,
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              border: Border(
-                right: BorderSide(color: Theme.of(context).dividerColor),
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(currentModule.title, style: const TextStyle(fontSize: 16)),
+            if (_currentLessonDetail != null)
+              Text(
+                _currentLessonDetail!.title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.normal,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _modules.length,
-              itemBuilder: (context, index) {
-                final module = _modules[index];
-                final lessons = _moduleLessons[module.id];
-                final isExpanded = module.id == _activeModuleId;
-
-                return ExpansionTile(
-                  initiallyExpanded: isExpanded,
-                  title: Text(
-                    module.title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  subtitle: module.description != null
-                      ? Text(
-                          module.description!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        )
-                      : null,
-                  onExpansionChanged: (expanded) {
-                    if (expanded) {
-                      _loadLessonsForModule(module.id);
-                    }
-                  },
-                  children: [
-                    if (lessons == null)
-                      const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (lessons.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text('Chưa có bài học'),
-                      )
-                    else
-                      ...lessons.map((lesson) {
-                        final isActive = lesson.id == _activeLessonId;
-                        return ListTile(
-                          leading: Icon(
-                            _getLessonIcon(lesson.type),
-                            color: isActive
-                                ? Theme.of(context).colorScheme.primary
-                                : null,
-                          ),
-                          title: Text(lesson.title),
-                          subtitle: lesson.durationSec != null
-                              ? Text(_formatDuration(lesson.durationSec!))
-                              : null,
-                          selected: isActive,
-                          selectedTileColor: Theme.of(
-                            context,
-                          ).colorScheme.primaryContainer,
-                          onTap: () => _selectLesson(module.id, lesson.id),
-                        );
-                      }),
-                  ],
-                );
-              },
-            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.list),
+            onPressed: _showModuleList,
+            tooltip: 'Nội dung khóa học',
           ),
-
-          // Main Content Area
-          Expanded(child: _buildMainContent()),
         ],
       ),
+      body: _buildMainContent(),
     );
   }
 
@@ -341,76 +423,127 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
 
     final lesson = _currentLessonDetail!;
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Lesson Title
-          Text(
-            lesson.title,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+    return Column(
+      children: [
+        // Lesson Content
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Lesson info header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  color: Theme.of(context).cardColor,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Lesson Type & Duration
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 8,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(_getLessonIcon(lesson.lessonType), size: 18),
+                              const SizedBox(width: 6),
+                              Text(
+                                _getLessonTypeName(lesson.lessonType),
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                          if (lesson.durationSec != null)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.schedule, size: 18),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _formatDuration(lesson.durationSec!),
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Lesson Content
+                _buildLessonContent(lesson),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
+        ),
 
-          // Lesson Type & Duration
-          Row(
-            children: [
-              Icon(_getLessonIcon(lesson.lessonType), size: 20),
-              const SizedBox(width: 8),
-              Text(
-                _getLessonTypeName(lesson.lessonType),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              if (lesson.durationSec != null) ...[
-                const SizedBox(width: 16),
-                const Icon(Icons.schedule, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  _formatDuration(lesson.durationSec!),
-                  style: Theme.of(context).textTheme.bodyMedium,
+        // Bottom Navigation Bar - Hide in landscape (fullscreen)
+        if (MediaQuery.of(context).orientation == Orientation.portrait)
+          Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
                 ),
               ],
-            ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: SafeArea(
+              child: Row(
+                children: [
+                  // Previous button
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _goToPreviousLesson,
+                      icon: const Icon(Icons.chevron_left, size: 20),
+                      label: const Text('Trước'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Complete button
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: _isMarkingComplete
+                          ? null
+                          : _markLessonComplete,
+                      icon: _isMarkingComplete
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check, size: 20),
+                      label: const Text('Hoàn thành'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Next button
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _goToNextLesson,
+                      icon: const Icon(Icons.chevron_right, size: 20),
+                      label: const Text('Sau'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-
-          // Lesson Content
-          Expanded(child: _buildLessonContent(lesson)),
-
-          const SizedBox(height: 16),
-
-          // Navigation Buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton.icon(
-                onPressed: _goToPreviousLesson,
-                icon: const Icon(Icons.chevron_left),
-                label: const Text('Bài trước'),
-              ),
-              ElevatedButton.icon(
-                onPressed: _isMarkingComplete ? null : _markLessonComplete,
-                icon: _isMarkingComplete
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.check_circle_outline),
-                label: const Text('Hoàn thành & Tiếp theo'),
-              ),
-              TextButton.icon(
-                onPressed: _goToNextLesson,
-                icon: const Icon(Icons.chevron_right),
-                label: const Text('Bài tiếp'),
-              ),
-            ],
-          ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -426,16 +559,25 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       case LessonType.quiz:
         final quizId = _moduleQuizIds[_activeModuleId];
         if (quizId == null) {
-          return const Center(child: Text('Không tìm thấy bài kiểm tra'));
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: Text('Không tìm thấy bài kiểm tra')),
+          );
         }
         return QuizLessonWidget(
           quizId: quizId,
           onCompleted: _markLessonComplete,
         );
       case LessonType.assignment:
-        return const Center(child: Text('Assignment sẽ được triển khai sau'));
+        return const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: Text('Assignment sẽ được triển khai sau')),
+        );
       case LessonType.codelab:
-        return const Center(child: Text('Codelab không khả dụng trên mobile'));
+        return const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: Text('Codelab không khả dụng trên mobile')),
+        );
     }
   }
 
@@ -473,7 +615,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;
     if (minutes > 0) {
-      return '${minutes}:${secs.toString().padLeft(2, '0')}';
+      return '${minutes}p ${secs}s';
     } else {
       return '${secs}s';
     }

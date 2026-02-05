@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/stat_card.dart';
-import '../../widgets/glass_card.dart';
+import '../../providers/dashboard_provider.dart';
 import '../../themes/app_theme.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -13,603 +12,1096 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage>
-    with TickerProviderStateMixin {
-  late AnimationController _welcomeController;
-  late AnimationController _statsController;
-  late AnimationController _coursesController;
-
-  late Animation<double> _welcomeSlideAnimation;
-  late Animation<double> _welcomeFadeAnimation;
-
+class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-
-    // Welcome section animation
-    _welcomeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _welcomeSlideAnimation = Tween<double>(begin: 50.0, end: 0.0).animate(
-      CurvedAnimation(parent: _welcomeController, curve: Curves.easeOut),
-    );
-    _welcomeFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _welcomeController, curve: Curves.easeIn),
-    );
-
-    // Stats section animation
-    _statsController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-
-    // Courses section animation
-    _coursesController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-
-    // Start animations sequentially
-    _welcomeController.forward().then((_) {
-      _statsController.forward();
-      _coursesController.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DashboardProvider>().loadDashboard();
     });
   }
 
   @override
-  void dispose() {
-    _welcomeController.dispose();
-    _statsController.dispose();
-    _coursesController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Consumer2<AuthProvider, DashboardProvider>(
+      builder: (context, authProvider, dashboardProvider, child) {
         final user = authProvider.user;
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome Section with gradient and animation
-              AnimatedBuilder(
-                animation: _welcomeController,
-                builder: (context, child) {
-                  return Transform.translate(
-                    offset: Offset(0, _welcomeSlideAnimation.value),
-                    child: Opacity(
-                      opacity: _welcomeFadeAnimation.value,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppTheme.themeBlueStart,
-                              AppTheme.themeBlueEnd,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.themeBlueStart.withValues(
-                                alpha: 0.4,
-                              ),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Xin chào,',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium
-                                            ?.copyWith(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.9,
-                                              ),
-                                            ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        user?.fullName ?? 'Learner',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .headlineMedium
-                                            ?.copyWith(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: const Icon(
-                                    Icons.waving_hand,
-                                    color: Colors.white,
-                                    size: 32,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.lightbulb_outline,
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      'Hôm nay bạn muốn học gì?',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyLarge
-                                          ?.copyWith(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.95,
-                                            ),
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+        if (dashboardProvider.isLoading && !dashboardProvider.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-              const SizedBox(height: 24),
+        if (dashboardProvider.errorMessage != null &&
+            !dashboardProvider.hasData) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                const SizedBox(height: 16),
+                Text('Không thể tải dữ liệu'),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: () => dashboardProvider.loadDashboard(),
+                  child: const Text('Thử lại'),
+                ),
+              ],
+            ),
+          );
+        }
 
-              // Stats Section
-              Text(
-                'Thống kê học tập',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
+        return RefreshIndicator(
+          onRefresh: () => dashboardProvider.refreshDashboard(),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Welcome Header - Futuristic
+                _buildWelcomeHeader(context, user?.fullName ?? 'Pilot', isDark),
+                const SizedBox(height: 24),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: StatCard(
-                      title: 'Khóa học',
-                      value: '3',
-                      icon: Icons.book_outlined,
-                      gradientColors: const [
-                        AppTheme.themeBlueStart,
-                        AppTheme.themeBlueEnd,
-                      ],
-                      onTap: () => context.go('/courses'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Hoàn thành',
-                      value: '65%',
-                      icon: Icons.trending_up_outlined,
-                      gradientColors: const [
-                        AppTheme.themeGreenStart,
-                        AppTheme.themeGreenEnd,
-                      ],
-                    ),
-                  ),
+                // Wallet Card
+                _buildWalletCard(context, dashboardProvider, isDark),
+                const SizedBox(height: 24),
+
+                // Quick Actions
+                _buildQuickActions(context, isDark),
+                const SizedBox(height: 24),
+
+                // Streak Tracker
+                _buildStreakTracker(context, dashboardProvider, isDark),
+                const SizedBox(height: 24),
+
+                // Stats Grid
+                _buildStatsGrid(context, dashboardProvider, isDark),
+                const SizedBox(height: 24),
+
+                // Analyst Track (Roadmap Progress)
+                if (dashboardProvider.activeRoadmap != null) ...[
+                  _buildAnalystTrack(context, dashboardProvider, isDark),
+                  const SizedBox(height: 24),
                 ],
-              ),
 
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: StatCard(
-                      title: 'Streak',
-                      value: '7',
-                      icon: Icons.local_fire_department_outlined,
-                      gradientColors: const [
-                        AppTheme.themeOrangeStart,
-                        AppTheme.themeOrangeEnd,
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Điểm',
-                      value: '1,250',
-                      icon: Icons.star_outline,
-                      gradientColors: const [
-                        AppTheme.themePurpleStart,
-                        AppTheme.themePurpleEnd,
-                      ],
-                    ),
-                  ),
+                // System Limits (Subscription Features)
+                if (dashboardProvider.hasPremium) ...[
+                  _buildSystemLimits(context, dashboardProvider, isDark),
+                  const SizedBox(height: 24),
                 ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Quick Actions Section
-              Text(
-                'Truy cập nhanh',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildQuickActionCard(
-                      context,
-                      'AI Roadmap',
-                      Icons.map_outlined,
-                      const [
-                        AppTheme.themePurpleStart,
-                        AppTheme.themePurpleEnd,
-                      ],
-                      () => context.push('/roadmap'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildQuickActionCard(
-                      context,
-                      'Khóa học',
-                      Icons.school_outlined,
-                      const [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
-                      () => context.go('/courses'),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildQuickActionCard(
-                      context,
-                      'AI Chat',
-                      Icons.chat_bubble_outline,
-                      const [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
-                      () => context.go('/chat'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildQuickActionCard(
-                      context,
-                      'Cộng đồng',
-                      Icons.people_outline,
-                      const [
-                        AppTheme.themeOrangeStart,
-                        AppTheme.themeOrangeEnd,
-                      ],
-                      () => context.go('/community'),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildQuickActionCard(
-                      context,
-                      'Mentor 1:1',
-                      Icons.person_outline,
-                      const [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                      () => context.go('/mentors'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildQuickActionCard(
-                      context,
-                      'Portfolio',
-                      Icons.work_outline,
-                      const [Color(0xFFEC4899), Color(0xFFF43F5E)],
-                      () => context.go('/portfolio'),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Recent Courses
-              Text(
-                'Khóa học gần đây',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-
-              _buildCourseCard(
-                context,
-                'Full Stack Web Development',
-                'Đang học',
-                0.65,
-                const [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
-              ),
-
-              const SizedBox(height: 12),
-
-              _buildCourseCard(
-                context,
-                'Mobile App Development',
-                'Chưa bắt đầu',
-                0.0,
-                const [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Learning Goals
-              Text(
-                'Mục tiêu học tập',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-
-              _buildGoalCard(
-                context,
-                'Hoàn thành khóa React.js',
-                'Còn 2 tuần',
-                Icons.code,
-              ),
-
-              const SizedBox(height: 12),
-
-              _buildGoalCard(
-                context,
-                'Xây dựng portfolio project',
-                'Còn 1 tháng',
-                Icons.build,
-              ),
-
-              const SizedBox(height: 24),
-            ],
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildQuickActionCard(
+  Widget _buildWelcomeHeader(
     BuildContext context,
-    String title,
-    IconData icon,
-    List<Color> gradientColors,
-    VoidCallback onTap,
+    String userName,
+    bool isDark,
   ) {
-    return GlassCard(
-      padding: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onTap,
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: gradientColors
-                  .map((c) => c.withValues(alpha: 0.1))
-                  .toList(),
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: gradientColors),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: gradientColors.first.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(icon, color: Colors.white, size: 28),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
         ),
       ),
-    );
-  }
-
-  Widget _buildCourseCard(
-    BuildContext context,
-    String title,
-    String status,
-    double progress,
-    List<Color> gradientColors,
-  ) {
-    return GlassCard(
-      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 12,
-                height: 12,
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: gradientColors),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: gradientColors.first.withValues(alpha: 0.4),
-                      blurRadius: 8,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.primaryBlueDark,
+                      AppTheme.secondaryPurple,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.waving_hand, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'WELCOME BACK,',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontFamily: 'monospace',
+                        color: const Color(0xFF00D4FF),
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      userName,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            status,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppTheme.darkBackgroundSecondary
+                  : AppTheme.lightBackgroundSecondary,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF00D4FF).withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.terminal, size: 16, color: Color(0xFF00D4FF)),
+                const SizedBox(width: 8),
+                Text(
+                  'COMMAND CENTER OPERATIONAL',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    color: const Color(0xFF00D4FF),
+                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ),
-          if (progress > 0) ...[
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: gradientColors.first.withValues(alpha: 0.2),
-                valueColor: AlwaysStoppedAnimation<Color>(gradientColors.first),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${(progress * 100).toInt()}% hoàn thành',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: gradientColors.first,
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
 
-  Widget _buildGoalCard(
+  Widget _buildWalletCard(
     BuildContext context,
-    String title,
-    String deadline,
-    IconData icon,
+    DashboardProvider provider,
+    bool isDark,
   ) {
-    return GlassCard(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.themeBlueStart.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
+    return GestureDetector(
+      onTap: () => context.go('/wallet'),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF6366F1).withValues(alpha: 0.2),
+              const Color(0xFF8B5CF6).withValues(alpha: 0.2),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFF6366F1).withValues(alpha: 0.4),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.account_balance_wallet,
+                    color: Color(0xFF6366F1),
+                    size: 24,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  deadline,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'VÍ VŨ TRỤ',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'monospace',
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Quản lý tài sản của bạn',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.attach_money,
+                            size: 16,
+                            color: AppTheme.themeGreenStart,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Tiền Mặt',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontFamily: 'monospace',
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${provider.cashBalance} đ',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'monospace',
+                          color: AppTheme.themeGreenStart,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 50,
+                  color: isDark
+                      ? AppTheme.darkBorderColor
+                      : AppTheme.lightBorderColor,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.monetization_on,
+                            size: 16,
+                            color: const Color(0xFFFFD700),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'SkillCoin',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontFamily: 'monospace',
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${provider.coinBalance}',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'monospace',
+                          color: Color(0xFFFFD700),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context, bool isDark) {
+    final actions = [
+      {
+        'icon': Icons.map_outlined,
+        'label': 'AI Roadmap',
+        'color': AppTheme.themePurpleStart,
+        'route': '/roadmap',
+      },
+      {
+        'icon': Icons.school_outlined,
+        'label': 'Khóa học',
+        'color': AppTheme.themeBlueStart,
+        'route': '/courses',
+      },
+      {
+        'icon': Icons.chat_bubble_outline,
+        'label': 'AI Chat',
+        'color': AppTheme.themeGreenStart,
+        'route': '/chat',
+      },
+      {
+        'icon': Icons.people_outline,
+        'label': 'Cộng đồng',
+        'color': AppTheme.themeOrangeStart,
+        'route': '/community',
+      },
+      {
+        'icon': Icons.person_outline,
+        'label': 'Mentor 1:1',
+        'color': const Color(0xFF6366F1),
+        'route': '/mentors',
+      },
+      {
+        'icon': Icons.work_outline,
+        'label': 'Portfolio',
+        'color': const Color(0xFFEC4899),
+        'route': '/portfolio',
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Truy cập nhanh',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: isDark
+                ? AppTheme.darkTextPrimary
+                : AppTheme.lightTextPrimary,
           ),
-          Icon(
-            Icons.chevron_right,
-            color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.5),
+        ),
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.0,
+          ),
+          itemCount: actions.length,
+          itemBuilder: (context, index) {
+            final action = actions[index];
+            return _buildQuickActionCard(
+              context,
+              icon: action['icon'] as IconData,
+              label: action['label'] as String,
+              color: action['color'] as Color,
+              onTap: () => context.go(action['route'] as String),
+              isDark: isDark,
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActionCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStreakTracker(
+    BuildContext context,
+    DashboardProvider provider,
+    bool isDark,
+  ) {
+    final daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.local_fire_department,
+                color: AppTheme.themeOrangeStart,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'CHUỖI HỌC TẬP',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Current Streak
+          Row(
+            children: [
+              ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
+                ).createShader(bounds),
+                child: Text(
+                  '${provider.currentStreak}',
+                  style: const TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'NGÀY',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontFamily: 'monospace',
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Weekly Activity Grid
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (index) {
+              final isActive = provider.weeklyActivity.length > index
+                  ? provider.weeklyActivity[index]
+                  : false;
+              return Column(
+                children: [
+                  Text(
+                    daysOfWeek[index],
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? AppTheme.themeOrangeStart
+                          : (isDark
+                                ? AppTheme.darkBackgroundSecondary
+                                : AppTheme.lightBackgroundSecondary),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isActive
+                            ? AppTheme.themeOrangeStart
+                            : (isDark
+                                  ? AppTheme.darkBorderColor
+                                  : AppTheme.lightBorderColor),
+                      ),
+                    ),
+                    child: isActive
+                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                        : null,
+                  ),
+                ],
+              );
+            }),
+          ),
+          const SizedBox(height: 16),
+
+          // Power Level
+          Row(
+            children: [
+              Text(
+                'POWER LEVEL:',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: provider.currentStreak > 0
+                        ? (provider.currentStreak / 30).clamp(0.0, 1.0)
+                        : 0.0,
+                    minHeight: 8,
+                    backgroundColor: isDark
+                        ? AppTheme.darkBackgroundSecondary
+                        : AppTheme.lightBackgroundSecondary,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppTheme.themeOrangeStart,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                provider.currentStreak > 0
+                    ? '${(provider.currentStreak / 30 * 100).toInt()}%'
+                    : 'N/A',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.themeOrangeStart,
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatsGrid(
+    BuildContext context,
+    DashboardProvider provider,
+    bool isDark,
+  ) {
+    final stats = [
+      {
+        'icon': Icons.school_outlined,
+        'label': 'KHÓA HỌC ĐANG HỌC',
+        'value': provider.enrolledCoursesCount,
+        'change': '+${provider.enrolledCoursesCount} this cycle',
+        'color': AppTheme.primaryBlueDark,
+      },
+      {
+        'icon': Icons.work_outline,
+        'label': 'DỰ ÁN ĐÃ HOÀN THÀNH',
+        'value': provider.completedProjectsCount,
+        'change': '+${provider.completedProjectsCount} this cycle',
+        'color': AppTheme.themeGreenStart,
+      },
+      {
+        'icon': Icons.emoji_events_outlined,
+        'label': 'CHỨNG CHỈ ĐÃ ĐẠT',
+        'value': provider.certificatesCount,
+        'change': '+${provider.certificatesCount} this cycle',
+        'color': AppTheme.themePurpleStart,
+      },
+      {
+        'icon': Icons.access_time,
+        'label': 'TỔNG SỐ GIỜ HỌC',
+        'value': provider.totalHoursStudied,
+        'change': '+${provider.totalHoursStudied} this cycle',
+        'color': AppTheme.themeOrangeStart,
+      },
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.3,
+      ),
+      itemCount: stats.length,
+      itemBuilder: (context, index) {
+        final stat = stats[index];
+        return _buildStatCard(
+          context,
+          icon: stat['icon'] as IconData,
+          label: stat['label'] as String,
+          value: stat['value'] as int,
+          change: stat['change'] as String,
+          color: stat['color'] as Color,
+          isDark: isDark,
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required int value,
+    required String change,
+    required Color color,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.successColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.trending_up,
+                      size: 10,
+                      color: AppTheme.successColor,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '+${value}',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontFamily: 'monospace',
+                        color: AppTheme.successColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Text(
+            '$value',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontFamily: 'monospace',
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+              letterSpacing: 0.5,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalystTrack(
+    BuildContext context,
+    DashboardProvider provider,
+    bool isDark,
+  ) {
+    final roadmap = provider.activeRoadmap!;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primaryBlueDark.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.route, color: AppTheme.primaryBlueDark, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                'ANALYST TRACK',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => context.push('/roadmap'),
+                child: const Text(
+                  'VIEW ALL',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            roadmap.title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: isDark
+                  ? AppTheme.darkTextPrimary
+                  : AppTheme.lightTextPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlueDark.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  roadmap.difficultyLevel.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                    color: AppTheme.primaryBlueDark,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${roadmap.completedQuests}/${roadmap.totalQuests} quests',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: roadmap.progressPercentage / 100,
+                    minHeight: 12,
+                    backgroundColor: isDark
+                        ? AppTheme.darkBackgroundSecondary
+                        : AppTheme.lightBackgroundSecondary,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppTheme.primaryBlueDark,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '${roadmap.progressPercentage}%',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  color: AppTheme.primaryBlueDark,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSystemLimits(
+    BuildContext context,
+    DashboardProvider provider,
+    bool isDark,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFFFD700).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 24),
+              const SizedBox(width: 12),
+              Text(
+                'SYSTEM LIMITS & CAPABILITIES',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildLimitRow(
+            'AI CHATBOT REQUESTS',
+            'INF',
+            Icons.chat_bubble_outline,
+            const Color(0xFF00D4FF),
+            isDark,
+          ),
+          const SizedBox(height: 12),
+          _buildLimitRow(
+            'AI ROADMAP GENERATION',
+            'INF',
+            Icons.map_outlined,
+            AppTheme.primaryBlueDark,
+            isDark,
+          ),
+          const SizedBox(height: 12),
+          _buildLimitRow(
+            'PRIORITY SUPPORT',
+            'INF',
+            Icons.support_agent,
+            AppTheme.themePurpleStart,
+            isDark,
+          ),
+          const SizedBox(height: 12),
+          _buildLimitRow(
+            'COIN EARNING MULTIPLIER',
+            'x2',
+            Icons.monetization_on_outlined,
+            const Color(0xFFFFD700),
+            isDark,
+            isBadge: true,
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.successColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: AppTheme.successColor,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${provider.premiumPlanName} • ${provider.premiumDaysRemaining} days remaining',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                      color: AppTheme.successColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLimitRow(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    bool isDark, {
+    bool isBadge = false,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontFamily: 'monospace',
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: isBadge
+                ? color.withValues(alpha: 0.2)
+                : (isDark
+                      ? AppTheme.darkBackgroundSecondary
+                      : AppTheme.lightBackgroundSecondary),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
+          ),
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontFamily: 'monospace',
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

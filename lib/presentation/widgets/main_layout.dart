@@ -8,8 +8,14 @@ import 'galaxy_background.dart';
 class MainLayout extends StatefulWidget {
   final Widget child;
   final String currentPath;
+  final bool showAppBar;
 
-  const MainLayout({super.key, required this.child, required this.currentPath});
+  const MainLayout({
+    super.key,
+    required this.child,
+    required this.currentPath,
+    this.showAppBar = true,
+  });
 
   @override
   State<MainLayout> createState() => _MainLayoutState();
@@ -188,32 +194,40 @@ class _MainLayoutState extends State<MainLayout> {
     final isDarkMode = context.watch<ThemeProvider>().isDarkMode;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_getPageTitle()),
-        automaticallyImplyLeading: _shouldShowBackButton(),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // TODO: Implement notifications
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _showLogoutDialog(context),
-          ),
-        ],
-      ),
+      appBar: widget.showAppBar
+          ? AppBar(
+              title: Text(_getPageTitle()),
+              automaticallyImplyLeading: _shouldShowBackButton(),
+              elevation: 0,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () {
+                    // TODO: Implement notifications
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: () => _showLogoutDialog(context),
+                ),
+              ],
+            )
+          : null,
       body: isDarkMode ? GalaxyBackground(child: widget.child) : widget.child,
       bottomNavigationBar: _navigationItems.length >= 2
           ? BottomNavigationBar(
               currentIndex: _selectedIndex,
               onTap: _onItemTapped,
               type: BottomNavigationBarType.fixed,
-              backgroundColor: Colors.white,
-              selectedItemColor: Theme.of(context).colorScheme.primary,
-              unselectedItemColor: Colors.grey,
+              backgroundColor: isDarkMode
+                  ? const Color(0xFF1E293B)
+                  : Colors.white,
+              selectedItemColor: isDarkMode
+                  ? const Color(0xFF6366F1)
+                  : Theme.of(context).colorScheme.primary,
+              unselectedItemColor: isDarkMode
+                  ? Colors.grey.shade600
+                  : Colors.grey,
               showUnselectedLabels: true,
               elevation: 16,
               items: _navigationItems

@@ -55,11 +55,19 @@ class _LoginPageState extends State<LoginPage> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Đăng nhập Google thất bại'),
+          content: Text(
+            authProvider.errorMessage ?? 'Đăng nhập Google thất bại',
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
+  }
+
+  Future<void> _quickLogin(String email, String password) async {
+    _emailController.text = email;
+    _passwordController.text = password;
+    await _handleLogin();
   }
 
   @override
@@ -89,20 +97,21 @@ class _LoginPageState extends State<LoginPage> {
                       ),
 
                       const SizedBox(height: 8),
-                      
+
                       Text(
                         'Chào mừng trở lại!',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       Text(
                         'Đăng nhập để tiếp tục hành trình học tập',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.7),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -131,9 +140,9 @@ class _LoginPageState extends State<LoginPage> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Password Field
                 TextFormField(
                   controller: _passwordController,
@@ -144,7 +153,9 @@ class _LoginPageState extends State<LoginPage> {
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        _obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() {
@@ -163,9 +174,9 @@ class _LoginPageState extends State<LoginPage> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Forgot Password
                 Align(
                   alignment: Alignment.centerRight,
@@ -174,9 +185,9 @@ class _LoginPageState extends State<LoginPage> {
                     child: const Text('Quên mật khẩu?'),
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Login Button
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
@@ -192,7 +203,7 @@ class _LoginPageState extends State<LoginPage> {
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 24),
 
                 // Divider
@@ -204,7 +215,9 @@ class _LoginPageState extends State<LoginPage> {
                       child: Text(
                         'hoặc',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
                         ),
                       ),
                     ),
@@ -218,7 +231,9 @@ class _LoginPageState extends State<LoginPage> {
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
                     return OutlinedButton.icon(
-                      onPressed: authProvider.isLoading ? null : _handleGoogleSignIn,
+                      onPressed: authProvider.isLoading
+                          ? null
+                          : _handleGoogleSignIn,
                       icon: authProvider.isLoading
                           ? const SizedBox(
                               height: 20,
@@ -247,6 +262,100 @@ class _LoginPageState extends State<LoginPage> {
                 OutlinedButton(
                   onPressed: () => context.go('/register'),
                   child: const Text('Tạo tài khoản mới'),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Demo Accounts Section
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceVariant.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.speed,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'DEMO ACCOUNTS',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Consumer<AuthProvider>(
+                        builder: (context, authProvider, child) {
+                          return Column(
+                            children: [
+                              // Demo Account 1
+                              OutlinedButton.icon(
+                                onPressed: authProvider.isLoading
+                                    ? null
+                                    : () => _quickLogin(
+                                        'phuonganh160268@gmail.com',
+                                        'Duy071204@',
+                                      ),
+                                icon: const Icon(Icons.person, size: 16),
+                                label: const Text(
+                                  'phuonganh160268@gmail.com',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  minimumSize: const Size(double.infinity, 36),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Demo Account 2
+                              OutlinedButton.icon(
+                                onPressed: authProvider.isLoading
+                                    ? null
+                                    : () => _quickLogin(
+                                        'duy071204@gmail.com',
+                                        'Duy071204@',
+                                      ),
+                                icon: const Icon(Icons.person, size: 16),
+                                label: const Text(
+                                  'duy071204@gmail.com',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  minimumSize: const Size(double.infinity, 36),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

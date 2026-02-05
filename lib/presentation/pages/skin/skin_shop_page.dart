@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/skin_models.dart';
 import '../../providers/skin_provider.dart';
@@ -43,48 +44,53 @@ class _SkinShopPageState extends State<SkinShopPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return SafeArea(
-      child: Consumer<SkinProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading && provider.allSkins.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return Scaffold(
+      backgroundColor: isDark
+          ? AppTheme.darkBackgroundPrimary
+          : AppTheme.lightBackgroundPrimary,
+      body: SafeArea(
+        child: Consumer<SkinProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoading && provider.allSkins.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          return RefreshIndicator(
-            onRefresh: () => provider.refreshAll(),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  _buildHeader(isDark),
-                  const SizedBox(height: 24),
-
-                  // Hall of Fame
-                  if (provider.hallOfFame.isNotEmpty) ...[
-                    _buildHallOfFame(provider.hallOfFame, isDark),
+            return RefreshIndicator(
+              onRefresh: () => provider.refreshAll(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    _buildHeader(isDark),
                     const SizedBox(height: 24),
+
+                    // Hall of Fame
+                    if (provider.hallOfFame.isNotEmpty) ...[
+                      _buildHallOfFame(provider.hallOfFame, isDark),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Rising Stars
+                    if (provider.risingStars.isNotEmpty) ...[
+                      _buildRisingStars(provider.risingStars, isDark),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Filter chips
+                    _buildFilterChips(isDark),
+                    const SizedBox(height: 16),
+
+                    // Skin grid
+                    _buildSkinGrid(provider, isDark),
                   ],
-
-                  // Rising Stars
-                  if (provider.risingStars.isNotEmpty) ...[
-                    _buildRisingStars(provider.risingStars, isDark),
-                    const SizedBox(height: 24),
-                  ],
-
-                  // Filter chips
-                  _buildFilterChips(isDark),
-                  const SizedBox(height: 16),
-
-                  // Skin grid
-                  _buildSkinGrid(provider, isDark),
-                ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -95,31 +101,21 @@ class _SkinShopPageState extends State<SkinShopPage> {
       children: [
         Row(
           children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: AppTheme.successColor,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'DIGITAL BOUTIQUE ONLINE',
-              style: TextStyle(
-                fontSize: 10,
-                fontFamily: 'monospace',
+            IconButton(
+              icon: Icon(
+                Icons.arrow_back,
                 color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
-                letterSpacing: 2,
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary,
               ),
+              onPressed: () {
+                // Use go_router to navigate back to profile
+                context.go('/profile');
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
+            const SizedBox(width: 12),
             ShaderMask(
               shaderCallback: (bounds) => LinearGradient(
                 colors: [AppTheme.primaryBlueDark, AppTheme.primaryBlue],
@@ -127,7 +123,7 @@ class _SkinShopPageState extends State<SkinShopPage> {
               child: const Text(
                 'MEOWL SKIN SHOP',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'monospace',
                   color: Colors.white,
@@ -154,14 +150,17 @@ class _SkinShopPageState extends State<SkinShopPage> {
           ],
         ),
         const SizedBox(height: 8),
-        Text(
-          'Nâng cấp trợ lý Meowl của bạn với những bộ trang phục công nghệ cao từ tương lai.',
-          style: TextStyle(
-            fontSize: 12,
-            fontFamily: 'monospace',
-            color: isDark
-                ? AppTheme.darkTextSecondary
-                : AppTheme.lightTextSecondary,
+        Padding(
+          padding: const EdgeInsets.only(left: 44),
+          child: Text(
+            'Nâng cấp trợ lý Meowl của bạn với những bộ trang phục công nghệ cao từ tương lai.',
+            style: TextStyle(
+              fontSize: 12,
+              fontFamily: 'monospace',
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
           ),
         ),
       ],

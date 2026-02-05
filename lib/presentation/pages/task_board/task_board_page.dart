@@ -98,28 +98,34 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
             child: Consumer<TaskBoardProvider>(
               builder: (context, provider, _) => Row(
                 children: [
-                  _buildTabButton(
-                    icon: Icons.auto_awesome,
-                    label: 'AI STRATEGIST',
-                    isSelected: provider.selectedTabIndex == 0,
-                    onTap: () => provider.setSelectedTab(0),
-                    color: const Color(0xFFFFA500),
+                  Expanded(
+                    child: _buildTabButton(
+                      icon: Icons.auto_awesome,
+                      label: 'AI STRATEGIST',
+                      isSelected: provider.selectedTabIndex == 0,
+                      onTap: () => provider.setSelectedTab(0),
+                      color: const Color(0xFFFFA500),
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  _buildTabButton(
-                    icon: Icons.calendar_month,
-                    label: 'TIMELINE',
-                    isSelected: provider.selectedTabIndex == 1,
-                    onTap: () => provider.setSelectedTab(1),
-                    color: AppTheme.primaryBlueDark,
+                  Expanded(
+                    child: _buildTabButton(
+                      icon: Icons.calendar_month,
+                      label: 'TIMELINE',
+                      isSelected: provider.selectedTabIndex == 1,
+                      onTap: () => provider.setSelectedTab(1),
+                      color: AppTheme.primaryBlueDark,
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  _buildTabButton(
-                    icon: Icons.view_column,
-                    label: 'KANBAN',
-                    isSelected: provider.selectedTabIndex == 2,
-                    onTap: () => provider.setSelectedTab(2),
-                    color: AppTheme.primaryBlueDark,
+                  Expanded(
+                    child: _buildTabButton(
+                      icon: Icons.view_column,
+                      label: 'KANBAN',
+                      isSelected: provider.selectedTabIndex == 2,
+                      onTap: () => provider.setSelectedTab(2),
+                      color: AppTheme.primaryBlueDark,
+                    ),
                   ),
                 ],
               ),
@@ -176,7 +182,8 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
           ),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
           children: [
             Icon(
               icon,
@@ -188,18 +195,22 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
                         : AppTheme.lightTextSecondary),
             ),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontFamily: 'monospace',
-                color: isSelected
-                    ? color
-                    : (isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary),
-                letterSpacing: 1,
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontFamily: 'monospace',
+                  color: isSelected
+                      ? color
+                      : (isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary),
+                  letterSpacing: 1,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ],
