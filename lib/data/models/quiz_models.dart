@@ -139,10 +139,7 @@ class SubmitQuizDto {
   final int quizId;
   final List<QuizAnswerDto> answers;
 
-  const SubmitQuizDto({
-    required this.quizId,
-    required this.answers,
-  });
+  const SubmitQuizDto({required this.quizId, required this.answers});
 
   factory SubmitQuizDto.fromJson(Map<String, dynamic> json) =>
       _$SubmitQuizDtoFromJson(json);
@@ -155,20 +152,39 @@ class SubmitQuizDto {
 class QuizAttemptDto {
   final int? id;
   final int quizId;
+  final String? quizTitle;
+
+  @JsonKey(name: 'userId')
   final int studentId;
+
   final int score;
   final bool passed;
-  final DateTime startedAt;
+  final int? correctAnswers;
+  final int? totalQuestions;
+
+  final DateTime? submittedAt;
+  final DateTime? createdAt;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final DateTime? startedAt;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
   final DateTime? completedAt;
+
   final List<QuizAnswerResultDto>? answers;
 
   const QuizAttemptDto({
     this.id,
     required this.quizId,
+    this.quizTitle,
     required this.studentId,
     required this.score,
     required this.passed,
-    required this.startedAt,
+    this.correctAnswers,
+    this.totalQuestions,
+    this.submittedAt,
+    this.createdAt,
+    this.startedAt,
     this.completedAt,
     this.answers,
   });
@@ -219,4 +235,37 @@ class QuizSubmitResponseDto {
       _$QuizSubmitResponseDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$QuizSubmitResponseDtoToJson(this);
+}
+
+/// Quiz attempt status (for retry logic and history)
+@JsonSerializable()
+class QuizAttemptStatusDto {
+  final int quizId;
+  final int userId;
+  final int attemptsUsed;
+  final int maxAttempts;
+  final bool canRetry;
+  final bool hasPassed;
+  final int bestScore;
+  final int secondsUntilRetry;
+  final String? nextRetryAt;
+  final List<QuizAttemptDto>? recentAttempts;
+
+  const QuizAttemptStatusDto({
+    required this.quizId,
+    required this.userId,
+    required this.attemptsUsed,
+    required this.maxAttempts,
+    required this.canRetry,
+    required this.hasPassed,
+    required this.bestScore,
+    required this.secondsUntilRetry,
+    this.nextRetryAt,
+    this.recentAttempts,
+  });
+
+  factory QuizAttemptStatusDto.fromJson(Map<String, dynamic> json) =>
+      _$QuizAttemptStatusDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$QuizAttemptStatusDtoToJson(this);
 }

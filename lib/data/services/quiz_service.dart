@@ -92,4 +92,22 @@ class QuizService {
       throw ApiException('Lấy lịch sử làm bài thất bại: ${e.toString()}');
     }
   }
+
+  /// Get quiz attempt status with retry information
+  Future<QuizAttemptStatusDto> getQuizAttemptStatus({
+    required int quizId,
+    required int userId,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/quizzes/$quizId/attempt-status',
+        queryParameters: {'userId': userId},
+      );
+
+      return QuizAttemptStatusDto.fromJson(response.data);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Lấy trạng thái quiz thất bại: ${e.toString()}');
+    }
+  }
 }

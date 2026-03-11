@@ -121,6 +121,28 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     }
   }
 
+  void _selectQuiz(int moduleId) {
+    final quizId = _moduleQuizIds[moduleId];
+    if (quizId == null) return;
+
+    setState(() {
+      _activeModuleId = moduleId;
+      _activeLessonId = null; // No lesson selected, it's a quiz
+      _isLoadingLesson = false;
+
+      // Create a pseudo lesson detail for quiz
+      _currentLessonDetail = LessonDetailDto(
+        id: -quizId, // Negative ID to distinguish from real lessons
+        title: 'Bài kiểm tra',
+        type: 'QUIZ',
+        orderIndex: 999,
+        contentText: null,
+        videoUrl: null,
+        durationSec: null,
+      );
+    });
+  }
+
   Future<void> _markLessonComplete() async {
     if (_activeModuleId == null || _activeLessonId == null) return;
 
@@ -316,12 +338,13 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                               padding: EdgeInsets.all(16.0),
                               child: Center(child: CircularProgressIndicator()),
                             )
-                          else if (lessons.isEmpty)
+                          else if (lessons.isEmpty &&
+                              !_moduleQuizIds.containsKey(module.id))
                             const Padding(
                               padding: EdgeInsets.all(16.0),
                               child: Text('Chưa có bài học'),
                             )
-                          else
+                          else ...[
                             ...lessons.map((lesson) {
                               final isActive = lesson.id == _activeLessonId;
                               return ListTile(
@@ -352,6 +375,36 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                                 },
                               );
                             }),
+                            // Add quiz item if available
+                            if (_moduleQuizIds.containsKey(module.id))
+                              ListTile(
+                                leading: Icon(
+                                  Icons.quiz_outlined,
+                                  color:
+                                      _activeModuleId == module.id &&
+                                          _currentLessonDetail?.lessonType ==
+                                              LessonType.quiz
+                                      ? Theme.of(context).colorScheme.primary
+                                      : null,
+                                ),
+                                title: const Text(
+                                  'Bài kiểm tra',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                subtitle: const Text('Quiz'),
+                                selected:
+                                    _activeModuleId == module.id &&
+                                    _currentLessonDetail?.lessonType ==
+                                        LessonType.quiz,
+                                selectedTileColor: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer.withOpacity(0.3),
+                                onTap: () {
+                                  _selectQuiz(module.id);
+                                  Navigator.pop(context);
+                                },
+                              ),
+                          ],
                         ],
                       ),
                     );

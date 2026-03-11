@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
+import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/dashboard_models.dart';
 import '../../data/services/dashboard_service.dart';
 
 /// Provider for managing Dashboard state and data
-class DashboardProvider extends ChangeNotifier {
+///
+/// Uses [LoadingStateProviderMixin] to auto-manage:
+/// - `isLoading` / `setLoading(bool)` — loading state
+/// - `hasError` / `errorMessage` / `setError(String?)` — error state
+/// - `executeAsync()` — try/catch/loading wrapper
+/// - `resetState()` — clear loading + error
+class DashboardProvider extends ChangeNotifier with LoadingStateProviderMixin {
   final DashboardService _service = DashboardService();
 
-  // State
+  // State (chỉ giữ domain data — loading/error do mixin quản lý)
   DashboardData? _dashboardData;
-  bool _isLoading = false;
-  String? _errorMessage;
 
   // Getters
   DashboardData? get dashboardData => _dashboardData;
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
   bool get hasData => _dashboardData != null;
 
   // Convenience getters
@@ -48,22 +51,15 @@ class DashboardProvider extends ChangeNotifier {
 
   /// Load all dashboard data
   Future<void> loadDashboard() async {
-    if (_isLoading) return;
+    if (isLoading) return;
 
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
+    await executeAsync(() async {
       _dashboardData = await _service.fetchAllDashboardData();
-      _errorMessage = null;
-    } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error loading dashboard: $e');
-    } finally {
-      _isLoading = false;
       notifyListeners();
-    }
+    }, errorMessageBuilder: (e) {
+      debugPrint('Error loading dashboard: $e');
+      return e.toString();
+    });
   }
 
   /// Refresh dashboard data
@@ -74,8 +70,6 @@ class DashboardProvider extends ChangeNotifier {
   /// Clear dashboard data
   void clear() {
     _dashboardData = null;
-    _errorMessage = null;
-    _isLoading = false;
-    notifyListeners();
+    resetState(); // Clears isLoading + errorMessage + notifyListeners()
   }
 }

@@ -24,6 +24,7 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
   String? _errorMessage;
 
   QuizDetailDto? _quiz;
+  QuizAttemptStatusDto? _attemptStatus;
 
   // State for tracking user answers
   // QuestionID -> Selected Option IDs (for multiple choice) or Answer Text
@@ -35,19 +36,33 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
   @override
   void initState() {
     super.initState();
-    _loadQuiz();
+    _loadQuizData();
   }
 
-  Future<void> _loadQuiz() async {
+  Future<void> _loadQuizData() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final quiz = await _quizService.getQuiz(widget.quizId);
+      final authProvider = context.read<AuthProvider>();
+
+      // Load quiz and attempt status in parallel
+      final results = await Future.wait([
+        _quizService.getQuiz(widget.quizId),
+        if (authProvider.user != null)
+          _quizService.getQuizAttemptStatus(
+            quizId: widget.quizId,
+            userId: authProvider.user!.id,
+          ),
+      ]);
+
       setState(() {
-        _quiz = quiz;
+        _quiz = results[0] as QuizDetailDto;
+        if (results.length > 1) {
+          _attemptStatus = results[1] as QuizAttemptStatusDto;
+        }
         _isLoading = false;
       });
     } catch (e) {
@@ -103,6 +118,27 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
       return;
     }
 
+    // Check if user can submit (not exceeded attempts or in cooldown)
+    if (_attemptStatus != null &&
+        !_attemptStatus!.canRetry &&
+        _result == null) {
+      String message = 'Bạn đã hết lượt làm bài quiz này';
+      if (_attemptStatus!.secondsUntilRetry > 0) {
+        final hours = _attemptStatus!.secondsUntilRetry ~/ 3600;
+        final minutes = (_attemptStatus!.secondsUntilRetry % 3600) ~/ 60;
+        message = 'Vui lòng chờ ${hours}h ${minutes}m để làm lại';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -127,18 +163,58 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
         _showReview = true;
       });
 
+      // Reload attempt status to update count
+      _loadQuizData();
+
       if (result.passed && widget.onCompleted != null) {
         widget.onCompleted!();
       }
     } catch (e) {
       setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Lỗi nộp bài: ${e.toString()}')));
+
+      // Extract error message
+      String errorMsg = 'Lỗi nộp bài';
+      if (e.toString().contains('Bạn đã hết lượt làm bài')) {
+        errorMsg = 'Bạn đã hết lượt làm bài quiz này';
+      } else if (e.toString().contains('ApiException')) {
+        errorMsg = e.toString().replaceAll('ApiException: ', '');
+      } else {
+        errorMsg = e.toString();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMsg),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+
+      // Reload attempt status to update count
+      _loadQuizData();
     }
   }
 
   void _retry() {
+    // Check if user can retry
+    if (_attemptStatus != null && !_attemptStatus!.canRetry) {
+      String message = 'Bạn đã hết lượt làm bài quiz này';
+      if (_attemptStatus!.secondsUntilRetry > 0) {
+        final hours = _attemptStatus!.secondsUntilRetry ~/ 3600;
+        final minutes = (_attemptStatus!.secondsUntilRetry % 3600) ~/ 60;
+        message = 'Vui lòng chờ ${hours}h ${minutes}m để làm lại';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _selectedOptions.clear();
       _result = null;
@@ -158,7 +234,10 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
-            ElevatedButton(onPressed: _loadQuiz, child: const Text('Thử lại')),
+            ElevatedButton(
+              onPressed: _loadQuizData,
+              child: const Text('Thử lại'),
+            ),
           ],
         ),
       );
@@ -195,20 +274,233 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
                   Text(_quiz!.description!),
                 ],
                 const SizedBox(height: 12),
-                Row(
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
                   children: [
-                    const Icon(Icons.help_outline, size: 16),
-                    const SizedBox(width: 4),
-                    Text('${_quiz!.questions?.length ?? 0} câu hỏi'),
-                    const SizedBox(width: 16),
-                    const Icon(Icons.check_circle_outline, size: 16),
-                    const SizedBox(width: 4),
-                    Text('Điểm đạt: ${_quiz!.passScore}%'),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.help_outline, size: 16),
+                        const SizedBox(width: 4),
+                        Text('${_quiz!.questions?.length ?? 0} câu hỏi'),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle_outline, size: 16),
+                        const SizedBox(width: 4),
+                        Text('Điểm đạt: ${_quiz!.passScore}%'),
+                      ],
+                    ),
+                    if (_attemptStatus != null &&
+                        _attemptStatus!.attemptsUsed > 0)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.history, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${_attemptStatus!.attemptsUsed}/${_attemptStatus!.maxAttempts} lần',
+                          ),
+                        ],
+                      ),
+                    if (_attemptStatus != null && _attemptStatus!.hasPassed)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star, size: 16, color: Colors.amber),
+                          const SizedBox(width: 4),
+                          Text('Điểm cao nhất: ${_attemptStatus!.bestScore}%'),
+                        ],
+                      ),
                   ],
                 ),
+
+                // Status cards
+                if (_attemptStatus != null) ...[
+                  // Passed status
+                  if (_attemptStatus!.hasPassed)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Bạn đã hoàn thành quiz với ${_attemptStatus!.bestScore}%',
+                                style: TextStyle(
+                                  color: Colors.green[700],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // Cooldown warning
+                  if (!_attemptStatus!.canRetry &&
+                      _attemptStatus!.secondsUntilRetry > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.schedule,
+                              color: Colors.orange,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Vui lòng chờ ${_formatCooldown(_attemptStatus!.secondsUntilRetry)} để làm lại',
+                                style: TextStyle(color: Colors.orange[700]),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // Max attempts reached
+                  if (!_attemptStatus!.canRetry &&
+                      _attemptStatus!.secondsUntilRetry == 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber,
+                              color: Colors.red,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Bạn đã hết lượt làm bài (${_attemptStatus!.attemptsUsed}/${_attemptStatus!.maxAttempts})',
+                                style: TextStyle(color: Colors.red[700]),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ],
             ),
           ),
+          const SizedBox(height: 16),
+
+          // Recent attempts history
+          if (_attemptStatus != null &&
+              _attemptStatus!.recentAttempts != null &&
+              _attemptStatus!.recentAttempts!.isNotEmpty)
+            GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.history,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Lịch sử làm bài',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ..._attemptStatus!.recentAttempts!.take(3).map((attempt) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: attempt.passed
+                            ? Colors.green.withOpacity(0.05)
+                            : Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: attempt.passed
+                              ? Colors.green.withOpacity(0.3)
+                              : Theme.of(context).dividerColor,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            attempt.passed ? Icons.check_circle : Icons.cancel,
+                            color: attempt.passed ? Colors.green : Colors.red,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${attempt.score}% - ${attempt.passed ? "Đạt" : "Chưa đạt"}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: attempt.passed ? Colors.green : null,
+                                  ),
+                                ),
+                                if (attempt.submittedAt != null)
+                                  Text(
+                                    _formatDate(attempt.submittedAt!),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '${attempt.correctAnswers ?? 0}/${attempt.totalQuestions ?? 0}',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
           const SizedBox(height: 24),
 
           // Questions
@@ -222,7 +514,11 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
           // Submit Button
           if (_result == null)
             ElevatedButton(
-              onPressed: _isSubmitting ? null : _submitQuiz,
+              onPressed:
+                  (_isSubmitting ||
+                      (_attemptStatus != null && !_attemptStatus!.canRetry))
+                  ? null
+                  : _submitQuiz,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: AppTheme.themeOrangeStart,
@@ -237,17 +533,27 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text('Nộp bài'),
+                  : Text(
+                      (_attemptStatus != null && !_attemptStatus!.canRetry)
+                          ? 'Đã hết lượt'
+                          : 'Nộp bài',
+                    ),
             )
           else
             ElevatedButton(
-              onPressed: _retry,
+              onPressed: (_attemptStatus != null && !_attemptStatus!.canRetry)
+                  ? null
+                  : _retry,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: AppTheme.themeBlueStart,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Làm lại'),
+              child: Text(
+                (_attemptStatus != null && !_attemptStatus!.canRetry)
+                    ? 'Đã hết lượt'
+                    : 'Làm lại',
+              ),
             ),
         ],
       ),
@@ -415,5 +721,33 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
         ],
       ),
     );
+  }
+
+  String _formatCooldown(int seconds) {
+    if (seconds <= 0) return '0 phút';
+
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    }
+    return '${minutes} phút';
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays == 0) {
+      if (diff.inHours == 0) {
+        return '${diff.inMinutes} phút trước';
+      }
+      return '${diff.inHours} giờ trước';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} ngày trước';
+    }
+
+    return '${date.day}/${date.month}/${date.year}';
   }
 }
