@@ -132,10 +132,10 @@ class _CoursesPageState extends State<CoursesPage> {
               ),
 
               // Course Grid/List
-              _buildCourseContent(courseProvider, isDark),
+              ..._buildCourseContent(courseProvider, isDark),
 
               // Bottom spacing
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
           ),
         );
@@ -244,84 +244,88 @@ class _CoursesPageState extends State<CoursesPage> {
   Widget _buildSearchBar(bool isDark, CourseProvider courseProvider) {
     return Row(
       children: [
-        // Search bar container
+        // Search bar - single clean TextField
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'BẮT ĐẦU QUÉT DỮ LIỆU...',
+              hintStyle: TextStyle(
+                color: isDark
+                    ? AppTheme.darkTextSecondary.withValues(alpha: 0.5)
+                    : AppTheme.lightTextSecondary.withValues(alpha: 0.5),
+                fontSize: 13,
+                fontFamily: 'monospace',
+                letterSpacing: 1,
+              ),
+              filled: true,
+              fillColor: isDark
                   ? Colors.black.withValues(alpha: 0.3)
                   : Colors.white.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDark
-                    ? AppTheme.primaryBlueDark.withValues(alpha: 0.3)
-                    : AppTheme.lightBorderColor,
+              prefixIcon: Icon(
+                Icons.radar,
+                color: AppTheme.primaryBlueDark.withValues(alpha: 0.7),
+                size: 22,
+              ),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(
+                        Icons.close,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                        courseProvider.loadCourses(refresh: true);
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: isDark
+                      ? AppTheme.primaryBlueDark.withValues(alpha: 0.3)
+                      : AppTheme.lightBorderColor,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: isDark
+                      ? AppTheme.primaryBlueDark.withValues(alpha: 0.3)
+                      : AppTheme.lightBorderColor,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppTheme.primaryBlueDark.withValues(alpha: 0.6),
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
             ),
-            child: Row(
-              children: [
-                // Scan icon
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  child: Icon(
-                    Icons.radar,
-                    color: AppTheme.primaryBlueDark.withValues(alpha: 0.7),
-                    size: 22,
-                  ),
-                ),
-                // Search input
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'BẮT ĐẦU QUÉT DỮ LIỆU...',
-                      hintStyle: TextStyle(
-                        color: isDark
-                            ? AppTheme.darkTextSecondary.withValues(alpha: 0.5)
-                            : AppTheme.lightTextSecondary.withValues(
-                                alpha: 0.5,
-                              ),
-                        fontSize: 13,
-                        fontFamily: 'monospace',
-                        letterSpacing: 1,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    style: TextStyle(
-                      color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                      fontSize: 14,
-                      fontFamily: 'monospace',
-                    ),
-                    onChanged: (value) {
-                      setState(() => _searchQuery = value);
-                    },
-                    onSubmitted: (value) {
-                      if (value.isNotEmpty) {
-                        courseProvider.searchCourses(value);
-                      } else {
-                        courseProvider.loadCourses(refresh: true);
-                      }
-                    },
-                    textInputAction: TextInputAction.search,
-                  ),
-                ),
-                // Clear button
-                if (_searchQuery.isNotEmpty)
-                  IconButton(
-                    icon: Icon(
-                      Icons.close,
-                      color: AppTheme.darkTextSecondary,
-                      size: 20,
-                    ),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() => _searchQuery = '');
-                      courseProvider.loadCourses(refresh: true);
-                    },
-                  ),
-              ],
+            style: TextStyle(
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+              fontSize: 14,
+              fontFamily: 'monospace',
             ),
+            onChanged: (value) {
+              setState(() => _searchQuery = value);
+            },
+            onSubmitted: (value) {
+              if (value.isNotEmpty) {
+                courseProvider.searchCourses(value);
+              } else {
+                courseProvider.loadCourses(refresh: true);
+              }
+            },
+            textInputAction: TextInputAction.search,
           ),
         ),
         const SizedBox(width: 12),
@@ -497,89 +501,100 @@ class _CoursesPageState extends State<CoursesPage> {
     );
   }
 
-  Widget _buildCourseContent(CourseProvider courseProvider, bool isDark) {
+  List<Widget> _buildCourseContent(CourseProvider courseProvider, bool isDark) {
     // Loading state
     if (courseProvider.isInitialLoading ||
         courseProvider.pagination.isRefreshing) {
-      return SliverPadding(
+      return [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 0.75,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => const CourseCardSkeleton(),
+              childCount: 6,
+            ),
+          ),
+        ),
+      ];
+    }
+
+    // Error state
+    if (courseProvider.paginationError != null && courseProvider.isEmpty) {
+      return [
+        SliverFillRemaining(
+          child: Center(child: _buildErrorState(courseProvider, isDark)),
+        ),
+      ];
+    }
+
+    // Empty state
+    if (courseProvider.isEmpty) {
+      return [
+        SliverFillRemaining(
+          child: Center(child: _buildEmptyState(isDark)),
+        ),
+      ];
+    }
+
+    // Course grid + footer indicators
+    return [
+      SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         sliver: SliverGrid(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             mainAxisSpacing: 16,
             crossAxisSpacing: 16,
-            childAspectRatio: 0.85,
+            childAspectRatio: 0.75,
           ),
           delegate: SliverChildBuilderDelegate(
-            (context, index) => const CourseCardSkeleton(),
-            childCount: 6,
+            (context, index) {
+              final course = courseProvider.courses[index];
+              return CourseCardV2(
+                course: course,
+                onTap: () => context.push('/courses/${course.id}'),
+              );
+            },
+            childCount: courseProvider.courses.length,
           ),
         ),
-      );
-    }
-
-    // Error state
-    if (courseProvider.paginationError != null && courseProvider.isEmpty) {
-      return SliverFillRemaining(
-        child: Center(child: _buildErrorState(courseProvider, isDark)),
-      );
-    }
-
-    // Empty state
-    if (courseProvider.isEmpty) {
-      return SliverFillRemaining(
-        child: Center(child: _buildEmptyState(isDark)),
-      );
-    }
-
-    // Course grid
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childAspectRatio: 0.85,
-        ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            // Loading more indicator
-            if (index == courseProvider.courses.length) {
-              if (courseProvider.isLoadingMore) {
-                return Center(
-                  child: CommonLoading.small(color: AppTheme.primaryBlueDark),
-                );
-              }
-              if (!courseProvider.hasMorePages) {
-                return Center(
-                  child: Text(
-                    'ĐÃ HIỂN THỊ TẤT CẢ',
-                    style: TextStyle(
-                      color: AppTheme.darkTextSecondary,
-                      fontSize: 10,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            }
-
-            final course = courseProvider.courses[index];
-            return CourseCardV2(
-              course: course,
-              onTap: () => context.push('/courses/${course.id}'),
-            );
-          },
-          childCount:
-              courseProvider.courses.length +
-              (courseProvider.isLoadingMore || !courseProvider.hasMorePages
-                  ? 1
-                  : 0),
-        ),
       ),
-    );
+      // Loading more indicator (separate from grid)
+      if (courseProvider.isLoadingMore)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: CommonLoading.small(color: AppTheme.primaryBlueDark),
+            ),
+          ),
+        ),
+      // End of list indicator (separate from grid)
+      if (!courseProvider.hasMorePages && !courseProvider.isLoadingMore)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: Text(
+                'ĐÃ HIỂN THỊ TẤT CẢ',
+                style: TextStyle(
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+          ),
+        ),
+    ];
   }
 
   Widget _buildErrorState(CourseProvider courseProvider, bool isDark) {

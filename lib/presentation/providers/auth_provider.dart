@@ -24,6 +24,9 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
 
   /// Khởi tạo provider và kiểm tra trạng thái đăng nhập
   Future<void> initialize() async {
+    // Register force logout callback so the 401 interceptor can trigger logout
+    _apiClient.onForceLogout = () => forceLogout();
+
     await executeAsync(() async {
       final isAuth = await _authService.isAuthenticated();
       if (isAuth) {
@@ -119,6 +122,22 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
     }
   }
 
+  /// Force logout — called by ApiClient 401 interceptor when token refresh fails.
+  /// Clears local state without calling the backend logout API (token is already invalid).
+  /// Triggers notifyListeners() → GoRouter redirect → Login page.
+  Future<void> forceLogout() async {
+    debugPrint('🚪 Force logout triggered by 401 interceptor');
+    _user = null;
+    _apiClient.clearAuthToken();
+    // Clear stored tokens silently
+    try {
+      await _authService.logout();
+    } catch (_) {
+      // Ignore — token is already invalid
+    }
+    notifyListeners(); // This triggers GoRouter redirect to /login
+  }
+
   /// Làm mới token
   Future<bool> refreshToken() async {
     try {
@@ -145,3 +164,4 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
   /// Xóa lỗi hiện tại
   void clearError() => super.clearError();
 }
+

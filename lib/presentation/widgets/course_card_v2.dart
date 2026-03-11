@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/course_models.dart';
 import '../themes/app_theme.dart';
 
-/// Modernized course card matching Skillverse web sci-fi design
+/// Modernized course card with clean Column layout
 class CourseCardV2 extends StatelessWidget {
   final CourseSummaryDto course;
   final VoidCallback? onTap;
@@ -23,50 +23,117 @@ class CourseCardV2 extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isDark
-                ? AppTheme.primaryBlueDark.withValues(alpha: 0.3)
+                ? AppTheme.darkBorderColor
                 : AppTheme.lightBorderColor,
-            width: 1,
           ),
           boxShadow: [
             BoxShadow(
               color: isDark
-                  ? AppTheme.primaryBlueDark.withValues(alpha: 0.1)
-                  : Colors.black.withValues(alpha: 0.05),
-              blurRadius: 20,
+                  ? Colors.black.withValues(alpha: 0.2)
+                  : Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Stack(
+          borderRadius: BorderRadius.circular(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Background with thumbnail
-              _buildThumbnail(isDark),
-
-              // Level badge overlay
-              Positioned(top: 12, left: 12, child: _buildLevelBadge(isDark)),
-
-              // Status indicator
-              if (showStatus)
-                Positioned(top: 12, right: 12, child: _buildStatusIndicator()),
-
-              // Course ID badge
-              Positioned(
-                top: 12,
-                right: showStatus ? 36 : 12,
-                child: _buildIdBadge(isDark),
+              // Thumbnail area with level badge
+              Expanded(
+                flex: 3,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _buildThumbnail(isDark),
+                    // Level badge - top left
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _buildLevelBadge(),
+                    ),
+                    // Status dot - top right
+                    if (showStatus)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: _buildStatusIndicator(),
+                      ),
+                  ],
+                ),
               ),
 
-              // Bottom title overlay
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: _buildTitleOverlay(context, isDark),
+              // Info section below image
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title
+                      Expanded(
+                        child: Text(
+                          course.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.lightTextPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Author + Price row
+                      Row(
+                        children: [
+                          // Author
+                          if (course.authorName != null ||
+                              course.author.fullName != null) ...[
+                            Icon(
+                              Icons.person_outline,
+                              size: 12,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                            const SizedBox(width: 3),
+                            Flexible(
+                              child: Text(
+                                course.authorName ??
+                                    course.author.fullName ??
+                                    '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(width: 6),
+                          // Price badge
+                          _buildPriceBadge(),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -78,35 +145,19 @@ class CourseCardV2 extends StatelessWidget {
   Widget _buildThumbnail(bool isDark) {
     final thumbnailUrl = course.thumbnailUrl ?? course.thumbnail?.url;
 
-    return AspectRatio(
-      aspectRatio: 16 / 10,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? [AppTheme.galaxyDark, AppTheme.galaxyMid]
-                : [
-                    AppTheme.lightBackgroundSecondary,
-                    AppTheme.lightBackgroundPrimary,
-                  ],
-          ),
-        ),
-        child: thumbnailUrl != null
-            ? Image.network(
-                thumbnailUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    _buildPlaceholder(isDark),
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return _buildPlaceholder(isDark);
-                },
-              )
-            : _buildPlaceholder(isDark),
-      ),
-    );
+    if (thumbnailUrl != null) {
+      return Image.network(
+        thumbnailUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            _buildPlaceholder(isDark),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _buildPlaceholder(isDark);
+        },
+      );
+    }
+    return _buildPlaceholder(isDark);
   }
 
   Widget _buildPlaceholder(bool isDark) {
@@ -121,23 +172,23 @@ class CourseCardV2 extends StatelessWidget {
       child: Center(
         child: Icon(
           Icons.school_rounded,
-          size: 48,
-          color: Colors.white.withValues(alpha: 0.5),
+          size: 36,
+          color: Colors.white.withValues(alpha: 0.6),
         ),
       ),
     );
   }
 
-  Widget _buildLevelBadge(bool isDark) {
+  Widget _buildLevelBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: _getLevelGradient()),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         boxShadow: [
           BoxShadow(
             color: _getLevelGradient().first.withValues(alpha: 0.4),
-            blurRadius: 8,
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -145,16 +196,16 @@ class CourseCardV2 extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(_getLevelIcon(), size: 12, color: Colors.white),
-          const SizedBox(width: 4),
+          Icon(_getLevelIcon(), size: 10, color: Colors.white),
+          const SizedBox(width: 3),
           Text(
             _getLevelText().toUpperCase(),
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: FontWeight.bold,
               fontFamily: 'monospace',
-              letterSpacing: 1,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -165,8 +216,8 @@ class CourseCardV2 extends StatelessWidget {
   Widget _buildStatusIndicator() {
     final isPublic = course.status == CourseStatus.public;
     return Container(
-      width: 12,
-      height: 12,
+      width: 10,
+      height: 10,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: isPublic ? AppTheme.successColor : AppTheme.warningColor,
@@ -174,143 +225,46 @@ class CourseCardV2 extends StatelessWidget {
           BoxShadow(
             color: (isPublic ? AppTheme.successColor : AppTheme.warningColor)
                 .withValues(alpha: 0.5),
-            blurRadius: 6,
+            blurRadius: 4,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildIdBadge(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.black.withValues(alpha: 0.6)
-            : Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: isDark
-              ? AppTheme.primaryBlueDark.withValues(alpha: 0.3)
-              : AppTheme.lightBorderColor,
+  Widget _buildPriceBadge() {
+    if (course.price != null && course.price! > 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: BoxDecoration(
+          color: AppTheme.themeOrangeStart.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(4),
         ),
+        child: Text(
+          _formatPrice(course.price!),
+          style: const TextStyle(
+            color: AppTheme.themeOrangeStart,
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'monospace',
+          ),
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppTheme.successColor.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(
-        '#${course.id}',
+      child: const Text(
+        'FREE',
         style: TextStyle(
-          color: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
-          fontSize: 10,
+          color: AppTheme.successColor,
+          fontSize: 9,
           fontWeight: FontWeight.bold,
           fontFamily: 'monospace',
         ),
-      ),
-    );
-  }
-
-  Widget _buildTitleOverlay(BuildContext context, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.transparent,
-            (isDark ? Colors.black : Colors.white).withValues(alpha: 0.7),
-            (isDark ? Colors.black : Colors.white).withValues(alpha: 0.95),
-          ],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Title
-          Text(
-            course.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              height: 1.3,
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Meta info row
-          Row(
-            children: [
-              // Author - use Flexible to prevent overflow
-              if (course.authorName != null ||
-                  course.author.fullName != null) ...[
-                Icon(
-                  Icons.person_outline,
-                  size: 12,
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                ),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    course.authorName ?? course.author.fullName ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ],
-              // Price badge
-              const SizedBox(width: 6),
-              if (course.price != null && course.price! > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.themeOrangeStart.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    _formatPrice(course.price!),
-                    style: const TextStyle(
-                      color: AppTheme.themeOrangeStart,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.successColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'FREE',
-                    style: TextStyle(
-                      color: AppTheme.successColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
       ),
     );
   }

@@ -1,8 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../constants/environment.dart';
 import '../error/exceptions.dart';
+import '../../data/services/auth_service.dart';
+
+/// Callback type for triggering force logout from the interceptor.
+/// Set by AuthProvider during app initialization.
+typedef ForceLogoutCallback = Future<void> Function();
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
@@ -11,6 +17,28 @@ class ApiClient {
 
   late final Dio _dio;
   String? _authToken;
+
+  /// Callback to force logout when token refresh fails.
+  /// This is set by AuthProvider so the interceptor can trigger logout
+  /// without a direct dependency on AuthProvider.
+  ForceLogoutCallback? onForceLogout;
+
+  /// Lock to prevent concurrent refresh attempts.
+  /// When a 401 occurs, the first request starts the refresh.
+  /// Subsequent 401s wait for the same refresh to complete.
+  Completer<bool>? _refreshLock;
+
+  /// Auth endpoints that should NOT trigger token refresh on 401
+  static const _authPaths = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/refresh',
+    '/auth/google',
+    '/auth/verify-email',
+    '/auth/resend-otp',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+  ];
 
   void initialize() {
     _dio = Dio(
@@ -35,7 +63,7 @@ class ApiClient {
       );
     }
 
-    // Add auth interceptor
+    // Add auth + token refresh interceptor
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -46,7 +74,40 @@ class ApiClient {
           }
           handler.next(options);
         },
-        onError: (error, handler) {
+        onError: (error, handler) async {
+          // Handle 401 Unauthorized — attempt token refresh
+          if (error.response?.statusCode == 401) {
+            final requestPath = error.requestOptions.path;
+
+            // Don't attempt refresh for auth endpoints
+            final isAuthEndpoint = _authPaths.any(
+              (path) => requestPath.contains(path),
+            );
+
+            if (!isAuthEndpoint) {
+              final refreshed = await _attemptTokenRefresh();
+              if (refreshed) {
+                // Retry original request with new token
+                try {
+                  final retryResponse = await _retryRequest(
+                    error.requestOptions,
+                  );
+                  return handler.resolve(retryResponse);
+                } catch (retryError) {
+                  // Retry also failed — fall through to normal error handling
+                  debugPrint('🔄 Retry after refresh failed: $retryError');
+                }
+              } else {
+                // Refresh failed — force logout
+                debugPrint('🚪 Token refresh failed — forcing logout');
+                if (onForceLogout != null) {
+                  await onForceLogout!();
+                }
+              }
+            }
+          }
+
+          // Default error handling
           final appException = _handleError(error);
           handler.reject(
             DioException(
@@ -56,6 +117,62 @@ class ApiClient {
           );
         },
       ),
+    );
+  }
+
+  /// Attempt to refresh the access token.
+  /// Uses a lock so concurrent 401s share a single refresh attempt.
+  Future<bool> _attemptTokenRefresh() async {
+    // If a refresh is already in progress, wait for it
+    if (_refreshLock != null) {
+      debugPrint('🔄 Refresh already in progress, waiting...');
+      return await _refreshLock!.future;
+    }
+
+    // Start a new refresh
+    _refreshLock = Completer<bool>();
+    debugPrint('🔄 Starting token refresh...');
+
+    try {
+      final authService = AuthService();
+      final newToken = await authService.refreshAccessToken();
+
+      if (newToken != null) {
+        _authToken = newToken;
+        debugPrint('✅ Token refreshed successfully');
+        _refreshLock!.complete(true);
+        return true;
+      } else {
+        debugPrint('❌ Token refresh returned null');
+        _refreshLock!.complete(false);
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Token refresh error: $e');
+      _refreshLock!.complete(false);
+      return false;
+    } finally {
+      _refreshLock = null;
+    }
+  }
+
+  /// Retry a failed request with the updated auth token.
+  Future<Response<dynamic>> _retryRequest(RequestOptions requestOptions) async {
+    debugPrint('🔄 Retrying request: ${requestOptions.path}');
+
+    final options = Options(
+      method: requestOptions.method,
+      headers: {
+        ...requestOptions.headers,
+        'Authorization': 'Bearer $_authToken',
+      },
+    );
+
+    return _dio.request(
+      requestOptions.path,
+      data: requestOptions.data,
+      queryParameters: requestOptions.queryParameters,
+      options: options,
     );
   }
 

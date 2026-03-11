@@ -1,6 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/job_provider.dart';
+import '../../../data/models/job_models.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/shimmer_loading.dart';
 import '../../themes/app_theme.dart';
+import '../../../core/utils/number_formatter.dart';
+import '../../../core/utils/date_time_helper.dart';
+import 'job_detail_page.dart';
+import 'my_applications_page.dart';
 
 class JobsPage extends StatefulWidget {
   const JobsPage({super.key});
@@ -9,498 +18,1147 @@ class JobsPage extends StatefulWidget {
   State<JobsPage> createState() => _JobsPageState();
 }
 
-class _JobsPageState extends State<JobsPage> {
-  String _search = '';
-  String _selectedCategory = 'all';
+class _JobsPageState extends State<JobsPage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
 
-  final List<Map<String, dynamic>> _categories = [
-    {'id': 'all', 'name': 'Tất Cả', 'icon': Icons.work_outline, 'count': 89},
-    {
-      'id': 'design',
-      'name': 'Thiết Kế',
-      'icon': Icons.palette_outlined,
-      'count': 18,
-    },
-    {
-      'id': 'writing',
-      'name': 'Viết Lách',
-      'icon': Icons.edit_outlined,
-      'count': 15,
-    },
-    {'id': 'development', 'name': 'Lập Trình', 'icon': Icons.code, 'count': 25},
-    {
-      'id': 'marketing',
-      'name': 'Marketing',
-      'icon': Icons.trending_up,
-      'count': 20,
-    },
-  ];
+  // Filter state
+  bool _filterRemote = false;
+  String? _filterUrgency;
 
-  final List<Map<String, dynamic>> _jobs = [
-    {
-      'id': 1,
-      'title': 'Thiết Kế Logo & Brand Identity',
-      'company': 'TechViet Solutions',
-      'category': 'design',
-      'budget': '3.000.000 - 5.000.000 VNĐ',
-      'duration': '1-2 tuần',
-      'type': 'remote',
-      'level': 'Trung cấp',
-      'description':
-          'Tìm designer có kinh nghiệm thiết kế logo và brand identity cho startup công nghệ.',
-      'skills': ['Adobe Illustrator', 'Photoshop', 'Brand Design'],
-      'gradientColors': [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
-    },
-    {
-      'id': 2,
-      'title': 'Full Stack Developer - React & Node.js',
-      'company': 'Digital Hub Co.',
-      'category': 'development',
-      'budget': '10.000.000 - 15.000.000 VNĐ',
-      'duration': '2-3 tháng',
-      'type': 'hybrid',
-      'level': 'Senior',
-      'description':
-          'Phát triển web application với React frontend và Node.js backend.',
-      'skills': ['React', 'Node.js', 'MongoDB', 'TypeScript'],
-      'gradientColors': [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
-    },
-    {
-      'id': 3,
-      'title': 'Content Writer - Blog & Social Media',
-      'company': 'Green Energy Vietnam',
-      'category': 'writing',
-      'budget': '2.000.000 - 4.000.000 VNĐ',
-      'duration': '1 tháng',
-      'type': 'remote',
-      'level': 'Mới bắt đầu',
-      'description':
-          'Viết content cho blog và quản lý social media về năng lượng xanh.',
-      'skills': ['Content Writing', 'SEO', 'Social Media'],
-      'gradientColors': [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
-    },
-    {
-      'id': 4,
-      'title': 'Digital Marketing Specialist',
-      'company': 'Online Retail Plus',
-      'category': 'marketing',
-      'budget': '8.000.000 - 12.000.000 VNĐ',
-      'duration': '3 tháng',
-      'type': 'remote',
-      'level': 'Trung cấp',
-      'description':
-          'Quản lý campaigns marketing trên Google Ads và Facebook Ads.',
-      'skills': ['Google Ads', 'Facebook Ads', 'Analytics'],
-      'gradientColors': [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
-    },
-    {
-      'id': 5,
-      'title': 'Mobile App Developer - Flutter',
-      'company': 'FinTech Startup',
-      'category': 'development',
-      'budget': '15.000.000 - 20.000.000 VNĐ',
-      'duration': '3-4 tháng',
-      'type': 'remote',
-      'level': 'Senior',
-      'description':
-          'Phát triển ứng dụng di động cho nền tảng FinTech sử dụng Flutter.',
-      'skills': ['Flutter', 'Dart', 'Firebase', 'REST API'],
-      'gradientColors': [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
-    },
-    {
-      'id': 6,
-      'title': 'UI/UX Designer - Web & Mobile',
-      'company': 'Fashion Brand Vietnam',
-      'category': 'design',
-      'budget': '5.000.000 - 8.000.000 VNĐ',
-      'duration': '1-2 tháng',
-      'type': 'hybrid',
-      'level': 'Trung cấp',
-      'description':
-          'Thiết kế giao diện cho website và mobile app thương mại điện tử thời trang.',
-      'skills': ['Figma', 'User Research', 'Wireframing', 'Prototyping'],
-      'gradientColors': [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<JobProvider>();
+      provider.loadPublicJobs();
+      provider.loadShortTermJobs();
+      // Pre-load applications for "Đã ứng tuyển" badges
+      provider.loadMyApplications();
+      provider.loadMyShortTermApplications();
+    });
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging) {
+      context.read<JobProvider>().setSelectedTab(_tabController.index);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      context.read<JobProvider>().searchJobs(query);
+      setState(() {});
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _jobs.where((j) {
-      final matchesSearch =
-          j['title'].toString().toLowerCase().contains(_search.toLowerCase()) ||
-          j['company'].toString().toLowerCase().contains(_search.toLowerCase());
-      final matchesCategory =
-          _selectedCategory == 'all' || j['category'] == _selectedCategory;
-      return matchesSearch && matchesCategory;
-    }).toList();
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(child: _buildSearchBar()),
+                  const SizedBox(width: 8),
+                  _buildMyApplicationsButton(),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildTabBar(),
+              // Filter chips (short-term only)
+              Consumer<JobProvider>(
+                builder: (context, provider, _) {
+                  if (provider.selectedTab == 1) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: _buildFilterChips(),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Search Bar
-          GlassCard(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: TextField(
-              decoration: InputDecoration(
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: Theme.of(
-                    context,
-                  ).iconTheme.color?.withValues(alpha: 0.6),
-                ),
-                hintText: 'Tìm kiếm việc làm...',
-                border: InputBorder.none,
-                hintStyle: TextStyle(
-                  color: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildLongTermJobList(),
+              _buildShortTermJobList(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ==================== SEARCH BAR ====================
+
+  Widget _buildSearchBar() {
+    return GlassCard(
+      showBorder: false,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          prefixIcon: Icon(
+            Icons.search,
+            color:
+                Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+          ),
+          hintText: 'Tìm kiếm việc làm...',
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          hintStyle: TextStyle(
+            color: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.color
+                ?.withValues(alpha: 0.5),
+          ),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 20),
+                  onPressed: () {
+                    _searchController.clear();
+                    context.read<JobProvider>().searchJobs('');
+                    setState(() {});
+                  },
+                )
+              : null,
+        ),
+        onChanged: _onSearchChanged,
+      ),
+    );
+  }
+
+  Widget _buildMyApplicationsButton() {
+    return Consumer<JobProvider>(
+      builder: (context, provider, _) {
+        final pendingCount = provider.myLongTermApplications
+                .where((a) =>
+                    a.status == JobApplicationStatus.pending ||
+                    a.status == JobApplicationStatus.reviewed)
+                .length +
+            provider.myShortTermApplications
+                .where((a) =>
+                    a.status == 'PENDING' || a.status == 'APPLIED')
+                .length;
+
+        return GlassCard(
+          showBorder: false,
+          padding: EdgeInsets.zero,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const MyApplicationsPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.assignment_outlined),
+                tooltip: 'Đơn ứng tuyển',
+                style: IconButton.styleFrom(
+                  fixedSize: const Size(48, 48),
                 ),
               ),
-              onChanged: (v) => setState(() => _search = v),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Categories
-          SizedBox(
-            height: 80,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final category = _categories[index];
-                final isSelected = _selectedCategory == category['id'];
-
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => setState(
-                      () => _selectedCategory = category['id'] as String,
-                    ),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 85,
-                      decoration: BoxDecoration(
-                        gradient: isSelected
-                            ? const LinearGradient(
-                                colors: [
-                                  AppTheme.themeBlueStart,
-                                  AppTheme.themeBlueEnd,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
-                        color: isSelected ? null : Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppTheme.themeBlueStart
-                              : Theme.of(context).dividerColor,
-                          width: isSelected ? 2 : 1,
-                        ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.themeBlueStart.withValues(
-                                    alpha: 0.3,
-                                  ),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            category['icon'] as IconData,
-                            color: isSelected
-                                ? Colors.white
-                                : Theme.of(context).iconTheme.color,
-                            size: 24,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            category['name'] as String,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Theme.of(
-                                          context,
-                                        ).textTheme.bodySmall?.color,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                  fontSize: 11,
-                                ),
-                            textAlign: TextAlign.center,
-                          ),
+              if (pendingCount > 0)
+                Positioned(
+                  right: 2,
+                  top: 2,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(minWidth: 18),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.themeOrangeStart,
+                          AppTheme.themeOrangeEnd,
                         ],
                       ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$pendingCount',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Jobs List Header
-          Text(
-            filtered.isEmpty ? 'Không tìm thấy' : '${filtered.length} việc làm',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-
-          if (filtered.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(48),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.work_off_outlined,
-                      size: 64,
-                      color: Theme.of(
-                        context,
-                      ).iconTheme.color?.withValues(alpha: 0.3),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Không tìm thấy việc làm phù hợp',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
                 ),
-              ),
-            )
-          else
-            ...filtered.map((job) => _buildJobCard(context, job)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ==================== FILTER CHIPS ====================
+
+  Widget _buildFilterChips() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildFilterChip(
+            label: 'Remote',
+            icon: Icons.wifi,
+            isSelected: _filterRemote,
+            onTap: () {
+              setState(() => _filterRemote = !_filterRemote);
+              _applyFilters();
+            },
+          ),
+          const SizedBox(width: 8),
+          _buildFilterChip(
+            label: 'Gấp',
+            icon: Icons.bolt,
+            isSelected: _filterUrgency == 'URGENT',
+            onTap: () {
+              setState(() {
+                _filterUrgency =
+                    _filterUrgency == 'URGENT' ? null : 'URGENT';
+              });
+              _applyFilters();
+            },
+          ),
+          const SizedBox(width: 8),
+          _buildFilterChip(
+            label: 'Rất gấp',
+            icon: Icons.flash_on,
+            isSelected: _filterUrgency == 'VERY_URGENT',
+            onTap: () {
+              setState(() {
+                _filterUrgency = _filterUrgency == 'VERY_URGENT'
+                    ? null
+                    : 'VERY_URGENT';
+              });
+              _applyFilters();
+            },
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildJobCard(BuildContext context, Map<String, dynamic> job) {
-    final List<Color> gradientColors;
-    if (job['gradientColors'] != null && job['gradientColors'] is List) {
-      gradientColors = List<Color>.from(job['gradientColors'] as List);
-    } else {
-      gradientColors = [AppTheme.themeBlueStart, AppTheme.themeBlueEnd];
+  Widget _buildFilterChip({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? const LinearGradient(colors: [
+                  AppTheme.themeBlueStart,
+                  AppTheme.themeBlueEnd,
+                ])
+              : null,
+          color: isSelected ? null : Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? null
+              : Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 14,
+                color: isSelected
+                    ? Colors.white
+                    : Theme.of(context).hintColor),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isSelected
+                    ? Colors.white
+                    : Theme.of(context).textTheme.bodySmall?.color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _applyFilters() {
+    // Client-side filtering — just rebuild to apply filters
+    setState(() {});
+  }
+
+  /// Apply local filters to short-term jobs
+  List<ShortTermJobResponse> _getFilteredShortTermJobs(List<ShortTermJobResponse> jobs) {
+    var filtered = jobs;
+    if (_filterRemote) {
+      filtered = filtered.where((j) => j.remote == true).toList();
     }
+    if (_filterUrgency != null) {
+      filtered = filtered.where((j) {
+        final u = j.urgency;
+        if (_filterUrgency == 'URGENT') return u == JobUrgency.urgent;
+        if (_filterUrgency == 'VERY_URGENT') return u == JobUrgency.veryUrgent || u == JobUrgency.asap;
+        return true;
+      }).toList();
+    }
+    return filtered;
+  }
+
+  // ==================== TAB BAR ====================
+
+  Widget _buildTabBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          gradient: const LinearGradient(
+            colors: [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+          ),
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        labelColor: Colors.white,
+        unselectedLabelColor:
+            Theme.of(context).textTheme.bodyMedium?.color,
+        labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold, fontSize: 13),
+        unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.normal, fontSize: 13),
+        tabs: const [
+          Tab(text: 'Việc Làm'),
+          Tab(text: 'Freelance'),
+        ],
+      ),
+    );
+  }
+
+  // ==================== LONG-TERM JOB LIST ====================
+
+  Widget _buildLongTermJobList() {
+    return Consumer<JobProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoadingJobs) {
+          return _buildSkeletonList();
+        }
+
+        if (provider.hasError) {
+          return _buildErrorState(provider.errorMessage ?? 'Lỗi tải dữ liệu',
+              () => provider.loadPublicJobs());
+        }
+
+        final jobs = provider.filteredLongTermJobs;
+
+        if (jobs.isEmpty) {
+          return _buildEmptyState('Không có việc làm nào');
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            await provider.loadPublicJobs();
+            await provider.loadMyApplications();
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: jobs.length,
+            itemBuilder: (context, index) =>
+                _buildAnimatedCard(index, _buildLongTermJobCard(jobs[index])),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLongTermJobCard(JobPostingResponse job) {
+    final gradientColors = _getGradientForIndex(job.id ?? 0);
+    final hasApplied = context.watch<JobProvider>().hasAppliedToJob(job.id ?? 0);
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => JobDetailPage(
+              jobId: job.id!,
+              isShortTerm: false,
+            ),
+          ),
+        );
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row
+          // Header row
           Row(
             children: [
-              // Company Avatar
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: gradientColors,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: gradientColors.first.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.business,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
+              _buildCompanyAvatar(gradientColors),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      job['title'] as String,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      job.title ?? 'Không có tiêu đề',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      job['company'] as String,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                      ),
+                      job.recruiterCompanyName ?? 'Công ty',
+                      style:
+                          Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.color
+                                    ?.withValues(alpha: 0.7),
+                              ),
                     ),
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.bookmark_border),
-                onPressed: () {},
-                color: Theme.of(
-                  context,
-                ).iconTheme.color?.withValues(alpha: 0.6),
-              ),
+              if (hasApplied) _buildAppliedBadge(),
+              if (!hasApplied && job.highlighted == true)
+                _buildHotBadge(),
             ],
           ),
 
-          const SizedBox(height: 16),
+          // Salary highlight
+          if (job.minBudget != null && job.maxBudget != null) ...[
+            const SizedBox(height: 12),
+            _buildSalaryRow(
+              '${NumberFormatter.formatPrice(job.minBudget!)} - ${NumberFormatter.formatCurrency(job.maxBudget!)}',
+              isNegotiable: job.negotiable == true,
+            ),
+          ],
+
+          const SizedBox(height: 10),
 
           // Description
-          Text(
-            job['description'] as String,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
+          if (job.description != null)
+            Text(
+              job.description!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.color
+                        ?.withValues(alpha: 0.8),
+                  ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
 
           // Skills
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: (job['skills'] as List<String>).map((skill) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: gradientColors.first.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: gradientColors.first.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Text(
-                  skill,
+          if (job.requiredSkills != null && job.requiredSkills!.isNotEmpty)
+            _buildSkillChips(job.requiredSkills!, gradientColors.first),
+
+          const SizedBox(height: 12),
+
+          // Info row
+          _buildInfoRow([
+            if (job.remote == true)
+              _buildInfoChip(Icons.wifi, 'Remote'),
+            if (job.location != null && job.remote != true)
+              _buildInfoChip(Icons.location_on_outlined, job.location!),
+            if (job.experienceLevel != null)
+              _buildInfoChip(Icons.bar_chart_outlined, job.experienceLevel!),
+            if (job.jobType != null)
+              _buildInfoChip(Icons.work_outline, job.jobType!),
+          ]),
+
+          const SizedBox(height: 12),
+
+          // Footer: countdown + applicants
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (job.deadline != null)
+                _buildDeadlineCountdown(DateTime.parse(job.deadline!)),
+              if (job.applicantCount != null)
+                Text(
+                  '${job.applicantCount} ứng viên',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: gradientColors.first,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.color
+                            ?.withValues(alpha: 0.6),
+                      ),
+                ),
+              if (job.createdAt != null && job.deadline == null)
+                Text(
+                  DateTimeHelper.formatRelativeTime(
+                    DateTime.parse(job.createdAt!),
                   ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.color
+                            ?.withValues(alpha: 0.5),
+                      ),
                 ),
-              );
-            }).toList(),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Footer Info
-          Row(
-            children: [
-              Expanded(
-                child: _buildInfoChip(
-                  context,
-                  Icons.payments_outlined,
-                  job['budget'] as String,
-                ),
-              ),
             ],
-          ),
-
-          const SizedBox(height: 8),
-
-          Row(
-            children: [
-              _buildInfoChip(
-                context,
-                Icons.schedule_outlined,
-                job['duration'] as String,
-              ),
-              const SizedBox(width: 12),
-              _buildInfoChip(
-                context,
-                Icons.location_on_outlined,
-                job['type'] == 'remote'
-                    ? 'Remote'
-                    : job['type'] == 'hybrid'
-                    ? 'Hybrid'
-                    : 'Onsite',
-              ),
-              const SizedBox(width: 12),
-              _buildInfoChip(
-                context,
-                Icons.bar_chart_outlined,
-                job['level'] as String,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Apply Button
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: gradientColors.first.withValues(alpha: 0.5),
-                ),
-                foregroundColor: gradientColors.first,
-                minimumSize: const Size(double.infinity, 48),
-              ),
-              child: const Text('Ứng tuyển ngay'),
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoChip(BuildContext context, IconData icon, String label) {
+  // ==================== SHORT-TERM JOB LIST ====================
+
+  Widget _buildShortTermJobList() {
+    return Consumer<JobProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoadingJobs) {
+          return _buildSkeletonList();
+        }
+
+        if (provider.hasError) {
+          return _buildErrorState(provider.errorMessage ?? 'Lỗi tải dữ liệu',
+              () => provider.loadShortTermJobs());
+        }
+
+        final allJobs = provider.shortTermJobs;
+        final jobs = _getFilteredShortTermJobs(allJobs);
+
+        if (allJobs.isEmpty) {
+          return _buildEmptyState('Không có việc freelance nào');
+        }
+
+        if (jobs.isEmpty) {
+          return _buildEmptyState('Không có kết quả phù hợp với bộ lọc');
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            await provider.loadShortTermJobs();
+            await provider.loadMyShortTermApplications();
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: jobs.length,
+            itemBuilder: (context, index) =>
+                _buildAnimatedCard(index, _buildShortTermJobCard(jobs[index])),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildShortTermJobCard(ShortTermJobResponse job) {
+    final gradientColors = _getGradientForIndex(job.id ?? 0);
+    final hasApplied =
+        context.watch<JobProvider>().hasAppliedToShortTermJob(job.id ?? 0);
+
+    return GlassCard(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => JobDetailPage(
+              jobId: job.id!,
+              isShortTerm: true,
+            ),
+          ),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              _buildCompanyAvatar(gradientColors),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      job.title ?? 'Không có tiêu đề',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    if (job.recruiterInfo?.companyName != null)
+                      Text(
+                        job.recruiterInfo!.companyName!,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.color
+                                  ?.withValues(alpha: 0.7),
+                            ),
+                      ),
+                  ],
+                ),
+              ),
+              if (hasApplied)
+                _buildAppliedBadge()
+              else if (job.urgency != null &&
+                  job.urgency != JobUrgency.normal)
+                _buildUrgencyBadge(job.urgency!),
+            ],
+          ),
+
+          // Salary highlight
+          if (job.budget != null) ...[
+            const SizedBox(height: 12),
+            _buildSalaryRow(
+              NumberFormatter.formatCurrency(job.budget!),
+              isNegotiable: job.negotiable == true,
+            ),
+          ],
+
+          const SizedBox(height: 10),
+
+          // Description
+          if (job.description != null)
+            Text(
+              job.description!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.color
+                        ?.withValues(alpha: 0.8),
+                  ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+          const SizedBox(height: 10),
+
+          // Skills
+          if (job.requiredSkills != null && job.requiredSkills!.isNotEmpty)
+            _buildSkillChips(job.requiredSkills!, gradientColors.first),
+
+          const SizedBox(height: 12),
+
+          // Info row
+          _buildInfoRow([
+            if (job.estimatedDuration != null)
+              _buildInfoChip(
+                  Icons.schedule_outlined, job.estimatedDuration!),
+            if (job.remote == true)
+              _buildInfoChip(Icons.wifi, 'Remote'),
+            if (job.location != null && job.remote != true)
+              _buildInfoChip(Icons.location_on_outlined, job.location!),
+          ]),
+
+          const SizedBox(height: 12),
+
+          // Footer
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  if (job.deadline != null)
+                    _buildDeadlineCountdown(DateTime.parse(job.deadline!)),
+                  if (job.applicantCount != null) ...[
+                    if (job.deadline != null) const SizedBox(width: 12),
+                    Text(
+                      '${job.applicantCount}${job.maxApplicants != null ? '/${job.maxApplicants}' : ''} ứng viên',
+                      style:
+                          Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.color
+                                    ?.withValues(alpha: 0.6),
+                              ),
+                    ),
+                  ],
+                ],
+              ),
+              if (job.createdAt != null && job.deadline == null)
+                Text(
+                  DateTimeHelper.formatRelativeTime(
+                    DateTime.parse(job.createdAt!),
+                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.color
+                            ?.withValues(alpha: 0.5),
+                      ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== NEW SHARED WIDGETS ====================
+
+  /// Salary row with gradient icon + highlight text
+  Widget _buildSalaryRow(String salary, {bool isNegotiable = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.themeGreenStart.withValues(alpha: 0.1),
+            AppTheme.themeGreenEnd.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: AppTheme.themeGreenStart.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.payments_outlined,
+              size: 18, color: AppTheme.themeGreenStart),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              salary,
+              style: const TextStyle(
+                color: AppTheme.themeGreenStart,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          if (isNegotiable)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppTheme.themeGreenStart.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'Thương lượng',
+                style: TextStyle(
+                  color: AppTheme.themeGreenStart,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Deadline countdown with color coding
+  Widget _buildDeadlineCountdown(DateTime deadline) {
+    final now = DateTime.now();
+    final diff = deadline.difference(now);
+    final days = diff.inDays;
+
+    String label;
+    Color color;
+
+    if (diff.isNegative) {
+      label = 'Đã hết hạn';
+      color = Colors.grey;
+    } else if (days == 0) {
+      label = 'Hôm nay';
+      color = Colors.red;
+    } else if (days <= 3) {
+      label = 'Còn $days ngày';
+      color = Colors.red;
+    } else if (days <= 7) {
+      label = 'Còn $days ngày';
+      color = AppTheme.themeOrangeStart;
+    } else {
+      label = 'Còn $days ngày';
+      color = AppTheme.themeBlueStart;
+    }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          icon,
-          size: 14,
-          color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
-        ),
+        Icon(Icons.timer_outlined, size: 13, color: color),
         const SizedBox(width: 4),
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(
-              context,
-            ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-            fontSize: 12,
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
     );
+  }
+
+  /// "Đã ứng tuyển" badge
+  Widget _buildAppliedBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.themeGreenStart.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppTheme.themeGreenStart.withValues(alpha: 0.4),
+        ),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle, size: 12, color: AppTheme.themeGreenStart),
+          SizedBox(width: 4),
+          Text('Đã ứng tuyển',
+              style: TextStyle(
+                  color: AppTheme.themeGreenStart,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  /// HOT badge
+  Widget _buildHotBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Text('HOT',
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.bold)),
+    );
+  }
+
+  /// Staggered card animation
+  Widget _buildAnimatedCard(int index, Widget child) {
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('card_$index'),
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + (index * 60).clamp(0, 300)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: child,
+    );
+  }
+
+  // ==================== ORIGINAL SHARED WIDGETS ====================
+
+  Widget _buildCompanyAvatar(List<Color> gradientColors) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.first.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.business, color: Colors.white, size: 24),
+    );
+  }
+
+  Widget _buildSkillChips(List<String> skills, Color color) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: skills.take(4).map((skill) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Text(
+            skill,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildInfoRow(List<Widget> chips) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      children: chips,
+    );
+  }
+
+  Widget _buildInfoChip(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14,
+            color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6)),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.color
+                      ?.withValues(alpha: 0.7),
+                  fontSize: 12,
+                ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUrgencyBadge(JobUrgency urgency) {
+    final (label, colors) = switch (urgency) {
+      JobUrgency.urgent => ('Gấp', [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd]),
+      JobUrgency.veryUrgent => ('Rất gấp', [Colors.red.shade400, Colors.red.shade600]),
+      JobUrgency.asap => ('ASAP', [Colors.red.shade600, Colors.red.shade800]),
+      _ => ('', <Color>[]),
+    };
+
+    if (label.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: colors),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+            color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonList() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 4,
+      itemBuilder: (context, index) {
+        return ShimmerLoading(
+          child: GlassCard(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 48, height: 48,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).dividerColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(width: 180, height: 16,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).dividerColor,
+                                borderRadius: BorderRadius.circular(4),
+                              )),
+                          const SizedBox(height: 8),
+                          Container(width: 120, height: 12,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).dividerColor,
+                                borderRadius: BorderRadius.circular(4),
+                              )),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                // Salary skeleton
+                Container(
+                  width: double.infinity, height: 36,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).dividerColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(width: double.infinity, height: 14,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).dividerColor,
+                      borderRadius: BorderRadius.circular(4),
+                    )),
+                const SizedBox(height: 8),
+                Container(width: 200, height: 14,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).dividerColor,
+                      borderRadius: BorderRadius.circular(4),
+                    )),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.work_off_outlined, size: 64,
+                color: Theme.of(context)
+                    .iconTheme
+                    .color
+                    ?.withValues(alpha: 0.3)),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.color
+                        ?.withValues(alpha: 0.6),
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            TextButton.icon(
+              onPressed: () {
+                final provider = context.read<JobProvider>();
+                provider.refresh();
+              },
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Tải lại'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String message, VoidCallback onRetry) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64,
+                color: Colors.red.withValues(alpha: 0.5)),
+            const SizedBox(height: 16),
+            Text(message,
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Thử lại'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Color> _getGradientForIndex(int index) {
+    final gradients = [
+      [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
+      [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+      [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
+      [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
+    ];
+    return gradients[index % gradients.length];
   }
 }

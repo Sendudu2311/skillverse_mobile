@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
+import '../../providers/skin_provider.dart';
 import '../../themes/app_theme.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -18,6 +19,7 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DashboardProvider>().loadDashboard();
+      context.read<SkinProvider>().loadAllSkins();
     });
   }
 
@@ -98,6 +100,21 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  Widget _buildDefaultAvatar() {
+    return Container(
+      width: 48,
+      height: 48,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppTheme.primaryBlueDark, AppTheme.secondaryPurple],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Icon(Icons.waving_hand, color: Colors.white, size: 24),
+    );
+  }
+
   Widget _buildWelcomeHeader(
     BuildContext context,
     String userName,
@@ -105,6 +122,7 @@ class _DashboardPageState extends State<DashboardPage> {
   ) {
     return Container(
       padding: const EdgeInsets.all(24),
+      clipBehavior: Clip.none,
       decoration: BoxDecoration(
         color: isDark
             ? AppTheme.darkCardBackground
@@ -114,86 +132,69 @@ class _DashboardPageState extends State<DashboardPage> {
           color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppTheme.primaryBlueDark,
-                      AppTheme.secondaryPurple,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.waving_hand, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'WELCOME BACK,',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontFamily: 'monospace',
-                        color: AppTheme.accentCyan,
-                        letterSpacing: 1.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      userName,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? AppTheme.darkTextPrimary
-                            : AppTheme.lightTextPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppTheme.darkBackgroundSecondary
-                  : AppTheme.lightBackgroundSecondary,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppTheme.accentCyan.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          // Left: Text content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.terminal, size: 16, color: AppTheme.accentCyan),
-                const SizedBox(width: 8),
                 Text(
-                  'COMMAND CENTER OPERATIONAL',
+                  'WELCOME BACK,',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     fontFamily: 'monospace',
                     color: AppTheme.accentCyan,
-                    letterSpacing: 1.2,
+                    letterSpacing: 1.5,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  userName,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Right: Meowl avatar
+          Consumer<SkinProvider>(
+            builder: (context, skinProvider, _) {
+              final skin = skinProvider.selectedSkin;
+              if (skin != null && skin.imageUrl != null) {
+                return Container(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.secondaryPurple
+                            .withValues(alpha: 0.4),
+                        blurRadius: 20,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Image.network(
+                    skin.imageUrl!,
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+                  ),
+                );
+              }
+              return _buildDefaultAvatar();
+            },
           ),
         ],
       ),

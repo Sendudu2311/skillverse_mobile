@@ -29,6 +29,8 @@ import '../pages/mentor/my_bookings_page.dart';
 import '../pages/skin/skin_shop_page.dart';
 import '../pages/task_board/task_board_page.dart';
 import '../pages/jobs/jobs_page.dart';
+import '../pages/jobs/job_detail_page.dart';
+import '../pages/jobs/my_applications_page.dart';
 import '../pages/wallet/wallet_page.dart';
 import '../pages/expert_chat/expert_chat_landing_page.dart';
 import '../pages/expert_chat/domain_selection_page.dart';
@@ -202,6 +204,21 @@ class AppRouter {
             currentPath: state.matchedLocation,
             child: const JobsPage(),
           ),
+        ),
+        GoRoute(
+          path: '/jobs/:jobId',
+          name: 'job-detail',
+          builder: (context, state) {
+            final jobId = int.parse(state.pathParameters['jobId']!);
+            final isShortTerm =
+                state.uri.queryParameters['shortTerm'] == 'true';
+            return JobDetailPage(jobId: jobId, isShortTerm: isShortTerm);
+          },
+        ),
+        GoRoute(
+          path: '/my-applications',
+          name: 'my-applications',
+          builder: (context, state) => const MyApplicationsPage(),
         ),
 
         // Community Routes
