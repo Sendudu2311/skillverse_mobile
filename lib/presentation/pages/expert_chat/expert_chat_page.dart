@@ -83,9 +83,12 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
               // Compact SliverAppBar
               SliverAppBar(
                 pinned: true,
+                automaticallyImplyLeading: false,
                 expandedHeight: 70,
                 collapsedHeight: 60,
-                backgroundColor: Colors.transparent,
+                backgroundColor: isDark
+                    ? AppTheme.darkBackgroundPrimary
+                    : AppTheme.lightBackgroundPrimary,
                 flexibleSpace: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -93,7 +96,7 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                       end: Alignment.bottomRight,
                       colors: [
                         AppTheme.primaryBlueDark,
-                        const Color(0xFF00D4FF),
+                        AppTheme.accentCyan,
                       ],
                     ),
                   ),
@@ -201,7 +204,7 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                             gradient: LinearGradient(
                               colors: [
                                 AppTheme.primaryBlueDark.withValues(alpha: 0.3),
-                                const Color(0xFF00D4FF).withValues(alpha: 0.3),
+                                AppTheme.accentCyan.withValues(alpha: 0.3),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(8),
@@ -292,7 +295,7 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                             : const LinearGradient(
                                 colors: [
                                   AppTheme.primaryBlueDark,
-                                  Color(0xFF00D4FF),
+                                  AppTheme.accentCyan,
                                 ],
                               ),
                         color: provider.isSending ? Colors.grey : null,
@@ -331,7 +334,7 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppTheme.primaryBlueDark, Color(0xFF00D4FF)],
+                  colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
                 ),
               ),
               child: Row(
@@ -358,7 +361,7 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  context.go('/expert-chat/domains');
+                  context.go('/expert-chat/domain');
                 },
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text(
@@ -606,7 +609,7 @@ class _MessageBubble extends StatelessWidget {
               height: 32,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppTheme.primaryBlueDark, Color(0xFF00D4FF)],
+                  colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -628,7 +631,7 @@ class _MessageBubble extends StatelessWidget {
                     ? LinearGradient(
                         colors: [
                           AppTheme.primaryBlueDark.withValues(alpha: 0.15),
-                          const Color(0xFF00D4FF).withValues(alpha: 0.15),
+                          AppTheme.accentCyan.withValues(alpha: 0.15),
                         ],
                       )
                     : null,
@@ -734,7 +737,7 @@ class _ThinkingIndicatorState extends State<_ThinkingIndicator>
                 gradient: LinearGradient(
                   colors: [
                     AppTheme.primaryBlueDark.withValues(alpha: opacity),
-                    const Color(0xFF00D4FF).withValues(alpha: opacity),
+                    AppTheme.accentCyan.withValues(alpha: opacity),
                   ],
                 ),
                 shape: BoxShape.circle,

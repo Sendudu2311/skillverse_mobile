@@ -30,7 +30,7 @@ class _ExpertChatLandingPageState extends State<ExpertChatLandingPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/profile'),
+          onPressed: () => context.go('/dashboard'),
         ),
         title: Row(
           children: [
@@ -38,7 +38,7 @@ class _ExpertChatLandingPageState extends State<ExpertChatLandingPage> {
             const SizedBox(width: 8),
             ShaderMask(
               shaderCallback: (bounds) => const LinearGradient(
-                colors: [AppTheme.primaryBlueDark, Color(0xFF00D4FF)],
+                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
               ).createShader(bounds),
               child: const Text(
                 'HỆ THỐNG CHUYÊN GIA',
@@ -113,8 +113,8 @@ class _ExpertChatLandingPageState extends State<ExpertChatLandingPage> {
                 'Lộ trình cụ thể cho từng vai trò',
               ],
               buttonText: 'CHỌN CHUYÊN GIA',
-              onTap: () => context.push('/expert-chat/domains'),
-              color: const Color(0xFF00D4FF),
+              onTap: () => context.push('/expert-chat/domain'),
+              color: AppTheme.accentCyan,
               isPremium: true,
             ),
           ],
@@ -154,7 +154,7 @@ class _ExpertChatLandingPageState extends State<ExpertChatLandingPage> {
                 icon: Icons.category,
                 value: totalDomains > 0 ? '$totalDomains' : '13',
                 label: 'LĨNH VỰC',
-                color: const Color(0xFF00D4FF),
+                color: AppTheme.accentCyan,
               ),
             ),
             const SizedBox(width: 8),

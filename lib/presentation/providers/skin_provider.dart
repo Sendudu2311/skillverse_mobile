@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
+import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/skin_models.dart';
 import '../../data/services/skin_service.dart';
 import '../../core/utils/error_handler.dart';
 
-class SkinProvider extends ChangeNotifier {
+/// Skin Provider
+///
+/// Uses [LoadingStateProviderMixin] to auto-manage primary loading state:
+/// - `isLoading` / `setLoading(bool)` — primary loading state (loadAllSkins)
+/// - `hasError` / `errorMessage` / `setError(String?)` — error state
+/// - `executeAsync()` — try/catch/loading wrapper
+/// - `resetState()` — clear loading + error
+///
+/// Secondary loading (`_isLoadingLeaderboard`) managed separately.
+class SkinProvider extends ChangeNotifier with LoadingStateProviderMixin {
   final SkinService _skinService = SkinService();
 
-  // State
+  // State (chỉ giữ domain data — primary loading/error do mixin quản lý)
   List<MeowlSkin> _allSkins = [];
   List<MeowlSkin> _mySkins = [];
   List<MeowlSkin> _leaderboard = [];
   MeowlSkin? _selectedSkin;
 
-  bool _isLoading = false;
   bool _isLoadingLeaderboard = false;
-  String? _error;
   String? _successMessage;
 
   // Getters
@@ -22,9 +30,8 @@ class SkinProvider extends ChangeNotifier {
   List<MeowlSkin> get mySkins => _mySkins;
   List<MeowlSkin> get leaderboard => _leaderboard;
   MeowlSkin? get selectedSkin => _selectedSkin;
-  bool get isLoading => _isLoading;
   bool get isLoadingLeaderboard => _isLoadingLeaderboard;
-  String? get error => _error;
+  String? get error => errorMessage; // Alias for backward compatibility
   String? get successMessage => _successMessage;
 
   // Filtered getters
@@ -49,23 +56,17 @@ class SkinProvider extends ChangeNotifier {
 
   /// Load all skins
   Future<void> loadAllSkins() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
+    await executeAsync(() async {
       _allSkins = await _skinService.getAllSkins();
       _selectedSkin = _allSkins.cast<MeowlSkin?>().firstWhere(
         (s) => s?.selected == true,
         orElse: () => null,
       );
-    } catch (e) {
-      _error = ErrorHandler.getErrorMessage(e);
-      debugPrint('Error loading skins: $e');
-    } finally {
-      _isLoading = false;
       notifyListeners();
-    }
+    }, errorMessageBuilder: (e) {
+      debugPrint('Error loading skins: $e');
+      return ErrorHandler.getErrorMessage(e);
+    });
   }
 
   /// Load my skins only
@@ -95,7 +96,7 @@ class SkinProvider extends ChangeNotifier {
 
   /// Purchase a skin
   Future<bool> purchaseSkin(String skinCode) async {
-    _error = null;
+    clearError();
     _successMessage = null;
 
     try {
@@ -111,15 +112,14 @@ class SkinProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = ErrorHandler.getErrorMessage(e);
-      notifyListeners();
+      setError(ErrorHandler.getErrorMessage(e));
       return false;
     }
   }
 
   /// Select/equip a skin
   Future<bool> selectSkin(String skinCode) async {
-    _error = null;
+    clearError();
     _successMessage = null;
 
     try {
@@ -140,15 +140,14 @@ class SkinProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = ErrorHandler.getErrorMessage(e);
-      notifyListeners();
+      setError(ErrorHandler.getErrorMessage(e));
       return false;
     }
   }
 
   /// Clear messages
   void clearMessages() {
-    _error = null;
+    clearError();
     _successMessage = null;
     notifyListeners();
   }

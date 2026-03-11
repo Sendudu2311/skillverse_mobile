@@ -1,40 +1,36 @@
 import 'package:flutter/foundation.dart';
+import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/subscription_response.dart';
 import '../../data/services/subscription_service.dart';
 
-class SubscriptionProvider with ChangeNotifier {
+/// Subscription Provider
+///
+/// Uses [LoadingStateProviderMixin] to auto-manage:
+/// - `isLoading` / `setLoading(bool)` — loading state
+/// - `hasError` / `errorMessage` / `setError(String?)` — error state
+/// - `executeAsync()` — try/catch/loading wrapper
+/// - `resetState()` — clear loading + error
+class SubscriptionProvider with ChangeNotifier, LoadingStateProviderMixin {
   final SubscriptionService _subscriptionService = SubscriptionService();
 
   SubscriptionResponse? _subscription;
-  bool _isLoading = false;
-  String? _errorMessage;
 
   SubscriptionResponse? get subscription => _subscription;
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
   bool get hasActiveSubscription => _subscription?.currentlyActive ?? false;
   bool get isPremium => _subscription != null && _subscription!.currentlyActive;
 
   Future<void> loadSubscription() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
+    await executeAsync(() async {
       _subscription = await _subscriptionService.getCurrentSubscription();
-      _errorMessage = null;
-    } catch (e) {
-      _errorMessage = e.toString();
-      _subscription = null;
-    } finally {
-      _isLoading = false;
       notifyListeners();
-    }
+    }, errorMessageBuilder: (e) {
+      _subscription = null;
+      return e.toString();
+    });
   }
 
   void clearSubscription() {
     _subscription = null;
-    _errorMessage = null;
-    notifyListeners();
+    resetState();
   }
 }

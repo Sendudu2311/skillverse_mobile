@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/task_board_provider.dart';
 import '../../themes/app_theme.dart';
 import 'widgets/ai_study_planner_dialog.dart';
@@ -32,6 +33,10 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/dashboard'),
+        ),
         title: Row(
           children: [
             Icon(
@@ -42,7 +47,7 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
             const SizedBox(width: 8),
             ShaderMask(
               shaderCallback: (bounds) => const LinearGradient(
-                colors: [AppTheme.primaryBlueDark, Color(0xFF00D4FF)],
+                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
               ).createShader(bounds),
               child: const Text(
                 'MISSION CONTROL',
@@ -104,7 +109,7 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
                       label: 'AI STRATEGIST',
                       isSelected: provider.selectedTabIndex == 0,
                       onTap: () => provider.setSelectedTab(0),
-                      color: const Color(0xFFFFA500),
+                      color: AppTheme.accentOrange,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -231,7 +236,7 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
             Icon(
               Icons.auto_awesome,
               size: 80,
-              color: const Color(0xFFFFA500).withValues(alpha: 0.6),
+              color: AppTheme.accentOrange.withValues(alpha: 0.6),
             ),
             const SizedBox(height: 24),
             Text(
@@ -240,7 +245,7 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'monospace',
-                color: const Color(0xFFFFA500),
+                color: AppTheme.accentOrange,
                 letterSpacing: 2,
               ),
             ),
@@ -263,7 +268,7 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
               icon: const Icon(Icons.rocket_launch),
               label: const Text('TẠO LỊCH HỌC TỰ ĐỘNG'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFA500),
+                backgroundColor: AppTheme.accentOrange,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,

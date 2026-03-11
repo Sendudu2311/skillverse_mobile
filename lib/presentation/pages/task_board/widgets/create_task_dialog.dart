@@ -71,7 +71,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                   Expanded(
                     child: ShaderMask(
                       shaderCallback: (bounds) => const LinearGradient(
-                        colors: [AppTheme.primaryBlueDark, Color(0xFF00D4FF)],
+                        colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
                       ).createShader(bounds),
                       child: const Text(
                         'NHIỆM VỤ MỚI',

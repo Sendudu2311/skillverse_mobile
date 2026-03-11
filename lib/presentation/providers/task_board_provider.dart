@@ -1,11 +1,18 @@
 import 'package:flutter/foundation.dart';
+import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/task_board_models.dart';
 import '../../data/models/study_planner_models.dart';
 import '../../data/services/task_board_service.dart';
 import '../../data/services/study_planner_service.dart';
 
 /// Task Board Provider for state management
-class TaskBoardProvider extends ChangeNotifier {
+///
+/// Uses [LoadingStateProviderMixin] to auto-manage:
+/// - `isLoading` / `setLoading(bool)` — loading state
+/// - `hasError` / `errorMessage` / `setError(String?)` — error state
+/// - `executeAsync()` — try/catch/loading wrapper
+/// - `resetState()` — clear loading + error
+class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
   final TaskBoardService _taskBoardService;
   final StudyPlannerService _studyPlannerService;
 
@@ -15,13 +22,11 @@ class TaskBoardProvider extends ChangeNotifier {
   }) : _taskBoardService = taskBoardService ?? TaskBoardService(),
        _studyPlannerService = studyPlannerService ?? StudyPlannerService();
 
-  // State
+  // State (chỉ giữ domain data — loading/error do mixin quản lý)
   List<TaskColumn> _columns = [];
   List<DashboardNote> _notes = [];
   List<StudySessionResponse> _sessions = [];
   DateTime _selectedWeekStart = _getWeekStart(DateTime.now());
-  bool _isLoading = false;
-  String? _error;
   int _selectedTabIndex = 1; // 0: AI, 1: Timeline, 2: Kanban
 
   // Getters
@@ -29,8 +34,7 @@ class TaskBoardProvider extends ChangeNotifier {
   List<DashboardNote> get notes => _notes;
   List<StudySessionResponse> get sessions => _sessions;
   DateTime get selectedWeekStart => _selectedWeekStart;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
+  String? get error => errorMessage; // Alias for backward compatibility
   int get selectedTabIndex => _selectedTabIndex;
 
   // Default columns
@@ -71,43 +75,36 @@ class TaskBoardProvider extends ChangeNotifier {
 
   // Load board data from backend
   Future<void> loadBoard() async {
+    setLoading(true);
     try {
-      _setLoading(true);
       final boardData = await _taskBoardService.getBoard();
       _columns = boardData.map((col) => col.toTaskColumn()).toList();
 
       // If no columns, initialize with defaults
       if (_columns.isEmpty) {
-        _columns = defaultColumns
-            .map(
-              (col) => TaskColumn(
-                id: col['id']!,
-                name: col['name']!,
-                color: col['color'],
-                tasks: [],
-              ),
-            )
-            .toList();
+        _columns = _buildDefaultColumns();
       }
 
-      _setLoading(false);
-      notifyListeners();
+      setLoading(false);
     } catch (e) {
       debugPrint('Error loading board: $e');
       // Fallback to default columns on error
-      _columns = defaultColumns
-          .map(
-            (col) => TaskColumn(
-              id: col['id']!,
-              name: col['name']!,
-              color: col['color'],
-              tasks: [],
-            ),
-          )
-          .toList();
-      _setLoading(false);
-      notifyListeners();
+      _columns = _buildDefaultColumns();
+      setLoading(false);
     }
+  }
+
+  List<TaskColumn> _buildDefaultColumns() {
+    return defaultColumns
+        .map(
+          (col) => TaskColumn(
+            id: col['id']!,
+            name: col['name']!,
+            color: col['color'],
+            tasks: [],
+          ),
+        )
+        .toList();
   }
 
   // Get overdue count
@@ -128,8 +125,7 @@ class TaskBoardProvider extends ChangeNotifier {
 
   /// Create a new task
   Future<void> createTask(CreateTaskRequest request) async {
-    try {
-      _setLoading(true);
+    await executeAsync(() async {
       final response = await _taskBoardService.createTask(request);
       final task = response.toTask();
 
@@ -141,17 +137,16 @@ class TaskBoardProvider extends ChangeNotifier {
         _columns[columnIndex] = column.copyWith(tasks: [...column.tasks, task]);
       }
 
-      _setLoading(false);
       notifyListeners();
-    } catch (e) {
-      _setError('Không thể tạo nhiệm vụ: $e');
-    }
+    }, errorMessageBuilder: (e) {
+      debugPrint('❌ TaskBoardProvider Error: $e');
+      return 'Không thể tạo nhiệm vụ: $e';
+    });
   }
 
   /// Update a task
   Future<void> updateTask(String taskId, UpdateTaskRequest request) async {
-    try {
-      _setLoading(true);
+    await executeAsync(() async {
       final response = await _taskBoardService.updateTask(taskId, request);
       final updatedTask = response.toTask();
 
@@ -166,17 +161,16 @@ class TaskBoardProvider extends ChangeNotifier {
         }
       }
 
-      _setLoading(false);
       notifyListeners();
-    } catch (e) {
-      _setError('Không thể cập nhật nhiệm vụ: $e');
-    }
+    }, errorMessageBuilder: (e) {
+      debugPrint('❌ TaskBoardProvider Error: $e');
+      return 'Không thể cập nhật nhiệm vụ: $e';
+    });
   }
 
   /// Delete a task
   Future<void> deleteTask(String taskId) async {
-    try {
-      _setLoading(true);
+    await executeAsync(() async {
       await _taskBoardService.deleteTask(taskId);
 
       // Remove from columns
@@ -190,11 +184,11 @@ class TaskBoardProvider extends ChangeNotifier {
         }
       }
 
-      _setLoading(false);
       notifyListeners();
-    } catch (e) {
-      _setError('Không thể xóa nhiệm vụ: $e');
-    }
+    }, errorMessageBuilder: (e) {
+      debugPrint('❌ TaskBoardProvider Error: $e');
+      return 'Không thể xóa nhiệm vụ: $e';
+    });
   }
 
   /// Move task to another column
@@ -236,7 +230,8 @@ class TaskBoardProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      _setError('Không thể di chuyển nhiệm vụ: $e');
+      setError('Không thể di chuyển nhiệm vụ: $e');
+      debugPrint('❌ TaskBoardProvider Error: $e');
     }
   }
 
@@ -271,7 +266,8 @@ class TaskBoardProvider extends ChangeNotifier {
       _notes.add(note);
       notifyListeners();
     } catch (e) {
-      _setError('Không thể tạo ghi chú: $e');
+      setError('Không thể tạo ghi chú: $e');
+      debugPrint('❌ TaskBoardProvider Error: $e');
     }
   }
 
@@ -282,7 +278,8 @@ class TaskBoardProvider extends ChangeNotifier {
       _notes.removeWhere((n) => n.id == noteId);
       notifyListeners();
     } catch (e) {
-      _setError('Không thể xóa ghi chú: $e');
+      setError('Không thể xóa ghi chú: $e');
+      debugPrint('❌ TaskBoardProvider Error: $e');
     }
   }
 
@@ -302,19 +299,18 @@ class TaskBoardProvider extends ChangeNotifier {
   Future<List<StudySessionResponse>> generateProposal(
     GenerateScheduleRequest request,
   ) async {
-    try {
-      _setLoading(true);
+    final result = await executeAsync(() async {
       final generatedSessions = await _studyPlannerService.generateProposal(
         request,
       );
       _sessions = [..._sessions, ...generatedSessions];
-      _setLoading(false);
       notifyListeners();
       return generatedSessions;
-    } catch (e) {
-      _setError('Không thể tạo lịch học: $e');
-      return [];
-    }
+    }, errorMessageBuilder: (e) {
+      debugPrint('❌ TaskBoardProvider Error: $e');
+      return 'Không thể tạo lịch học: $e';
+    });
+    return result ?? [];
   }
 
   /// Update session status
@@ -339,7 +335,8 @@ class TaskBoardProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      _setError('Không thể cập nhật trạng thái: $e');
+      setError('Không thể cập nhật trạng thái: $e');
+      debugPrint('❌ TaskBoardProvider Error: $e');
     }
   }
 
@@ -354,21 +351,5 @@ class TaskBoardProvider extends ChangeNotifier {
 
   // ==================== HELPERS ====================
 
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    if (loading) _error = null;
-    notifyListeners();
-  }
-
-  void _setError(String message) {
-    _error = message;
-    _isLoading = false;
-    debugPrint('❌ TaskBoardProvider Error: $message');
-    notifyListeners();
-  }
-
-  void clearError() {
-    _error = null;
-    notifyListeners();
-  }
+  void clearError() => super.clearError();
 }

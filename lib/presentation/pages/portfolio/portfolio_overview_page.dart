@@ -17,6 +17,8 @@ class PortfolioOverviewPage extends StatefulWidget {
 }
 
 class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
+  late bool isDark;
+
   @override
   void initState() {
     super.initState();
@@ -109,17 +111,20 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
+    final isDark = this.isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: Stack(
         children: [
           // Galaxy Background
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [AppTheme.galaxyDarkest, AppTheme.galaxyDark],
+                colors: isDark
+                    ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
+                    : [Colors.grey.shade50, Colors.white],
               ),
             ),
           ),
@@ -147,7 +152,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                   return RefreshIndicator(
                     onRefresh: _loadPortfolio,
                     color: AppTheme.themePurpleStart,
-                    backgroundColor: AppTheme.darkCardBackground,
+                    backgroundColor: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(16),
@@ -311,19 +316,19 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Về tôi',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
             ),
           ),
           const SizedBox(height: 12),
           if (profile.bio != null)
             Text(
               profile.bio!,
-              style: const TextStyle(fontSize: 14, color: Colors.white70),
+              style: TextStyle(fontSize: 14, color: isDark ? Colors.white70 : AppTheme.lightTextSecondary),
             ),
           if (profile.location != null) ...[
             const SizedBox(height: 16),
@@ -334,7 +339,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                 const SizedBox(width: 8),
                 Text(
                   profile.location!,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
                 ),
               ],
             ),
@@ -366,12 +371,12 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
           if (profile.expertiseAreas != null &&
               profile.expertiseAreas!.isNotEmpty) ...[
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Chuyên môn',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               ),
             ),
             const SizedBox(height: 8),
@@ -407,9 +412,9 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.darkCardBackground,
+        color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.darkBorderColor),
+        border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -417,7 +422,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
           Icon(icon, size: 16, color: AppTheme.themePurpleStart),
           const SizedBox(width: 6),
           Text(label,
-              style: const TextStyle(fontSize: 12, color: Colors.white)),
+              style: TextStyle(fontSize: 12, color: isDark ? Colors.white : AppTheme.lightTextPrimary)),
         ],
       ),
     );
@@ -453,17 +458,17 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
             ),
           ),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: AppTheme.darkTextSecondary,
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
             ),
           ),
         ],
@@ -478,12 +483,12 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Dự án',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               ),
             ),
             TextButton.icon(
@@ -528,10 +533,10 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: AppTheme.darkBackgroundSecondary,
+                    color: isDark ? AppTheme.darkBackgroundSecondary : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.image, color: AppTheme.darkTextSecondary),
+                  child: Icon(Icons.image, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                 ),
               ),
             )
@@ -555,10 +560,10 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                     Expanded(
                       child: Text(
                         project.title ?? '',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -572,9 +577,9 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                   const SizedBox(height: 4),
                   Text(
                     project.technologies!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.darkTextSecondary,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -584,7 +589,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                   const SizedBox(height: 4),
                   Text(
                     project.description!,
-                    style: const TextStyle(fontSize: 13, color: Colors.white70),
+                    style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : AppTheme.lightTextSecondary),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -605,12 +610,12 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Chứng chỉ',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               ),
             ),
             TextButton.icon(
@@ -658,27 +663,27 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
               children: [
                 Text(
                   certificate.title ?? '',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   certificate.issuer ?? '',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: AppTheme.darkTextSecondary,
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                   ),
                 ),
                 if (certificate.issueDate != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     certificate.issueDate!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.darkTextSecondary,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                     ),
                   ),
                 ],
@@ -694,12 +699,12 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Đánh giá',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: isDark ? Colors.white : AppTheme.lightTextPrimary,
           ),
         ),
         const SizedBox(height: 12),
@@ -741,10 +746,10 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                   children: [
                     Text(
                       review.reviewerName ?? 'Anonymous',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                       ),
                     ),
                     Row(
@@ -768,7 +773,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
             const SizedBox(height: 12),
             Text(
               review.comment!,
-              style: const TextStyle(fontSize: 14, color: Colors.white70),
+              style: TextStyle(fontSize: 14, color: isDark ? Colors.white70 : AppTheme.lightTextSecondary),
             ),
           ],
         ],
@@ -781,13 +786,13 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
       child: Center(
         child: Column(
           children: [
-            Icon(icon, size: 64, color: AppTheme.darkTextSecondary),
+            Icon(icon, size: 64, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
             const SizedBox(height: 16),
             Text(
               message,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
-                color: AppTheme.darkTextSecondary,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
               ),
             ),
           ],
@@ -823,21 +828,21 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
               ),
             ),
             const SizedBox(height: 32),
-            const Text(
+            Text(
               'Chưa có Portfolio',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Tạo portfolio để giới thiệu bản thân,\ndự án và kỹ năng của bạn',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
-                color: AppTheme.darkTextSecondary,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                 height: 1.5,
               ),
             ),
@@ -900,20 +905,20 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
               color: AppTheme.errorColor.withValues(alpha: 0.7),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Có lỗi xảy ra',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               ),
             ),
             const SizedBox(height: 12),
             Text(
               error,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 14, color: AppTheme.darkTextSecondary),
+              style: TextStyle(
+                  fontSize: 14, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -950,7 +955,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
   void _showQuickActionMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.darkCardBackground,
+      backgroundColor: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -963,7 +968,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.darkTextSecondary,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -977,8 +982,8 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                 ),
                 child: const Icon(Icons.work, color: Colors.white),
               ),
-              title: const Text('Thêm dự án',
-                  style: TextStyle(color: Colors.white)),
+              title: Text('Thêm dự án',
+                  style: TextStyle(color: isDark ? Colors.white : AppTheme.lightTextPrimary)),
               onTap: () {
                 Navigator.pop(context);
                 _navigateToAddProject();
@@ -993,8 +998,8 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                 ),
                 child: const Icon(Icons.card_membership, color: Colors.white),
               ),
-              title: const Text('Thêm chứng chỉ',
-                  style: TextStyle(color: Colors.white)),
+              title: Text('Thêm chứng chỉ',
+                  style: TextStyle(color: isDark ? Colors.white : AppTheme.lightTextPrimary)),
               onTap: () {
                 Navigator.pop(context);
                 _navigateToAddCertificate();

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
+import '../themes/app_theme.dart';
 import 'galaxy_background.dart';
 
 class MainLayout extends StatefulWidget {
@@ -223,7 +224,7 @@ class _MainLayoutState extends State<MainLayout> {
                   ? const Color(0xFF1E293B)
                   : Colors.white,
               selectedItemColor: isDarkMode
-                  ? const Color(0xFF6366F1)
+                  ? AppTheme.primaryBlueDark
                   : Theme.of(context).colorScheme.primary,
               unselectedItemColor: isDarkMode
                   ? Colors.grey.shade600

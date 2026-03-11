@@ -144,7 +144,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                   end: Alignment.bottomCenter,
                   colors: isDark
                       ? [
-                          const Color(0xFF1E1B4B),
+                          AppTheme.indigoDark,
                           const Color(0xFF312E81),
                           AppTheme.darkBackgroundPrimary,
                         ]

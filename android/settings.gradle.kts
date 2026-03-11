@@ -3,8 +3,13 @@ pluginManagement {
         run {
             val properties = java.util.Properties()
             file("local.properties").inputStream().use { properties.load(it) }
-            val flutterSdkPath = properties.getProperty("flutter.sdk")
+            var flutterSdkPath = properties.getProperty("flutter.sdk")
             require(flutterSdkPath != null) { "flutter.sdk not set in local.properties" }
+            // Fix: Java reads UTF-8 local.properties as Latin-1, garbling Vietnamese chars.
+            // Redirect to C:\flutter junction (no special characters).
+            if (flutterSdkPath.contains("MÃ¡y") || flutterSdkPath.contains("Máy")) {
+                flutterSdkPath = "C:\\flutter"
+            }
             flutterSdkPath
         }
 

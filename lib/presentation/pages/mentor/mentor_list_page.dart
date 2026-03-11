@@ -38,49 +38,55 @@ class _MentorListPageState extends State<MentorListPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return SafeArea(
-      child: Column(
-        children: [
-          _buildHeader(context, isDark),
-          _buildSearchBar(context, isDark),
-          _buildSkillFilter(context, isDark),
-          Expanded(child: _buildMentorList(context, isDark)),
-        ],
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/dashboard'),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.people_outline,
+              color: AppTheme.primaryBlueDark,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
+              ).createShader(bounds),
+              child: const Text(
+                'MENTOR NETWORK',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  color: Colors.white,
+                  letterSpacing: 2,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            _buildSearchBar(context, isDark),
+            _buildSkillFilter(context, isDark),
+            Expanded(child: _buildMentorList(context, isDark)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title with HUD style
-          Text(
-            'MENTOR NETWORK',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
-              letterSpacing: 2,
-              fontFamily: 'monospace',
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Kết nối với chuyên gia hàng đầu',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
+
 
   Widget _buildSearchBar(BuildContext context, bool isDark) {
     return Padding(

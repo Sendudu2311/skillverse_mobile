@@ -24,6 +24,7 @@ class EditProjectPage extends StatefulWidget {
 
 class _EditProjectPageState extends State<EditProjectPage>
     with SingleTickerProviderStateMixin {
+  late bool isDark;
   final _formKey = GlobalKey<FormState>();
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -100,10 +101,15 @@ class _EditProjectPageState extends State<EditProjectPage>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppTheme.themeBlueStart,
-              surface: AppTheme.darkCardBackground,
-            ),
+            colorScheme: isDark
+                ? const ColorScheme.dark(
+                    primary: AppTheme.themeBlueStart,
+                    surface: AppTheme.darkCardBackground,
+                  )
+                : ColorScheme.light(
+                    primary: AppTheme.themeBlueStart,
+                    surface: Colors.grey.shade50,
+                  ),
           ),
           child: child!,
         );
@@ -214,6 +220,8 @@ class _EditProjectPageState extends State<EditProjectPage>
 
   @override
   Widget build(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: FadeTransition(
         opacity: _fadeAnimation,
@@ -221,11 +229,13 @@ class _EditProjectPageState extends State<EditProjectPage>
           children: [
             // Galaxy Background
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [AppTheme.galaxyDarkest, AppTheme.galaxyDark],
+                  colors: isDark
+                      ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
+                      : [Colors.grey.shade50, Colors.white],
                 ),
               ),
             ),
@@ -308,13 +318,13 @@ class _EditProjectPageState extends State<EditProjectPage>
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : AppTheme.lightTextPrimary),
             onPressed: () => Navigator.pop(context),
           ),
           Text(
             widget.isCreate ? 'Thêm dự án' : 'Chỉnh sửa dự án',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -371,10 +381,10 @@ class _EditProjectPageState extends State<EditProjectPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Thông tin dự án',
             style: TextStyle(
-              color: Colors.white,
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
@@ -435,10 +445,10 @@ class _EditProjectPageState extends State<EditProjectPage>
             children: [
               const Icon(Icons.link, color: AppTheme.themeBlueStart, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Liên kết',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
@@ -482,10 +492,10 @@ class _EditProjectPageState extends State<EditProjectPage>
               const Icon(Icons.calendar_today,
                   color: AppTheme.themeOrangeStart, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Thời gian',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
@@ -523,13 +533,13 @@ class _EditProjectPageState extends State<EditProjectPage>
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.darkCardBackground,
+          color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.darkBorderColor),
+          border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
         ),
         child: Row(
           children: [
-            const Icon(Icons.event, color: AppTheme.darkTextSecondary),
+            Icon(Icons.event, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -537,8 +547,8 @@ class _EditProjectPageState extends State<EditProjectPage>
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
-                      color: AppTheme.darkTextSecondary,
+                    style: TextStyle(
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -547,15 +557,15 @@ class _EditProjectPageState extends State<EditProjectPage>
                     date != null
                         ? _dateFormat.format(date)
                         : 'Chọn ngày',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                       fontSize: 16,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_drop_down, color: AppTheme.darkTextSecondary),
+            Icon(Icons.arrow_drop_down, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
           ],
         ),
       ),
@@ -568,7 +578,7 @@ class _EditProjectPageState extends State<EditProjectPage>
         children: [
           Icon(
             _isFeatured ? Icons.star : Icons.star_outline,
-            color: _isFeatured ? Colors.amber : AppTheme.darkTextSecondary,
+            color: _isFeatured ? Colors.amber : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
             size: 24,
           ),
           const SizedBox(width: 12),
@@ -576,10 +586,10 @@ class _EditProjectPageState extends State<EditProjectPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Dự án nổi bật',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -589,8 +599,8 @@ class _EditProjectPageState extends State<EditProjectPage>
                   _isFeatured
                       ? 'Dự án này sẽ được hiển thị ưu tiên'
                       : 'Đánh dấu là dự án quan trọng',
-                  style: const TextStyle(
-                    color: AppTheme.darkTextSecondary,
+                  style: TextStyle(
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                     fontSize: 14,
                   ),
                 ),
@@ -627,12 +637,12 @@ class _EditProjectPageState extends State<EditProjectPage>
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(prefixIcon, color: AppTheme.darkTextSecondary),
+        prefixIcon: Icon(prefixIcon, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
         counterText: maxLength != null ? null : '',
-        labelStyle: const TextStyle(color: AppTheme.darkTextSecondary),
-        hintStyle: const TextStyle(color: AppTheme.darkTextSecondary),
+        labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+        hintStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
       ),
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
       maxLines: maxLines,
       maxLength: maxLength,
       keyboardType: keyboardType,

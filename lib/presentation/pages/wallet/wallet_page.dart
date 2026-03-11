@@ -40,7 +40,7 @@ class _WalletPageState extends State<WalletPage> {
             const SizedBox(width: 8),
             ShaderMask(
               shaderCallback: (bounds) => const LinearGradient(
-                colors: [AppTheme.primaryBlueDark, Color(0xFF00D4FF)],
+                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
               ).createShader(bounds),
               child: const Text(
                 'VÍ VŨ TRỤ',
@@ -129,7 +129,7 @@ class _WalletPageState extends State<WalletPage> {
                   icon: Icons.monetization_on,
                   label: 'SkillCoin',
                   value: '${provider.coinBalance}',
-                  color: const Color(0xFFFFD700),
+                  color: AppTheme.accentGold,
                   isDark: isDark,
                 ),
                 const SizedBox(height: 32),
@@ -338,7 +338,7 @@ class _WalletPageState extends State<WalletPage> {
         'icon': Icons.shopping_bag,
         'label': 'TỔNG XU KIẾM ĐƯỢC',
         'value': '0 xu',
-        'color': const Color(0xFFFFD700),
+        'color': AppTheme.accentGold,
       },
     ];
 

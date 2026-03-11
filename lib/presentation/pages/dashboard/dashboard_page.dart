@@ -142,7 +142,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       style: TextStyle(
                         fontSize: 13,
                         fontFamily: 'monospace',
-                        color: const Color(0xFF00D4FF),
+                        color: AppTheme.accentCyan,
                         letterSpacing: 1.5,
                         fontWeight: FontWeight.bold,
                       ),
@@ -174,20 +174,20 @@ class _DashboardPageState extends State<DashboardPage> {
                   : AppTheme.lightBackgroundSecondary,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: const Color(0xFF00D4FF).withValues(alpha: 0.3),
+                color: AppTheme.accentCyan.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.terminal, size: 16, color: Color(0xFF00D4FF)),
+                Icon(Icons.terminal, size: 16, color: AppTheme.accentCyan),
                 const SizedBox(width: 8),
                 Text(
                   'COMMAND CENTER OPERATIONAL',
                   style: TextStyle(
                     fontSize: 11,
                     fontFamily: 'monospace',
-                    color: const Color(0xFF00D4FF),
+                    color: AppTheme.accentCyan,
                     letterSpacing: 1.2,
                     fontWeight: FontWeight.bold,
                   ),
@@ -212,7 +212,7 @@ class _DashboardPageState extends State<DashboardPage> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              const Color(0xFF6366F1).withValues(alpha: 0.2),
+              AppTheme.primaryBlueDark.withValues(alpha: 0.2),
               const Color(0xFF8B5CF6).withValues(alpha: 0.2),
             ],
             begin: Alignment.topLeft,
@@ -220,7 +220,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: const Color(0xFF6366F1).withValues(alpha: 0.4),
+            color: AppTheme.primaryBlueDark.withValues(alpha: 0.4),
             width: 1,
           ),
         ),
@@ -232,12 +232,12 @@ class _DashboardPageState extends State<DashboardPage> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                    color: AppTheme.primaryBlueDark.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.account_balance_wallet,
-                    color: Color(0xFF6366F1),
+                    color: AppTheme.primaryBlueDark,
                     size: 24,
                   ),
                 ),
@@ -337,7 +337,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           Icon(
                             Icons.monetization_on,
                             size: 16,
-                            color: const Color(0xFFFFD700),
+                            color: AppTheme.accentGold,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -359,7 +359,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'monospace',
-                          color: Color(0xFFFFD700),
+                          color: AppTheme.accentGold,
                         ),
                       ),
                     ],
@@ -394,6 +394,18 @@ class _DashboardPageState extends State<DashboardPage> {
         'route': '/chat',
       },
       {
+        'icon': Icons.dashboard_customize_outlined,
+        'label': 'Task Board',
+        'color': AppTheme.accentCyan,
+        'route': '/task-board',
+      },
+      {
+        'icon': Icons.psychology_outlined,
+        'label': 'Expert Chat',
+        'color': const Color(0xFFE040FB),
+        'route': '/expert-chat',
+      },
+      {
         'icon': Icons.people_outline,
         'label': 'Cộng đồng',
         'color': AppTheme.themeOrangeStart,
@@ -402,14 +414,26 @@ class _DashboardPageState extends State<DashboardPage> {
       {
         'icon': Icons.person_outline,
         'label': 'Mentor 1:1',
-        'color': const Color(0xFF6366F1),
+        'color': AppTheme.primaryBlueDark,
         'route': '/mentors',
       },
       {
         'icon': Icons.work_outline,
         'label': 'Portfolio',
-        'color': const Color(0xFFEC4899),
+        'color': AppTheme.accentPink,
         'route': '/portfolio',
+      },
+      {
+        'icon': Icons.storefront_outlined,
+        'label': 'Skin Shop',
+        'color': AppTheme.accentGold,
+        'route': '/skins',
+      },
+      {
+        'icon': Icons.work_history_outlined,
+        'label': 'Việc làm',
+        'color': const Color(0xFF26A69A),
+        'route': '/jobs',
       },
     ];
 
@@ -964,7 +988,7 @@ class _DashboardPageState extends State<DashboardPage> {
             : AppTheme.lightCardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFFFFD700).withValues(alpha: 0.3),
+          color: AppTheme.accentGold.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -972,7 +996,7 @@ class _DashboardPageState extends State<DashboardPage> {
         children: [
           Row(
             children: [
-              Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 24),
+              Icon(Icons.workspace_premium, color: AppTheme.accentGold, size: 24),
               const SizedBox(width: 12),
               Text(
                 'SYSTEM LIMITS & CAPABILITIES',
@@ -993,7 +1017,7 @@ class _DashboardPageState extends State<DashboardPage> {
             'AI CHATBOT REQUESTS',
             'INF',
             Icons.chat_bubble_outline,
-            const Color(0xFF00D4FF),
+            AppTheme.accentCyan,
             isDark,
           ),
           const SizedBox(height: 12),
@@ -1017,7 +1041,7 @@ class _DashboardPageState extends State<DashboardPage> {
             'COIN EARNING MULTIPLIER',
             'x2',
             Icons.monetization_on_outlined,
-            const Color(0xFFFFD700),
+            AppTheme.accentGold,
             isDark,
             isBadge: true,
           ),

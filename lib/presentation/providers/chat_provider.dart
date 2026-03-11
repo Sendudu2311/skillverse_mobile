@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
+import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/chat_models.dart';
 import '../../data/services/chat_service.dart';
 import 'auth_provider.dart';
 
-class ChatProvider with ChangeNotifier {
+/// Chat Provider
+///
+/// Uses [LoadingProviderMixin] to auto-manage:
+/// - `isLoading` / `setLoading(bool)` — loading state
+/// - `performAsync()` — try/finally/loading wrapper
+///
+/// Error handling is done inline (adding error messages to chat UI),
+/// so error-tracking mixin is not needed.
+class ChatProvider with ChangeNotifier, LoadingProviderMixin {
   final ChatService _chatService = ChatService();
   final AuthProvider _authProvider;
 
   ChatProvider(this._authProvider);
 
   List<UIMessage> _messages = [];
-  bool _isLoading = false;
-  String? _error;
   int? _currentSessionId;
 
   List<UIMessage> get messages => _messages;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
   int? get currentSessionId => _currentSessionId;
 
   /// Initialize with welcome message
@@ -45,9 +50,7 @@ class ChatProvider with ChangeNotifier {
     );
 
     _messages.add(userMessage);
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+    setLoading(true);
 
     try {
       // Create chat history from current messages (excluding the current user message)
@@ -85,8 +88,7 @@ class ChatProvider with ChangeNotifier {
 
       _messages.add(aiMessage);
     } catch (e) {
-      _error = e.toString();
-      // Add error message to UI
+      // Add error message to UI (inline error handling)
       final errorMessage = UIMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         role: 'assistant',
@@ -95,8 +97,7 @@ class ChatProvider with ChangeNotifier {
       );
       _messages.add(errorMessage);
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      setLoading(false);
     }
   }
 
@@ -108,11 +109,7 @@ class ChatProvider with ChangeNotifier {
 
   /// Load conversation history for a session
   Future<void> loadHistory(int sessionId) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
+    await performAsync(() async {
       final history = await _chatService.getHistory(sessionId);
 
       // Convert ChatMessage to UIMessage
@@ -132,18 +129,7 @@ class ChatProvider with ChangeNotifier {
       ]).toList();
 
       _currentSessionId = sessionId;
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  /// Clear error
-  void clearError() {
-    _error = null;
-    notifyListeners();
+    });
   }
 
   /// Start a new conversation
@@ -157,7 +143,6 @@ class ChatProvider with ChangeNotifier {
       ),
     ];
     _currentSessionId = null;
-    _error = null;
     notifyListeners();
   }
 }

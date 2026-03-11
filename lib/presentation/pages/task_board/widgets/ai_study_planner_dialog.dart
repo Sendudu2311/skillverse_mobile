@@ -74,7 +74,7 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
           : AppTheme.lightCardBackground,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: const Color(0xFFFFA500).withValues(alpha: 0.3)),
+        side: BorderSide(color: AppTheme.accentOrange.withValues(alpha: 0.3)),
       ),
       child: Container(
         width: size.width * 0.95,
@@ -98,7 +98,7 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
                 children: [
                   Icon(
                     Icons.smart_toy,
-                    color: const Color(0xFFFFA500),
+                    color: AppTheme.accentOrange,
                     size: 24,
                   ),
                   const SizedBox(width: 8),
@@ -108,7 +108,7 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
                       children: [
                         ShaderMask(
                           shaderCallback: (bounds) => const LinearGradient(
-                            colors: [Color(0xFFFFA500), Color(0xFFFFD700)],
+                            colors: [AppTheme.accentOrange, AppTheme.accentGold],
                           ).createShader(bounds),
                           child: const Text(
                             'AI STUDY PLANNER',
@@ -138,7 +138,7 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
                             style: TextStyle(
                               fontSize: 10,
                               fontFamily: 'monospace',
-                              color: Color(0xFFFFA500),
+                              color: AppTheme.accentOrange,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -373,7 +373,7 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
                         ),
                         controlAffinity: ListTileControlAffinity.leading,
                         contentPadding: EdgeInsets.zero,
-                        activeColor: const Color(0xFFFFA500),
+                        activeColor: AppTheme.accentOrange,
                       ),
                       CheckboxListTile(
                         value: _allowLateNight,
@@ -384,7 +384,7 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
                         ),
                         controlAffinity: ListTileControlAffinity.leading,
                         contentPadding: EdgeInsets.zero,
-                        activeColor: const Color(0xFFFFA500),
+                        activeColor: AppTheme.accentOrange,
                       ),
                     ],
                   ),
@@ -415,7 +415,7 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
                   ElevatedButton.icon(
                     onPressed: _isLoading ? null : _generateProposal,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFA500),
+                      backgroundColor: AppTheme.accentOrange,
                       foregroundColor: Colors.black,
                     ),
                     icon: _isLoading
@@ -439,7 +439,7 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
   Widget _buildSectionHeader(String label, IconData icon) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: const Color(0xFFFFA500)),
+        Icon(icon, size: 16, color: AppTheme.accentOrange),
         const SizedBox(width: 6),
         Text(
           label,
@@ -447,7 +447,7 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
             fontSize: 12,
             fontWeight: FontWeight.bold,
             fontFamily: 'monospace',
-            color: Color(0xFFFFA500),
+            color: AppTheme.accentOrange,
             letterSpacing: 1,
           ),
         ),

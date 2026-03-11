@@ -339,14 +339,18 @@ class _CourseDetailPageState extends State<CourseDetailPage>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (isLoading) {
       return Scaffold(
         body: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [AppTheme.galaxyDarkest, AppTheme.galaxyDark],
+              colors: isDark
+                  ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
+                  : [Colors.grey.shade100, Colors.white],
             ),
           ),
           child: const Center(child: CircularProgressIndicator()),
@@ -407,11 +411,13 @@ class _CourseDetailPageState extends State<CourseDetailPage>
           children: [
             // Gradient Background
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [AppTheme.galaxyDarkest, AppTheme.galaxyDark],
+                  colors: isDark
+                      ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
+                      : [Colors.grey.shade50, Colors.white],
                 ),
               ),
             ),
@@ -467,7 +473,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               end: Alignment.bottomCenter,
                               colors: [
                                 Colors.transparent,
-                                AppTheme.galaxyDarkest.withValues(alpha: 0.9),
+                                isDark
+                                    ? AppTheme.galaxyDarkest.withValues(alpha: 0.9)
+                                    : Colors.grey.shade50.withValues(alpha: 0.9),
                               ],
                             ),
                           ),
@@ -643,7 +651,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                               ),
                         ),
                         const SizedBox(height: 8),
@@ -664,7 +672,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                             Text(
                               _course!.authorName ?? 'Unknown',
                               style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(color: AppTheme.darkTextSecondary),
+                                  ?.copyWith(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                             ),
                           ],
                         ),
@@ -681,23 +689,25 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 label: 'Học viên',
                                 value: '${_course!.enrollmentCount}',
                                 color: AppTheme.themeBlueStart,
+                                isDark: isDark,
                               ),
                               Container(
                                 width: 1,
                                 height: 40,
-                                color: AppTheme.darkBorderColor,
+                                color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
                               ),
                               _StatItem(
                                 icon: Icons.auto_stories_outlined,
                                 label: 'Modules',
                                 value: '${_course!.moduleCount ?? 0}',
                                 color: AppTheme.themePurpleStart,
+                                isDark: isDark,
                               ),
                               if (_course!.rating != null) ...[
                                 Container(
                                   width: 1,
                                   height: 40,
-                                  color: AppTheme.darkBorderColor,
+                                  color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
                                 ),
                                 _StatItem(
                                   icon: Icons.star_outline,
@@ -706,6 +716,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                     _course!.rating!,
                                   ),
                                   color: Colors.amber,
+                                  isDark: isDark,
                                 ),
                               ],
                             ],
@@ -729,7 +740,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                           .textTheme
                                           .bodySmall
                                           ?.copyWith(
-                                            color: AppTheme.darkTextSecondary,
+                                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                                           ),
                                     ),
                                     const SizedBox(height: 4),
@@ -776,7 +787,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleLarge
-                                        ?.copyWith(color: Colors.white),
+                                        ?.copyWith(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
                                   ),
                                 ],
                               ),
@@ -785,7 +796,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 _course!.description ?? 'Không có mô tả',
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(
-                                      color: AppTheme.darkTextSecondary,
+                                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                                       height: 1.6,
                                     ),
                               ),
@@ -813,7 +824,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleLarge
-                                        ?.copyWith(color: Colors.white),
+                                        ?.copyWith(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
                                   ),
                                 ],
                               ),
@@ -822,18 +833,21 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 icon: Icons.access_time,
                                 text: 'Truy cập trọn đời',
                                 color: gradientColors[0],
+                                isDark: isDark,
                               ),
                               const SizedBox(height: 12),
                               _BenefitItem(
                                 icon: Icons.card_membership,
                                 text: 'Chứng chỉ hoàn thành',
                                 color: gradientColors[0],
+                                isDark: isDark,
                               ),
                               const SizedBox(height: 12),
                               _BenefitItem(
                                 icon: Icons.support_agent,
                                 text: 'Hỗ trợ giảng viên',
                                 color: gradientColors[0],
+                                isDark: isDark,
                               ),
                             ],
                           ),
@@ -859,7 +873,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleLarge
-                                        ?.copyWith(color: Colors.white),
+                                        ?.copyWith(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
                                   ),
                                 ],
                               ),
@@ -867,10 +881,10 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               if (_isLoadingModules)
                                 const Center(child: CircularProgressIndicator())
                               else if (_modules.isEmpty)
-                                const Text(
+                                Text(
                                   'Chưa có nội dung khóa học',
                                   style: TextStyle(
-                                    color: AppTheme.darkTextSecondary,
+                                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                                   ),
                                 )
                               else
@@ -887,6 +901,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                       isExpanded: isExpanded,
                                       onTap: () => toggleModule(module.id),
                                       gradientColors: gradientColors,
+                                      isDark: isDark,
                                     );
                                   },
                                 ),
@@ -907,9 +922,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.darkCardBackground,
+          color: isDark ? AppTheme.darkCardBackground : Colors.white,
           border: Border(
-            top: BorderSide(color: AppTheme.darkBorderColor, width: 1),
+            top: BorderSide(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor, width: 1),
           ),
         ),
         child: SafeArea(
@@ -1028,12 +1043,14 @@ class _StatItem extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final bool isDark;
 
   const _StatItem({
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
+    this.isDark = true,
   });
 
   @override
@@ -1044,8 +1061,8 @@ class _StatItem extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: isDark ? Colors.white : AppTheme.lightTextPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -1053,8 +1070,8 @@ class _StatItem extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
-            color: AppTheme.darkTextSecondary,
+          style: TextStyle(
+            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
             fontSize: 12,
           ),
         ),
@@ -1067,11 +1084,13 @@ class _BenefitItem extends StatelessWidget {
   final IconData icon;
   final String text;
   final Color color;
+  final bool isDark;
 
   const _BenefitItem({
     required this.icon,
     required this.text,
     required this.color,
+    this.isDark = true,
   });
 
   @override
@@ -1090,8 +1109,8 @@ class _BenefitItem extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
-              color: AppTheme.darkTextPrimary,
+            style: TextStyle(
+              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
               fontSize: 14,
             ),
           ),
@@ -1111,12 +1130,14 @@ class _ModuleItem extends StatelessWidget {
   final bool isExpanded;
   final VoidCallback onTap;
   final List<Color> gradientColors;
+  final bool isDark;
 
   const _ModuleItem({
     required this.module,
     required this.isExpanded,
     required this.onTap,
     required this.gradientColors,
+    this.isDark = true,
   });
 
   @override
@@ -1165,8 +1186,8 @@ class _ModuleItem extends StatelessWidget {
                       children: [
                         Text(
                           module.title,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 15,
                           ),
@@ -1188,13 +1209,13 @@ class _ModuleItem extends StatelessWidget {
             margin: const EdgeInsets.only(left: 56, top: 8, bottom: 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.darkBackgroundSecondary,
+              color: isDark ? AppTheme.darkBackgroundSecondary : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               module.description!,
-              style: const TextStyle(
-                color: AppTheme.darkTextSecondary,
+              style: TextStyle(
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                 fontSize: 13,
                 height: 1.5,
               ),

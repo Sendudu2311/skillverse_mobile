@@ -24,6 +24,7 @@ class EditExtendedProfilePage extends StatefulWidget {
 
 class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
     with SingleTickerProviderStateMixin {
+  late bool isDark;
   final _formKey = GlobalKey<FormState>();
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -179,6 +180,8 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
 
   @override
   Widget build(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: FadeTransition(
         opacity: _fadeAnimation,
@@ -186,11 +189,13 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
           children: [
             // Galaxy Background
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [AppTheme.galaxyDarkest, AppTheme.galaxyDark],
+                  colors: isDark
+                      ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
+                      : [Colors.grey.shade50, Colors.white],
                 ),
               ),
             ),
@@ -273,13 +278,13 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : AppTheme.lightTextPrimary),
             onPressed: () => Navigator.pop(context),
           ),
           Text(
             widget.isCreate ? 'Tạo Profile' : 'Chỉnh sửa',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -336,10 +341,10 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Thông tin cơ bản',
             style: TextStyle(
-              color: Colors.white,
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
@@ -398,10 +403,10 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             children: [
               const Icon(Icons.link, color: AppTheme.themeBlueStart, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Liên kết mạng xã hội',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
@@ -474,10 +479,10 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             children: [
               const Icon(Icons.stars, color: AppTheme.themeOrangeStart, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Chuyên môn',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
@@ -557,10 +562,10 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
               }).toList(),
             )
           else
-            const Text(
+            Text(
               'Chưa có kỹ năng nào',
               style: TextStyle(
-                color: AppTheme.darkTextSecondary,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                 fontSize: 14,
               ),
             ),
@@ -583,10 +588,10 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Hiển thị công khai',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -596,8 +601,8 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
                   _isPublic
                       ? 'Profile của bạn có thể được mọi người xem'
                       : 'Chỉ bạn có thể xem profile này',
-                  style: const TextStyle(
-                    color: AppTheme.darkTextSecondary,
+                  style: TextStyle(
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                     fontSize: 14,
                   ),
                 ),
@@ -635,12 +640,12 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(prefixIcon, color: AppTheme.darkTextSecondary),
+        prefixIcon: Icon(prefixIcon, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
         counterText: maxLength != null ? null : '',
-        labelStyle: const TextStyle(color: AppTheme.darkTextSecondary),
-        hintStyle: const TextStyle(color: AppTheme.darkTextSecondary),
+        labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+        hintStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
       ),
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
       maxLines: maxLines,
       maxLength: maxLength,
       keyboardType: keyboardType,

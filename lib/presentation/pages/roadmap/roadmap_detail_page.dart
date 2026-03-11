@@ -212,7 +212,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
               end: Alignment.bottomRight,
               colors: isDark
                   ? [
-                      Color(0xFF1E1B4B), // Indigo 950
+                      AppTheme.indigoDark, // Indigo 950
                       Color(0xFF312E81), // Indigo 900
                       Color(0xFF0F172A), // Slate 900
                     ]

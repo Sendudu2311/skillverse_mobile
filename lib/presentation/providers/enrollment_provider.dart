@@ -1,20 +1,24 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/enrollment_models.dart';
 import '../../data/services/enrollment_service.dart';
 
-class EnrollmentProvider with ChangeNotifier {
+/// Enrollment Provider
+///
+/// Uses [LoadingStateProviderMixin] to auto-manage:
+/// - `isLoading` / `setLoading(bool)` — loading state
+/// - `hasError` / `errorMessage` / `setError(String?)` — error state
+/// - `executeAsync()` — try/catch/loading wrapper
+/// - `resetState()` — clear loading + error
+class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
   final EnrollmentService _enrollmentService = EnrollmentService();
 
-  // State
-  bool _isLoading = false;
-  String? _errorMessage;
+  // State (chỉ giữ domain data — loading/error do mixin quản lý)
   List<EnrollmentDetailDto> _enrollments = [];
   Map<int, bool> _enrollmentStatusCache = {}; // courseId -> enrolled status
 
   // Getters
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
   List<EnrollmentDetailDto> get enrollments => _enrollments;
 
   /// Check if user is enrolled in a specific course
@@ -27,10 +31,7 @@ class EnrollmentProvider with ChangeNotifier {
     required int courseId,
     required int userId,
   }) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
+    final result = await executeAsync(() async {
       final enrollment = await _enrollmentService.enrollUser(
         courseId: courseId,
         userId: userId,
@@ -41,19 +42,10 @@ class EnrollmentProvider with ChangeNotifier {
 
       // Update cache
       _enrollmentStatusCache[courseId] = true;
-
-      _setLoading(false);
       notifyListeners();
       return true;
-    } on DioException catch (e) {
-      _handleError(e);
-      _setLoading(false);
-      return false;
-    } catch (e) {
-      _setError('Failed to enroll in course: $e');
-      _setLoading(false);
-      return false;
-    }
+    }, errorMessageBuilder: (e) => _extractErrorMessage(e, 'Failed to enroll in course'));
+    return result ?? false;
   }
 
   /// Unenroll user from a course
@@ -61,10 +53,7 @@ class EnrollmentProvider with ChangeNotifier {
     required int courseId,
     required int userId,
   }) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
+    final result = await executeAsync(() async {
       await _enrollmentService.unenrollUser(
         courseId: courseId,
         userId: userId,
@@ -75,19 +64,10 @@ class EnrollmentProvider with ChangeNotifier {
 
       // Update cache
       _enrollmentStatusCache[courseId] = false;
-
-      _setLoading(false);
       notifyListeners();
       return true;
-    } on DioException catch (e) {
-      _handleError(e);
-      _setLoading(false);
-      return false;
-    } catch (e) {
-      _setError('Failed to unenroll from course: $e');
-      _setLoading(false);
-      return false;
-    }
+    }, errorMessageBuilder: (e) => _extractErrorMessage(e, 'Failed to unenroll from course'));
+    return result ?? false;
   }
 
   /// Check enrollment status for a course
@@ -116,10 +96,7 @@ class EnrollmentProvider with ChangeNotifier {
     int page = 0,
     int size = 20,
   }) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
+    await executeAsync(() async {
       final response = await _enrollmentService.getUserEnrollments(
         userId: userId,
         page: page,
@@ -136,16 +113,8 @@ class EnrollmentProvider with ChangeNotifier {
       for (var enrollment in response.content ?? []) {
         _enrollmentStatusCache[enrollment.courseId] = true;
       }
-
-      _setLoading(false);
       notifyListeners();
-    } on DioException catch (e) {
-      _handleError(e);
-      _setLoading(false);
-    } catch (e) {
-      _setError('Failed to fetch enrollments: $e');
-      _setLoading(false);
-    }
+    }, errorMessageBuilder: (e) => _extractErrorMessage(e, 'Failed to fetch enrollments'));
   }
 
   /// Update course progress
@@ -236,40 +205,22 @@ class EnrollmentProvider with ChangeNotifier {
     }
   }
 
-  // Helper methods
-  void _setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
-  }
-
-  void _setError(String message) {
-    _errorMessage = message;
-    notifyListeners();
-  }
-
-  void _clearError() {
-    _errorMessage = null;
-  }
-
-  void _handleError(DioException e) {
-    if (e.response != null) {
+  // Helper: extract error message from DioException or generic error
+  String _extractErrorMessage(dynamic e, String fallback) {
+    if (e is DioException && e.response != null) {
       final data = e.response!.data;
       if (data is Map && data.containsKey('message')) {
-        _setError(data['message']);
-      } else {
-        _setError('Error: ${e.response!.statusCode}');
+        return data['message'];
       }
-    } else {
-      _setError('Network error: ${e.message}');
+      return 'Error: ${e.response!.statusCode}';
     }
+    return '$fallback: $e';
   }
 
   /// Clear all data
   void clear() {
     _enrollments = [];
     _enrollmentStatusCache = {};
-    _errorMessage = null;
-    _isLoading = false;
-    notifyListeners();
+    resetState(); // Clears isLoading + errorMessage + notifyListeners()
   }
 }

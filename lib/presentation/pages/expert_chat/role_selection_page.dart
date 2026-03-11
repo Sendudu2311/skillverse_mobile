@@ -210,7 +210,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                         provider.selectIndustry(industry);
                         provider.selectRole(role);
                         provider.startNewChat();
-                        context.push('/expert-chat/conversation');
+                        context.push('/expert-chat/chat');
                       },
                     );
                   },

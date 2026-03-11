@@ -52,7 +52,7 @@ class _RoadmapPageState extends State<RoadmapPage> {
             const SizedBox(width: 8),
             ShaderMask(
               shaderCallback: (bounds) => const LinearGradient(
-                colors: [AppTheme.primaryBlueDark, Color(0xFF00D4FF)],
+                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
               ).createShader(bounds),
               child: const Text(
                 'NAVIGATION CONTROL',

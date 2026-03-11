@@ -94,7 +94,11 @@ class GlassCard extends StatelessWidget {
 
     return Container(
       margin: margin,
-      child: cardContent,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: cardContent,
+      ),
     );
   }
 }

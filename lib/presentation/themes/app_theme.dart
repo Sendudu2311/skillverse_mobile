@@ -52,6 +52,14 @@ class AppTheme {
   static const Color warningColor = themeOrangeStart;
   static const Color infoColor = themeBlueStart;
 
+  // Accent Colors (audit: replace hardcoded hex)
+  static const Color accentCyan = Color(0xFF00D4FF);
+  static const Color accentOrange = Color(0xFFFFA500);
+  static const Color accentGold = Color(0xFFFFD700);
+  static const Color accentSilver = Color(0xFFC0C0C0);
+  static const Color indigoDark = Color(0xFF1E1B4B);
+  static const Color accentPink = Color(0xFFEC4899);
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,

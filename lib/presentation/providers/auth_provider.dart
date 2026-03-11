@@ -1,27 +1,30 @@
 import 'package:flutter/foundation.dart';
+import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/auth_models.dart';
 import '../../data/services/auth_service.dart';
 import '../../core/network/api_client.dart';
 import '../../core/exceptions/api_exception.dart';
 
-class AuthProvider extends ChangeNotifier {
+/// Auth Provider
+///
+/// Uses [LoadingStateProviderMixin] to auto-manage:
+/// - `isLoading` / `setLoading(bool)` — loading state
+/// - `hasError` / `errorMessage` / `setError(String?)` — error state
+/// - `executeAsync()` — try/catch/loading wrapper
+/// - `resetState()` — clear loading + error
+class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
   final AuthService _authService = AuthService();
   final ApiClient _apiClient = ApiClient();
 
   UserDto? _user;
-  bool _isLoading = false;
-  String? _errorMessage;
 
   // Getters
   UserDto? get user => _user;
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _user != null;
 
   /// Khởi tạo provider và kiểm tra trạng thái đăng nhập
   Future<void> initialize() async {
-    _setLoading(true);
-    try {
+    await executeAsync(() async {
       final isAuth = await _authService.isAuthenticated();
       if (isAuth) {
         _user = await _authService.getStoredUser();
@@ -31,31 +34,21 @@ class AuthProvider extends ChangeNotifier {
           _apiClient.setAuthToken(token);
         }
       }
-      _clearError();
-    } catch (e) {
-      _setError('Lỗi khởi tạo: ${e.toString()}');
-    } finally {
-      _setLoading(false);
-    }
+      notifyListeners();
+    }, errorMessageBuilder: (e) => 'Lỗi khởi tạo: ${e.toString()}');
   }
 
   /// Đăng nhập
   Future<bool> login(String email, String password) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
+    final result = await executeAsync(() async {
       final request = LoginRequest(email: email, password: password);
       final response = await _authService.login(request);
       _user = response.user;
       _apiClient.setAuthToken(response.accessToken);
-      _setLoading(false);
+      notifyListeners();
       return true;
-    } catch (e) {
-      _setError(_getErrorMessage(e));
-      _setLoading(false);
-      return false;
-    }
+    }, errorMessageBuilder: (e) => _getErrorMessage(e));
+    return result ?? false;
   }
 
   /// Đăng ký
@@ -65,10 +58,7 @@ class AuthProvider extends ChangeNotifier {
     required String fullName,
     String? phoneNumber,
   }) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
+    final result = await executeAsync(() async {
       final request = RegisterRequest(
         email: email,
         password: password,
@@ -77,69 +67,45 @@ class AuthProvider extends ChangeNotifier {
       );
       final response = await _authService.register(request);
       _apiClient.setAuthToken(response.accessToken);
-
-      _setLoading(false);
+      notifyListeners();
       return true;
-    } catch (e) {
-      _setError(_getErrorMessage(e));
-      _setLoading(false);
-      return false;
-    }
+    }, errorMessageBuilder: (e) => _getErrorMessage(e));
+    return result ?? false;
   }
 
   /// Đăng nhập bằng Google
   Future<bool> signInWithGoogle() async {
-    _setLoading(true);
-    _clearError();
-
-    try {
+    final result = await executeAsync(() async {
       final response = await _authService.signInWithGoogle();
       _user = response.user;
       _apiClient.setAuthToken(response.accessToken);
-      _setLoading(false);
+      notifyListeners();
       return true;
-    } catch (e) {
-      _setError(_getErrorMessage(e));
-      _setLoading(false);
-      return false;
-    }
+    }, errorMessageBuilder: (e) => _getErrorMessage(e));
+    return result ?? false;
   }
 
   /// Xác thực email
   Future<bool> verifyEmail(String email, String otp) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
+    final result = await executeAsync(() async {
       await _authService.verifyEmail(email, otp);
-      _setLoading(false);
       return true;
-    } catch (e) {
-      _setError(_getErrorMessage(e));
-      _setLoading(false);
-      return false;
-    }
+    }, errorMessageBuilder: (e) => _getErrorMessage(e));
+    return result ?? false;
   }
 
   /// Gửi lại OTP
   Future<bool> resendOtp(String email) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
+    final result = await executeAsync(() async {
       await _authService.resendOtp(email);
-      _setLoading(false);
       return true;
-    } catch (e) {
-      _setError(_getErrorMessage(e));
-      _setLoading(false);
-      return false;
-    }
+    }, errorMessageBuilder: (e) => _getErrorMessage(e));
+    return result ?? false;
   }
 
   /// Đăng xuất
   Future<void> logout() async {
-    _setLoading(true);
+    setLoading(true);
     try {
       await _authService.logout();
     } catch (e) {
@@ -149,8 +115,7 @@ class AuthProvider extends ChangeNotifier {
       // Always clear user and token regardless of API call result
       _user = null;
       _apiClient.clearAuthToken();
-      _clearError();
-      _setLoading(false);
+      resetState(); // Clears isLoading + errorMessage + notifyListeners()
     }
   }
 
@@ -169,22 +134,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Helper methods
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
-
-  void _setError(String error) {
-    _errorMessage = error;
-    notifyListeners();
-  }
-
-  void _clearError() {
-    _errorMessage = null;
-    notifyListeners();
-  }
-
+  // Helper: extract error from ApiException
   String _getErrorMessage(dynamic error) {
     if (error is ApiException) {
       return error.message;
@@ -193,7 +143,5 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Xóa lỗi hiện tại
-  void clearError() {
-    _clearError();
-  }
+  void clearError() => super.clearError();
 }

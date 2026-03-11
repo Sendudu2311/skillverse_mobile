@@ -246,14 +246,14 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
+        color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color, width: 1),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1),
       ),
       child: Text(
         text,
-        style: TextStyle(
-          color: color,
+        style: const TextStyle(
+          color: Colors.white,
           fontSize: 12,
           fontWeight: FontWeight.bold,
           fontFamily: 'monospace',
@@ -302,7 +302,7 @@ class _ProfilePageState extends State<ProfilePage> {
             : AppTheme.lightCardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF00D4FF).withValues(alpha: 0.3),
+          color: AppTheme.accentCyan.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -315,7 +315,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 height: 24,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [AppTheme.primaryBlueDark, Color(0xFF00D4FF)],
+                    colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
                   ),
                   borderRadius: BorderRadius.circular(2),
                 ),
@@ -327,7 +327,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF00D4FF),
+                    color: AppTheme.accentCyan,
                     fontFamily: 'monospace',
                     letterSpacing: 1.5,
                   ),
@@ -336,7 +336,7 @@ class _ProfilePageState extends State<ProfilePage> {
               IconButton(
                 icon: const Icon(Icons.edit_outlined),
                 onPressed: () => context.push('/profile/edit'),
-                color: const Color(0xFF00D4FF),
+                color: AppTheme.accentCyan,
                 tooltip: 'Chỉnh sửa',
               ),
             ],
@@ -611,11 +611,11 @@ class _ProfilePageState extends State<ProfilePage> {
   Color _getPremiumRingColor(String planType) {
     switch (planType) {
       case 'PREMIUM_PLUS':
-        return const Color(0xFF00D4FF); // Diamond
+        return AppTheme.accentCyan; // Diamond
       case 'PREMIUM':
-        return const Color(0xFFFFD700); // Gold
+        return AppTheme.accentGold; // Gold
       case 'BASIC':
-        return const Color(0xFFC0C0C0); // Silver
+        return AppTheme.accentSilver; // Silver
       default:
         return Colors.grey;
     }
@@ -624,9 +624,9 @@ class _ProfilePageState extends State<ProfilePage> {
   Color _getPlanColor(String planType) {
     switch (planType) {
       case 'PREMIUM_PLUS':
-        return const Color(0xFF00D4FF);
+        return AppTheme.accentCyan;
       case 'PREMIUM':
-        return const Color(0xFFFFD700);
+        return AppTheme.accentGold;
       case 'BASIC':
         return AppTheme.themeGreenStart;
       default:

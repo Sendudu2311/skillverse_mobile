@@ -1,15 +1,20 @@
 import 'package:flutter/foundation.dart';
+import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/expert_chat_models.dart';
 import '../../data/services/expert_chat_service.dart';
 
-/// Expert Chat Provider
-/// State management for AI Expert consultation feature
-class ExpertChatProvider extends ChangeNotifier {
+/// Expert Chat Provider — State management for AI Expert consultation feature
+///
+/// Uses [MultiLoadingProviderMixin] to manage multiple independent loading states:
+/// - `isLoadingFor('fields')` — loading expert fields
+/// - `isLoadingFor('session')` — loading session history
+/// - `isLoadingFor('sessions')` — loading session list
+/// - `isLoadingFor('sending')` — sending a message
+class ExpertChatProvider extends ChangeNotifier with MultiLoadingProviderMixin {
   final ExpertChatService _service = ExpertChatService();
 
   // Expert fields state
   List<ExpertFieldResponse> _expertFields = [];
-  bool _loadingFields = false;
   String? _fieldsError;
 
   // Selection state
@@ -22,16 +27,13 @@ class ExpertChatProvider extends ChangeNotifier {
   List<UIMessage> _messages = [];
   int? _sessionId;
   String? _currentSessionTitle; // Title of current session
-  bool _isLoading = false;
-  bool _isSending = false;
 
   // Sessions state
   List<ExpertChatSession> _sessions = [];
-  bool _loadingSessions = false;
 
   // Getters
   List<ExpertFieldResponse> get expertFields => _expertFields;
-  bool get loadingFields => _loadingFields;
+  bool get loadingFields => isLoadingFor('fields');
   String? get fieldsError => _fieldsError;
 
   ExpertFieldResponse? get selectedDomain => _selectedDomain;
@@ -42,31 +44,24 @@ class ExpertChatProvider extends ChangeNotifier {
   List<UIMessage> get messages => _messages;
   int? get sessionId => _sessionId;
   String? get currentSessionTitle => _currentSessionTitle;
-  bool get isLoading => _isLoading;
-  bool get isSending => _isSending;
+  bool get isLoading => isLoadingFor('session');
+  bool get isSending => isLoadingFor('sending');
 
   List<ExpertChatSession> get sessions => _sessions;
-  bool get loadingSessions => _loadingSessions;
+  bool get loadingSessions => isLoadingFor('sessions');
 
   /// Load expert fields from API
   Future<void> loadExpertFields() async {
     if (_expertFields.isNotEmpty) return; // Already loaded
 
-    try {
-      _loadingFields = true;
+    await performAsyncFor('fields', () async {
       _fieldsError = null;
-      notifyListeners();
-
       _expertFields = await _service.getExpertFields();
-
-      _loadingFields = false;
-      notifyListeners();
-    } catch (e) {
-      _loadingFields = false;
+    }).catchError((e) {
       _fieldsError = e.toString();
-      notifyListeners();
       debugPrint('Error loading expert fields: $e');
-    }
+    });
+    notifyListeners();
   }
 
   /// Select a domain
@@ -141,10 +136,10 @@ Tôi có thể tư vấn chuyên sâu về:
 
   /// Send message to expert
   Future<void> sendMessage(String message) async {
-    if (message.trim().isEmpty || _expertContext == null || _isSending) return;
+    if (message.trim().isEmpty || _expertContext == null || isSending) return;
 
     try {
-      _isSending = true;
+      setLoadingFor('sending', true);
 
       // Add user message
       final userMessage = UIMessage(
@@ -190,10 +185,9 @@ Tôi có thể tư vấn chuyên sâu về:
       );
       _messages = [..._messages, assistantMessage];
 
-      _isSending = false;
-      notifyListeners();
+      setLoadingFor('sending', false);
     } catch (e) {
-      _isSending = false;
+      setLoadingFor('sending', false);
 
       // Add error message
       final errorMessage = UIMessage(
@@ -211,27 +205,17 @@ Tôi có thể tư vấn chuyên sâu về:
 
   /// Load sessions
   Future<void> loadSessions() async {
-    try {
-      _loadingSessions = true;
-      notifyListeners();
-
+    await performAsyncFor('sessions', () async {
       _sessions = await _service.getSessions(chatMode: ChatMode.expertMode);
-
-      _loadingSessions = false;
-      notifyListeners();
-    } catch (e) {
-      _loadingSessions = false;
-      notifyListeners();
+    }).catchError((e) {
       debugPrint('Error loading sessions: $e');
-    }
+    });
+    notifyListeners();
   }
 
   /// Load session history
   Future<void> loadSession(ExpertChatSession session) async {
-    try {
-      _isLoading = true;
-      notifyListeners();
-
+    await performAsyncFor('session', () async {
       final history = await _service.getHistory(session.sessionId);
 
       _sessionId = session.sessionId;
@@ -258,14 +242,10 @@ Tôi có thể tư vấn chuyên sâu về:
           ),
         );
       }
-
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      _isLoading = false;
-      notifyListeners();
+    }).catchError((e) {
       debugPrint('Error loading session: $e');
-    }
+    });
+    notifyListeners();
   }
 
   /// Delete session

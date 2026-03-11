@@ -17,6 +17,7 @@ class AddCertificatePage extends StatefulWidget {
 
 class _AddCertificatePageState extends State<AddCertificatePage>
     with SingleTickerProviderStateMixin {
+  late bool isDark;
   final _formKey = GlobalKey<FormState>();
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -69,10 +70,15 @@ class _AddCertificatePageState extends State<AddCertificatePage>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppTheme.themeOrangeStart,
-              surface: AppTheme.darkCardBackground,
-            ),
+            colorScheme: isDark
+                ? const ColorScheme.dark(
+                    primary: AppTheme.themeOrangeStart,
+                    surface: AppTheme.darkCardBackground,
+                  )
+                : ColorScheme.light(
+                    primary: AppTheme.themeOrangeStart,
+                    surface: Colors.grey.shade50,
+                  ),
           ),
           child: child!,
         );
@@ -152,6 +158,8 @@ class _AddCertificatePageState extends State<AddCertificatePage>
 
   @override
   Widget build(BuildContext context) {
+    isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: FadeTransition(
         opacity: _fadeAnimation,
@@ -159,11 +167,13 @@ class _AddCertificatePageState extends State<AddCertificatePage>
           children: [
             // Galaxy Background
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [AppTheme.galaxyDarkest, AppTheme.galaxyDark],
+                  colors: isDark
+                      ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
+                      : [Colors.grey.shade50, Colors.white],
                 ),
               ),
             ),
@@ -244,13 +254,13 @@ class _AddCertificatePageState extends State<AddCertificatePage>
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : AppTheme.lightTextPrimary),
             onPressed: () => Navigator.pop(context),
           ),
-          const Text(
+          Text(
             'Thêm chứng chỉ',
             style: TextStyle(
-              color: Colors.white,
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -307,10 +317,10 @@ class _AddCertificatePageState extends State<AddCertificatePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Thông tin chứng chỉ',
             style: TextStyle(
-              color: Colors.white,
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
@@ -350,10 +360,10 @@ class _AddCertificatePageState extends State<AddCertificatePage>
               const Icon(Icons.verified,
                   color: AppTheme.themeOrangeStart, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Thông tin xác thực',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
@@ -395,10 +405,10 @@ class _AddCertificatePageState extends State<AddCertificatePage>
               const Icon(Icons.calendar_today,
                   color: AppTheme.themeGreenStart, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Thời gian',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
@@ -431,10 +441,10 @@ class _AddCertificatePageState extends State<AddCertificatePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Thông tin bổ sung',
             style: TextStyle(
-              color: Colors.white,
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
@@ -476,13 +486,13 @@ class _AddCertificatePageState extends State<AddCertificatePage>
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.darkCardBackground,
+          color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.darkBorderColor),
+          border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
         ),
         child: Row(
           children: [
-            const Icon(Icons.event, color: AppTheme.darkTextSecondary),
+            Icon(Icons.event, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -490,24 +500,24 @@ class _AddCertificatePageState extends State<AddCertificatePage>
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
-                      color: AppTheme.darkTextSecondary,
+                    style: TextStyle(
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
                       fontSize: 12,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     date != null ? _dateFormat.format(date) : 'Chọn ngày',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                       fontSize: 16,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_drop_down,
-                color: AppTheme.darkTextSecondary),
+            Icon(Icons.arrow_drop_down,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
           ],
         ),
       ),
@@ -529,12 +539,12 @@ class _AddCertificatePageState extends State<AddCertificatePage>
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(prefixIcon, color: AppTheme.darkTextSecondary),
+        prefixIcon: Icon(prefixIcon, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
         counterText: maxLength != null ? null : '',
-        labelStyle: const TextStyle(color: AppTheme.darkTextSecondary),
-        hintStyle: const TextStyle(color: AppTheme.darkTextSecondary),
+        labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+        hintStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
       ),
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
       maxLines: maxLines,
       maxLength: maxLength,
       keyboardType: keyboardType,

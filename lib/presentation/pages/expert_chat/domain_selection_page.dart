@@ -109,7 +109,7 @@ class DomainSelectionPage extends StatelessWidget {
                 domain: domain,
                 onTap: () {
                   provider.selectDomain(domain);
-                  context.push('/expert-chat/roles');
+                  context.push('/expert-chat/role');
                 },
               );
             },

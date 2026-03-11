@@ -161,13 +161,13 @@ class FormattedAIResponse extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF00D4FF).withValues(alpha: 0.1),
+            AppTheme.accentCyan.withValues(alpha: 0.1),
             AppTheme.primaryBlueDark.withValues(alpha: 0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: const Color(0xFF00D4FF).withValues(alpha: 0.3),
+          color: AppTheme.accentCyan.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -178,7 +178,7 @@ class FormattedAIResponse extends StatelessWidget {
               Icon(
                 Icons.lightbulb_outline,
                 size: 16,
-                color: const Color(0xFF00D4FF),
+                color: AppTheme.accentCyan,
               ),
               const SizedBox(width: 8),
               Text(
@@ -187,7 +187,7 @@ class FormattedAIResponse extends StatelessWidget {
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'monospace',
-                  color: const Color(0xFF00D4FF),
+                  color: AppTheme.accentCyan,
                   letterSpacing: 1,
                 ),
               ),
@@ -205,10 +205,10 @@ class FormattedAIResponse extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00D4FF).withValues(alpha: 0.1),
+                    color: AppTheme.accentCyan.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: const Color(0xFF00D4FF).withValues(alpha: 0.3),
+                      color: AppTheme.accentCyan.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -218,7 +218,7 @@ class FormattedAIResponse extends StatelessWidget {
                         width: 6,
                         height: 6,
                         decoration: const BoxDecoration(
-                          color: Color(0xFF00D4FF),
+                          color: AppTheme.accentCyan,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -237,7 +237,7 @@ class FormattedAIResponse extends StatelessWidget {
                       Icon(
                         Icons.arrow_forward_ios,
                         size: 12,
-                        color: const Color(0xFF00D4FF).withValues(alpha: 0.6),
+                        color: AppTheme.accentCyan.withValues(alpha: 0.6),
                       ),
                     ],
                   ),
