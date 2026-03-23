@@ -83,3 +83,19 @@ windows/flutter/ephemeral/
 
 # Linux
 linux/flutter/ephemeral/
+
+# Appium / E2E Tests
+test/*.js
+test/*.xml
+test/package.json
+test/package-lock.json
+test/node_modules/
+test/screenshots/
+test/page_dumps/
+
+# Project-specific ignores
+assets/images/
+GEMINI.md
+DEVELOPMENT_AND_TESTING_LOG.md
+.serena/
+edit_profile_source.xml

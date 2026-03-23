@@ -33,6 +33,7 @@ class ApiClient {
     '/auth/login',
     '/auth/register',
     '/auth/refresh',
+    '/auth/logout',
     '/auth/google',
     '/auth/verify-email',
     '/auth/resend-otp',

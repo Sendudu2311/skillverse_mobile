@@ -12,6 +12,18 @@ enum QuestionType {
   shortAnswer,
 }
 
+/// Quiz grading method enum
+enum QuizGradingMethod {
+  @JsonValue('HIGHEST')
+  highest,
+  @JsonValue('AVERAGE')
+  average,
+  @JsonValue('FIRST')
+  first,
+  @JsonValue('LAST')
+  last,
+}
+
 /// Quiz summary (for lists)
 @JsonSerializable()
 class QuizSummaryDto {
@@ -19,6 +31,13 @@ class QuizSummaryDto {
   final String title;
   final String? description;
   final int passScore;
+  final int? maxAttempts;
+  final int? timeLimitMinutes;
+  final int? cooldownHours;
+  @JsonKey(unknownEnumValue: QuizGradingMethod.highest)
+  final QuizGradingMethod? gradingMethod;
+  final bool? isAssessment;
+  final int? orderIndex;
   final int? questionCount;
   final int? moduleId;
 
@@ -27,6 +46,12 @@ class QuizSummaryDto {
     required this.title,
     this.description,
     required this.passScore,
+    this.maxAttempts,
+    this.timeLimitMinutes,
+    this.cooldownHours,
+    this.gradingMethod,
+    this.isAssessment,
+    this.orderIndex,
     this.questionCount,
     this.moduleId,
   });
@@ -44,6 +69,13 @@ class QuizDetailDto {
   final String title;
   final String? description;
   final int passScore;
+  final int? maxAttempts;
+  final int? timeLimitMinutes;
+  final int? cooldownHours;
+  @JsonKey(unknownEnumValue: QuizGradingMethod.highest)
+  final QuizGradingMethod? gradingMethod;
+  final bool? isAssessment;
+  final int? orderIndex;
   final int? moduleId;
   final List<QuizQuestionDetailDto>? questions;
   final DateTime? createdAt;
@@ -54,6 +86,12 @@ class QuizDetailDto {
     required this.title,
     this.description,
     required this.passScore,
+    this.maxAttempts,
+    this.timeLimitMinutes,
+    this.cooldownHours,
+    this.gradingMethod,
+    this.isAssessment,
+    this.orderIndex,
     this.moduleId,
     this.questions,
     this.createdAt,
@@ -153,9 +191,11 @@ class QuizAttemptDto {
   final int? id;
   final int quizId;
   final String? quizTitle;
+  final int? userId;
 
-  @JsonKey(name: 'userId')
-  final int studentId;
+  /// Legacy field — kept for backward compatibility
+  @JsonKey(name: 'studentId')
+  final int? studentId;
 
   final int score;
   final bool passed;
@@ -164,11 +204,7 @@ class QuizAttemptDto {
 
   final DateTime? submittedAt;
   final DateTime? createdAt;
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
   final DateTime? startedAt;
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
   final DateTime? completedAt;
 
   final List<QuizAnswerResultDto>? answers;
@@ -177,7 +213,8 @@ class QuizAttemptDto {
     this.id,
     required this.quizId,
     this.quizTitle,
-    required this.studentId,
+    this.userId,
+    this.studentId,
     required this.score,
     required this.passed,
     this.correctAnswers,

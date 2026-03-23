@@ -109,4 +109,90 @@ class PremiumService {
       rethrow;
     }
   }
+
+  /// Purchase premium with wallet cash
+  /// POST /premium/purchase-with-wallet
+  Future<UserSubscriptionDto> purchaseWithWallet({
+    required int planId,
+    bool applyStudentDiscount = false,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/premium/purchase-with-wallet',
+        queryParameters: {
+          'planId': planId,
+          'applyStudentDiscount': applyStudentDiscount,
+        },
+      );
+      return UserSubscriptionDto.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Recover pending subscriptions (paid but not activated)
+  /// POST /premium/subscription/recover
+  Future<Map<String, dynamic>> recoverPendingSubscriptions() async {
+    try {
+      final response = await _apiClient.dio.post('/premium/subscription/recover');
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Cancel subscription with refund
+  /// POST /premium/subscription/cancel-with-refund
+  Future<Map<String, dynamic>> cancelSubscriptionWithRefund({
+    String? reason,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/premium/subscription/cancel-with-refund',
+        queryParameters: reason != null ? {'reason': reason} : null,
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Enable auto-renewal
+  /// POST /premium/subscription/enable-auto-renewal
+  Future<Map<String, dynamic>> enableAutoRenewal() async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/premium/subscription/enable-auto-renewal',
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Cancel auto-renewal
+  /// POST /premium/subscription/cancel-auto-renewal
+  Future<Map<String, dynamic>> cancelAutoRenewal() async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/premium/subscription/cancel-auto-renewal',
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Check refund eligibility
+  /// GET /premium/subscription/refund-eligibility
+  Future<Map<String, dynamic>> checkRefundEligibility() async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/premium/subscription/refund-eligibility',
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

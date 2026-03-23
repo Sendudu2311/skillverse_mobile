@@ -13,6 +13,18 @@ enum PlanType {
   premiumPlus,
   @JsonValue('STUDENT_PACK')
   studentPack,
+  @JsonValue('RECRUITER_PRO')
+  recruiterPro,
+}
+
+/// Target role for premium plans
+enum TargetRole {
+  @JsonValue('LEARNER')
+  learner,
+  @JsonValue('RECRUITER')
+  recruiter,
+  @JsonValue('PARENT')
+  parent,
 }
 
 /// Subscription status enum
@@ -25,6 +37,8 @@ enum SubscriptionStatus {
   cancelled,
   @JsonValue('PENDING')
   pending,
+  @JsonValue('SUSPENDED')
+  suspended,
 }
 
 /// Premium plan response
@@ -38,6 +52,7 @@ class PremiumPlanDto {
   final double price;
   final String currency;
   final PlanType planType;
+  final TargetRole? targetRole;
   final double? studentDiscountPercent;
   final double? studentPrice;
   final List<String>? features;
@@ -57,6 +72,7 @@ class PremiumPlanDto {
     required this.price,
     required this.currency,
     required this.planType,
+    this.targetRole,
     this.studentDiscountPercent,
     this.studentPrice,
     this.features,

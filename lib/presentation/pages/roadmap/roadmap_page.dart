@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/roadmap_provider.dart';
 import '../../widgets/ai_roadmap_card.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/empty_state_widget.dart';
 import 'package:go_router/go_router.dart';
 
 class RoadmapPage extends StatefulWidget {
@@ -427,63 +428,22 @@ class _RoadmapPageState extends State<RoadmapPage> {
     final hasFilters =
         provider.searchQuery.isNotEmpty || provider.filterExperience != 'all';
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              hasFilters ? Icons.search_off : Icons.map_outlined,
-              size: 80,
-              color: isDark
-                  ? AppTheme.primaryBlueDark.withValues(alpha: 0.4)
-                  : AppTheme.primaryBlue.withValues(alpha: 0.4),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              hasFilters ? 'Không tìm thấy lộ trình' : 'Chưa có lộ trình nào',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: isDark
-                    ? AppTheme.darkTextPrimary
-                    : AppTheme.lightTextPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              hasFilters
-                  ? 'Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm'
-                  : 'Bắt đầu hành trình học tập với lộ trình AI cá nhân hóa',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (hasFilters)
-              OutlinedButton.icon(
-                onPressed: () {
-                  _searchController.clear();
-                  provider.clearFilters();
-                },
-                icon: const Icon(Icons.filter_alt_off),
-                label: const Text('Xóa bộ lọc'),
-              )
-            else
-              ElevatedButton.icon(
-                onPressed: () => _navigateToGenerate(context),
-                icon: const Icon(Icons.add),
-                label: const Text('Tạo lộ trình mới'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlueDark,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-          ],
-        ),
-      ),
+    return EmptyStateWidget(
+      icon: hasFilters ? Icons.search_off : Icons.map_outlined,
+      title: hasFilters ? 'Không tìm thấy lộ trình' : 'Chưa có lộ trình nào',
+      subtitle: hasFilters
+          ? 'Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm'
+          : 'Bắt đầu hành trình học tập với lộ trình AI cá nhân hóa',
+      ctaLabel: hasFilters ? 'Xóa bộ lọc' : 'Tạo lộ trình mới',
+      onCtaPressed: () {
+        if (hasFilters) {
+          _searchController.clear();
+          provider.clearFilters();
+        } else {
+          _navigateToGenerate(context);
+        }
+      },
+      iconGradient: AppTheme.blueGradient,
     );
   }
 

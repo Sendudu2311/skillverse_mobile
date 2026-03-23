@@ -104,6 +104,9 @@ class UserProfileResponse {
   final String? gender;
   final String? province;
   final String? district;
+  final int? avatarMediaId;
+  final String? avatarMediaUrl;
+  final String? avatarPosition;
   final bool isActive;
   final bool emailVerified;
   final String createdAt;
@@ -122,6 +125,9 @@ class UserProfileResponse {
     this.gender,
     this.province,
     this.district,
+    this.avatarMediaId,
+    this.avatarMediaUrl,
+    this.avatarPosition,
     required this.isActive,
     required this.emailVerified,
     required this.createdAt,

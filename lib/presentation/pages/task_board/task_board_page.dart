@@ -23,7 +23,6 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
       final provider = context.read<TaskBoardProvider>();
       provider.loadBoard();
       provider.loadNotes();
-      provider.loadSessions();
     });
   }
 

@@ -24,6 +24,7 @@ enum StorageKey {
   lastSyncTime,
   cachedCourses,
   cachedUserProfile,
+  showOnboardingPrompt,
 }
 
 /// Extension to get string value from enum
@@ -55,6 +56,8 @@ extension StorageKeyExtension on StorageKey {
         return 'cached_courses';
       case StorageKey.cachedUserProfile:
         return 'cached_user_profile';
+      case StorageKey.showOnboardingPrompt:
+        return 'show_onboarding_prompt';
     }
   }
 }
@@ -76,6 +79,7 @@ extension StorageKeyExtension on StorageKey {
 class StorageHelper {
   // Singleton instance
   static StorageHelper? _instance;
+  
   static StorageHelper get instance {
     if (_instance == null) {
       throw StateError(

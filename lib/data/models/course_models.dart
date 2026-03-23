@@ -11,6 +11,10 @@ enum CourseStatus {
   public,
   @JsonValue('ARCHIVED')
   archived,
+  @JsonValue('REJECTED')
+  rejected,
+  @JsonValue('SUSPENDED')
+  suspended,
 }
 
 extension CourseStatusExtension on CourseStatus {
@@ -104,6 +108,7 @@ class CourseSummaryDto {
   final String title;
   final String? description;
   final String? shortDescription;
+  final String? category;
   @JsonKey(unknownEnumValue: CourseLevel.beginner)
   final CourseLevel level;
   @JsonKey(unknownEnumValue: CourseStatus.public)
@@ -117,18 +122,22 @@ class CourseSummaryDto {
   final int? lessonCount;
   final double? price;
   final String? currency;
+  final int? estimatedDurationHours;
+  final String? language;
   final double? rating;
   final int? reviewCount;
   final String? createdAt;
   final String? updatedAt;
   final String? submittedDate;
   final String? publishedDate;
+  final String? rejectionReason;
 
   CourseSummaryDto({
     required this.id,
     required this.title,
     this.description,
     this.shortDescription,
+    this.category,
     required this.level,
     required this.status,
     required this.author,
@@ -140,12 +149,15 @@ class CourseSummaryDto {
     this.lessonCount,
     this.price,
     this.currency,
+    this.estimatedDurationHours,
+    this.language,
     this.rating,
     this.reviewCount,
     this.createdAt,
     this.updatedAt,
     this.submittedDate,
     this.publishedDate,
+    this.rejectionReason,
   });
 
   factory CourseSummaryDto.fromJson(Map<String, dynamic> json) =>
@@ -196,6 +208,8 @@ class CourseDetailDto {
   final int id;
   final String title;
   final String description;
+  final String? shortDescription;
+  final String? category;
   final String level;
   final String status;
   final AuthorDto author;
@@ -207,17 +221,27 @@ class CourseDetailDto {
   final int enrollmentCount;
   final int? moduleCount;
   final int? lessonCount;
+  final int? estimatedDurationHours;
+  final String? language;
+  final List<String>? learningObjectives;
+  final List<String>? requirements;
   final double? rating;
   final int? reviewCount;
   final String? createdAt;
   final String? updatedAt;
   final String? submittedDate;
   final String? publishedDate;
+  final String? rejectionReason;
+  final String? rejectedAt;
+  final String? suspensionReason;
+  final String? suspendedAt;
 
   CourseDetailDto({
     required this.id,
     required this.title,
     required this.description,
+    this.shortDescription,
+    this.category,
     required this.level,
     required this.status,
     required this.author,
@@ -229,12 +253,20 @@ class CourseDetailDto {
     required this.enrollmentCount,
     this.moduleCount,
     this.lessonCount,
+    this.estimatedDurationHours,
+    this.language,
+    this.learningObjectives,
+    this.requirements,
     this.rating,
     this.reviewCount,
     this.createdAt,
     this.updatedAt,
     this.submittedDate,
     this.publishedDate,
+    this.rejectionReason,
+    this.rejectedAt,
+    this.suspensionReason,
+    this.suspendedAt,
   });
 
   factory CourseDetailDto.fromJson(Map<String, dynamic> json) =>

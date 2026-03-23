@@ -17,6 +17,12 @@ class PremiumProvider with ChangeNotifier, LoadingStateProviderMixin {
   List<UserSubscriptionDto> get subscriptionHistory => _subscriptionHistory;
   bool get hasPremium => _hasPremium;
 
+  /// Filtered plans (no FREE_TIER, no recruiter plans for learners)
+  List<PremiumPlanDto> get displayPlans =>
+      _availablePlans.where((p) => p.planType != PlanType.freeTier).toList();
+
+  // ==================== LOAD ACTIONS ====================
+
   /// Load available premium plans
   Future<void> loadAvailablePlans() async {
     await executeAsync(
@@ -40,7 +46,70 @@ class PremiumProvider with ChangeNotifier, LoadingStateProviderMixin {
     return result;
   }
 
-  /// Create subscription
+  /// Load current subscription
+  Future<void> loadCurrentSubscription() async {
+    await executeAsync(
+      () async {
+        _currentSubscription = await _premiumService.getCurrentSubscription();
+        _hasPremium = _currentSubscription?.isActive ?? false;
+        notifyListeners();
+      },
+      errorMessageBuilder: (e) {
+        if (e.toString().contains('404')) {
+          return '';
+        }
+        return ErrorHandler.getErrorMessage(e);
+      },
+    );
+  }
+
+  /// Load subscription history
+  Future<void> loadSubscriptionHistory() async {
+    await executeAsync(
+      () async {
+        _subscriptionHistory = await _premiumService.getSubscriptionHistory();
+        notifyListeners();
+      },
+      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
+    );
+  }
+
+  /// Check premium status
+  Future<void> checkPremiumStatus() async {
+    await executeAsync(
+      () async {
+        _hasPremium = await _premiumService.checkPremiumStatus();
+        notifyListeners();
+      },
+      errorMessageBuilder: (e) {
+        _hasPremium = false;
+        return '';
+      },
+    );
+  }
+
+  /// Load all data in parallel
+  Future<void> loadAll() async {
+    await executeAsync(
+      () async {
+        final results = await Future.wait([
+          _premiumService.getAvailablePlans(),
+          _premiumService.getCurrentSubscription().catchError((_) => null),
+          _premiumService.checkPremiumStatus().catchError((_) => false),
+        ]);
+
+        _availablePlans = results[0] as List<PremiumPlanDto>;
+        _currentSubscription = results[1] as UserSubscriptionDto?;
+        _hasPremium = (results[2] as bool?) ?? (_currentSubscription?.isActive ?? false);
+        notifyListeners();
+      },
+      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
+    );
+  }
+
+  // ==================== PURCHASE ACTIONS ====================
+
+  /// Create subscription via PayOS
   Future<UserSubscriptionDto?> createSubscription({
     required int planId,
     required paymentMethod,
@@ -72,34 +141,27 @@ class PremiumProvider with ChangeNotifier, LoadingStateProviderMixin {
     );
   }
 
-  /// Load current subscription
-  Future<void> loadCurrentSubscription() async {
-    await executeAsync(
+  /// Purchase subscription with wallet cash (instant)
+  Future<UserSubscriptionDto?> purchaseWithWallet({
+    required int planId,
+    bool applyStudentDiscount = false,
+  }) async {
+    return await executeAsync<UserSubscriptionDto>(
       () async {
-        _currentSubscription = await _premiumService.getCurrentSubscription();
-        _hasPremium = _currentSubscription?.isActive ?? false;
+        final subscription = await _premiumService.purchaseWithWallet(
+          planId: planId,
+          applyStudentDiscount: applyStudentDiscount,
+        );
+        _currentSubscription = subscription;
+        _hasPremium = subscription.isActive;
         notifyListeners();
-      },
-      errorMessageBuilder: (e) {
-        // 404 means no active subscription - not an error
-        if (e.toString().contains('404')) {
-          return ''; // Return empty string to avoid showing error for 404
-        }
-        return ErrorHandler.getErrorMessage(e);
-      },
-    );
-  }
-
-  /// Load subscription history
-  Future<void> loadSubscriptionHistory() async {
-    await executeAsync(
-      () async {
-        _subscriptionHistory = await _premiumService.getSubscriptionHistory();
-        notifyListeners();
+        return subscription;
       },
       errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
     );
   }
+
+  // ==================== SUBSCRIPTION MANAGEMENT ====================
 
   /// Cancel subscription
   Future<bool> cancelSubscription({String? reason}) async {
@@ -116,17 +178,64 @@ class PremiumProvider with ChangeNotifier, LoadingStateProviderMixin {
     return result ?? false;
   }
 
-  /// Check premium status
-  Future<void> checkPremiumStatus() async {
-    await executeAsync(
+  /// Cancel subscription with refund
+  Future<Map<String, dynamic>?> cancelSubscriptionWithRefund({String? reason}) async {
+    return await executeAsync<Map<String, dynamic>>(
       () async {
-        _hasPremium = await _premiumService.checkPremiumStatus();
-        notifyListeners();
+        final result = await _premiumService.cancelSubscriptionWithRefund(reason: reason);
+        // Reload subscription after cancel
+        await loadCurrentSubscription();
+        return result;
       },
-      errorMessageBuilder: (e) {
-        _hasPremium = false;
-        return ''; // Silent fail - premium status check shouldn't show errors
+      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
+    );
+  }
+
+  /// Enable auto-renewal
+  Future<Map<String, dynamic>?> enableAutoRenewal() async {
+    return await executeAsync<Map<String, dynamic>>(
+      () async {
+        final result = await _premiumService.enableAutoRenewal();
+        await loadCurrentSubscription();
+        return result;
       },
+      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
+    );
+  }
+
+  /// Cancel auto-renewal
+  Future<Map<String, dynamic>?> cancelAutoRenewal() async {
+    return await executeAsync<Map<String, dynamic>>(
+      () async {
+        final result = await _premiumService.cancelAutoRenewal();
+        await loadCurrentSubscription();
+        return result;
+      },
+      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
+    );
+  }
+
+  /// Recover pending subscriptions
+  Future<Map<String, dynamic>?> recoverPendingSubscriptions() async {
+    return await executeAsync<Map<String, dynamic>>(
+      () async {
+        final result = await _premiumService.recoverPendingSubscriptions();
+        if (result['recovered'] == true) {
+          await loadCurrentSubscription();
+        }
+        return result;
+      },
+      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
+    );
+  }
+
+  /// Check refund eligibility
+  Future<Map<String, dynamic>?> checkRefundEligibility() async {
+    return await executeAsync<Map<String, dynamic>>(
+      () async {
+        return await _premiumService.checkRefundEligibility();
+      },
+      errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e),
     );
   }
 

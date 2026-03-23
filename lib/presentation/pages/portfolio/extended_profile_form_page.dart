@@ -135,6 +135,7 @@ class _ExtendedProfileFormPageState extends State<ExtendedProfileFormPage> {
             )
           else
             TextButton(
+              key: const Key('save-profile-button'),
               onPressed: _submit,
               child: const Text('Lưu'),
             ),
@@ -147,6 +148,7 @@ class _ExtendedProfileFormPageState extends State<ExtendedProfileFormPage> {
           children: [
             // Slug
             TextFormField(
+              key: const Key('slug-field'),
               controller: _slugController,
               decoration: const InputDecoration(
                 labelText: 'Slug (URL tùy chỉnh)',
@@ -166,38 +168,53 @@ class _ExtendedProfileFormPageState extends State<ExtendedProfileFormPage> {
             const SizedBox(height: 16),
 
             // Headline
-            TextFormField(
-              controller: _headlineController,
-              decoration: const InputDecoration(
-                labelText: 'Tiêu đề',
-                hintText: 'vd: Full-stack Developer | AI Enthusiast',
-                prefixIcon: Icon(Icons.title),
+            Semantics(
+              identifier: 'headline-field',
+              container: true,
+              child: TextFormField(
+                key: const Key('headline-field'),
+                controller: _headlineController,
+                decoration: const InputDecoration(
+                  labelText: 'Tiêu đề',
+                  hintText: 'vd: Full-stack Developer | AI Enthusiast',
+                  prefixIcon: Icon(Icons.title),
+                ),
+                maxLength: 100,
               ),
-              maxLength: 100,
             ),
             const SizedBox(height: 16),
 
             // Bio
-            TextFormField(
-              controller: _bioController,
-              decoration: const InputDecoration(
-                labelText: 'Giới thiệu',
-                hintText: 'Viết vài dòng giới thiệu về bản thân...',
-                prefixIcon: Icon(Icons.person),
-                alignLabelWithHint: true,
+            Semantics(
+              identifier: 'bio-field',
+              container: true,
+              child: TextFormField(
+                key: const Key('bio-field'),
+                controller: _bioController,
+                decoration: const InputDecoration(
+                  labelText: 'Giới thiệu',
+                  hintText: 'Viết vài dòng giới thiệu về bản thân...',
+                  prefixIcon: Icon(Icons.person),
+                  alignLabelWithHint: true,
+                ),
+                maxLines: 5,
+                maxLength: 500,
               ),
-              maxLines: 5,
-              maxLength: 500,
             ),
             const SizedBox(height: 16),
 
             // Location
-            TextFormField(
-              controller: _locationController,
-              decoration: const InputDecoration(
-                labelText: 'Địa chỉ',
-                hintText: 'vd: Hà Nội, Việt Nam',
-                prefixIcon: Icon(Icons.location_on),
+            Semantics(
+              identifier: 'location-field',
+              container: true,
+              child: TextFormField(
+                key: const Key('location-field'),
+                controller: _locationController,
+                decoration: const InputDecoration(
+                  labelText: 'Địa chỉ',
+                  hintText: 'vd: Hà Nội, Việt Nam',
+                  prefixIcon: Icon(Icons.location_on),
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -210,6 +227,7 @@ class _ExtendedProfileFormPageState extends State<ExtendedProfileFormPage> {
             const SizedBox(height: 16),
 
             TextFormField(
+              key: const Key('website-field'),
               controller: _websiteController,
               decoration: const InputDecoration(
                 labelText: 'Website',
@@ -221,6 +239,7 @@ class _ExtendedProfileFormPageState extends State<ExtendedProfileFormPage> {
             const SizedBox(height: 16),
 
             TextFormField(
+              key: const Key('github-field'),
               controller: _githubController,
               decoration: const InputDecoration(
                 labelText: 'GitHub',
@@ -232,6 +251,7 @@ class _ExtendedProfileFormPageState extends State<ExtendedProfileFormPage> {
             const SizedBox(height: 16),
 
             TextFormField(
+              key: const Key('linkedin-field'),
               controller: _linkedinController,
               decoration: const InputDecoration(
                 labelText: 'LinkedIn',
@@ -243,6 +263,7 @@ class _ExtendedProfileFormPageState extends State<ExtendedProfileFormPage> {
             const SizedBox(height: 16),
 
             TextFormField(
+              key: const Key('twitter-field'),
               controller: _twitterController,
               decoration: const InputDecoration(
                 labelText: 'Twitter/X',
@@ -264,6 +285,7 @@ class _ExtendedProfileFormPageState extends State<ExtendedProfileFormPage> {
               children: [
                 Expanded(
                   child: TextFormField(
+                    key: const Key('expertise-field'),
                     controller: _expertiseController,
                     decoration: const InputDecoration(
                       hintText: 'vd: Flutter, React, Python',
@@ -274,6 +296,7 @@ class _ExtendedProfileFormPageState extends State<ExtendedProfileFormPage> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
+                  key: const Key('add-expertise-button'),
                   onPressed: _addExpertise,
                   icon: const Icon(Icons.add_circle),
                   color: Theme.of(context).colorScheme.primary,

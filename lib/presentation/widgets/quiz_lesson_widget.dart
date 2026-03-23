@@ -54,7 +54,6 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
         if (authProvider.user != null)
           _quizService.getQuizAttemptStatus(
             quizId: widget.quizId,
-            userId: authProvider.user!.id,
           ),
       ]);
 
@@ -153,7 +152,6 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
 
       final result = await _quizService.submitQuiz(
         quizId: widget.quizId,
-        userId: authProvider.user!.id,
         submitData: submission,
       );
 

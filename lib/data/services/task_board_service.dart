@@ -89,6 +89,26 @@ class TaskBoardService {
     }
   }
 
+  /// Clear overdue tasks
+  Future<Map<String, dynamic>> clearOverdueTasks({
+    int overdueDays = 30,
+    String? columnId,
+  }) async {
+    try {
+      final response = await _apiClient.dio.delete(
+        '/task-board/tasks/clear-overdue',
+        queryParameters: {
+          'overdueDays': overdueDays,
+          if (columnId != null) 'columnId': columnId,
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('❌ Error clearing overdue tasks: $e');
+      rethrow;
+    }
+  }
+
   // ==================== COLUMNS ====================
 
   /// Create a new column

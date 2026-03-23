@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/skin_models.dart';
 import '../../providers/skin_provider.dart';
@@ -63,10 +62,6 @@ class _SkinShopPageState extends State<SkinShopPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header
-                    _buildHeader(isDark),
-                    const SizedBox(height: 24),
-
                     // Hall of Fame
                     if (provider.hallOfFame.isNotEmpty) ...[
                       _buildHallOfFame(provider.hallOfFame, isDark),
@@ -92,78 +87,6 @@ class _SkinShopPageState extends State<SkinShopPage> {
           },
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            IconButton(
-              icon: Icon(
-                Icons.arrow_back,
-                color: isDark
-                    ? AppTheme.darkTextPrimary
-                    : AppTheme.lightTextPrimary,
-              ),
-              onPressed: () {
-                // Use go_router to navigate back to profile
-                context.go('/profile');
-              },
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-            const SizedBox(width: 12),
-            ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(
-                colors: [AppTheme.primaryBlueDark, AppTheme.primaryBlue],
-              ).createShader(bounds),
-              child: const Text(
-                'MEOWL SKIN SHOP',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: Colors.white,
-                  letterSpacing: 2,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppTheme.primaryBlueDark),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'v2.0',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontFamily: 'monospace',
-                  color: AppTheme.primaryBlueDark,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.only(left: 44),
-          child: Text(
-            'Nâng cấp trợ lý Meowl của bạn với những bộ trang phục công nghệ cao từ tương lai.',
-            style: TextStyle(
-              fontSize: 12,
-              fontFamily: 'monospace',
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-            ),
-          ),
-        ),
-      ],
     );
   }
 

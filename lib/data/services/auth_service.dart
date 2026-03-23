@@ -309,6 +309,12 @@ class AuthService {
     await _secureStorage.write(key: AppConstants.userDataKey, value: userJson);
   }
 
+  /// Public method to clear stored tokens (used by forceLogout — no API call).
+  Future<void> clearStoredTokens() async {
+    await _clearLocalData();
+    await signOutGoogle();
+  }
+
   /// Xóa toàn bộ dữ liệu local
   Future<void> _clearLocalData() async {
     await _secureStorage.delete(key: AppConstants.accessTokenKey);

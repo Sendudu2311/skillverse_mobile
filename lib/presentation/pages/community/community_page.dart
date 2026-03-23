@@ -5,6 +5,7 @@ import '../../providers/post_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/post_card.dart';
 import '../../widgets/skeleton_loaders.dart';
+import '../../widgets/empty_state_widget.dart';
 import 'widgets/community_stats_widget.dart';
 import '../../themes/app_theme.dart';
 
@@ -233,38 +234,11 @@ class _CommunityPageState extends State<CommunityPage> {
 
     // Empty state
     if (provider.isEmpty) {
-      return Center(
-        child: GlassCard(
-          padding: const EdgeInsets.all(48),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.forum_outlined,
-                size: 64,
-                color: Theme.of(
-                  context,
-                ).iconTheme.color?.withValues(alpha: 0.3),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Chưa có bài viết nào',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Hãy tạo bài viết đầu tiên!',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).hintColor,
-                ),
-              ),
-            ],
-          ),
-        ),
+      return const EmptyStateWidget(
+        icon: Icons.forum_outlined,
+        title: 'Chưa có bài viết nào',
+        subtitle: 'Hãy tạo bài viết đầu tiên!',
+        iconGradient: AppTheme.blueGradient,
       );
     }
 

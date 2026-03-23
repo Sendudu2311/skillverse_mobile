@@ -32,6 +32,9 @@ import '../pages/jobs/jobs_page.dart';
 import '../pages/jobs/job_detail_page.dart';
 import '../pages/jobs/my_applications_page.dart';
 import '../pages/wallet/wallet_page.dart';
+import '../pages/journey/journey_list_page.dart';
+import '../pages/journey/journey_create_page.dart';
+import '../pages/journey/journey_detail_page.dart';
 import '../pages/expert_chat/expert_chat_landing_page.dart';
 import '../pages/expert_chat/domain_selection_page.dart';
 import '../pages/expert_chat/role_selection_page.dart';
@@ -252,6 +255,26 @@ class AppRouter {
           },
         ),
 
+        // Journey Routes
+        GoRoute(
+          path: '/journey',
+          name: 'journey',
+          builder: (context, state) => const JourneyListPage(),
+        ),
+        GoRoute(
+          path: '/journey/create',
+          name: 'journey-create',
+          builder: (context, state) => const JourneyCreatePage(),
+        ),
+        GoRoute(
+          path: '/journey/:journeyId',
+          name: 'journey-detail',
+          builder: (context, state) {
+            final journeyId = state.pathParameters['journeyId']!;
+            return JourneyDetailPage(journeyId: journeyId);
+          },
+        ),
+
         // Roadmap Routes
         GoRoute(
           path: '/roadmap',
@@ -311,6 +334,7 @@ class AppRouter {
           name: 'wallet',
           builder: (context, state) => MainLayout(
             currentPath: state.matchedLocation,
+            showAppBar: false,
             child: const WalletPage(),
           ),
         ),

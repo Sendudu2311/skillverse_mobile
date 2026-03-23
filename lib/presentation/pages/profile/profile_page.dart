@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/subscription_provider.dart';
+import '../../providers/wallet_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/glass_card.dart';
+import '../../../core/utils/number_formatter.dart';
+import '../../../data/services/user_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -15,13 +20,64 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  bool _isUploadingAvatar = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<UserProvider>().loadUserProfile();
       context.read<SubscriptionProvider>().loadSubscription();
+      context.read<WalletProvider>().refresh();
     });
+  }
+
+  Future<void> _pickAndUploadAvatar(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+
+    if (result == null ||
+        result.files.isEmpty ||
+        result.files.first.path == null) {
+      return;
+    }
+
+    final filePath = result.files.first.path!;
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.user?.id;
+    if (userId == null) return;
+
+    setState(() => _isUploadingAvatar = true);
+
+    try {
+      await UserService().uploadAvatar(filePath, userId);
+
+      // Reload profile to get the new avatar URL
+      if (mounted) {
+        await context.read<UserProvider>().loadUserProfile();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cập nhật ảnh đại diện thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload thất bại: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+      }
+    }
   }
 
   @override
@@ -29,6 +85,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final userProvider = context.watch<UserProvider>();
     final subscriptionProvider = context.watch<SubscriptionProvider>();
+    final walletProvider = context.watch<WalletProvider>();
     final authProvider = context.watch<AuthProvider>();
 
     if (userProvider.isLoading || subscriptionProvider.isLoading) {
@@ -49,8 +106,14 @@ class _ProfilePageState extends State<ProfilePage> {
               user,
               userProfile,
               subscription,
+              walletProvider,
               isDark,
             ),
+          ),
+
+          // Subscription Card (NEW — kept from rewrite)
+          SliverToBoxAdapter(
+            child: _buildSubscriptionCard(context, subscription, isDark),
           ),
 
           // Personal Info Section
@@ -80,17 +143,21 @@ class _ProfilePageState extends State<ProfilePage> {
     dynamic user,
     dynamic userProfile,
     dynamic subscription,
+    WalletProvider walletProvider,
     bool isDark,
   ) {
     final displayName = userProfile?.fullName ?? user?.fullName ?? 'User';
-    final avatarUrl = subscription?.userAvatarUrl;
+    final avatarUrl =
+        userProfile?.avatarMediaUrl ?? subscription?.userAvatarUrl;
 
     // Get subscription info
     final planName = subscription?.plan.displayName ?? 'Cadet';
-    final planType = subscription?.plan.planType ?? 'FREE';
-    final level = 0; // TODO: Get from user stats
-    final xp = 0; // TODO: Get from user stats
-    final credits = 0; // TODO: Get from wallet
+    final planType = subscription?.plan.planType ?? 'FREE_TIER';
+    final joinedYear = userProfile?.createdAt != null
+        ? 'Since ${DateTime.tryParse(userProfile!.createdAt)?.year ?? '---'}'
+        : 'Since ---';
+    final cashBalance = walletProvider.cashBalance;
+    final coinBalance = walletProvider.coinBalance;
     final status = subscription?.status ?? 'ACTIVE';
 
     return Container(
@@ -100,89 +167,138 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Column(
         children: [
-          // Avatar with Premium Ring
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              // Premium ring
-              if (subscription != null)
+          // Avatar with Premium Frame (matching web PilotHeader)
+          SizedBox(
+            width: 160,
+            height: 160,
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                // Avatar (smaller, centered inside Stack)
                 Container(
-                  width: 140,
-                  height: 140,
+                  width: 112,
+                  height: 112,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _getPremiumRingColor(planType),
-                      width: 4,
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.themePurpleStart,
+                        AppTheme.themePurpleEnd,
+                      ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _getPremiumRingColor(
-                          planType,
-                        ).withValues(alpha: 0.5),
-                        blurRadius: 20,
-                        spreadRadius: 2,
+                  ),
+                  child: avatarUrl != null
+                      ? ClipOval(
+                          child: Image.network(
+                            avatarUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                _buildDefaultAvatar(displayName),
+                          ),
+                        )
+                      : _buildDefaultAvatar(displayName),
+                ),
+                // Premium frame overlay — wraps around avatar
+                if (_getAvatarFrame(planType) != null)
+                  Positioned(
+                    top: -4,
+                    left: -4,
+                    right: -4,
+                    bottom: -4,
+                    child: Image.asset(
+                      _getAvatarFrame(planType)!,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                // Camera button — tap to upload avatar
+                Positioned(
+                  bottom: 6,
+                  right: 10,
+                  child: GestureDetector(
+                    onTap: _isUploadingAvatar
+                        ? null
+                        : () => _pickAndUploadAvatar(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlueDark,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
                       ),
-                    ],
+                      child: _isUploadingAvatar
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                    ),
                   ),
                 ),
-              // Avatar
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      AppTheme.themePurpleStart,
-                      AppTheme.themePurpleEnd,
-                    ],
-                  ),
-                ),
-                child: avatarUrl != null
-                    ? ClipOval(
-                        child: Image.network(
-                          avatarUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _buildDefaultAvatar(displayName),
-                        ),
-                      )
-                    : _buildDefaultAvatar(displayName),
-              ),
-              // Camera button
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryBlueDark,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Icon(
-                    Icons.camera_alt,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
-          // Name
-          Text(
-            displayName.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              fontFamily: 'monospace',
-              letterSpacing: 2,
-            ),
-            textAlign: TextAlign.center,
+          // Name with gradient + glow
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              // Glow layer (blurred shadow behind text)
+              Text(
+                displayName.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  letterSpacing: 2,
+                  color: Colors.transparent,
+                  shadows: [
+                    Shadow(
+                      color: _getPlanColor(planType).withValues(alpha: 0.8),
+                      blurRadius: 30,
+                    ),
+                    Shadow(
+                      color: _getPlanColor(planType).withValues(alpha: 0.5),
+                      blurRadius: 16,
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              // Gradient text layer
+              ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: planType == 'FREE_TIER'
+                      ? [Colors.white, Colors.white70]
+                      : [
+                          _getPlanColor(planType),
+                          Colors.white,
+                          _getPlanColor(planType),
+                        ],
+                  stops: planType == 'FREE_TIER' ? null : const [0.0, 0.5, 1.0],
+                ).createShader(bounds),
+                child: Text(
+                  displayName.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontFamily: 'monospace',
+                    letterSpacing: 2,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
 
@@ -190,14 +306,14 @@ class _ProfilePageState extends State<ProfilePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildBadge('Level $level', AppTheme.themeBlueStart),
+              _buildJoinedBadge(joinedYear),
               const SizedBox(width: 12),
-              _buildBadge(planName, _getPlanColor(planType)),
+              _buildPlanBadge(planName, planType),
             ],
           ),
           const SizedBox(height: 24),
 
-          // Stats Row
+          // Stats Row — real data from wallet
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -207,13 +323,21 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem('CREDITS', credits.toString(), isDark),
+                _buildStatItem(
+                  'VÍ',
+                  NumberFormatter.formatCompact(cashBalance),
+                  isDark,
+                ),
                 Container(
                   width: 1,
                   height: 40,
                   color: Colors.white.withValues(alpha: 0.3),
                 ),
-                _buildStatItem('XP', xp.toString(), isDark),
+                _buildStatItem(
+                  'XU',
+                  NumberFormatter.formatCompact(coinBalance),
+                  isDark,
+                ),
                 Container(
                   width: 1,
                   height: 40,
@@ -228,6 +352,176 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+
+  // ==================== SUBSCRIPTION CARD (NEW) ====================
+
+  Widget _buildSubscriptionCard(
+    BuildContext context,
+    dynamic subscription,
+    bool isDark,
+  ) {
+    if (subscription != null && subscription.currentlyActive) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+        child: GlassCard(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _getPlanColor(
+                    subscription.plan.planType,
+                  ).withValues(alpha: 0.12),
+                  _getPlanColor(
+                    subscription.plan.planType,
+                  ).withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: _getPlanColor(
+                      subscription.plan.planType,
+                    ).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.workspace_premium,
+                    color: _getPlanColor(subscription.plan.planType),
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subscription.plan.displayName,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(
+                            subscription.autoRenew
+                                ? Icons.repeat
+                                : Icons.event_busy,
+                            size: 13,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              subscription.autoRenew
+                                  ? 'Tự động gia hạn · Còn ${subscription.daysRemaining} ngày'
+                                  : 'Hết hạn ${_formatDate(subscription.endDate)} · Còn ${subscription.daysRemaining} ngày',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => context.push('/premium'),
+                  child: const Text('Quản lý', style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // CTA — no active subscription
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: GlassCard(
+        child: InkWell(
+          onTap: () => context.push('/premium'),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.accentGold.withValues(alpha: 0.12),
+                  AppTheme.themeOrangeStart.withValues(alpha: 0.06),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentGold.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome,
+                    color: AppTheme.accentGold,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nâng cấp Premium',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Truy cập không giới hạn khóa học & AI',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: AppTheme.accentGold),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==================== OLD UI SECTIONS ====================
 
   Widget _buildDefaultAvatar(String name) {
     return Center(
@@ -248,7 +542,10 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.5),
+          width: 1,
+        ),
       ),
       child: Text(
         text,
@@ -258,6 +555,92 @@ class _ProfilePageState extends State<ProfilePage> {
           fontWeight: FontWeight.bold,
           fontFamily: 'monospace',
         ),
+      ),
+    );
+  }
+
+  Widget _buildJoinedBadge(String text) {
+    final color = AppTheme.themeBlueStart;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [color.withValues(alpha: 0.7), color.withValues(alpha: 0.35)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.6), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.3),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.calendar_month, color: Colors.white, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlanBadge(String planName, String planType) {
+    final color = _getPlanColor(planType);
+    final isFree = planType == 'FREE_TIER';
+
+    // Free tier → keep simple badge
+    if (isFree) return _buildBadge(planName, color);
+
+    // Paid plans → gradient + icon + glow
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [color.withValues(alpha: 0.9), color.withValues(alpha: 0.5)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.8), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.4),
+            blurRadius: 12,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.workspace_premium, color: Colors.white, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            planName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+              letterSpacing: 1,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -301,9 +684,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ? AppTheme.darkCardBackground
             : AppTheme.lightCardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppTheme.accentCyan.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: AppTheme.accentCyan.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -539,7 +920,7 @@ class _ProfilePageState extends State<ProfilePage> {
         trailing: Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppTheme.primaryBlueDark,
+          activeTrackColor: AppTheme.primaryBlueDark,
         ),
       ),
     );
@@ -558,9 +939,9 @@ class _ProfilePageState extends State<ProfilePage> {
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      child: Row(
+      child: const Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
+        children: [
           Icon(Icons.logout),
           SizedBox(width: 8),
           Text(
@@ -608,16 +989,22 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Color _getPremiumRingColor(String planType) {
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  /// Returns the premium frame image asset path for the given plan type.
+  /// Matches web's PilotHeader.getAvatarFrame logic.
+  String? _getAvatarFrame(String planType) {
     switch (planType) {
+      case 'STUDENT_PACK':
+        return 'assets/images/premium/silver_avatar.png';
+      case 'PREMIUM_BASIC':
+        return 'assets/images/premium/golden_avatar.png';
       case 'PREMIUM_PLUS':
-        return AppTheme.accentCyan; // Diamond
-      case 'PREMIUM':
-        return AppTheme.accentGold; // Gold
-      case 'BASIC':
-        return AppTheme.accentSilver; // Silver
+        return 'assets/images/premium/diamond_avatar.png';
       default:
-        return Colors.grey;
+        return null;
     }
   }
 
@@ -625,10 +1012,14 @@ class _ProfilePageState extends State<ProfilePage> {
     switch (planType) {
       case 'PREMIUM_PLUS':
         return AppTheme.accentCyan;
-      case 'PREMIUM':
+      case 'PREMIUM_BASIC':
         return AppTheme.accentGold;
-      case 'BASIC':
+      case 'STUDENT_PACK':
         return AppTheme.themeGreenStart;
+      case 'RECRUITER_PRO':
+        return AppTheme.themeOrangeStart;
+      case 'FREE_TIER':
+        return Colors.grey;
       default:
         return Colors.grey;
     }

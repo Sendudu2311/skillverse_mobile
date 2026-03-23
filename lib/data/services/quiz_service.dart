@@ -9,10 +9,11 @@ class QuizService {
 
   final ApiClient _apiClient = ApiClient();
 
-  /// Get quiz details by ID
+  /// Get quiz details by ID (learner-safe view)
+  /// Uses /attempt-view endpoint (GET /quizzes/{id} now requires MENTOR/ADMIN)
   Future<QuizDetailDto> getQuiz(int quizId) async {
     try {
-      final response = await _apiClient.dio.get('/quizzes/$quizId');
+      final response = await _apiClient.dio.get('/quizzes/$quizId/attempt-view');
       return QuizDetailDto.fromJson(response.data);
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -41,25 +42,19 @@ class QuizService {
     }
   }
 
-  /// Submit quiz answers
+  /// Submit quiz answers (userId extracted from JWT by backend)
   Future<QuizSubmitResponseDto> submitQuiz({
     required int quizId,
-    required int userId,
     required SubmitQuizDto submitData,
   }) async {
     try {
       final response = await _apiClient.dio.post(
         '/quizzes/$quizId/submit',
-        queryParameters: {'userId': userId},
         data: submitData.toJson(),
       );
 
-      // The backend returns a Map, we need to adapt it to QuizSubmitResponseDto
-      // or ensure the DTO matches the backend response structure.
-      // Based on controller: Map.of("score", score, "passed", passed, "attempt", attempt)
       final data = response.data as Map<String, dynamic>;
 
-      // We can construct the response object here
       return QuizSubmitResponseDto(
         score: data['score'] as int,
         passed: data['passed'] as bool,
@@ -73,15 +68,13 @@ class QuizService {
     }
   }
 
-  /// Get user attempts for a quiz
+  /// Get user attempts for a quiz (userId extracted from JWT by backend)
   Future<List<QuizAttemptDto>> getUserAttempts({
     required int quizId,
-    required int userId,
   }) async {
     try {
       final response = await _apiClient.dio.get(
         '/quizzes/$quizId/attempts',
-        queryParameters: {'userId': userId},
       );
 
       return (response.data as List)
@@ -93,15 +86,13 @@ class QuizService {
     }
   }
 
-  /// Get quiz attempt status with retry information
+  /// Get quiz attempt status with retry information (userId extracted from JWT)
   Future<QuizAttemptStatusDto> getQuizAttemptStatus({
     required int quizId,
-    required int userId,
   }) async {
     try {
       final response = await _apiClient.dio.get(
         '/quizzes/$quizId/attempt-status',
-        queryParameters: {'userId': userId},
       );
 
       return QuizAttemptStatusDto.fromJson(response.data);

@@ -5,7 +5,7 @@ abstract class AppException implements Exception {
   AppException(this.message, {this.code});
 
   @override
-  String toString() => 'AppException: $message';
+  String toString() => message;
 }
 
 class NetworkException extends AppException {

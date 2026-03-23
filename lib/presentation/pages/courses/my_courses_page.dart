@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../../data/models/enrollment_models.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class MyCoursesPage extends StatefulWidget {
   const MyCoursesPage({super.key});
@@ -37,12 +38,7 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Khóa học của tôi'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
+      appBar: SkillVerseAppBar(title: 'Khóa học của tôi', centerTitle: true),
       extendBodyBehindAppBar: true,
       body: Container(
         decoration: const BoxDecoration(

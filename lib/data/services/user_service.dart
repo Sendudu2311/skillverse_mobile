@@ -135,6 +135,34 @@ class UserService {
     }
   }
 
+  /// Upload avatar: (1) upload file to media service, (2) update profile with mediaId.
+  /// Matches web's userService.uploadUserAvatar flow.
+  Future<String> uploadAvatar(String filePath, int userId) async {
+    try {
+      // Step 1: Upload file to /media/upload
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath),
+        'actorId': userId,
+      });
+
+      final uploadResponse = await _apiClient.dio.post(
+        '/media/upload',
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+
+      final mediaId = uploadResponse.data['id'] as int;
+      final mediaUrl = uploadResponse.data['url'] as String;
+
+      // Step 2: Update user profile with new avatarMediaId
+      await updateUserProfile({'avatarMediaId': mediaId});
+
+      return mediaUrl;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   // Get User Skills
   Future<List<UserSkillResponse>> getUserSkills(int userId) async {
     try {

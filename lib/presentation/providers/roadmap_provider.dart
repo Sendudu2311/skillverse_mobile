@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/roadmap_models.dart';
 import '../../data/services/roadmap_service.dart';
+import '../../data/services/journey_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
 
 enum SortOption { newest, oldest, progress, title }
@@ -204,6 +205,7 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
       notifyListeners();
       return roadmap;
     } catch (e) {
+      debugPrint('🚨 RoadmapProvider Generation Error: $e');
       _generationError = e.toString();
       _isGenerating = false;
       notifyListeners();
@@ -364,6 +366,28 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
       return _roadmaps.firstWhere((r) => r.sessionId == sessionId);
     } catch (e) {
       return null;
+    }
+  }
+
+  // ============================================================================
+  // STUDY PLAN FROM NODE
+  // ============================================================================
+
+  final JourneyService _journeyService = JourneyService();
+
+  /// Create study plan for a specific roadmap node
+  Future<Map<String, dynamic>?> createStudyPlanForNode({
+    required int roadmapSessionId,
+    required String nodeId,
+  }) async {
+    try {
+      final result = await _journeyService.createStudyPlanForRoadmapNode(
+        roadmapSessionId: roadmapSessionId,
+        nodeId: nodeId,
+      );
+      return result;
+    } catch (e) {
+      rethrow;
     }
   }
 }

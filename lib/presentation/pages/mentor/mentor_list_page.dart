@@ -5,6 +5,7 @@ import '../../../data/models/mentor_models.dart';
 import '../../providers/mentor_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class MentorListPage extends StatefulWidget {
   const MentorListPage({super.key});
@@ -39,38 +40,11 @@ class _MentorListPageState extends State<MentorListPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/dashboard'),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.people_outline,
-              color: AppTheme.primaryBlueDark,
-              size: 28,
-            ),
-            const SizedBox(width: 8),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
-              ).createShader(bounds),
-              child: const Text(
-                'MENTOR NETWORK',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: Colors.white,
-                  letterSpacing: 2,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+      appBar: SkillVerseAppBar(
+        title: 'MENTOR NETWORK',
+        icon: Icons.people_outline,
+        useGradientTitle: true,
+        onBack: () => context.go('/dashboard'),
       ),
       body: SafeArea(
         top: false,
@@ -85,14 +59,12 @@ class _MentorListPageState extends State<MentorListPage> {
     );
   }
 
-
-
-
   Widget _buildSearchBar(BuildContext context, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        showBorder: false,
         child: TextField(
           controller: _searchController,
           style: TextStyle(

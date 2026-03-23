@@ -1,9 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/task_board_models.dart';
-import '../../data/models/study_planner_models.dart';
 import '../../data/services/task_board_service.dart';
-import '../../data/services/study_planner_service.dart';
 
 /// Task Board Provider for state management
 ///
@@ -14,28 +12,26 @@ import '../../data/services/study_planner_service.dart';
 /// - `resetState()` — clear loading + error
 class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
   final TaskBoardService _taskBoardService;
-  final StudyPlannerService _studyPlannerService;
 
   TaskBoardProvider({
     TaskBoardService? taskBoardService,
-    StudyPlannerService? studyPlannerService,
-  }) : _taskBoardService = taskBoardService ?? TaskBoardService(),
-       _studyPlannerService = studyPlannerService ?? StudyPlannerService();
+  }) : _taskBoardService = taskBoardService ?? TaskBoardService();
 
-  // State (chỉ giữ domain data — loading/error do mixin quản lý)
+  // State
   List<TaskColumn> _columns = [];
   List<DashboardNote> _notes = [];
-  List<StudySessionResponse> _sessions = [];
   DateTime _selectedWeekStart = _getWeekStart(DateTime.now());
   int _selectedTabIndex = 1; // 0: AI, 1: Timeline, 2: Kanban
 
   // Getters
   List<TaskColumn> get columns => _columns;
   List<DashboardNote> get notes => _notes;
-  List<StudySessionResponse> get sessions => _sessions;
   DateTime get selectedWeekStart => _selectedWeekStart;
-  String? get error => errorMessage; // Alias for backward compatibility
+  String? get error => errorMessage;
   int get selectedTabIndex => _selectedTabIndex;
+
+  /// All tasks flattened from columns — used by TimelineView
+  List<Task> get allTasks => _columns.expand((col) => col.tasks).toList();
 
   // Default columns
   static const List<Map<String, String>> defaultColumns = [
@@ -109,16 +105,7 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
 
   // Get overdue count
   int get overdueCount {
-    final now = DateTime.now();
-    return _columns
-        .expand((col) => col.tasks)
-        .where(
-          (task) =>
-              task.deadline != null &&
-              task.deadline!.isBefore(now) &&
-              (task.isOverdue || true),
-        ) // Check if not completed
-        .length;
+    return allTasks.where((task) => task.isOverdue).length;
   }
 
   // ==================== TASKS ====================
@@ -283,73 +270,46 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
     }
   }
 
-  // ==================== STUDY PLANNER ====================
+  // ==================== CLEAR OVERDUE ====================
 
-  /// Load study sessions
-  Future<void> loadSessions() async {
-    try {
-      _sessions = await _studyPlannerService.getSessions();
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading sessions: $e');
-    }
-  }
-
-  /// Generate AI schedule proposal
-  Future<List<StudySessionResponse>> generateProposal(
-    GenerateScheduleRequest request,
-  ) async {
+  /// Clear overdue tasks
+  Future<Map<String, dynamic>> clearOverdueTasks({
+    int overdueDays = 30,
+    String? columnId,
+  }) async {
     final result = await executeAsync(() async {
-      final generatedSessions = await _studyPlannerService.generateProposal(
-        request,
+      final response = await _taskBoardService.clearOverdueTasks(
+        overdueDays: overdueDays,
+        columnId: columnId,
       );
-      _sessions = [..._sessions, ...generatedSessions];
-      notifyListeners();
-      return generatedSessions;
+      // Reload board after clearing
+      await loadBoard();
+      return response;
     }, errorMessageBuilder: (e) {
       debugPrint('❌ TaskBoardProvider Error: $e');
-      return 'Không thể tạo lịch học: $e';
+      return 'Không thể xóa task quá hạn: $e';
     });
-    return result ?? [];
-  }
-
-  /// Update session status
-  Future<void> updateSessionStatus(String sessionId, String status) async {
-    try {
-      await _studyPlannerService.updateSessionStatus(sessionId, status);
-
-      final index = _sessions.indexWhere((s) => s.id == sessionId);
-      if (index != -1) {
-        // Update locally - create new session with updated status
-        final oldSession = _sessions[index];
-        _sessions[index] = StudySessionResponse(
-          id: oldSession.id,
-          subject: oldSession.subject,
-          topic: oldSession.topic,
-          startTime: oldSession.startTime,
-          endTime: oldSession.endTime,
-          durationMinutes: oldSession.durationMinutes,
-          status: status,
-          notes: oldSession.notes,
-        );
-        notifyListeners();
-      }
-    } catch (e) {
-      setError('Không thể cập nhật trạng thái: $e');
-      debugPrint('❌ TaskBoardProvider Error: $e');
-    }
-  }
-
-  /// Get sessions for a specific day
-  List<StudySessionResponse> getSessionsForDay(DateTime date) {
-    return _sessions.where((session) {
-      return session.startTime.year == date.year &&
-          session.startTime.month == date.month &&
-          session.startTime.day == date.day;
-    }).toList();
+    return result ?? {};
   }
 
   // ==================== HELPERS ====================
 
-  void clearError() => super.clearError();
+  /// Get tasks for a specific day — used by TimelineView
+  List<Task> getTasksForDay(DateTime date) {
+    return allTasks.where((task) {
+      // Check startDate
+      if (task.startDate != null) {
+        return task.startDate!.year == date.year &&
+            task.startDate!.month == date.month &&
+            task.startDate!.day == date.day;
+      }
+      // Fallback to deadline
+      if (task.deadline != null) {
+        return task.deadline!.year == date.year &&
+            task.deadline!.month == date.month &&
+            task.deadline!.day == date.day;
+      }
+      return false;
+    }).toList();
+  }
 }

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../../providers/dashboard_provider.dart';
+import '../../providers/wallet_provider.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/skeleton_loaders.dart';
 import '../../themes/app_theme.dart';
+import '../../../core/utils/number_formatter.dart';
+import 'deposit_sheet.dart';
+import 'buy_coin_sheet.dart';
+import 'withdraw_sheet.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({super.key});
@@ -16,7 +22,7 @@ class _WalletPageState extends State<WalletPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DashboardProvider>().loadDashboard();
+      context.read<WalletProvider>().loadAll();
     });
   }
 
@@ -58,138 +64,41 @@ class _WalletPageState extends State<WalletPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Consumer<DashboardProvider>(
+      body: Consumer<WalletProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return _buildSkeleton(isDark);
           }
 
           if (provider.errorMessage != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(provider.errorMessage!),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => provider.loadDashboard(),
-                    child: const Text('Thử lại'),
-                  ),
-                ],
-              ),
-            );
+            return _buildError(context, provider, isDark);
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Description
-                Row(
-                  children: [
-                    Text(
-                      '>> ',
-                      style: TextStyle(
-                        color: AppTheme.primaryBlueDark,
-                        fontFamily: 'monospace',
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Quản lý tài sản của bạn trong vũ trụ SkillVerse',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
+          return RefreshIndicator(
+            onRefresh: () => provider.refresh(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Balance card
+                  _buildBalanceSection(context, provider, isDark),
+                  const SizedBox(height: 20),
 
-                // Balance Cards
-                _buildBalanceCard(
-                  context,
-                  icon: Icons.attach_money,
-                  label: 'Tiền Mặt',
-                  value: '${provider.cashBalance} đ',
-                  color: AppTheme.themeGreenStart,
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 16),
-                _buildBalanceCard(
-                  context,
-                  icon: Icons.monetization_on,
-                  label: 'SkillCoin',
-                  value: '${provider.coinBalance}',
-                  color: AppTheme.accentGold,
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 32),
+                  // Action buttons
+                  _buildActionButtons(context, isDark),
+                  const SizedBox(height: 28),
 
-                // Action Buttons
-                Text(
-                  'Tổng tài sản:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionButton(
-                        context,
-                        icon: Icons.add,
-                        label: 'Nạp tiền',
-                        color: AppTheme.themeGreenStart,
-                        onTap: () {
-                          // TODO: Navigate to deposit page
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionButton(
-                        context,
-                        icon: Icons.shopping_cart,
-                        label: 'Mua xu',
-                        color: AppTheme.themeOrangeStart,
-                        onTap: () {
-                          // TODO: Navigate to buy coins page
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionButton(
-                        context,
-                        icon: Icons.remove,
-                        label: 'Rút tiền',
-                        color: Colors.red,
-                        onTap: () {
-                          // TODO: Navigate to withdraw page
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
+                  // Statistics
+                  _buildStatsSection(context, provider, isDark),
+                  const SizedBox(height: 28),
 
-                // Transaction Stats
-                _buildStatsSection(context, provider, isDark),
-              ],
+                  // Recent transactions
+                  _buildTransactionsSection(context, provider, isDark),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           );
         },
@@ -197,91 +106,374 @@ class _WalletPageState extends State<WalletPage> {
     );
   }
 
-  Widget _buildBalanceCard(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.darkCardBackground
-            : AppTheme.lightCardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+  // ==================== SKELETON ====================
+
+  Widget _buildSkeleton(bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          const CardSkeleton(imageHeight: 200),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Expanded(child: CardSkeleton(imageHeight: 60, hasSubtitle: false, hasFooter: false)),
+              const SizedBox(width: 12),
+              const Expanded(child: CardSkeleton(imageHeight: 60, hasSubtitle: false, hasFooter: false)),
+              const SizedBox(width: 12),
+              const Expanded(child: CardSkeleton(imageHeight: 60, hasSubtitle: false, hasFooter: false)),
+            ],
+          ),
+          const SizedBox(height: 28),
+          const CardSkeleton(imageHeight: 160),
+        ],
       ),
+    );
+  }
+
+  // ==================== ERROR ====================
+
+  Widget _buildError(
+    BuildContext context,
+    WalletProvider provider,
+    bool isDark,
+  ) {
+    return Center(
+      child: GlassCard(
+        padding: const EdgeInsets.all(32),
+        margin: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              provider.errorMessage!,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => provider.refresh(),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Thử lại'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==================== BALANCE SECTION ====================
+
+  Widget _buildBalanceSection(
+    BuildContext context,
+    WalletProvider provider,
+    bool isDark,
+  ) {
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      borderColor: AppTheme.primaryBlueDark.withValues(alpha: 0.3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header with eye toggle
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.account_balance_wallet,
+                    size: 18,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Số Dư Tài Khoản',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+              IconButton(
+                onPressed: () => provider.toggleBalance(),
+                icon: Icon(
+                  provider.showBalance
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                  size: 20,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+                constraints: const BoxConstraints(),
+                padding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+
+          // KPI chips
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 28),
+              _buildKpiChip(
+                'TIỀN MẶT',
+                provider.showBalance
+                    ? '${provider.cashPercent.toStringAsFixed(1)}%'
+                    : '•••',
+                isDark,
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 8),
+              _buildKpiChip(
+                'XU',
+                provider.showBalance
+                    ? '${provider.coinPercent.toStringAsFixed(1)}%'
+                    : '•••',
+                isDark,
+              ),
+              const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ],
+                child: _buildKpiChip(
+                  'TỔNG TÀI SẢN',
+                  provider.showBalance
+                      ? _formatVnd(provider.totalAssets)
+                      : '••••••',
+                  isDark,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Text(
-                '0.0% tổng tài sản',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                ),
+
+          // Cash balance
+          _buildBalanceRow(
+            icon: Icons.attach_money,
+            label: 'Tiền Mặt',
+            value: provider.showBalance
+                ? _formatVnd(provider.cashBalance)
+                : '••••••',
+            percentText: provider.showBalance
+                ? '${provider.cashPercent.toStringAsFixed(1)}% tổng tài sản'
+                : null,
+            color: AppTheme.themeGreenStart,
+            isDark: isDark,
+          ),
+          const Divider(height: 24),
+
+          // Coin balance
+          _buildBalanceRow(
+            icon: Icons.monetization_on,
+            label: 'SkillCoin',
+            value: provider.showBalance
+                ? '${NumberFormatter.formatNumber(provider.coinBalance)} xu'
+                : '••••••',
+            percentText: provider.showBalance
+                ? '${provider.coinPercent.toStringAsFixed(1)}% tổng tài sản  ≈ ${_formatVnd(provider.coinValueInVnd)}'
+                : null,
+            color: AppTheme.accentGold,
+            isDark: isDark,
+          ),
+
+          if (provider.showBalance) ...[
+            const SizedBox(height: 16),
+            // Total assets
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlueDark.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
-              const Spacer(),
-              Text(
-                '± 0 đ',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.trending_up,
+                    size: 18,
+                    color: AppTheme.themeGreenStart,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tổng tài sản:',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _formatVnd(provider.totalAssets),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKpiChip(String label, String value, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.black.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9,
+              fontFamily: 'monospace',
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+              color: isDark
+                  ? AppTheme.darkTextPrimary
+                  : AppTheme.lightTextPrimary,
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBalanceRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    required bool isDark,
+    String? percentText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (percentText != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            percentText,
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // ==================== ACTION BUTTONS ====================
+
+  Widget _buildActionButtons(BuildContext context, bool isDark) {
+    final provider = context.read<WalletProvider>();
+    return Row(
+      children: [
+        Expanded(
+          child: _buildActionButton(
+            context,
+            icon: Icons.add,
+            label: 'Nạp tiền',
+            color: AppTheme.themeGreenStart,
+            onTap: () => _openDepositSheet(context, provider),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildActionButton(
+            context,
+            icon: Icons.rocket_launch,
+            label: 'Mua xu',
+            color: AppTheme.themeOrangeStart,
+            onTap: () => _openBuyCoinSheet(context, provider),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildActionButton(
+            context,
+            icon: Icons.remove,
+            label: 'Rút tiền',
+            color: Colors.redAccent,
+            onTap: () => _openWithdrawSheet(context, provider),
+          ),
+        ),
+      ],
     );
   }
 
@@ -310,38 +502,49 @@ class _WalletPageState extends State<WalletPage> {
     );
   }
 
+  void _openDepositSheet(BuildContext context, WalletProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DepositSheet(
+        onSuccess: () => provider.refresh(),
+      ),
+    );
+  }
+
+  void _openBuyCoinSheet(BuildContext context, WalletProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => BuyCoinSheet(
+        currentCashBalance: provider.cashBalance,
+        onSuccess: () => provider.refresh(),
+      ),
+    );
+  }
+
+  void _openWithdrawSheet(BuildContext context, WalletProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => WithdrawSheet(
+        currentCashBalance: provider.cashBalance,
+        hasBankAccount: provider.hasBankAccount,
+        onSuccess: () => provider.refresh(),
+      ),
+    );
+  }
+
+  // ==================== STATS SECTION ====================
+
   Widget _buildStatsSection(
     BuildContext context,
-    DashboardProvider provider,
+    WalletProvider provider,
     bool isDark,
   ) {
-    final stats = [
-      {
-        'icon': Icons.trending_up,
-        'label': 'TỔNG THU NHẬP',
-        'value': '0 đ',
-        'color': AppTheme.themeGreenStart,
-      },
-      {
-        'icon': Icons.trending_down,
-        'label': 'TỔNG CHI TIÊU',
-        'value': '0 đ',
-        'color': Colors.red,
-      },
-      {
-        'icon': Icons.account_balance,
-        'label': 'DÒNG TIỀN RỘNG',
-        'value': '0 đ',
-        'color': AppTheme.themeBlueStart,
-      },
-      {
-        'icon': Icons.shopping_bag,
-        'label': 'TỔNG XU KIẾM ĐƯỢC',
-        'value': '0 xu',
-        'color': AppTheme.accentGold,
-      },
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -355,70 +558,273 @@ class _WalletPageState extends State<WalletPage> {
                 : AppTheme.lightTextPrimary,
           ),
         ),
-        const SizedBox(height: 16),
-        GridView.builder(
+        const SizedBox(height: 14),
+        GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.3,
-          ),
-          itemCount: stats.length,
-          itemBuilder: (context, index) {
-            final stat = stats[index];
-            return Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppTheme.darkCardBackground
-                    : AppTheme.lightCardBackground,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: (stat['color'] as Color).withValues(alpha: 0.3),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(
-                    stat['icon'] as IconData,
-                    color: stat['color'] as Color,
-                    size: 24,
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        stat['label'] as String,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        stat['value'] as String,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: stat['color'] as Color,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.4,
+          children: [
+            _buildStatCard(
+              icon: Icons.trending_up,
+              label: 'TỔNG NẠP',
+              value: _formatVnd(provider.statsTotalDeposited),
+              color: AppTheme.themeGreenStart,
+              isDark: isDark,
+            ),
+            _buildStatCard(
+              icon: Icons.trending_down,
+              label: 'TỔNG RÚT',
+              value: _formatVnd(provider.statsTotalWithdrawn),
+              color: Colors.redAccent,
+              isDark: isDark,
+            ),
+            _buildStatCard(
+              icon: Icons.account_balance,
+              label: 'DÒNG TIỀN RÒNG',
+              value: _formatVnd(provider.netCashFlow),
+              color: AppTheme.themeBlueStart,
+              isDark: isDark,
+            ),
+            _buildStatCard(
+              icon: Icons.monetization_on,
+              label: 'XU KIẾM ĐƯỢC',
+              value: '${NumberFormatter.formatNumber(provider.statsTotalCoinsEarned)} xu',
+              color: AppTheme.accentGold,
+              isDark: isDark,
+            ),
+          ],
         ),
       ],
     );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    required bool isDark,
+  }) {
+    return GlassCard(
+      padding: const EdgeInsets.all(14),
+      borderColor: color.withValues(alpha: 0.3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Icon(icon, color: color, size: 22),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                  fontFamily: 'monospace',
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  fontFamily: 'monospace',
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== TRANSACTIONS SECTION ====================
+
+  Widget _buildTransactionsSection(
+    BuildContext context,
+    WalletProvider provider,
+    bool isDark,
+  ) {
+    if (provider.transactions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.bolt, size: 18, color: AppTheme.accentGold),
+            const SizedBox(width: 6),
+            Text(
+              'Giao dịch gần đây',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        ...provider.transactions.map(
+          (tx) => _buildTransactionItem(tx, isDark),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTransactionItem(dynamic tx, bool isDark) {
+    final isCredit = tx.isCreditTransaction;
+    final amount = tx.cashAmount ?? tx.coinAmount ?? 0;
+    final sign = isCredit ? '+' : '-';
+    final color = isCredit ? AppTheme.themeGreenStart : Colors.redAccent;
+    final isCash = tx.cashAmount != null && tx.cashAmount != 0;
+
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              _getTransactionIcon(tx.transactionType),
+              color: color,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tx.description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  tx.createdAt.toString().substring(0, 10),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$sign${isCash ? _formatVnd(amount.abs()) : '${NumberFormatter.formatNumber(amount.abs())} xu'}',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  fontFamily: 'monospace',
+                ),
+              ),
+              const SizedBox(height: 2),
+              _buildStatusChip(tx.status),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    Color color;
+    String label;
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
+        color = AppTheme.themeGreenStart;
+        label = 'Hoàn thành';
+        break;
+      case 'PENDING':
+        color = AppTheme.accentGold;
+        label = 'Đang xử lý';
+        break;
+      case 'FAILED':
+        color = Colors.redAccent;
+        label = 'Thất bại';
+        break;
+      default:
+        color = AppTheme.darkTextSecondary;
+        label = status;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  // ==================== HELPERS ====================
+
+  String _formatVnd(int amount) {
+    return NumberFormatter.formatCurrency(amount.toDouble(), currency: 'đ');
+  }
+
+  IconData _getTransactionIcon(String type) {
+    switch (type.toUpperCase()) {
+      case 'DEPOSIT':
+      case 'DEPOSIT_CASH':
+        return Icons.arrow_downward;
+      case 'WITHDRAWAL':
+        return Icons.arrow_upward;
+      case 'COIN_PURCHASE':
+      case 'PURCHASE_COINS':
+        return Icons.monetization_on;
+      case 'COIN_EARN':
+      case 'EARN_COINS':
+        return Icons.card_giftcard;
+      case 'COIN_SPEND':
+      case 'SPEND_COINS':
+        return Icons.flash_on;
+      case 'REFUND':
+        return Icons.refresh;
+      default:
+        return Icons.swap_horiz;
+    }
   }
 }

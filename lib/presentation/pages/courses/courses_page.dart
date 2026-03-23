@@ -6,6 +6,7 @@ import '../../widgets/course_card_v2.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/empty_state_widget.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/course_models.dart';
 import '../../../core/utils/pagination_helper.dart';
@@ -644,52 +645,13 @@ class _CoursesPageState extends State<CoursesPage> {
   }
 
   Widget _buildEmptyState(bool isDark) {
-    return GlassCard(
-      padding: const EdgeInsets.all(48),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  AppTheme.primaryBlueDark.withValues(alpha: 0.2),
-                  AppTheme.secondaryPurple.withValues(alpha: 0.2),
-                ],
-              ),
-            ),
-            child: Icon(
-              Icons.search_off_rounded,
-              size: 48,
-              color: AppTheme.primaryBlueDark.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'KHÔNG TÌM THẤY',
-            style: TextStyle(
-              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'monospace',
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Không có khóa học nào phù hợp\nvới bộ lọc hiện tại',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-              fontSize: 13,
-              height: 1.5,
-            ),
-          ),
-        ],
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: EmptyStateWidget(
+        icon: Icons.search_off_rounded,
+        title: 'KHÔNG TÌM THẤY',
+        subtitle: 'Không có khóa học nào phù hợp\nvới bộ lọc hiện tại',
+        iconGradient: AppTheme.blueGradient,
       ),
     );
   }

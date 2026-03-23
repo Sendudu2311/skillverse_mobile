@@ -62,25 +62,31 @@ class Task {
   final String id;
   final String title;
   final String? description;
-  final String? note;
+  final String? status;
   final TaskPriority priority;
-  final DateTime? startTime;
+  final DateTime? startDate;
+  final DateTime? endDate;
   final DateTime? deadline;
   final String? columnId;
-  final bool isOverdue;
-  final DateTime? createdAt;
+  final int? userProgress;
+  final String? satisfactionLevel;
+  final String? userNotes;
+  final List<String>? linkedSessionIds;
 
   Task({
     required this.id,
     required this.title,
     this.description,
-    this.note,
+    this.status,
     this.priority = TaskPriority.medium,
-    this.startTime,
+    this.startDate,
+    this.endDate,
     this.deadline,
     this.columnId,
-    this.isOverdue = false,
-    this.createdAt,
+    this.userProgress,
+    this.satisfactionLevel,
+    this.userNotes,
+    this.linkedSessionIds,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => _$TaskFromJson(json);
@@ -90,26 +96,40 @@ class Task {
     String? id,
     String? title,
     String? description,
-    String? note,
+    String? status,
     TaskPriority? priority,
-    DateTime? startTime,
+    DateTime? startDate,
+    DateTime? endDate,
     DateTime? deadline,
     String? columnId,
-    bool? isOverdue,
-    DateTime? createdAt,
+    int? userProgress,
+    String? satisfactionLevel,
+    String? userNotes,
+    List<String>? linkedSessionIds,
   }) {
     return Task(
       id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
-      note: note ?? this.note,
+      status: status ?? this.status,
       priority: priority ?? this.priority,
-      startTime: startTime ?? this.startTime,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
       deadline: deadline ?? this.deadline,
       columnId: columnId ?? this.columnId,
-      isOverdue: isOverdue ?? this.isOverdue,
-      createdAt: createdAt ?? this.createdAt,
+      userProgress: userProgress ?? this.userProgress,
+      satisfactionLevel: satisfactionLevel ?? this.satisfactionLevel,
+      userNotes: userNotes ?? this.userNotes,
+      linkedSessionIds: linkedSessionIds ?? this.linkedSessionIds,
     );
+  }
+
+  /// Whether the task is overdue
+  bool get isOverdue {
+    if (deadline == null) return false;
+    return deadline!.isBefore(DateTime.now()) &&
+        status?.toLowerCase() != 'done' &&
+        (userProgress == null || userProgress! < 100);
   }
 
   /// Get priority color
@@ -233,31 +253,37 @@ class UpdateTaskRequest {
   Map<String, dynamic> toJson() => _$UpdateTaskRequestToJson(this);
 }
 
-/// Task Response
+/// Task Response (maps 1:1 with backend TaskResponse DTO)
 @JsonSerializable()
 class TaskResponse {
   final String id;
   final String title;
   final String? description;
-  final String? note;
+  final String? startDate;
+  final String? endDate;
+  final String? deadline;
   final String priority;
-  final DateTime? startTime;
-  final DateTime? deadline;
+  final String? status;
+  final int? userProgress;
+  final String? satisfactionLevel;
+  final String? userNotes;
   final String? columnId;
-  final bool isOverdue;
-  final DateTime? createdAt;
+  final List<String>? linkedSessionIds;
 
   TaskResponse({
     required this.id,
     required this.title,
     this.description,
-    this.note,
-    required this.priority,
-    this.startTime,
+    this.startDate,
+    this.endDate,
     this.deadline,
+    required this.priority,
+    this.status,
+    this.userProgress,
+    this.satisfactionLevel,
+    this.userNotes,
     this.columnId,
-    this.isOverdue = false,
-    this.createdAt,
+    this.linkedSessionIds,
   });
 
   factory TaskResponse.fromJson(Map<String, dynamic> json) =>
@@ -269,14 +295,22 @@ class TaskResponse {
       id: id,
       title: title,
       description: description,
-      note: note,
+      status: status,
       priority: _parsePriority(priority),
-      startTime: startTime,
-      deadline: deadline,
+      startDate: _parseDate(startDate),
+      endDate: _parseDate(endDate),
+      deadline: _parseDate(deadline),
       columnId: columnId,
-      isOverdue: isOverdue,
-      createdAt: createdAt,
+      userProgress: userProgress,
+      satisfactionLevel: satisfactionLevel,
+      userNotes: userNotes,
+      linkedSessionIds: linkedSessionIds,
     );
+  }
+
+  DateTime? _parseDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return null;
+    return DateTime.tryParse(dateStr);
   }
 
   TaskPriority _parsePriority(String value) {

@@ -4,6 +4,7 @@ import '../../data/models/auth_models.dart';
 import '../../data/services/auth_service.dart';
 import '../../core/network/api_client.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/utils/storage_helper.dart';
 
 /// Auth Provider
 ///
@@ -48,6 +49,13 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
       final response = await _authService.login(request);
       _user = response.user;
       _apiClient.setAuthToken(response.accessToken);
+      
+      // Set onboarding prompt flag for subsequent dashboard load
+      await StorageHelper.instance.writeBool(
+        StorageKey.showOnboardingPrompt,
+        true,
+      );
+      
       notifyListeners();
       return true;
     }, errorMessageBuilder: (e) => _getErrorMessage(e));
@@ -70,6 +78,13 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
       );
       final response = await _authService.register(request);
       _apiClient.setAuthToken(response.accessToken);
+      
+      // Set onboarding prompt flag for subsequent dashboard load
+      await StorageHelper.instance.writeBool(
+        StorageKey.showOnboardingPrompt,
+        true,
+      );
+
       notifyListeners();
       return true;
     }, errorMessageBuilder: (e) => _getErrorMessage(e));
@@ -82,6 +97,13 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
       final response = await _authService.signInWithGoogle();
       _user = response.user;
       _apiClient.setAuthToken(response.accessToken);
+
+      // Set onboarding prompt flag for subsequent dashboard load
+      await StorageHelper.instance.writeBool(
+        StorageKey.showOnboardingPrompt,
+        true,
+      );
+
       notifyListeners();
       return true;
     }, errorMessageBuilder: (e) => _getErrorMessage(e));
@@ -123,19 +145,23 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
   }
 
   /// Force logout — called by ApiClient 401 interceptor when token refresh fails.
-  /// Clears local state without calling the backend logout API (token is already invalid).
+  /// ONLY clears local state. Does NOT call backend logout API (token is already invalid).
   /// Triggers notifyListeners() → GoRouter redirect → Login page.
+  bool _isForceLoggingOut = false;
+
   Future<void> forceLogout() async {
+    // Prevent re-entrant calls (interceptor can fire multiple 401s)
+    if (_isForceLoggingOut) return;
+    _isForceLoggingOut = true;
+
     debugPrint('🚪 Force logout triggered by 401 interceptor');
     _user = null;
     _apiClient.clearAuthToken();
-    // Clear stored tokens silently
-    try {
-      await _authService.logout();
-    } catch (_) {
-      // Ignore — token is already invalid
-    }
+    // Clear stored refresh token locally (no API call!)
+    await _authService.clearStoredTokens();
     notifyListeners(); // This triggers GoRouter redirect to /login
+
+    _isForceLoggingOut = false;
   }
 
   /// Làm mới token

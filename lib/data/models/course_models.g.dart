@@ -56,6 +56,7 @@ CourseSummaryDto _$CourseSummaryDtoFromJson(Map<String, dynamic> json) =>
       title: json['title'] as String,
       description: json['description'] as String?,
       shortDescription: json['shortDescription'] as String?,
+      category: json['category'] as String?,
       level: $enumDecode(
         _$CourseLevelEnumMap,
         json['level'],
@@ -77,12 +78,15 @@ CourseSummaryDto _$CourseSummaryDtoFromJson(Map<String, dynamic> json) =>
       lessonCount: (json['lessonCount'] as num?)?.toInt(),
       price: (json['price'] as num?)?.toDouble(),
       currency: json['currency'] as String?,
+      estimatedDurationHours: (json['estimatedDurationHours'] as num?)?.toInt(),
+      language: json['language'] as String?,
       rating: (json['rating'] as num?)?.toDouble(),
       reviewCount: (json['reviewCount'] as num?)?.toInt(),
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
       submittedDate: json['submittedDate'] as String?,
       publishedDate: json['publishedDate'] as String?,
+      rejectionReason: json['rejectionReason'] as String?,
     );
 
 Map<String, dynamic> _$CourseSummaryDtoToJson(CourseSummaryDto instance) =>
@@ -91,6 +95,7 @@ Map<String, dynamic> _$CourseSummaryDtoToJson(CourseSummaryDto instance) =>
       'title': instance.title,
       'description': instance.description,
       'shortDescription': instance.shortDescription,
+      'category': instance.category,
       'level': _$CourseLevelEnumMap[instance.level]!,
       'status': _$CourseStatusEnumMap[instance.status]!,
       'author': instance.author,
@@ -102,12 +107,15 @@ Map<String, dynamic> _$CourseSummaryDtoToJson(CourseSummaryDto instance) =>
       'lessonCount': instance.lessonCount,
       'price': instance.price,
       'currency': instance.currency,
+      'estimatedDurationHours': instance.estimatedDurationHours,
+      'language': instance.language,
       'rating': instance.rating,
       'reviewCount': instance.reviewCount,
       'createdAt': instance.createdAt,
       'updatedAt': instance.updatedAt,
       'submittedDate': instance.submittedDate,
       'publishedDate': instance.publishedDate,
+      'rejectionReason': instance.rejectionReason,
     };
 
 const _$CourseLevelEnumMap = {
@@ -121,6 +129,8 @@ const _$CourseStatusEnumMap = {
   CourseStatus.pending: 'PENDING',
   CourseStatus.public: 'PUBLIC',
   CourseStatus.archived: 'ARCHIVED',
+  CourseStatus.rejected: 'REJECTED',
+  CourseStatus.suspended: 'SUSPENDED',
 };
 
 PageResponse<T> _$PageResponseFromJson<T>(
@@ -156,6 +166,8 @@ CourseDetailDto _$CourseDetailDtoFromJson(Map<String, dynamic> json) =>
       id: (json['id'] as num).toInt(),
       title: json['title'] as String,
       description: json['description'] as String,
+      shortDescription: json['shortDescription'] as String?,
+      category: json['category'] as String?,
       level: json['level'] as String,
       status: json['status'] as String,
       author: AuthorDto.fromJson(json['author'] as Map<String, dynamic>),
@@ -169,12 +181,24 @@ CourseDetailDto _$CourseDetailDtoFromJson(Map<String, dynamic> json) =>
       enrollmentCount: (json['enrollmentCount'] as num).toInt(),
       moduleCount: (json['moduleCount'] as num?)?.toInt(),
       lessonCount: (json['lessonCount'] as num?)?.toInt(),
+      estimatedDurationHours: (json['estimatedDurationHours'] as num?)?.toInt(),
+      language: json['language'] as String?,
+      learningObjectives: (json['learningObjectives'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      requirements: (json['requirements'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       rating: (json['rating'] as num?)?.toDouble(),
       reviewCount: (json['reviewCount'] as num?)?.toInt(),
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
       submittedDate: json['submittedDate'] as String?,
       publishedDate: json['publishedDate'] as String?,
+      rejectionReason: json['rejectionReason'] as String?,
+      rejectedAt: json['rejectedAt'] as String?,
+      suspensionReason: json['suspensionReason'] as String?,
+      suspendedAt: json['suspendedAt'] as String?,
     );
 
 Map<String, dynamic> _$CourseDetailDtoToJson(CourseDetailDto instance) =>
@@ -182,6 +206,8 @@ Map<String, dynamic> _$CourseDetailDtoToJson(CourseDetailDto instance) =>
       'id': instance.id,
       'title': instance.title,
       'description': instance.description,
+      'shortDescription': instance.shortDescription,
+      'category': instance.category,
       'level': instance.level,
       'status': instance.status,
       'author': instance.author,
@@ -193,10 +219,18 @@ Map<String, dynamic> _$CourseDetailDtoToJson(CourseDetailDto instance) =>
       'enrollmentCount': instance.enrollmentCount,
       'moduleCount': instance.moduleCount,
       'lessonCount': instance.lessonCount,
+      'estimatedDurationHours': instance.estimatedDurationHours,
+      'language': instance.language,
+      'learningObjectives': instance.learningObjectives,
+      'requirements': instance.requirements,
       'rating': instance.rating,
       'reviewCount': instance.reviewCount,
       'createdAt': instance.createdAt,
       'updatedAt': instance.updatedAt,
       'submittedDate': instance.submittedDate,
       'publishedDate': instance.publishedDate,
+      'rejectionReason': instance.rejectionReason,
+      'rejectedAt': instance.rejectedAt,
+      'suspensionReason': instance.suspensionReason,
+      'suspendedAt': instance.suspendedAt,
     };

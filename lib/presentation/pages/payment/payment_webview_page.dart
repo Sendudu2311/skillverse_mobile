@@ -21,6 +21,7 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
   late final WebViewController _controller;
   bool _isLoading = true;
   String? _error;
+  String _lastUrl = '';
 
   @override
   void initState() {
@@ -44,6 +45,7 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
           onPageStarted: (String url) {
             setState(() {
               _isLoading = true;
+              _lastUrl = url;
             });
             _checkUrlForCallback(url);
           },
@@ -53,6 +55,12 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
             });
           },
           onWebResourceError: (WebResourceError error) {
+            // Nếu lỗi xảy ra trên callback URL → pop với kết quả
+            // thay vì hiện lỗi (ví dụ ERR_BLOCKED_BY_ORB)
+            if (_isCallbackUrl(_lastUrl)) {
+              _handleCallback(_lastUrl);
+              return;
+            }
             setState(() {
               _error = 'Lỗi tải trang: ${error.description}';
               _isLoading = false;

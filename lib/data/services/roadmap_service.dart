@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
-import '../../core/exceptions/api_exception.dart';
+import 'package:flutter/foundation.dart';
+import '../../core/error/exceptions.dart';
 import '../../core/network/api_client.dart';
 import '../models/roadmap_models.dart';
 
@@ -39,16 +41,14 @@ class RoadmapService {
           )
           .toList();
     } on DioException catch (e) {
-      final message =
-          e.response?.data?['message'] ?? 'Lấy danh sách lộ trình thất bại';
-      throw ApiException(message.toString());
+      throw _handleDioError(e, 'Lỗi lấy danh sách lộ trình');
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Lấy danh sách lộ trình thất bại: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
     }
   }
 
-  /// Get a specific roadmap by ID
+  /// Get a specific roadmap by its session ID
   /// API: GET /api/v1/ai/roadmap/{sessionId}
   Future<RoadmapResponse> getRoadmapById(int sessionId) async {
     try {
@@ -57,17 +57,15 @@ class RoadmapService {
       );
 
       if (response.data == null) {
-        throw ApiException('Không có dữ liệu phản hồi');
+        throw UnknownException('Không có dữ liệu phản hồi');
       }
 
       return RoadmapResponse.fromJson(response.data!);
     } on DioException catch (e) {
-      final message =
-          e.response?.data?['message'] ?? 'Lấy thông tin lộ trình thất bại';
-      throw ApiException(message.toString());
+      throw _handleDioError(e, 'Lỗi lấy thông tin lộ trình');
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Lấy thông tin lộ trình thất bại: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
     }
   }
 
@@ -92,38 +90,36 @@ class RoadmapService {
           )
           .toList();
     } on DioException catch (e) {
-      final message =
-          e.response?.data?['message'] ?? 'Xác thực yêu cầu thất bại';
-      throw ApiException(message.toString());
+      throw _handleDioError(e, 'Lỗi xác thực lộ trình');
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Xác thực yêu cầu thất bại: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
     }
   }
 
-  /// Generate a new AI-powered roadmap with request deduplication
+  /// Generate a new personalized learning roadmap using AI
   /// API: POST /api/v1/ai/roadmap/generate
   Future<RoadmapResponse> generateRoadmap(
     GenerateRoadmapRequest request,
   ) async {
-    final requestKey = _createRequestKey(request);
-
-    // If same request is already in progress, return the ongoing promise
-    if (_ongoingGenerateRequest != null && _lastRequestKey == requestKey) {
+    // Basic deduplication
+    final key = _createRequestKey(request);
+    if (_ongoingGenerateRequest != null && _lastRequestKey == key) {
       return _ongoingGenerateRequest!;
     }
 
+    _lastRequestKey = key;
+    _ongoingGenerateRequest = _generateRoadmapInternal(request);
+
     try {
-      _lastRequestKey = requestKey;
-      _ongoingGenerateRequest = _doGenerateRoadmap(request);
-      return await _ongoingGenerateRequest!;
+      final result = await _ongoingGenerateRequest!;
+      return result;
     } finally {
       _ongoingGenerateRequest = null;
-      _lastRequestKey = null;
     }
   }
 
-  Future<RoadmapResponse> _doGenerateRoadmap(
+  Future<RoadmapResponse> _generateRoadmapInternal(
     GenerateRoadmapRequest request,
   ) async {
     try {
@@ -137,16 +133,15 @@ class RoadmapService {
       );
 
       if (response.data == null) {
-        throw ApiException('Không có dữ liệu phản hồi');
+        throw UnknownException('Không có dữ liệu phản hồi từ AI');
       }
 
       return RoadmapResponse.fromJson(response.data!);
     } on DioException catch (e) {
-      final message = e.response?.data?['message'] ?? 'Tạo lộ trình thất bại';
-      throw ApiException(message.toString());
+      throw _handleDioError(e, 'Lỗi tạo lộ trình');
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Tạo lộ trình thất bại: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi hệ thống: ${e.toString()}');
     }
   }
 
@@ -172,12 +167,10 @@ class RoadmapService {
           )
           .toList();
     } on DioException catch (e) {
-      final message =
-          e.response?.data?['message'] ?? 'Lấy câu hỏi làm rõ thất bại';
-      throw ApiException(message.toString());
+      throw _handleDioError(e, 'Lỗi lấy câu hỏi làm rõ');
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Lấy câu hỏi làm rõ thất bại: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
     }
   }
 
@@ -198,18 +191,57 @@ class RoadmapService {
       );
 
       if (response.data == null) {
-        throw ApiException('Không có dữ liệu phản hồi');
+        throw UnknownException('Không có dữ liệu phản hồi');
       }
 
       return ProgressResponse.fromJson(response.data!);
     } on DioException catch (e) {
-      final message =
-          e.response?.data?['message'] ?? 'Cập nhật tiến độ thất bại';
-      throw ApiException(message.toString());
+      throw _handleDioError(e, 'Lỗi cập nhật tiến độ');
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Cập nhật tiến độ thất bại: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
     }
+  }
+
+  /// Helper to convert DioException to standard AppException while preserving server message
+  AppException _handleDioError(DioException e, String defaultMessage) {
+    debugPrint('🛑 RoadmapService Error: ${e.type} | Status: ${e.response?.statusCode}');
+    
+    // 1. Priority: Use error from ApiClient interceptor if it's an AppException
+    if (e.error is AppException) {
+      debugPrint('✅ Found AppException in DioException.error: ${e.error}');
+      return e.error as AppException;
+    }
+
+    // 2. Fallback: Manually try to extract message from response data
+    if (e.response?.data != null) {
+      try {
+        final dynamic data = e.response?.data;
+        Map<String, dynamic>? errorMap;
+
+        if (data is Map) {
+          errorMap = Map<String, dynamic>.from(data);
+        } else if (data is String) {
+          final decoded = jsonDecode(data);
+          if (decoded is Map) {
+            errorMap = Map<String, dynamic>.from(decoded);
+          }
+        }
+
+        if (errorMap != null) {
+          final serverMessage = errorMap['message'] ?? errorMap['error'] ?? errorMap['details'];
+          if (serverMessage != null) {
+            debugPrint('✅ Extracted Server Message (Direct): $serverMessage');
+            return ServerException(serverMessage.toString(), statusCode: e.response?.statusCode);
+          }
+        }
+      } catch (err) {
+        debugPrint('⚠️ Error parsing server error response: $err');
+      }
+    }
+    
+    // 3. Last resort: Use default message
+    return ServerException(defaultMessage, statusCode: e.response?.statusCode);
   }
 
   // ============================================================================
@@ -223,15 +255,15 @@ class RoadmapService {
       final response = await _apiClient.dio.get<List<dynamic>>('/roadmaps');
 
       if (response.data == null) {
-        throw ApiException('Không có dữ liệu phản hồi');
+        throw UnknownException('Không có dữ liệu phản hồi');
       }
 
       return response.data!
           .map((json) => Roadmap.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Lấy danh sách roadmap thất bại: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi lấy danh sách lộ trình: ${e.toString()}');
     }
   }
 
@@ -240,19 +272,19 @@ class RoadmapService {
   Future<List<Roadmap>> getRoadmapsByCategory(String category) async {
     try {
       final response = await _apiClient.dio.get<List<dynamic>>(
-        '/roadmaps/category/$category',
+        '/v1/roadmaps/category/$category',
       );
 
       if (response.data == null) {
-        throw ApiException('Không có dữ liệu phản hồi');
+        throw UnknownException('Không có dữ liệu phản hồi');
       }
 
       return response.data!
           .map((json) => Roadmap.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Lấy roadmap theo danh mục thất bại: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi lấy lộ trình theo danh mục: ${e.toString()}');
     }
   }
 
@@ -264,18 +296,18 @@ class RoadmapService {
   ) async {
     try {
       final response = await _apiClient.dio.put<Map<String, dynamic>>(
-        '/roadmaps/$roadmapId/progress',
+        '/v1/roadmaps/$roadmapId/progress',
         data: {'completedSteps': completedSteps},
       );
 
       if (response.data == null) {
-        throw ApiException('Không có dữ liệu phản hồi');
+        throw UnknownException('Không có dữ liệu phản hồi');
       }
 
       return Roadmap.fromJson(response.data!);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Cập nhật tiến độ roadmap thất bại: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi cập nhật tiến độ: ${e.toString()}');
     }
   }
 
@@ -284,20 +316,20 @@ class RoadmapService {
   Future<List<Roadmap>> getLegacyUserRoadmaps() async {
     try {
       final response = await _apiClient.dio.get<List<dynamic>>(
-        '/roadmaps/user',
+        '/v1/roadmaps/user',
       );
 
       if (response.data == null) {
-        throw ApiException('Không có dữ liệu phản hồi');
+        throw UnknownException('Không có dữ liệu phản hồi');
       }
 
       return response.data!
           .map((json) => Roadmap.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException(
-        'Lấy roadmap của người dùng thất bại: ${e.toString()}',
+      if (e is AppException) rethrow;
+      throw UnknownException(
+        'Lỗi lấy lộ trình người dùng: ${e.toString()}',
       );
     }
   }
@@ -307,17 +339,17 @@ class RoadmapService {
   Future<Roadmap> startRoadmap(int roadmapId) async {
     try {
       final response = await _apiClient.dio.post<Map<String, dynamic>>(
-        '/roadmaps/$roadmapId/start',
+        '/v1/roadmaps/$roadmapId/start',
       );
 
       if (response.data == null) {
-        throw ApiException('Không có dữ liệu phản hồi');
+        throw UnknownException('Không có dữ liệu phản hồi');
       }
 
       return Roadmap.fromJson(response.data!);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Bắt đầu roadmap thất bại: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi bắt đầu lộ trình: ${e.toString()}');
     }
   }
 }

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/task_board_provider.dart';
 import '../../../themes/app_theme.dart';
 import '../../../../data/models/task_board_models.dart';
-import 'create_task_dialog.dart';
+import 'task_detail_sheet.dart';
 
 /// Kanban View - Horizontal scrollable rows with drag & drop
 class KanbanView extends StatelessWidget {
@@ -29,10 +29,7 @@ class KanbanView extends StatelessWidget {
   }
 
   void _showCreateTaskDialog(BuildContext context, String columnId) {
-    showDialog(
-      context: context,
-      builder: (context) => CreateTaskDialog(columnId: columnId),
-    );
+    TaskDetailSheet.show(context, columnId: columnId);
   }
 }
 
@@ -129,7 +126,7 @@ class KanbanRow extends StatelessWidget {
 
           // Horizontal Scrollable Tasks
           SizedBox(
-            height: 140,
+            height: 200,
             child: DragTarget<Task>(
               onAcceptWithDetails: (details) {
                 final task = details.data;
@@ -268,21 +265,28 @@ class DraggableTaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Draggable<Task>(
-      data: task,
-      feedback: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(8),
-        child: Opacity(
-          opacity: 0.8,
-          child: _buildTaskCard(context, isDark, isDragging: true),
-        ),
+    return GestureDetector(
+      onTap: () => TaskDetailSheet.show(
+        context,
+        task: task,
+        columnId: task.columnId ?? '',
       ),
-      childWhenDragging: Opacity(
-        opacity: 0.3,
+      child: Draggable<Task>(
+        data: task,
+        feedback: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(8),
+          child: Opacity(
+            opacity: 0.8,
+            child: _buildTaskCard(context, isDark, isDragging: true),
+          ),
+        ),
+        childWhenDragging: Opacity(
+          opacity: 0.3,
+          child: _buildTaskCard(context, isDark),
+        ),
         child: _buildTaskCard(context, isDark),
       ),
-      child: _buildTaskCard(context, isDark),
     );
   }
 
@@ -293,7 +297,6 @@ class DraggableTaskCard extends StatelessWidget {
   }) {
     return Container(
       width: isDragging ? 220 : 200,
-      height: 120,
       margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -342,13 +345,13 @@ class DraggableTaskCard extends StatelessWidget {
                     ? AppTheme.darkTextSecondary
                     : AppTheme.lightTextSecondary,
               ),
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ],
 
           // User Notes
-          if (task.note != null) ...[
+          if (task.userNotes != null) ...[
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.all(6),
@@ -365,7 +368,7 @@ class DraggableTaskCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      task.note!,
+                      task.userNotes!,
                       style: TextStyle(
                         fontSize: 9,
                         fontFamily: 'monospace',
@@ -380,33 +383,88 @@ class DraggableTaskCard extends StatelessWidget {
             ),
           ],
 
-          const SizedBox(height: 8),
+          // Progress bar
+          if (task.userProgress != null && task.userProgress! > 0) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: task.userProgress! / 100,
+                      minHeight: 4,
+                      backgroundColor: _priorityColor.withValues(alpha: 0.15),
+                      valueColor: AlwaysStoppedAnimation(_priorityColor),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${task.userProgress}%',
+                  style: TextStyle(
+                    fontSize: 9, fontFamily: 'monospace',
+                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
 
-          // End Date
+          // Status + Satisfaction row
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              // Status badge
+              if (task.status != null) ...[  
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _priorityColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    task.status!,
+                    style: TextStyle(fontSize: 8, fontFamily: 'monospace', color: _priorityColor),
+                  ),
+                ),
+              ],
+              const Spacer(),
+              // Satisfaction icon
+              if (task.satisfactionLevel != null)
+                Icon(
+                  task.satisfactionLevel == 'Satisfied'
+                      ? Icons.sentiment_satisfied
+                      : task.satisfactionLevel == 'Unsatisfied'
+                          ? Icons.sentiment_dissatisfied
+                          : Icons.sentiment_neutral,
+                  size: 14,
+                  color: task.satisfactionLevel == 'Satisfied'
+                      ? Colors.green
+                      : task.satisfactionLevel == 'Unsatisfied'
+                          ? Colors.red
+                          : Colors.orange,
+                ),
+            ],
+          ),
+
+          // Deadline
           if (task.deadline != null) ...[
             const SizedBox(height: 6),
             Row(
               children: [
                 Icon(
-                  Icons.access_time,
-                  size: 11,
-                  color: task.isOverdue
-                      ? Colors.red
-                      : (isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary),
+                  Icons.access_time, size: 11,
+                  color: task.isOverdue ? Colors.red
+                      : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '${task.deadline!.day}/${task.deadline!.month}/${task.deadline!.year}',
                   style: TextStyle(
-                    fontSize: 10,
-                    fontFamily: 'monospace',
-                    color: task.isOverdue
-                        ? Colors.red
-                        : (isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary),
+                    fontSize: 10, fontFamily: 'monospace',
+                    color: task.isOverdue ? Colors.red
+                        : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
                   ),
                 ),
               ],

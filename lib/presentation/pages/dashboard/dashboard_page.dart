@@ -5,6 +5,10 @@ import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/skin_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../../core/utils/storage_helper.dart';
+import '../../../core/utils/number_formatter.dart';
+import '../../widgets/onboarding_prompt.dart';
+import '../../widgets/glass_card.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -20,7 +24,28 @@ class _DashboardPageState extends State<DashboardPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DashboardProvider>().loadDashboard();
       context.read<SkinProvider>().loadAllSkins();
+
+      // Check if we should show onboarding prompt
+      _checkAndShowOnboarding();
     });
+  }
+
+  Future<void> _checkAndShowOnboarding() async {
+    final shouldShow =
+        StorageHelper.instance.readBool(StorageKey.showOnboardingPrompt) ??
+        false;
+    if (shouldShow && mounted) {
+      OnboardingPrompt.show(
+        context,
+        onDismiss: () {
+          // Clear flag so it doesn't show again
+          StorageHelper.instance.writeBool(
+            StorageKey.showOnboardingPrompt,
+            false,
+          );
+        },
+      );
+    }
   }
 
   @override
@@ -120,83 +145,120 @@ class _DashboardPageState extends State<DashboardPage> {
     String userName,
     bool isDark,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      clipBehavior: Clip.none,
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.darkCardBackground
-            : AppTheme.lightCardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-        ),
-      ),
-      child: Row(
-        children: [
-          // Left: Text content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'WELCOME BACK,',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontFamily: 'monospace',
-                    color: AppTheme.accentCyan,
-                    letterSpacing: 1.5,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  userName,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+    return Semantics(
+      label: 'welcome_header',
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        clipBehavior: Clip.none,
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
           ),
-
-          const SizedBox(width: 8),
-
-          // Right: Meowl avatar
-          Consumer<SkinProvider>(
-            builder: (context, skinProvider, _) {
-              final skin = skinProvider.selectedSkin;
-              if (skin != null && skin.imageUrl != null) {
-                return Container(
-                  decoration: BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.secondaryPurple
-                            .withValues(alpha: 0.4),
-                        blurRadius: 20,
-                        spreadRadius: 4,
+        ),
+        child: Row(
+          children: [
+            // Left: Text content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'WELCOME BACK,',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontFamily: 'monospace',
+                      color: AppTheme.accentCyan,
+                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      // Glow layer
+                      Text(
+                        userName,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.transparent,
+                          shadows: [
+                            Shadow(
+                              color: AppTheme.accentCyan.withValues(alpha: 0.7),
+                              blurRadius: 24,
+                            ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      // Gradient text
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [
+                            AppTheme.accentCyan,
+                            isDark ? Colors.white : AppTheme.lightTextPrimary,
+                            AppTheme.accentCyan,
+                          ],
+                          stops: const [0.0, 0.5, 1.0],
+                        ).createShader(bounds),
+                        child: Text(
+                          userName,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
-                  child: Image.network(
-                    skin.imageUrl!,
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
-                  ),
-                );
-              }
-              return _buildDefaultAvatar();
-            },
-          ),
-        ],
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // Right: Meowl avatar
+            Consumer<SkinProvider>(
+              builder: (context, skinProvider, _) {
+                final skin = skinProvider.selectedSkin;
+                if (skin != null && skin.imageUrl != null) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.secondaryPurple.withValues(
+                            alpha: 0.4,
+                          ),
+                          blurRadius: 20,
+                          spreadRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: Image.network(
+                      skin.imageUrl!,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+                    ),
+                  );
+                }
+                return _buildDefaultAvatar();
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -206,25 +268,12 @@ class _DashboardPageState extends State<DashboardPage> {
     DashboardProvider provider,
     bool isDark,
   ) {
-    return GestureDetector(
-      onTap: () => context.go('/wallet'),
-      child: Container(
+    return Semantics(
+      label: 'wallet_card',
+      child: GlassCard(
+        onTap: () => context.push('/wallet'),
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppTheme.primaryBlueDark.withValues(alpha: 0.2),
-              const Color(0xFF8B5CF6).withValues(alpha: 0.2),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppTheme.primaryBlueDark.withValues(alpha: 0.4),
-            width: 1,
-          ),
-        ),
+        borderColor: AppTheme.primaryBlueDark.withValues(alpha: 0.4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -309,13 +358,21 @@ class _DashboardPageState extends State<DashboardPage> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        '${provider.cashBalance} đ',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'monospace',
-                          color: AppTheme.themeGreenStart,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          NumberFormatter.formatCurrency(
+                            provider.cashBalance.toDouble(),
+                            currency: 'đ',
+                          ),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                            color: AppTheme.themeGreenStart,
+                          ),
+                          maxLines: 1,
                         ),
                       ),
                     ],
@@ -354,13 +411,18 @@ class _DashboardPageState extends State<DashboardPage> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        '${provider.coinBalance}',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'monospace',
-                          color: AppTheme.accentGold,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          NumberFormatter.formatNumber(provider.coinBalance),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                            color: AppTheme.accentGold,
+                          ),
+                          maxLines: 1,
                         ),
                       ),
                     ],
@@ -381,6 +443,12 @@ class _DashboardPageState extends State<DashboardPage> {
         'label': 'AI Roadmap',
         'color': AppTheme.themePurpleStart,
         'route': '/roadmap',
+      },
+      {
+        'icon': Icons.explore_outlined,
+        'label': 'Hành trình',
+        'color': AppTheme.accentCyan,
+        'route': '/journey',
       },
       {
         'icon': Icons.school_outlined,
@@ -469,7 +537,7 @@ class _DashboardPageState extends State<DashboardPage> {
               icon: action['icon'] as IconData,
               label: action['label'] as String,
               color: action['color'] as Color,
-              onTap: () => context.go(action['route'] as String),
+              onTap: () => context.push(action['route'] as String),
               isDark: isDark,
             );
           },
@@ -486,42 +554,45 @@ class _DashboardPageState extends State<DashboardPage> {
     required VoidCallback onTap,
     required bool isDark,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppTheme.darkCardBackground
-              : AppTheme.lightCardBackground,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+    return Semantics(
+      label: 'quick_action_$label',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppTheme.darkCardBackground
+                : AppTheme.lightCardBackground,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 28),
               ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: isDark
-                    ? AppTheme.darkTextPrimary
-                    : AppTheme.lightTextPrimary,
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -534,172 +605,184 @@ class _DashboardPageState extends State<DashboardPage> {
   ) {
     final daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.darkCardBackground
-            : AppTheme.lightCardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.local_fire_department,
-                color: AppTheme.themeOrangeStart,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'CHUỖI HỌC TẬP',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: isDark
-                      ? AppTheme.darkTextPrimary
-                      : AppTheme.lightTextPrimary,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ],
+    return Semantics(
+      label: 'streak_tracker',
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
           ),
-          const SizedBox(height: 20),
-
-          // Current Streak
-          Row(
-            children: [
-              ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  colors: [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
-                ).createShader(bounds),
-                child: Text(
-                  '${provider.currentStreak}',
-                  style: const TextStyle(
-                    fontSize: 48,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.local_fire_department,
+                  color: AppTheme.themeOrangeStart,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'CHUỖI HỌC TẬP',
+                  style: TextStyle(
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'monospace',
-                    color: Colors.white,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                    letterSpacing: 1.5,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'NGÀY',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontFamily: 'monospace',
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+              ],
+            ),
+            const SizedBox(height: 20),
 
-          // Weekly Activity Grid
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(7, (index) {
-              final isActive = provider.weeklyActivity.length > index
-                  ? provider.weeklyActivity[index]
-                  : false;
-              return Column(
-                children: [
-                  Text(
-                    daysOfWeek[index],
-                    style: TextStyle(
-                      fontSize: 11,
+            // Current Streak
+            Row(
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: [
+                      AppTheme.themeOrangeStart,
+                      AppTheme.themeOrangeEnd,
+                    ],
+                  ).createShader(bounds),
+                  child: Text(
+                    '${provider.currentStreak}',
+                    style: const TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
                       fontFamily: 'monospace',
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
+                      color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? AppTheme.themeOrangeStart
-                          : (isDark
-                                ? AppTheme.darkBackgroundSecondary
-                                : AppTheme.lightBackgroundSecondary),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'NGÀY',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontFamily: 'monospace',
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Weekly Activity Grid
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(7, (index) {
+                final isActive = provider.weeklyActivity.length > index
+                    ? provider.weeklyActivity[index]
+                    : false;
+                return Column(
+                  children: [
+                    Text(
+                      daysOfWeek[index],
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
                         color: isActive
                             ? AppTheme.themeOrangeStart
                             : (isDark
-                                  ? AppTheme.darkBorderColor
-                                  : AppTheme.lightBorderColor),
+                                  ? AppTheme.darkBackgroundSecondary
+                                  : AppTheme.lightBackgroundSecondary),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isActive
+                              ? AppTheme.themeOrangeStart
+                              : (isDark
+                                    ? AppTheme.darkBorderColor
+                                    : AppTheme.lightBorderColor),
+                        ),
+                      ),
+                      child: isActive
+                          ? const Icon(
+                              Icons.check,
+                              size: 16,
+                              color: Colors.white,
+                            )
+                          : null,
+                    ),
+                  ],
+                );
+              }),
+            ),
+            const SizedBox(height: 16),
+
+            // Power Level
+            Row(
+              children: [
+                Text(
+                  'POWER LEVEL:',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: provider.currentStreak > 0
+                          ? (provider.currentStreak / 30).clamp(0.0, 1.0)
+                          : 0.0,
+                      minHeight: 8,
+                      backgroundColor: isDark
+                          ? AppTheme.darkBackgroundSecondary
+                          : AppTheme.lightBackgroundSecondary,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppTheme.themeOrangeStart,
                       ),
                     ),
-                    child: isActive
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
-                        : null,
-                  ),
-                ],
-              );
-            }),
-          ),
-          const SizedBox(height: 16),
-
-          // Power Level
-          Row(
-            children: [
-              Text(
-                'POWER LEVEL:',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: provider.currentStreak > 0
-                        ? (provider.currentStreak / 30).clamp(0.0, 1.0)
-                        : 0.0,
-                    minHeight: 8,
-                    backgroundColor: isDark
-                        ? AppTheme.darkBackgroundSecondary
-                        : AppTheme.lightBackgroundSecondary,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppTheme.themeOrangeStart,
-                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                provider.currentStreak > 0
-                    ? '${(provider.currentStreak / 30 * 100).toInt()}%'
-                    : 'N/A',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.themeOrangeStart,
+                const SizedBox(width: 8),
+                Text(
+                  provider.currentStreak > 0
+                      ? '${(provider.currentStreak / 30 * 100).toInt()}%'
+                      : 'N/A',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.themeOrangeStart,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -774,75 +857,81 @@ class _DashboardPageState extends State<DashboardPage> {
     required Color color,
     required bool isDark,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.darkCardBackground
-            : AppTheme.lightCardBackground,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 24),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.successColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.trending_up,
-                      size: 10,
-                      color: AppTheme.successColor,
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      '+${value}',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontFamily: 'monospace',
+    return Semantics(
+      label: 'stat_card_$label',
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 24),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.trending_up,
+                        size: 10,
                         color: AppTheme.successColor,
-                        fontWeight: FontWeight.bold,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 2),
+                      Text(
+                        '+${value}',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontFamily: 'monospace',
+                          color: AppTheme.successColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ],
+            ),
+            Text(
+              '$value',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+                color: color,
               ),
-            ],
-          ),
-          Text(
-            '$value',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'monospace',
-              color: color,
             ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontFamily: 'monospace',
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-              letterSpacing: 0.5,
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontFamily: 'monospace',
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+                letterSpacing: 0.5,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -988,16 +1077,18 @@ class _DashboardPageState extends State<DashboardPage> {
             ? AppTheme.darkCardBackground
             : AppTheme.lightCardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppTheme.accentGold.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: AppTheme.accentGold.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.workspace_premium, color: AppTheme.accentGold, size: 24),
+              Icon(
+                Icons.workspace_premium,
+                color: AppTheme.accentGold,
+                size: 24,
+              ),
               const SizedBox(width: 12),
               Text(
                 'SYSTEM LIMITS & CAPABILITIES',

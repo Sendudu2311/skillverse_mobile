@@ -6,6 +6,7 @@ import '../../../data/models/roadmap_models.dart';
 import 'package:go_router/go_router.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/painters/grid_painter.dart';
+import '../../../core/utils/error_handler.dart';
 
 class RoadmapDetailPage extends StatefulWidget {
   final int sessionId;
@@ -18,6 +19,7 @@ class RoadmapDetailPage extends StatefulWidget {
 
 class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
   String? _expandedNodeId;
+  String? _creatingPlanNodeId;
 
   @override
   void initState() {
@@ -131,7 +133,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
       slivers: [
         // App Bar
         SliverAppBar(
-          expandedHeight: 200,
+          expandedHeight: 250,
           pinned: true,
           backgroundColor: isDark
               ? AppTheme.galaxyDark
@@ -310,7 +312,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
                   Icon(Icons.timer_outlined, size: 16, color: Colors.white70),
                   const SizedBox(width: 4),
                   Text(
-                    'Updated: V2.1',
+                    roadmap.metadata.duration,
                     style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
@@ -1230,6 +1232,10 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
               node.suggestedResources!,
               isDark,
             ),
+
+          // Study Plan button
+          const SizedBox(height: 8),
+          _buildCreateStudyPlanButton(context, node, isDark),
         ],
       ),
     );
@@ -1328,6 +1334,91 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
           duration: const Duration(seconds: 2),
         ),
       );
+    }
+  }
+
+  // ===========================================================================
+  // STUDY PLAN FROM NODE
+  // ===========================================================================
+
+  Widget _buildCreateStudyPlanButton(
+    BuildContext context,
+    RoadmapNode node,
+    bool isDark,
+  ) {
+    final isCreating = _creatingPlanNodeId == node.id;
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: isCreating ? null : () => _createStudyPlan(context, node),
+        icon: isCreating
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(
+                Icons.event_note_outlined,
+                size: 18,
+                color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+              ),
+        label: Text(
+          isCreating ? 'Đang tạo kế hoạch...' : '📋 Tạo kế hoạch học',
+          style: TextStyle(
+            color: isCreating
+                ? (isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary)
+                : (isDark ? AppTheme.accentCyan : AppTheme.primaryBlue),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          side: BorderSide(
+            color: isDark
+                ? AppTheme.accentCyan.withValues(alpha: 0.4)
+                : AppTheme.primaryBlue.withValues(alpha: 0.4),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createStudyPlan(
+    BuildContext context,
+    RoadmapNode node,
+  ) async {
+    if (!mounted) return;
+
+    setState(() => _creatingPlanNodeId = node.id);
+
+    try {
+      final provider = context.read<RoadmapProvider>();
+      final result = await provider.createStudyPlanForNode(
+        roadmapSessionId: widget.sessionId,
+        nodeId: node.id,
+      );
+
+      if (!mounted) return;
+
+      final message =
+          result?['message'] as String? ?? 'Đã tạo kế hoạch học tập!';
+      final taskCount = result?['taskCount'] as int? ?? 0;
+      final displayMsg = taskCount > 0 ? '$message ($taskCount task)' : message;
+
+      ErrorHandler.showSuccessSnackBar(context, displayMsg);
+    } catch (e) {
+      if (!mounted) return;
+      ErrorHandler.showErrorSnackBar(context, e);
+    } finally {
+      if (mounted) {
+        setState(() => _creatingPlanNodeId = null);
+      }
     }
   }
 }
