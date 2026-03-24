@@ -9,8 +9,14 @@ import '../../core/utils/number_formatter.dart';
 class CourseCardV3 extends StatelessWidget {
   final CourseSummaryDto course;
   final VoidCallback? onTap;
+  final bool isEnrolled;
 
-  const CourseCardV3({super.key, required this.course, this.onTap});
+  const CourseCardV3({
+    super.key,
+    required this.course,
+    this.onTap,
+    this.isEnrolled = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -262,11 +268,17 @@ class CourseCardV3 extends StatelessWidget {
         ),
       ),
       child: Text(
-        isFree
+        isEnrolled
+            ? 'Đã sở hữu'
+            : isFree
             ? 'Miễn phí'
             : NumberFormatter.formatCurrency(price, currency: 'đ'),
         style: TextStyle(
-          color: isFree ? AppTheme.successColor : AppTheme.primaryBlueDark,
+          color: isEnrolled
+              ? AppTheme.successColor
+              : isFree
+              ? AppTheme.successColor
+              : AppTheme.primaryBlueDark,
           fontSize: 12,
           fontWeight: FontWeight.w700,
         ),

@@ -10,13 +10,9 @@ class LessonService {
 
   /// Get lesson detail by ID
   /// GET /api/lessons/{lessonId}
-  Future<LessonDetailDto> getLesson({
-    required int lessonId,
-  }) async {
+  Future<LessonDetailDto> getLesson({required int lessonId}) async {
     try {
-      final response = await _apiClient.dio.get(
-        '/lessons/$lessonId',
-      );
+      final response = await _apiClient.dio.get('/lessons/$lessonId');
       return LessonDetailDto.fromJson(response.data);
     } catch (e) {
       rethrow;
@@ -90,6 +86,24 @@ class LessonService {
       );
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// Get completed lesson IDs for a user in a course
+  /// GET /api/lessons/progress/course/{courseId}/user/{userId}/completed-ids
+  Future<List<int>> getCompletedLessonIds({
+    required int courseId,
+    required int userId,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/lessons/progress/course/$courseId/user/$userId/completed-ids',
+      );
+      final List<dynamic> data = response.data as List<dynamic>;
+      return data.map((e) => (e as num).toInt()).toList();
+    } catch (e) {
+      // Return empty list if endpoint fails (e.g. no progress yet)
+      return [];
     }
   }
 }

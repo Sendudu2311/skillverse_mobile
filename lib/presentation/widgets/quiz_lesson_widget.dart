@@ -52,9 +52,7 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
       final results = await Future.wait([
         _quizService.getQuiz(widget.quizId),
         if (authProvider.user != null)
-          _quizService.getQuizAttemptStatus(
-            quizId: widget.quizId,
-          ),
+          _quizService.getQuizAttemptStatus(quizId: widget.quizId),
       ]);
 
       setState(() {
@@ -382,9 +380,9 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
                       ),
                     ),
 
-                  // Max attempts reached
-                  if (!_attemptStatus!.canRetry &&
-                      _attemptStatus!.secondsUntilRetry == 0)
+                  // Max attempts reached (only when truly out of attempts)
+                  if (_attemptStatus!.attemptsUsed >=
+                      _attemptStatus!.maxAttempts)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
                       child: Container(

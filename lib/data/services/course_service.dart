@@ -48,7 +48,7 @@ class CourseService {
     }
   }
 
-  /// Get course details by ID
+  /// Get course details by ID (summary)
   Future<CourseSummaryDto> getCourseById(int courseId) async {
     try {
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
@@ -60,6 +60,24 @@ class CourseService {
       }
 
       return CourseSummaryDto.fromJson(response.data!);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Lấy thông tin khóa học thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Get full course detail by ID (includes learningObjectives, requirements, etc.)
+  Future<CourseDetailDto> getCourseDetail(int courseId) async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/courses/$courseId',
+      );
+
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+
+      return CourseDetailDto.fromJson(response.data!);
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Lấy thông tin khóa học thất bại: ${e.toString()}');

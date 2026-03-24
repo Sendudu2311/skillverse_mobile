@@ -1,5 +1,6 @@
 import '../models/module_models.dart';
 import '../models/lesson_models.dart';
+import '../models/module_with_content_models.dart';
 import '../../core/network/api_client.dart';
 
 class ModuleService {
@@ -8,6 +9,28 @@ class ModuleService {
   ModuleService._internal();
 
   final ApiClient _apiClient = ApiClient();
+
+  /// List all modules with full content (lessons, quizzes, assignments)
+  /// GET /courses/{courseId}/modules/full
+  Future<List<ModuleWithContentDto>> listModulesWithContent({
+    required int courseId,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/courses/$courseId/modules/full',
+      );
+
+      final List<dynamic> data = response.data as List<dynamic>;
+      return data
+          .map(
+            (json) =>
+                ModuleWithContentDto.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
 
   /// List all modules for a course
   /// GET /courses/{courseId}/modules

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/course_provider.dart';
+import '../../providers/enrollment_provider.dart';
 import '../../widgets/course_card_v3.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/empty_state_widget.dart';
@@ -414,8 +415,11 @@ class _CoursesPageState extends State<CoursesPage> {
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate((context, index) {
             final course = courseProvider.courses[index];
+            final enrollmentProvider = context.watch<EnrollmentProvider>();
+            final isEnrolled = enrollmentProvider.isEnrolled(course.id);
             return CourseCardV3(
               course: course,
+              isEnrolled: isEnrolled,
               onTap: () => context.push('/courses/${course.id}'),
             );
           }, childCount: courseProvider.courses.length),

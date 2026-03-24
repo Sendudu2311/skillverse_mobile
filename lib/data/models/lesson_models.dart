@@ -24,6 +24,7 @@ class LessonBriefDto {
   final LessonType type;
   final int orderIndex;
   final int? durationSec;
+  final String? resourceUrl;
 
   const LessonBriefDto({
     required this.id,
@@ -31,6 +32,7 @@ class LessonBriefDto {
     required this.type,
     required this.orderIndex,
     this.durationSec,
+    this.resourceUrl,
   });
 
   factory LessonBriefDto.fromJson(Map<String, dynamic> json) =>
@@ -48,6 +50,7 @@ class LessonDetailDto {
   final int orderIndex;
   final int? durationSec;
   final String? contentText;
+  final String? resourceUrl;
   final String? videoUrl;
   final int? videoMediaId;
 
@@ -58,6 +61,7 @@ class LessonDetailDto {
     required this.orderIndex,
     this.durationSec,
     this.contentText,
+    this.resourceUrl,
     this.videoUrl,
     this.videoMediaId,
   });

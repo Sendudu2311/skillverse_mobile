@@ -13,6 +13,7 @@ LessonBriefDto _$LessonBriefDtoFromJson(Map<String, dynamic> json) =>
       type: $enumDecode(_$LessonTypeEnumMap, json['type']),
       orderIndex: (json['orderIndex'] as num).toInt(),
       durationSec: (json['durationSec'] as num?)?.toInt(),
+      resourceUrl: json['resourceUrl'] as String?,
     );
 
 Map<String, dynamic> _$LessonBriefDtoToJson(LessonBriefDto instance) =>
@@ -22,6 +23,7 @@ Map<String, dynamic> _$LessonBriefDtoToJson(LessonBriefDto instance) =>
       'type': _$LessonTypeEnumMap[instance.type]!,
       'orderIndex': instance.orderIndex,
       'durationSec': instance.durationSec,
+      'resourceUrl': instance.resourceUrl,
     };
 
 const _$LessonTypeEnumMap = {
@@ -40,6 +42,7 @@ LessonDetailDto _$LessonDetailDtoFromJson(Map<String, dynamic> json) =>
       orderIndex: (json['orderIndex'] as num).toInt(),
       durationSec: (json['durationSec'] as num?)?.toInt(),
       contentText: json['contentText'] as String?,
+      resourceUrl: json['resourceUrl'] as String?,
       videoUrl: json['videoUrl'] as String?,
       videoMediaId: (json['videoMediaId'] as num?)?.toInt(),
     );
@@ -52,6 +55,7 @@ Map<String, dynamic> _$LessonDetailDtoToJson(LessonDetailDto instance) =>
       'orderIndex': instance.orderIndex,
       'durationSec': instance.durationSec,
       'contentText': instance.contentText,
+      'resourceUrl': instance.resourceUrl,
       'videoUrl': instance.videoUrl,
       'videoMediaId': instance.videoMediaId,
     };
