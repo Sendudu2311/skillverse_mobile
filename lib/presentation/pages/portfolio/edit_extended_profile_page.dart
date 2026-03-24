@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/section_header.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/portfolio_models.dart';
 import '../../../core/utils/validation_helper.dart';
@@ -156,7 +157,9 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
       if (success) {
         ErrorHandler.showSuccessSnackBar(
           context,
-          widget.isCreate ? 'Tạo profile thành công!' : 'Cập nhật profile thành công!',
+          widget.isCreate
+              ? 'Tạo profile thành công!'
+              : 'Cập nhật profile thành công!',
         );
         Navigator.pop(context, true);
       } else {
@@ -217,14 +220,14 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Header
-                            _buildSectionHeader(
+                            SectionHeader.gradient(
                               icon: Icons.person,
                               title: widget.isCreate
                                   ? 'Tạo Extended Profile'
                                   : 'Chỉnh sửa Profile',
                               gradientColors: const [
                                 AppTheme.themePurpleStart,
-                                AppTheme.themePurpleEnd
+                                AppTheme.themePurpleEnd,
                               ],
                             ),
                             const SizedBox(height: 24),
@@ -261,9 +264,7 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             if (_isLoading)
               Container(
                 color: Colors.black54,
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: const Center(child: CircularProgressIndicator()),
               ),
           ],
         ),
@@ -278,7 +279,10 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
       child: Row(
         children: [
           IconButton(
-            icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : AppTheme.lightTextPrimary),
+            icon: Icon(
+              Icons.arrow_back,
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
           Text(
@@ -291,48 +295,6 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSectionHeader({
-    required IconData icon,
-    required String title,
-    required List<Color> gradientColors,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: gradientColors),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: gradientColors[0].withValues(alpha: 0.4),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: Colors.white, size: 24),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              colors: gradientColors,
-            ).createShader(bounds),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -357,7 +319,8 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             label: 'Slug (URL cá nhân)',
             hint: 'vd: john-doe',
             prefixIcon: Icons.link,
-            validator: (value) => ValidationHelper.slug(value, isRequired: false),
+            validator: (value) =>
+                ValidationHelper.slug(value, isRequired: false),
           ),
           const SizedBox(height: 16),
 
@@ -422,7 +385,8 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             hint: 'https://yourwebsite.com',
             prefixIcon: Icons.language,
             keyboardType: TextInputType.url,
-            validator: (value) => ValidationHelper.url(value, isRequired: false),
+            validator: (value) =>
+                ValidationHelper.url(value, isRequired: false),
           ),
           const SizedBox(height: 16),
 
@@ -433,7 +397,8 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             hint: 'https://github.com/username',
             prefixIcon: Icons.code,
             keyboardType: TextInputType.url,
-            validator: (value) => ValidationHelper.url(value, isRequired: false),
+            validator: (value) =>
+                ValidationHelper.url(value, isRequired: false),
           ),
           const SizedBox(height: 16),
 
@@ -444,7 +409,8 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             hint: 'https://linkedin.com/in/username',
             prefixIcon: Icons.business,
             keyboardType: TextInputType.url,
-            validator: (value) => ValidationHelper.linkedInUrl(value, isRequired: false),
+            validator: (value) =>
+                ValidationHelper.linkedInUrl(value, isRequired: false),
           ),
           const SizedBox(height: 16),
 
@@ -460,7 +426,10 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
               if (value == null || value.trim().isEmpty) return null;
               final trimmed = value.trim();
               if (trimmed.startsWith('@') || !trimmed.startsWith('http')) {
-                return ValidationHelper.twitterUsername(trimmed, isRequired: false);
+                return ValidationHelper.twitterUsername(
+                  trimmed,
+                  isRequired: false,
+                );
               }
               return ValidationHelper.url(trimmed, isRequired: false);
             },
@@ -477,7 +446,11 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
         children: [
           Row(
             children: [
-              const Icon(Icons.stars, color: AppTheme.themeOrangeStart, size: 20),
+              const Icon(
+                Icons.stars,
+                color: AppTheme.themeOrangeStart,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Chuyên môn',
@@ -525,13 +498,15 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
               runSpacing: 8,
               children: _expertiseAreas.map((area) {
                 return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [
                         AppTheme.themeOrangeStart,
-                        AppTheme.themeOrangeEnd
+                        AppTheme.themeOrangeEnd,
                       ],
                     ),
                     borderRadius: BorderRadius.circular(16),
@@ -565,7 +540,9 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             Text(
               'Chưa có kỹ năng nào',
               style: TextStyle(
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
                 fontSize: 14,
               ),
             ),
@@ -602,7 +579,9 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
                       ? 'Profile của bạn có thể được mọi người xem'
                       : 'Chỉ bạn có thể xem profile này',
                   style: TextStyle(
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
                     fontSize: 14,
                   ),
                 ),
@@ -640,12 +619,27 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(prefixIcon, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+        prefixIcon: Icon(
+          prefixIcon,
+          color: isDark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
+        ),
         counterText: maxLength != null ? null : '',
-        labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-        hintStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+        labelStyle: TextStyle(
+          color: isDark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
+        ),
+        hintStyle: TextStyle(
+          color: isDark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
+        ),
       ),
-      style: TextStyle(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
+      style: TextStyle(
+        color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+      ),
       maxLines: maxLines,
       maxLength: maxLength,
       keyboardType: keyboardType,

@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import '../../providers/job_provider.dart';
 import '../../../data/models/job_models.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/animated_list_item.dart';
 import '../../widgets/common_loading.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/status_badge.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/date_time_helper.dart';
 import 'job_detail_page.dart';
@@ -84,8 +86,10 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: apps.length,
-        itemBuilder: (context, index) =>
-            _buildAnimatedCard(index, _buildLongTermAppCard(apps[index])),
+        itemBuilder: (context, index) => AnimatedListItem(
+          index: index,
+          child: _buildLongTermAppCard(apps[index]),
+        ),
       ),
     );
   }
@@ -95,10 +99,12 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       onTap: app.jobId != null
-          ? () => Navigator.of(context).push(MaterialPageRoute(
+          ? () => Navigator.of(context).push(
+              MaterialPageRoute(
                 builder: (_) =>
                     JobDetailPage(jobId: app.jobId!, isShortTerm: false),
-              ))
+              ),
+            )
           : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,10 +118,9 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                   children: [
                     Text(
                       app.jobTitle ?? 'Không có tiêu đề',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -123,13 +128,18 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.business,
-                              size: 13, color: Theme.of(context).hintColor),
+                          Icon(
+                            Icons.business,
+                            size: 13,
+                            color: Theme.of(context).hintColor,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
-                            child: Text(app.recruiterCompanyName!,
-                                style: Theme.of(context).textTheme.bodySmall,
-                                overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              app.recruiterCompanyName!,
+                              style: Theme.of(context).textTheme.bodySmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -138,7 +148,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                 ),
               ),
               const SizedBox(width: 8),
-              _buildStatusBadge(app.status?.name ?? 'PENDING'),
+              StatusBadge(status: app.status?.name ?? 'PENDING'),
             ],
           ),
 
@@ -148,9 +158,9 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
             Text(
               '${NumberFormatter.formatPrice(app.minBudget!)} - ${NumberFormatter.formatCurrency(app.maxBudget!)}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.themeGreenStart,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: AppTheme.themeGreenStart,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
 
@@ -163,15 +173,18 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.access_time,
-                    size: 12, color: Theme.of(context).hintColor),
+                Icon(
+                  Icons.access_time,
+                  size: 12,
+                  color: Theme.of(context).hintColor,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Nộp ${DateTimeHelper.formatSmart(DateTime.parse(app.appliedAt!))}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).hintColor,
-                        fontSize: 11,
-                      ),
+                    color: Theme.of(context).hintColor,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -205,10 +218,10 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
               Text(
                 'Xem chi tiết →',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.themeBlueStart,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: AppTheme.themeBlueStart,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -231,22 +244,28 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: apps.length,
-        itemBuilder: (context, index) => _buildAnimatedCard(
-            index, _buildShortTermAppCard(apps[index], provider)),
+        itemBuilder: (context, index) => AnimatedListItem(
+          index: index,
+          child: _buildShortTermAppCard(apps[index], provider),
+        ),
       ),
     );
   }
 
   Widget _buildShortTermAppCard(
-      ShortTermApplicationResponse app, JobProvider provider) {
+    ShortTermApplicationResponse app,
+    JobProvider provider,
+  ) {
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       onTap: app.jobId != null
-          ? () => Navigator.of(context).push(MaterialPageRoute(
+          ? () => Navigator.of(context).push(
+              MaterialPageRoute(
                 builder: (_) =>
                     JobDetailPage(jobId: app.jobId!, isShortTerm: true),
-              ))
+              ),
+            )
           : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,15 +276,14 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
               Expanded(
                 child: Text(
                   app.jobTitle ?? 'Không có tiêu đề',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              _buildStatusBadge(app.status ?? 'PENDING'),
+              StatusBadge(status: app.status ?? 'PENDING'),
             ],
           ),
 
@@ -276,9 +294,9 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
             Text(
               'Giá đề xuất: ${NumberFormatter.formatCurrency(app.proposedPrice!)}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.themeBlueStart,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: AppTheme.themeBlueStart,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           if (app.proposedDuration != null) ...[
             const SizedBox(height: 2),
@@ -297,15 +315,18 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.access_time,
-                    size: 12, color: Theme.of(context).hintColor),
+                Icon(
+                  Icons.access_time,
+                  size: 12,
+                  color: Theme.of(context).hintColor,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Nộp ${DateTimeHelper.formatSmart(DateTime.parse(app.appliedAt!))}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).hintColor,
-                        fontSize: 11,
-                      ),
+                    color: Theme.of(context).hintColor,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -321,12 +342,13 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                 TextButton.icon(
                   onPressed: () => _confirmWithdraw(app.id!, provider),
                   icon: const Icon(Icons.undo, size: 14),
-                  label:
-                      const Text('Rút đơn', style: TextStyle(fontSize: 12)),
+                  label: const Text('Rút đơn', style: TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.red,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     visualDensity: VisualDensity.compact,
                   ),
                 )
@@ -337,10 +359,10 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
               Text(
                 'Xem chi tiết →',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.themeBlueStart,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: AppTheme.themeBlueStart,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -363,8 +385,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
           TextButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
-              final success =
-                  await provider.withdrawApplication(applicationId);
+              final success = await provider.withdrawApplication(applicationId);
               if (mounted && success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -384,14 +405,17 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
 
   // ==================== TIMELINE WIDGET ====================
 
-  Widget _buildStatusTimeline(String currentStatus,
-      {required bool isLongTerm}) {
+  Widget _buildStatusTimeline(
+    String currentStatus, {
+    required bool isLongTerm,
+  }) {
     final steps = isLongTerm
         ? ['PENDING', 'REVIEWED', 'ACCEPTED']
         : ['APPLIED', 'REVIEWED', 'APPROVED', 'IN_PROGRESS', 'COMPLETED'];
 
     // Check if rejected/cancelled (show as failed state)
-    final isRejected = currentStatus == 'REJECTED' ||
+    final isRejected =
+        currentStatus == 'REJECTED' ||
         currentStatus == 'CANCELLED' ||
         currentStatus == 'WITHDRAWN';
 
@@ -426,14 +450,15 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
             color: isRejected && stepIdx == 0
                 ? Colors.red
                 : isCompleted
-                    ? AppTheme.themeGreenStart
-                    : isCurrent
-                        ? AppTheme.themeBlueStart
-                        : Theme.of(context).dividerColor,
+                ? AppTheme.themeGreenStart
+                : isCurrent
+                ? AppTheme.themeBlueStart
+                : Theme.of(context).dividerColor,
             border: isCurrent
                 ? Border.all(
                     color: AppTheme.themeBlueStart.withValues(alpha: 0.3),
-                    width: 2)
+                    width: 2,
+                  )
                 : null,
           ),
           child: isCompleted
@@ -460,58 +485,9 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              message,
-              style: TextStyle(fontSize: 12, color: color),
-            ),
+            child: Text(message, style: TextStyle(fontSize: 12, color: color)),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildAnimatedCard(int index, Widget child) {
-    return TweenAnimationBuilder<double>(
-      key: ValueKey('app_card_$index'),
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 300 + (index * 60).clamp(0, 300)),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(opacity: value, child: child),
-        );
-      },
-      child: child,
-    );
-  }
-
-  Widget _buildStatusBadge(String status) {
-    final (label, color) = switch (status.toUpperCase()) {
-      'PENDING' || 'APPLIED' => ('Đang chờ', AppTheme.themeOrangeStart),
-      'REVIEWED' => ('Đã xem', AppTheme.themeBlueStart),
-      'ACCEPTED' || 'APPROVED' => ('Đã chấp nhận', AppTheme.themeGreenStart),
-      'REJECTED' => ('Bị từ chối', Colors.red),
-      'IN_PROGRESS' => ('Đang làm', AppTheme.themeBlueStart),
-      'SUBMITTED' => ('Đã nộp bài', AppTheme.themePurpleStart),
-      'COMPLETED' => ('Hoàn thành', AppTheme.themeGreenStart),
-      'PAID' => ('Đã thanh toán', AppTheme.themeGreenEnd),
-      'WITHDRAWN' => ('Đã rút đơn', Colors.blueGrey),
-      'CANCELLED' => ('Đã hủy', Colors.grey),
-      _ => (status, Colors.grey),
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-            color: color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -521,15 +497,17 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inbox_outlined,
-              size: 64,
-              color: Theme.of(context).hintColor.withValues(alpha: 0.4)),
+          Icon(
+            Icons.inbox_outlined,
+            size: 64,
+            color: Theme.of(context).hintColor.withValues(alpha: 0.4),
+          ),
           const SizedBox(height: 16),
           Text(
             message,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).hintColor,
-                ),
+              color: Theme.of(context).hintColor,
+            ),
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(

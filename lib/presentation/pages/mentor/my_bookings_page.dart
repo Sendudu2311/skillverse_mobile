@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skeleton_loaders.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/mentor_models.dart';
 import '../../providers/mentor_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/status_badge.dart';
 import '../../widgets/glass_card.dart';
 
 class MyBookingsPage extends StatefulWidget {
@@ -94,7 +96,11 @@ class _MyBookingsPageState extends State<MyBookingsPage>
       body: Consumer<MentorProvider>(
         builder: (context, provider, _) {
           if (provider.isLoadingBookings && provider.bookings.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: 4,
+              itemBuilder: (_, __) => const ListItemSkeleton(hasTrailing: true),
+            );
           }
 
           return TabBarView(
@@ -206,7 +212,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                             ),
                       ),
                       const SizedBox(height: 2),
-                      _buildStatusBadge(booking.status, isDark),
+                      StatusBadge(status: booking.status.name),
                     ],
                   ),
                 ),
@@ -308,62 +314,6 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(BookingStatus status, bool isDark) {
-    Color color;
-    String text;
-
-    switch (status) {
-      case BookingStatus.pending:
-        color = AppTheme.warningColor;
-        text = 'Chờ xác nhận';
-        break;
-      case BookingStatus.confirmed:
-        color = AppTheme.successColor;
-        text = 'Đã xác nhận';
-        break;
-      case BookingStatus.rejected:
-        color = AppTheme.errorColor;
-        text = 'Đã từ chối';
-        break;
-      case BookingStatus.ongoing:
-        color = AppTheme.infoColor;
-        text = 'Đang diễn ra';
-        break;
-      case BookingStatus.completed:
-        color = AppTheme.successColor;
-        text = 'Hoàn thành';
-        break;
-      case BookingStatus.cancelled:
-        color = AppTheme.errorColor;
-        text = 'Đã hủy';
-        break;
-      case BookingStatus.disputed:
-        color = AppTheme.errorColor;
-        text = 'Tranh chấp';
-        break;
-      case BookingStatus.refunded:
-        color = AppTheme.warningColor;
-        text = 'Đã hoàn tiền';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          color: color,
-          fontWeight: FontWeight.w500,
         ),
       ),
     );

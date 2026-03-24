@@ -5,6 +5,9 @@ import '../../providers/journey_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_state_widget.dart';
+import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/status_badge.dart';
 import '../../../data/models/journey_models.dart';
 
 class JourneyListPage extends StatefulWidget {
@@ -29,34 +32,11 @@ class _JourneyListPageState extends State<JourneyListPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/dashboard'),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.explore, color: AppTheme.primaryBlueDark, size: 28),
-            const SizedBox(width: 8),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
-              ).createShader(bounds),
-              child: const Text(
-                'HÀNH TRÌNH CỦA TÔI',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: Colors.white,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+      appBar: SkillVerseAppBar(
+        title: 'HÀNH TRÌNH CỦA TÔI',
+        icon: Icons.explore,
+        useGradientTitle: true,
+        onBack: () => context.go('/dashboard'),
       ),
       body: Consumer<JourneyProvider>(
         builder: (context, provider, child) {
@@ -65,7 +45,10 @@ class _JourneyListPageState extends State<JourneyListPage> {
           }
 
           if (provider.hasError) {
-            return _buildErrorState(context, provider.errorMessage!, isDark);
+            return ErrorStateWidget(
+              message: provider.errorMessage!,
+              onRetry: () => provider.loadJourneys(),
+            );
           }
 
           if (provider.journeys.isEmpty) {
@@ -93,45 +76,12 @@ class _JourneyListPageState extends State<JourneyListPage> {
     );
   }
 
-  Widget _buildErrorState(BuildContext context, String error, bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: AppTheme.errorColor.withValues(alpha: 0.6),
-            ),
-            const SizedBox(height: 16),
-            Text('Đã xảy ra lỗi', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                  ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => context.read<JourneyProvider>().loadJourneys(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Thử lại'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState(BuildContext context, bool isDark) {
     return EmptyStateWidget(
       icon: Icons.explore_outlined,
       title: 'Bắt đầu hành trình đầu tiên',
-      subtitle: 'AI sẽ đánh giá kỹ năng và tạo lộ trình học tập cá nhân hóa cho bạn',
+      subtitle:
+          'AI sẽ đánh giá kỹ năng và tạo lộ trình học tập cá nhân hóa cho bạn',
       ctaLabel: 'Tạo hành trình mới',
       onCtaPressed: () => context.push('/journey/create'),
       iconGradient: AppTheme.blueGradient,
@@ -139,7 +89,10 @@ class _JourneyListPageState extends State<JourneyListPage> {
   }
 
   Widget _buildJourneyList(
-      BuildContext context, List<JourneySummaryDto> journeys, bool isDark) {
+    BuildContext context,
+    List<JourneySummaryDto> journeys,
+    bool isDark,
+  ) {
     return RefreshIndicator(
       onRefresh: () => context.read<JourneyProvider>().refresh(),
       child: ListView.builder(
@@ -191,7 +144,10 @@ class _JourneyCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _getDomainColor().withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
@@ -206,7 +162,16 @@ class _JourneyCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  _buildStatusBadge(),
+                  Builder(
+                    builder: (_) {
+                      final info = _getStatusInfo();
+                      return StatusBadge.custom(
+                        label: info.$1,
+                        color: info.$2,
+                        icon: info.$3,
+                      );
+                    },
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -215,17 +180,21 @@ class _JourneyCard extends StatelessWidget {
               Text(
                 _getGoalLabel(),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                ),
               ),
               if (journey.jobRole != null) ...[
                 const SizedBox(height: 4),
                 Text(
                   journey.jobRole!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                      ),
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
                 ),
               ],
               const SizedBox(height: 12),
@@ -238,7 +207,9 @@ class _JourneyCard extends StatelessWidget {
                   backgroundColor: isDark
                       ? Colors.white.withValues(alpha: 0.1)
                       : Colors.grey.withValues(alpha: 0.15),
-                  valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor()),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _getProgressColor(),
+                  ),
                   minHeight: 6,
                 ),
               ),
@@ -251,13 +222,18 @@ class _JourneyCard extends StatelessWidget {
                     '${journey.progressPercentage}% hoàn thành',
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
                     ),
                   ),
                   const Spacer(),
                   if (journey.currentLevel != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.primaryBlueDark.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -276,28 +252,6 @@ class _JourneyCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge() {
-    final statusInfo = _getStatusInfo();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: statusInfo.$2.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(statusInfo.$3, size: 12, color: statusInfo.$2),
-          const SizedBox(width: 4),
-          Text(
-            statusInfo.$1,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: statusInfo.$2),
-          ),
-        ],
       ),
     );
   }

@@ -17,12 +17,17 @@ class CourseService {
     String? search,
     CourseStatus? status,
     CourseLevel? level,
+    String? sortField,
+    String sortDirection = 'desc',
   }) async {
     try {
       final queryParams = <String, dynamic>{'page': page, 'size': size};
       if (search != null && search.isNotEmpty) queryParams['q'] = search;
       if (status != null) queryParams['status'] = status.name.toUpperCase();
       if (level != null) queryParams['level'] = level.name.toUpperCase();
+      if (sortField != null) {
+        queryParams['sort'] = '$sortField,$sortDirection';
+      }
 
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
         '/courses',
@@ -96,5 +101,28 @@ class CourseService {
   }) async {
     // Just use getCourses with search parameter
     return getCourses(page: page, size: size, search: query, status: status);
+  }
+
+  /// Purchase course with wallet balance
+  /// POST /api/course-purchases/wallet
+  /// Backend auto-enrolls the user after successful wallet deduction
+  Future<Map<String, dynamic>> purchaseCourseWithWallet({
+    required int courseId,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/course-purchases/wallet',
+        data: {'courseId': courseId},
+      );
+
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+
+      return response.data!;
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Mua khóa học bằng ví thất bại: ${e.toString()}');
+    }
   }
 }

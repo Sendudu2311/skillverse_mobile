@@ -177,7 +177,14 @@ class SubmitQuizDto {
   final int quizId;
   final List<QuizAnswerDto> answers;
 
-  const SubmitQuizDto({required this.quizId, required this.answers});
+  /// Optional session token for in-progress attempt session tracking
+  final String? sessionToken;
+
+  const SubmitQuizDto({
+    required this.quizId,
+    required this.answers,
+    this.sessionToken,
+  });
 
   factory SubmitQuizDto.fromJson(Map<String, dynamic> json) =>
       _$SubmitQuizDtoFromJson(json);
@@ -305,4 +312,33 @@ class QuizAttemptStatusDto {
       _$QuizAttemptStatusDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$QuizAttemptStatusDtoToJson(this);
+}
+
+/// Quiz attempt session (for in-progress guard)
+@JsonSerializable()
+class QuizAttemptSessionDto {
+  final int? quizId;
+  final int? userId;
+  final String? sessionToken;
+
+  /// Status: IN_PROGRESS, SUBMITTED, EXPIRED, ABANDONED
+  final String? status;
+  final DateTime? startedAt;
+  final DateTime? lastSeenAt;
+  final DateTime? expiresAt;
+
+  const QuizAttemptSessionDto({
+    this.quizId,
+    this.userId,
+    this.sessionToken,
+    this.status,
+    this.startedAt,
+    this.lastSeenAt,
+    this.expiresAt,
+  });
+
+  factory QuizAttemptSessionDto.fromJson(Map<String, dynamic> json) =>
+      _$QuizAttemptSessionDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$QuizAttemptSessionDtoToJson(this);
 }

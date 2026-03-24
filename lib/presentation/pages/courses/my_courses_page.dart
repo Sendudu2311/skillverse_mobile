@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/enrollment_provider.dart';
@@ -53,7 +54,12 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
           child: Consumer<EnrollmentProvider>(
             builder: (context, enrollmentProvider, child) {
               if (enrollmentProvider.isLoading) {
-                return const Center(child: CircularProgressIndicator());
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: 3,
+                  itemBuilder: (_, __) =>
+                      const CardSkeleton(imageHeight: null, hasFooter: false),
+                );
               }
 
               if (enrollmentProvider.errorMessage != null) {

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/roadmap_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import '../../../data/models/roadmap_models.dart';
 import 'package:go_router/go_router.dart';
 
@@ -79,15 +80,9 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Tạo lộ trình học tập'),
+      appBar: const SkillVerseAppBar(
+        title: 'Tạo lộ trình học tập',
         centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
       ),
       body: SafeArea(
         child: Consumer<RoadmapProvider>(

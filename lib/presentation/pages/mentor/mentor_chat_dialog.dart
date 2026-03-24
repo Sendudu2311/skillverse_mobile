@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/mentor_models.dart';
 import '../../providers/mentor_provider.dart';
@@ -189,7 +190,11 @@ class _MentorChatDialogState extends State<MentorChatDialog> {
     return Consumer<MentorProvider>(
       builder: (context, provider, _) {
         if (provider.isLoadingChat) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: 5,
+            itemBuilder: (_, __) => const CommentSkeleton(),
+          );
         }
 
         final messages = provider.currentChatMessages;

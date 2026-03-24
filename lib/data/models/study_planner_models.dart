@@ -187,3 +187,89 @@ class CreateStudySessionRequest {
       _$CreateStudySessionRequestFromJson(json);
   Map<String, dynamic> toJson() => _$CreateStudySessionRequestToJson(this);
 }
+
+/// Refine Schedule Request — send current schedule + user feedback
+@JsonSerializable()
+class RefineScheduleRequest {
+  final List<StudySessionResponse> currentSchedule;
+  final String userFeedback;
+  final String originalGoal;
+
+  RefineScheduleRequest({
+    required this.currentSchedule,
+    required this.userFeedback,
+    required this.originalGoal,
+  });
+
+  factory RefineScheduleRequest.fromJson(Map<String, dynamic> json) =>
+      _$RefineScheduleRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$RefineScheduleRequestToJson(this);
+}
+
+/// Check Schedule Health Request
+@JsonSerializable()
+class CheckScheduleHealthRequest {
+  final List<StudySessionResponse> sessions;
+  final String? timezone;
+  final String? earliestStartLocalTime;
+  final String? latestEndLocalTime;
+  final int? maxDailyStudyMinutes;
+  final int? breakMinutesBetweenSessions;
+  final String? studyPreference;
+  final String? chronotype;
+  final List<String>? idealFocusWindows;
+
+  CheckScheduleHealthRequest({
+    required this.sessions,
+    this.timezone,
+    this.earliestStartLocalTime,
+    this.latestEndLocalTime,
+    this.maxDailyStudyMinutes,
+    this.breakMinutesBetweenSessions,
+    this.studyPreference,
+    this.chronotype,
+    this.idealFocusWindows,
+  });
+
+  factory CheckScheduleHealthRequest.fromJson(Map<String, dynamic> json) =>
+      _$CheckScheduleHealthRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$CheckScheduleHealthRequestToJson(this);
+}
+
+/// Session Score (used in ScheduleHealthReport)
+@JsonSerializable()
+class SessionScoreDto {
+  final String? id;
+  final String? title;
+  final int score;
+
+  const SessionScoreDto({this.id, this.title, required this.score});
+
+  factory SessionScoreDto.fromJson(Map<String, dynamic> json) =>
+      _$SessionScoreDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$SessionScoreDtoToJson(this);
+}
+
+/// Schedule Health Report — result of health check
+@JsonSerializable()
+class ScheduleHealthReport {
+  final bool healthy;
+  final List<String>? warnings;
+  final List<String>? errors;
+  final List<String>? suggestions;
+  final List<StudySessionResponse>? adjustedSessions;
+  final List<SessionScoreDto>? sessionScores;
+
+  const ScheduleHealthReport({
+    required this.healthy,
+    this.warnings,
+    this.errors,
+    this.suggestions,
+    this.adjustedSessions,
+    this.sessionScores,
+  });
+
+  factory ScheduleHealthReport.fromJson(Map<String, dynamic> json) =>
+      _$ScheduleHealthReportFromJson(json);
+  Map<String, dynamic> toJson() => _$ScheduleHealthReportToJson(this);
+}

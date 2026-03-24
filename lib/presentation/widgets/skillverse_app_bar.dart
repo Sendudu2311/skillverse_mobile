@@ -9,6 +9,7 @@ class SkillVerseAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final IconData? icon;
   final bool useGradientTitle;
+  final List<Color>? gradientColors;
   final List<Widget>? actions;
   final VoidCallback? onBack;
   final bool centerTitle;
@@ -18,6 +19,7 @@ class SkillVerseAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.title,
     this.icon,
     this.useGradientTitle = false,
+    this.gradientColors,
     this.actions,
     this.onBack,
     this.centerTitle = false,
@@ -50,8 +52,10 @@ class SkillVerseAppBar extends StatelessWidget implements PreferredSizeWidget {
             const SizedBox(width: 8),
           ],
           ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
+            shaderCallback: (bounds) => LinearGradient(
+              colors:
+                  gradientColors ??
+                  const [AppTheme.primaryBlueDark, AppTheme.accentCyan],
             ).createShader(bounds),
             child: Text(
               title,

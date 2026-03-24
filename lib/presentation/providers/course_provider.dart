@@ -10,6 +10,8 @@ class CourseProvider with ChangeNotifier, LoadingStateProviderMixin {
   CourseLevel? _selectedLevel;
   String? _currentSearchQuery;
   CourseStatus? _currentStatus;
+  String? _sortField = 'createdAt';
+  String _sortDirection = 'desc';
 
   // Lazy initialization to avoid LateInitializationError
   PaginationHelper<CourseSummaryDto>? _paginationHelper;
@@ -22,6 +24,8 @@ class CourseProvider with ChangeNotifier, LoadingStateProviderMixin {
           size: 10,
           search: _currentSearchQuery,
           status: _currentStatus,
+          sortField: _sortField,
+          sortDirection: _sortDirection,
         );
 
         return PaginatedResponse<CourseSummaryDto>(
@@ -78,6 +82,16 @@ class CourseProvider with ChangeNotifier, LoadingStateProviderMixin {
   void setLevelFilter(CourseLevel? level) {
     _selectedLevel = level;
     notifyListeners();
+  }
+
+  /// Set sort order and reload
+  Future<void> setSortOrder(String field, String direction) async {
+    _sortField = field;
+    _sortDirection = direction;
+    // Need to recreate pagination with new sort
+    _paginationHelper?.dispose();
+    _paginationHelper = null;
+    await _pagination.loadFirstPage();
   }
 
   /// Load courses with pagination

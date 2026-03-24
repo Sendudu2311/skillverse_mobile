@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
@@ -89,7 +90,19 @@ class _ProfilePageState extends State<ProfilePage> {
     final authProvider = context.watch<AuthProvider>();
 
     if (userProvider.isLoading || subscriptionProvider.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: SingleChildScrollView(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            children: [
+              SizedBox(height: 40),
+              ProfileHeaderSkeleton(),
+              SizedBox(height: 24),
+              TextSkeleton(lines: 4),
+            ],
+          ),
+        ),
+      );
     }
 
     final user = authProvider.user;
@@ -806,6 +819,13 @@ class _ProfilePageState extends State<ProfilePage> {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
+          _buildMenuItem(
+            context,
+            'Khóa học của tôi',
+            Icons.school_outlined,
+            () => context.push('/my-courses'),
+            isDark,
+          ),
           _buildMenuItem(
             context,
             'Cài đặt tài khoản',

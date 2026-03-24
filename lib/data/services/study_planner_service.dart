@@ -104,4 +104,89 @@ class StudyPlannerService {
       rethrow;
     }
   }
+
+  /// Get sessions in a date range
+  /// GET /study-planner/sessions/range?start=...&end=...
+  Future<List<StudySessionResponse>> getSessionsInRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/study-planner/sessions/range',
+        queryParameters: {
+          'start': start.toIso8601String(),
+          'end': end.toIso8601String(),
+        },
+      );
+      final List<dynamic> data = response.data;
+      return data.map((json) => StudySessionResponse.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('❌ Error getting sessions in range: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete a study session
+  /// DELETE /study-planner/sessions/{sessionId}
+  Future<void> deleteSession(String sessionId) async {
+    try {
+      await _apiClient.dio.delete('/study-planner/sessions/$sessionId');
+    } catch (e) {
+      debugPrint('❌ Error deleting session: $e');
+      rethrow;
+    }
+  }
+
+  /// Refine schedule with AI based on user feedback
+  /// POST /study-planner/refine-schedule
+  Future<List<StudySessionResponse>> refineSchedule(
+    RefineScheduleRequest request,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/study-planner/refine-schedule',
+        data: request.toJson(),
+      );
+      final List<dynamic> data = response.data;
+      return data.map((json) => StudySessionResponse.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('❌ Error refining schedule: $e');
+      rethrow;
+    }
+  }
+
+  /// Check schedule health
+  /// POST /study-planner/schedule-health
+  Future<ScheduleHealthReport> checkScheduleHealth(
+    CheckScheduleHealthRequest request,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/study-planner/schedule-health',
+        data: request.toJson(),
+      );
+      return ScheduleHealthReport.fromJson(response.data);
+    } catch (e) {
+      debugPrint('❌ Error checking schedule health: $e');
+      rethrow;
+    }
+  }
+
+  /// Suggest healthy adjustments for schedule
+  /// POST /study-planner/schedule-suggest-fix
+  Future<ScheduleHealthReport> suggestFix(
+    CheckScheduleHealthRequest request,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/study-planner/schedule-suggest-fix',
+        data: request.toJson(),
+      );
+      return ScheduleHealthReport.fromJson(response.data);
+    } catch (e) {
+      debugPrint('❌ Error suggesting schedule fix: $e');
+      rethrow;
+    }
+  }
 }

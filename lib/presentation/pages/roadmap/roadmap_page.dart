@@ -4,6 +4,8 @@ import '../../providers/roadmap_provider.dart';
 import '../../widgets/ai_roadmap_card.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_state_widget.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import 'package:go_router/go_router.dart';
 
 class RoadmapPage extends StatefulWidget {
@@ -38,38 +40,11 @@ class _RoadmapPageState extends State<RoadmapPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/dashboard'),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.satellite_alt,
-              color: AppTheme.primaryBlueDark,
-              size: 28,
-            ),
-            const SizedBox(width: 8),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
-              ).createShader(bounds),
-              child: const Text(
-                'NAVIGATION CONTROL',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: Colors.white,
-                  letterSpacing: 2,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+      appBar: SkillVerseAppBar(
+        title: 'NAVIGATION CONTROL',
+        icon: Icons.satellite_alt,
+        useGradientTitle: true,
+        onBack: () => context.go('/dashboard'),
       ),
       body: Column(
         children: [
@@ -123,7 +98,10 @@ class _RoadmapPageState extends State<RoadmapPage> {
                 }
 
                 if (provider.errorMessage != null) {
-                  return _buildErrorState(context, provider.errorMessage!);
+                  return ErrorStateWidget(
+                    message: provider.errorMessage!,
+                    onRetry: () => provider.loadUserRoadmaps(),
+                  );
                 }
 
                 final roadmaps = provider.filteredRoadmaps;
@@ -382,44 +360,6 @@ class _RoadmapPageState extends State<RoadmapPage> {
       padding: const EdgeInsets.all(20),
       itemCount: 5,
       itemBuilder: (context, index) => const AiRoadmapCardSkeleton(),
-    );
-  }
-
-  Widget _buildErrorState(BuildContext context, String error) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: AppTheme.errorColor.withValues(alpha: 0.6),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Đã xảy ra lỗi',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).textTheme.bodySmall?.color,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () =>
-                  context.read<RoadmapProvider>().loadUserRoadmaps(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Thử lại'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

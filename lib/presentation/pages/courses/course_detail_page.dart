@@ -8,6 +8,8 @@ import '../../providers/enrollment_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../../data/services/module_service.dart';
+import '../../../data/services/wallet_service.dart';
+import '../../../data/services/course_service.dart';
 import '../payment/payment_webview_page.dart';
 import 'course_learning_page.dart';
 import '../../widgets/glass_card.dart';
@@ -164,63 +166,84 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     if (_course == null) return;
 
     final price = _course!.price!;
-    final currency = _course!.currency ?? 'VND';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
+    // Show purchase bottom sheet
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _PurchaseBottomSheet(
+        course: _course!,
+        courseId: widget.courseId,
+        price: price,
+        isDark: isDark,
+        onWalletSuccess: () => _onPurchaseSuccess(),
+        onPayOSSelected: () => _handlePayOSFlow(),
+      ),
+    );
+  }
+
+  void _onPurchaseSuccess() {
+    if (!mounted) return;
+    final enrollmentProvider = context.read<EnrollmentProvider>();
+    final courseId = int.parse(widget.courseId);
+
+    // Refresh enrollment status (backend auto-enrolled)
+    final authProvider = context.read<AuthProvider>();
+    if (authProvider.user != null) {
+      enrollmentProvider.checkEnrollmentStatus(
+        courseId: courseId,
+        userId: authProvider.user!.id,
+      );
+    }
+
+    // Show success dialog
+    showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xác nhận mua khóa học'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _course!.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Giá: ${NumberFormatter.formatCurrency(price, currency: currency)}',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Bạn sẽ được:'),
-            const SizedBox(height: 8),
-            const Text('• Truy cập trọn đời vào khóa học'),
-            const Text('• Chứng chỉ hoàn thành'),
-            const Text('• Hỗ trợ từ giảng viên'),
-          ],
+        icon: const Icon(Icons.check_circle, color: Colors.green, size: 64),
+        title: const Text('Mua khóa học thành công!'),
+        content: Text(
+          'Bạn đã mua thành công khóa học "${_course!.title}".\n'
+          'Bắt đầu học ngay bây giờ!',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy'),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Để sau'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Thanh toán'),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      CourseLearningPage(courseId: widget.courseId),
+                ),
+              );
+            },
+            child: const Text('Học ngay'),
           ),
         ],
       ),
     );
+  }
 
-    if (confirmed != true || !mounted) return;
+  Future<void> _handlePayOSFlow() async {
+    if (_course == null) return;
 
-    // Show loading dialog
+    final price = _course!.price!;
+    final paymentProvider = context.read<PaymentProvider>();
+
+    // Show loading
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    final paymentProvider = context.read<PaymentProvider>();
-
-    // Create payment for course purchase
     final paymentResponse = await paymentProvider.createPayment(
       amount: price,
       type: PaymentType.coursePurchase,
@@ -231,8 +254,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       cancelUrl: 'https://skillverse.app/payment/cancel',
     );
 
-    // Close loading dialog
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.pop(context); // close loading
 
     if (paymentResponse == null) {
       if (mounted) {
@@ -244,7 +266,6 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       return;
     }
 
-    // Navigate to payment webview
     if (!mounted) return;
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
@@ -254,61 +275,12 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       ),
     );
 
-    // Handle payment result
-    final authProvider = context.read<AuthProvider>();
-    final enrollmentProvider = context.read<EnrollmentProvider>();
-    final courseId = int.parse(widget.courseId);
-
     if (result != null && result['success'] == true && mounted) {
-      ErrorHandler.showSuccessSnackBar(context, 'Thanh toán thành công!');
-
-      // Auto-enroll user after successful payment
-      final enrolled = await enrollmentProvider.enrollInCourse(
-        courseId: courseId,
-        userId: authProvider.user!.id,
-      );
-
-      if (enrolled && mounted) {
-        // Show success dialog
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            icon: const Icon(Icons.check_circle, color: Colors.green, size: 64),
-            title: const Text('Mua khóa học thành công!'),
-            content: Text(
-              'Bạn đã mua thành công khóa học "${_course!.title}".\n'
-              'Bắt đầu học ngay bây giờ!',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Để sau'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // Navigate to course learning page
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          CourseLearningPage(courseId: widget.courseId),
-                    ),
-                  );
-                },
-                child: const Text('Học ngay'),
-              ),
-            ],
-          ),
-        );
-      }
+      _onPurchaseSuccess();
     } else if (result != null && result['cancelled'] == true) {
-      // Payment cancelled by user
       if (mounted) {
         ErrorHandler.showWarningSnackBar(context, 'Thanh toán đã bị hủy');
       }
-
-      // Cancel the payment on backend
       if (paymentResponse.transactionReference.isNotEmpty) {
         await paymentProvider.cancelPayment(
           paymentResponse.transactionReference,
@@ -316,7 +288,6 @@ class _CourseDetailPageState extends State<CourseDetailPage>
         );
       }
     } else {
-      // Payment failed or unknown result
       if (mounted) {
         ErrorHandler.showErrorSnackBar(
           context,
@@ -474,8 +445,12 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               colors: [
                                 Colors.transparent,
                                 isDark
-                                    ? AppTheme.galaxyDarkest.withValues(alpha: 0.9)
-                                    : Colors.grey.shade50.withValues(alpha: 0.9),
+                                    ? AppTheme.galaxyDarkest.withValues(
+                                        alpha: 0.9,
+                                      )
+                                    : Colors.grey.shade50.withValues(
+                                        alpha: 0.9,
+                                      ),
                               ],
                             ),
                           ),
@@ -651,7 +626,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                                color: isDark
+                                    ? Colors.white
+                                    : AppTheme.lightTextPrimary,
                               ),
                         ),
                         const SizedBox(height: 8),
@@ -672,7 +649,11 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                             Text(
                               _course!.authorName ?? 'Unknown',
                               style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                                  ?.copyWith(
+                                    color: isDark
+                                        ? AppTheme.darkTextSecondary
+                                        : AppTheme.lightTextSecondary,
+                                  ),
                             ),
                           ],
                         ),
@@ -694,7 +675,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               Container(
                                 width: 1,
                                 height: 40,
-                                color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+                                color: isDark
+                                    ? AppTheme.darkBorderColor
+                                    : AppTheme.lightBorderColor,
                               ),
                               _StatItem(
                                 icon: Icons.auto_stories_outlined,
@@ -707,7 +690,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 Container(
                                   width: 1,
                                   height: 40,
-                                  color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+                                  color: isDark
+                                      ? AppTheme.darkBorderColor
+                                      : AppTheme.lightBorderColor,
                                 ),
                                 _StatItem(
                                   icon: Icons.star_outline,
@@ -740,7 +725,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                           .textTheme
                                           .bodySmall
                                           ?.copyWith(
-                                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                            color: isDark
+                                                ? AppTheme.darkTextSecondary
+                                                : AppTheme.lightTextSecondary,
                                           ),
                                     ),
                                     const SizedBox(height: 4),
@@ -787,7 +774,11 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleLarge
-                                        ?.copyWith(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
+                                        ?.copyWith(
+                                          color: isDark
+                                              ? Colors.white
+                                              : AppTheme.lightTextPrimary,
+                                        ),
                                   ),
                                 ],
                               ),
@@ -796,7 +787,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 _course!.description ?? 'Không có mô tả',
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(
-                                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                      color: isDark
+                                          ? AppTheme.darkTextSecondary
+                                          : AppTheme.lightTextSecondary,
                                       height: 1.6,
                                     ),
                               ),
@@ -824,7 +817,11 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleLarge
-                                        ?.copyWith(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
+                                        ?.copyWith(
+                                          color: isDark
+                                              ? Colors.white
+                                              : AppTheme.lightTextPrimary,
+                                        ),
                                   ),
                                 ],
                               ),
@@ -873,7 +870,11 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleLarge
-                                        ?.copyWith(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
+                                        ?.copyWith(
+                                          color: isDark
+                                              ? Colors.white
+                                              : AppTheme.lightTextPrimary,
+                                        ),
                                   ),
                                 ],
                               ),
@@ -884,7 +885,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 Text(
                                   'Chưa có nội dung khóa học',
                                   style: TextStyle(
-                                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                    color: isDark
+                                        ? AppTheme.darkTextSecondary
+                                        : AppTheme.lightTextSecondary,
                                   ),
                                 )
                               else
@@ -924,7 +927,12 @@ class _CourseDetailPageState extends State<CourseDetailPage>
         decoration: BoxDecoration(
           color: isDark ? AppTheme.darkCardBackground : Colors.white,
           border: Border(
-            top: BorderSide(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor, width: 1),
+            top: BorderSide(
+              color: isDark
+                  ? AppTheme.darkBorderColor
+                  : AppTheme.lightBorderColor,
+              width: 1,
+            ),
           ),
         ),
         child: SafeArea(
@@ -1071,7 +1079,9 @@ class _StatItem extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+            color: isDark
+                ? AppTheme.darkTextSecondary
+                : AppTheme.lightTextSecondary,
             fontSize: 12,
           ),
         ),
@@ -1110,7 +1120,9 @@ class _BenefitItem extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              color: isDark
+                  ? AppTheme.darkTextPrimary
+                  : AppTheme.lightTextPrimary,
               fontSize: 14,
             ),
           ),
@@ -1187,7 +1199,9 @@ class _ModuleItem extends StatelessWidget {
                         Text(
                           module.title,
                           style: TextStyle(
-                            color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                            color: isDark
+                                ? Colors.white
+                                : AppTheme.lightTextPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 15,
                           ),
@@ -1209,19 +1223,535 @@ class _ModuleItem extends StatelessWidget {
             margin: const EdgeInsets.only(left: 56, top: 8, bottom: 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isDark ? AppTheme.darkBackgroundSecondary : Colors.grey.shade100,
+              color: isDark
+                  ? AppTheme.darkBackgroundSecondary
+                  : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               module.description!,
               style: TextStyle(
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
                 fontSize: 13,
                 height: 1.5,
               ),
             ),
           ),
         const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+// =============================================================================
+// PURCHASE BOTTOM SHEET
+// =============================================================================
+
+class _PurchaseBottomSheet extends StatefulWidget {
+  final CourseSummaryDto course;
+  final String courseId;
+  final double price;
+  final bool isDark;
+  final VoidCallback onWalletSuccess;
+  final VoidCallback onPayOSSelected;
+
+  const _PurchaseBottomSheet({
+    required this.course,
+    required this.courseId,
+    required this.price,
+    required this.isDark,
+    required this.onWalletSuccess,
+    required this.onPayOSSelected,
+  });
+
+  @override
+  State<_PurchaseBottomSheet> createState() => _PurchaseBottomSheetState();
+}
+
+class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
+  final WalletService _walletService = WalletService();
+  final CourseService _courseService = CourseService();
+
+  bool _isLoadingWallet = true;
+  bool _isPurchasing = false;
+  int _walletBalance = 0;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWallet();
+  }
+
+  Future<void> _loadWallet() async {
+    try {
+      final wallet = await _walletService.getMyWallet();
+      if (mounted) {
+        setState(() {
+          _walletBalance = wallet.cashBalance;
+          _isLoadingWallet = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingWallet = false;
+          _error = 'Không thể tải số dư ví';
+        });
+      }
+    }
+  }
+
+  Future<void> _handleWalletPurchase() async {
+    setState(() {
+      _isPurchasing = true;
+      _error = null;
+    });
+
+    try {
+      await _courseService.purchaseCourseWithWallet(
+        courseId: int.parse(widget.courseId),
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // close bottom sheet
+        widget.onWalletSuccess();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isPurchasing = false;
+          _error = e.toString().replaceAll('Exception: ', '');
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canAfford = _walletBalance >= widget.price.toInt();
+    final remaining = _walletBalance - widget.price.toInt();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: widget.isDark ? AppTheme.darkCardBackground : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Title
+              Row(
+                children: [
+                  Icon(
+                    Icons.lock_outline,
+                    color: widget.isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Mua khóa học',
+                    style: TextStyle(
+                      color: widget.isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Course info
+              _buildCourseInfo(),
+              const SizedBox(height: 16),
+
+              // Wallet section
+              _buildWalletSection(canAfford, remaining),
+              const SizedBox(height: 12),
+
+              // Error
+              if (_error != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.errorColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppTheme.errorColor,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(
+                            color: AppTheme.errorColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Wallet payment button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _isLoadingWallet || _isPurchasing || !canAfford
+                      ? null
+                      : _handleWalletPurchase,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: canAfford
+                        ? AppTheme.successColor
+                        : Colors.grey,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: canAfford ? 4 : 0,
+                  ),
+                  child: _isPurchasing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              canAfford
+                                  ? Icons.account_balance_wallet
+                                  : Icons.warning_amber_rounded,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              canAfford
+                                  ? 'Thanh toán bằng Ví'
+                                  : 'Số dư không đủ',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // PayOS button
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton(
+                  onPressed: _isPurchasing
+                      ? null
+                      : () {
+                          Navigator.pop(context); // close bottom sheet
+                          widget.onPayOSSelected();
+                        },
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                      color: AppTheme.primaryBlueDark.withValues(alpha: 0.5),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.credit_card,
+                        size: 18,
+                        color: AppTheme.primaryBlueDark,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Thanh toán qua PayOS',
+                        style: TextStyle(
+                          color: AppTheme.primaryBlueDark,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Hint when insufficient
+              if (!_isLoadingWallet && !canAfford) ...[
+                const SizedBox(height: 10),
+                Text(
+                  'Vui lòng nạp thêm tiền vào ví hoặc dùng PayOS.',
+                  style: TextStyle(
+                    color: widget.isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCourseInfo() {
+    final imageUrl = widget.course.thumbnailUrl ?? widget.course.thumbnail?.url;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: widget.isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: imageUrl != null
+                ? Image.network(
+                    imageUrl,
+                    width: 60,
+                    height: 45,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 60,
+                      height: 45,
+                      color: AppTheme.primaryBlueDark.withValues(alpha: 0.2),
+                      child: const Icon(
+                        Icons.school,
+                        color: Colors.white54,
+                        size: 20,
+                      ),
+                    ),
+                  )
+                : Container(
+                    width: 60,
+                    height: 45,
+                    color: AppTheme.primaryBlueDark.withValues(alpha: 0.2),
+                    child: const Icon(
+                      Icons.school,
+                      color: Colors.white54,
+                      size: 20,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.course.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: widget.isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  NumberFormatter.formatCurrency(widget.price, currency: 'đ'),
+                  style: TextStyle(
+                    color: AppTheme.primaryBlueDark,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWalletSection(bool canAfford, int remaining) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: widget.isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: canAfford
+              ? AppTheme.successColor.withValues(alpha: 0.3)
+              : AppTheme.errorColor.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Wallet header
+          Row(
+            children: [
+              Text(
+                'Số dư ví',
+                style: TextStyle(
+                  color: widget.isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                  fontSize: 13,
+                ),
+              ),
+              const Spacer(),
+              Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 18,
+                color: widget.isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          // Balance
+          if (_isLoadingWallet)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                NumberFormatter.formatCurrency(
+                  _walletBalance.toDouble(),
+                  currency: 'đ',
+                ),
+                style: TextStyle(
+                  color: canAfford
+                      ? (widget.isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary)
+                      : AppTheme.errorColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Summary
+            _summaryRow(
+              'Giá khóa học',
+              NumberFormatter.formatCurrency(widget.price, currency: 'đ'),
+            ),
+            const SizedBox(height: 4),
+            Divider(
+              color: widget.isDark
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : Colors.grey.withValues(alpha: 0.2),
+            ),
+            const SizedBox(height: 4),
+            _summaryRow(
+              'Số dư còn lại',
+              NumberFormatter.formatCurrency(
+                remaining.toDouble(),
+                currency: 'đ',
+              ),
+              isBold: true,
+              valueColor: remaining >= 0
+                  ? AppTheme.successColor
+                  : AppTheme.errorColor,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    Color? valueColor,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: widget.isDark
+                ? AppTheme.darkTextSecondary
+                : AppTheme.lightTextSecondary,
+            fontSize: 13,
+            fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color:
+                valueColor ??
+                (widget.isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary),
+            fontSize: 13,
+            fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
       ],
     );
   }

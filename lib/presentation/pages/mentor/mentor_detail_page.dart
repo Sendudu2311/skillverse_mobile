@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skeleton_loaders.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/mentor_models.dart';
@@ -36,7 +37,18 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       body: Consumer<MentorProvider>(
         builder: (context, provider, _) {
           if (provider.isLoadingDetail) {
-            return const Center(child: CircularProgressIndicator());
+            return const SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  ProfileHeaderSkeleton(),
+                  SizedBox(height: 16),
+                  TextSkeleton(lines: 4),
+                  SizedBox(height: 16),
+                  TextSkeleton(lines: 3),
+                ],
+              ),
+            );
           }
 
           final mentor = provider.selectedMentor;

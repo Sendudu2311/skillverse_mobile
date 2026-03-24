@@ -11,6 +11,7 @@ import '../../../core/utils/date_time_helper.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/html_helper.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class PostDetailPage extends StatefulWidget {
   final int postId;
@@ -84,8 +85,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chi tiết bài viết'),
+      appBar: SkillVerseAppBar(
+        title: 'Chi tiết bài viết',
         actions: [
           if (_post != null)
             PopupMenuButton<String>(

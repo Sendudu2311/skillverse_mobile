@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/payment_models.dart';
 import '../../providers/payment_provider.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class PaymentHistoryPage extends StatefulWidget {
   const PaymentHistoryPage({super.key});
@@ -25,14 +27,16 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Lịch sử thanh toán'),
-        elevation: 0,
-      ),
+      appBar: const SkillVerseAppBar(title: 'Lịch sử thanh toán'),
       body: Consumer<PaymentProvider>(
         builder: (context, paymentProvider, child) {
-          if (paymentProvider.isLoading && paymentProvider.paymentHistory.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+          if (paymentProvider.isLoading &&
+              paymentProvider.paymentHistory.isEmpty) {
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: 5,
+              itemBuilder: (_, __) => const ListItemSkeleton(hasTrailing: true),
+            );
           }
 
           if (paymentProvider.errorMessage != null) {
@@ -65,26 +69,16 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.receipt_long,
-                    size: 80,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.receipt_long, size: 80, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
                     'Chưa có giao dịch nào',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Các giao dịch thanh toán sẽ hiển thị ở đây',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -184,19 +178,13 @@ class _PaymentHistoryCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         _getPaymentMethodName(),
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                     ],
                   ),
                   Text(
                     _formatDate(transaction.createdAt),
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
                   ),
                 ],
               ),
@@ -390,14 +378,36 @@ class _PaymentHistoryCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Center(child: _buildStatusChip()),
                 const SizedBox(height: 24),
-                _DetailRow(label: 'Số tiền', value: '${transaction.amount.toStringAsFixed(0)} ${transaction.currency}'),
-                _DetailRow(label: 'Mã giao dịch', value: transaction.internalReference ?? 'N/A'),
-                _DetailRow(label: 'Phương thức', value: _getPaymentMethodName()),
-                _DetailRow(label: 'Mô tả', value: transaction.description ?? 'Không có mô tả'),
-                _DetailRow(label: 'Ngày tạo', value: _formatDate(transaction.createdAt)),
-                _DetailRow(label: 'Cập nhật', value: _formatDate(transaction.updatedAt)),
+                _DetailRow(
+                  label: 'Số tiền',
+                  value:
+                      '${transaction.amount.toStringAsFixed(0)} ${transaction.currency}',
+                ),
+                _DetailRow(
+                  label: 'Mã giao dịch',
+                  value: transaction.internalReference ?? 'N/A',
+                ),
+                _DetailRow(
+                  label: 'Phương thức',
+                  value: _getPaymentMethodName(),
+                ),
+                _DetailRow(
+                  label: 'Mô tả',
+                  value: transaction.description ?? 'Không có mô tả',
+                ),
+                _DetailRow(
+                  label: 'Ngày tạo',
+                  value: _formatDate(transaction.createdAt),
+                ),
+                _DetailRow(
+                  label: 'Cập nhật',
+                  value: _formatDate(transaction.updatedAt),
+                ),
                 if (transaction.failureReason != null)
-                  _DetailRow(label: 'Lý do thất bại', value: transaction.failureReason!),
+                  _DetailRow(
+                    label: 'Lý do thất bại',
+                    value: transaction.failureReason!,
+                  ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -432,19 +442,13 @@ class _DetailRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
             ),
           ),
         ],

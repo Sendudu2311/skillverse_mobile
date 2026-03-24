@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/task_board_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import 'widgets/ai_study_planner_dialog.dart';
 import 'widgets/timeline_view.dart';
 import 'widgets/kanban_view.dart';
@@ -31,38 +32,11 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/dashboard'),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.satellite_alt,
-              color: AppTheme.primaryBlueDark,
-              size: 28,
-            ),
-            const SizedBox(width: 8),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
-              ).createShader(bounds),
-              child: const Text(
-                'MISSION CONTROL',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: Colors.white,
-                  letterSpacing: 2,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+      appBar: SkillVerseAppBar(
+        title: 'MISSION CONTROL',
+        icon: Icons.satellite_alt,
+        useGradientTitle: true,
+        onBack: () => context.go('/dashboard'),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

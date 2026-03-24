@@ -235,6 +235,8 @@ class CourseDetailDto {
   final String? rejectedAt;
   final String? suspensionReason;
   final String? suspendedAt;
+  final String? upgradePolicy;
+  final String? upgradePolicyStatusMessage;
 
   CourseDetailDto({
     required this.id,
@@ -267,6 +269,8 @@ class CourseDetailDto {
     this.rejectedAt,
     this.suspensionReason,
     this.suspendedAt,
+    this.upgradePolicy,
+    this.upgradePolicyStatusMessage,
   });
 
   factory CourseDetailDto.fromJson(Map<String, dynamic> json) =>

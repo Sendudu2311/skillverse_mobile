@@ -5,6 +5,7 @@ import '../../providers/wallet_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import '../../../core/utils/number_formatter.dart';
 import 'deposit_sheet.dart';
 import 'buy_coin_sheet.dart';
@@ -31,38 +32,11 @@ class _WalletPageState extends State<WalletPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/dashboard'),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.account_balance_wallet,
-              color: AppTheme.primaryBlueDark,
-              size: 28,
-            ),
-            const SizedBox(width: 8),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
-              ).createShader(bounds),
-              child: const Text(
-                'VÍ VŨ TRỤ',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: Colors.white,
-                  letterSpacing: 2,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+      appBar: SkillVerseAppBar(
+        title: 'VÍ VŨ TRỤ',
+        icon: Icons.account_balance_wallet,
+        useGradientTitle: true,
+        onBack: () => context.go('/dashboard'),
       ),
       body: Consumer<WalletProvider>(
         builder: (context, provider, child) {
@@ -117,11 +91,29 @@ class _WalletPageState extends State<WalletPage> {
           const SizedBox(height: 20),
           Row(
             children: [
-              const Expanded(child: CardSkeleton(imageHeight: 60, hasSubtitle: false, hasFooter: false)),
+              const Expanded(
+                child: CardSkeleton(
+                  imageHeight: 60,
+                  hasSubtitle: false,
+                  hasFooter: false,
+                ),
+              ),
               const SizedBox(width: 12),
-              const Expanded(child: CardSkeleton(imageHeight: 60, hasSubtitle: false, hasFooter: false)),
+              const Expanded(
+                child: CardSkeleton(
+                  imageHeight: 60,
+                  hasSubtitle: false,
+                  hasFooter: false,
+                ),
+              ),
               const SizedBox(width: 12),
-              const Expanded(child: CardSkeleton(imageHeight: 60, hasSubtitle: false, hasFooter: false)),
+              const Expanded(
+                child: CardSkeleton(
+                  imageHeight: 60,
+                  hasSubtitle: false,
+                  hasFooter: false,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 28),
@@ -507,9 +499,7 @@ class _WalletPageState extends State<WalletPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DepositSheet(
-        onSuccess: () => provider.refresh(),
-      ),
+      builder: (context) => DepositSheet(onSuccess: () => provider.refresh()),
     );
   }
 
@@ -591,7 +581,8 @@ class _WalletPageState extends State<WalletPage> {
             _buildStatCard(
               icon: Icons.monetization_on,
               label: 'XU KIẾM ĐƯỢC',
-              value: '${NumberFormatter.formatNumber(provider.statsTotalCoinsEarned)} xu',
+              value:
+                  '${NumberFormatter.formatNumber(provider.statsTotalCoinsEarned)} xu',
               color: AppTheme.accentGold,
               isDark: isDark,
             ),
@@ -679,9 +670,7 @@ class _WalletPageState extends State<WalletPage> {
           ],
         ),
         const SizedBox(height: 14),
-        ...provider.transactions.map(
-          (tx) => _buildTransactionItem(tx, isDark),
-        ),
+        ...provider.transactions.map((tx) => _buildTransactionItem(tx, isDark)),
       ],
     );
   }

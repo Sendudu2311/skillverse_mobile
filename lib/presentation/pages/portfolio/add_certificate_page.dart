@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/section_header.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/portfolio_models.dart';
 import '../../../core/utils/validation_helper.dart';
@@ -114,7 +115,9 @@ class _AddCertificatePageState extends State<AddCertificatePage>
         title: _titleController.text.trim(),
         issuer: _issuerController.text.trim(),
         issueDate: _issueDate != null ? _dateFormat.format(_issueDate!) : null,
-        expiryDate: _expiryDate != null ? _dateFormat.format(_expiryDate!) : null,
+        expiryDate: _expiryDate != null
+            ? _dateFormat.format(_expiryDate!)
+            : null,
         credentialId: _credentialIdController.text.trim().isEmpty
             ? null
             : _credentialIdController.text.trim(),
@@ -195,12 +198,12 @@ class _AddCertificatePageState extends State<AddCertificatePage>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Header
-                            _buildSectionHeader(
-                              icon: Icons.card_membership,
-                              title: 'Thêm chứng chỉ mới',
+                            SectionHeader.gradient(
+                              icon: Icons.workspace_premium,
+                              title: 'Thêm chứng chỉ',
                               gradientColors: const [
                                 AppTheme.themeOrangeStart,
-                                AppTheme.themeOrangeEnd
+                                AppTheme.themeOrangeEnd,
                               ],
                             ),
                             const SizedBox(height: 24),
@@ -237,9 +240,7 @@ class _AddCertificatePageState extends State<AddCertificatePage>
             if (_isLoading)
               Container(
                 color: Colors.black54,
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: const Center(child: CircularProgressIndicator()),
               ),
           ],
         ),
@@ -254,7 +255,10 @@ class _AddCertificatePageState extends State<AddCertificatePage>
       child: Row(
         children: [
           IconButton(
-            icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : AppTheme.lightTextPrimary),
+            icon: Icon(
+              Icons.arrow_back,
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
           Text(
@@ -267,48 +271,6 @@ class _AddCertificatePageState extends State<AddCertificatePage>
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSectionHeader({
-    required IconData icon,
-    required String title,
-    required List<Color> gradientColors,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: gradientColors),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: gradientColors[0].withValues(alpha: 0.4),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: Colors.white, size: 24),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              colors: gradientColors,
-            ).createShader(bounds),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -333,7 +295,8 @@ class _AddCertificatePageState extends State<AddCertificatePage>
             label: 'Tên chứng chỉ *',
             hint: 'vd: AWS Certified Solutions Architect',
             prefixIcon: Icons.workspace_premium,
-            validator: (value) => ValidationHelper.required(value, fieldName: 'Tên chứng chỉ'),
+            validator: (value) =>
+                ValidationHelper.required(value, fieldName: 'Tên chứng chỉ'),
           ),
           const SizedBox(height: 16),
 
@@ -343,7 +306,8 @@ class _AddCertificatePageState extends State<AddCertificatePage>
             label: 'Tổ chức cấp *',
             hint: 'vd: Amazon Web Services',
             prefixIcon: Icons.business,
-            validator: (value) => ValidationHelper.required(value, fieldName: 'Tổ chức cấp'),
+            validator: (value) =>
+                ValidationHelper.required(value, fieldName: 'Tổ chức cấp'),
           ),
         ],
       ),
@@ -357,8 +321,11 @@ class _AddCertificatePageState extends State<AddCertificatePage>
         children: [
           Row(
             children: [
-              const Icon(Icons.verified,
-                  color: AppTheme.themeOrangeStart, size: 20),
+              const Icon(
+                Icons.verified,
+                color: AppTheme.themeOrangeStart,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Thông tin xác thực',
@@ -388,7 +355,8 @@ class _AddCertificatePageState extends State<AddCertificatePage>
             hint: 'https://verify.certificate.com/...',
             prefixIcon: Icons.link,
             keyboardType: TextInputType.url,
-            validator: (value) => ValidationHelper.url(value, isRequired: false),
+            validator: (value) =>
+                ValidationHelper.url(value, isRequired: false),
           ),
         ],
       ),
@@ -402,8 +370,11 @@ class _AddCertificatePageState extends State<AddCertificatePage>
         children: [
           Row(
             children: [
-              const Icon(Icons.calendar_today,
-                  color: AppTheme.themeGreenStart, size: 20),
+              const Icon(
+                Icons.calendar_today,
+                color: AppTheme.themeGreenStart,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Thời gian',
@@ -458,7 +429,8 @@ class _AddCertificatePageState extends State<AddCertificatePage>
             hint: 'https://example.com/certificate.jpg',
             prefixIcon: Icons.image,
             keyboardType: TextInputType.url,
-            validator: (value) => ValidationHelper.url(value, isRequired: false),
+            validator: (value) =>
+                ValidationHelper.url(value, isRequired: false),
           ),
           const SizedBox(height: 16),
 
@@ -486,13 +458,24 @@ class _AddCertificatePageState extends State<AddCertificatePage>
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+          border: Border.all(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
+          ),
         ),
         child: Row(
           children: [
-            Icon(Icons.event, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+            Icon(
+              Icons.event,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -501,7 +484,9 @@ class _AddCertificatePageState extends State<AddCertificatePage>
                   Text(
                     label,
                     style: TextStyle(
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -516,8 +501,12 @@ class _AddCertificatePageState extends State<AddCertificatePage>
                 ],
               ),
             ),
-            Icon(Icons.arrow_drop_down,
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+            Icon(
+              Icons.arrow_drop_down,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
           ],
         ),
       ),
@@ -539,12 +528,27 @@ class _AddCertificatePageState extends State<AddCertificatePage>
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(prefixIcon, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+        prefixIcon: Icon(
+          prefixIcon,
+          color: isDark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
+        ),
         counterText: maxLength != null ? null : '',
-        labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-        hintStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+        labelStyle: TextStyle(
+          color: isDark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
+        ),
+        hintStyle: TextStyle(
+          color: isDark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
+        ),
       ),
-      style: TextStyle(color: isDark ? Colors.white : AppTheme.lightTextPrimary),
+      style: TextStyle(
+        color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+      ),
       maxLines: maxLines,
       maxLength: maxLength,
       keyboardType: keyboardType,

@@ -13,7 +13,9 @@ class QuizService {
   /// Uses /attempt-view endpoint (GET /quizzes/{id} now requires MENTOR/ADMIN)
   Future<QuizDetailDto> getQuiz(int quizId) async {
     try {
-      final response = await _apiClient.dio.get('/quizzes/$quizId/attempt-view');
+      final response = await _apiClient.dio.get(
+        '/quizzes/$quizId/attempt-view',
+      );
       return QuizDetailDto.fromJson(response.data);
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -69,13 +71,9 @@ class QuizService {
   }
 
   /// Get user attempts for a quiz (userId extracted from JWT by backend)
-  Future<List<QuizAttemptDto>> getUserAttempts({
-    required int quizId,
-  }) async {
+  Future<List<QuizAttemptDto>> getUserAttempts({required int quizId}) async {
     try {
-      final response = await _apiClient.dio.get(
-        '/quizzes/$quizId/attempts',
-      );
+      final response = await _apiClient.dio.get('/quizzes/$quizId/attempts');
 
       return (response.data as List)
           .map((json) => QuizAttemptDto.fromJson(json as Map<String, dynamic>))
@@ -99,6 +97,42 @@ class QuizService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Lấy trạng thái quiz thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Start (or resume) quiz attempt session for in-progress guard
+  /// POST /quizzes/{quizId}/attempt-session/start
+  Future<QuizAttemptSessionDto> startAttemptSession({
+    required int quizId,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/quizzes/$quizId/attempt-session/start',
+      );
+
+      return QuizAttemptSessionDto.fromJson(response.data);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Bắt đầu quiz session thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Refresh active quiz attempt session (heartbeat)
+  /// POST /quizzes/{quizId}/attempt-session/heartbeat
+  Future<QuizAttemptSessionDto> heartbeatAttemptSession({
+    required int quizId,
+    required String sessionToken,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/quizzes/$quizId/attempt-session/heartbeat',
+        data: {'sessionToken': sessionToken},
+      );
+
+      return QuizAttemptSessionDto.fromJson(response.data);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Heartbeat quiz session thất bại: ${e.toString()}');
     }
   }
 }

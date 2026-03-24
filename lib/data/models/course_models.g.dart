@@ -199,6 +199,8 @@ CourseDetailDto _$CourseDetailDtoFromJson(Map<String, dynamic> json) =>
       rejectedAt: json['rejectedAt'] as String?,
       suspensionReason: json['suspensionReason'] as String?,
       suspendedAt: json['suspendedAt'] as String?,
+      upgradePolicy: json['upgradePolicy'] as String?,
+      upgradePolicyStatusMessage: json['upgradePolicyStatusMessage'] as String?,
     );
 
 Map<String, dynamic> _$CourseDetailDtoToJson(CourseDetailDto instance) =>
@@ -233,4 +235,6 @@ Map<String, dynamic> _$CourseDetailDtoToJson(CourseDetailDto instance) =>
       'rejectedAt': instance.rejectedAt,
       'suspensionReason': instance.suspensionReason,
       'suspendedAt': instance.suspendedAt,
+      'upgradePolicy': instance.upgradePolicy,
+      'upgradePolicyStatusMessage': instance.upgradePolicyStatusMessage,
     };

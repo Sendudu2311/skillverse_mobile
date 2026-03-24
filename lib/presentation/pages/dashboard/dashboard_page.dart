@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
@@ -57,7 +58,18 @@ class _DashboardPageState extends State<DashboardPage> {
         final user = authProvider.user;
 
         if (dashboardProvider.isLoading && !dashboardProvider.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const SingleChildScrollView(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                CardSkeleton(imageHeight: 120),
+                SizedBox(height: 16),
+                ListItemSkeleton(),
+                ListItemSkeleton(),
+                ListItemSkeleton(),
+              ],
+            ),
+          );
         }
 
         if (dashboardProvider.errorMessage != null &&

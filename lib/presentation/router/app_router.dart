@@ -183,10 +183,7 @@ class AppRouter {
         GoRoute(
           path: '/my-courses',
           name: 'my-courses',
-          builder: (context, state) => MainLayout(
-            currentPath: state.matchedLocation,
-            child: const MyCoursesPage(),
-          ),
+          builder: (context, state) => const MyCoursesPage(),
         ),
 
         // Chat Route
@@ -322,10 +319,7 @@ class AppRouter {
         GoRoute(
           path: '/skins',
           name: 'skins',
-          builder: (context, state) => MainLayout(
-            currentPath: state.matchedLocation,
-            child: const SkinShopPage(),
-          ),
+          builder: (context, state) => const SkinShopPage(),
         ),
 
         // Wallet Route

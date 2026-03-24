@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/skin_models.dart';
 import '../../providers/skin_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import 'widgets/skin_card_widget.dart';
 import 'widgets/purchase_dialog.dart';
 
@@ -47,45 +49,59 @@ class _SkinShopPageState extends State<SkinShopPage> {
       backgroundColor: isDark
           ? AppTheme.darkBackgroundPrimary
           : AppTheme.lightBackgroundPrimary,
-      body: SafeArea(
-        child: Consumer<SkinProvider>(
-          builder: (context, provider, _) {
-            if (provider.isLoading && provider.allSkins.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            return RefreshIndicator(
-              onRefresh: () => provider.refreshAll(),
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Hall of Fame
-                    if (provider.hallOfFame.isNotEmpty) ...[
-                      _buildHallOfFame(provider.hallOfFame, isDark),
-                      const SizedBox(height: 24),
-                    ],
-
-                    // Rising Stars
-                    if (provider.risingStars.isNotEmpty) ...[
-                      _buildRisingStars(provider.risingStars, isDark),
-                      const SizedBox(height: 24),
-                    ],
-
-                    // Filter chips
-                    _buildFilterChips(isDark),
-                    const SizedBox(height: 16),
-
-                    // Skin grid
-                    _buildSkinGrid(provider, isDark),
-                  ],
-                ),
+      appBar: SkillVerseAppBar(
+        title: 'SKIN SHOP',
+        icon: Icons.auto_awesome,
+        useGradientTitle: true,
+        gradientColors: const [AppTheme.themePurpleStart, AppTheme.accentCyan],
+      ),
+      body: Consumer<SkinProvider>(
+        builder: (context, provider, _) {
+          if (provider.isLoading && provider.allSkins.isEmpty) {
+            return GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.75,
               ),
+              itemCount: 6,
+              itemBuilder: (_, __) => const GridItemSkeleton(),
             );
-          },
-        ),
+          }
+
+          return RefreshIndicator(
+            onRefresh: () => provider.refreshAll(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Hall of Fame
+                  if (provider.hallOfFame.isNotEmpty) ...[
+                    _buildHallOfFame(provider.hallOfFame, isDark),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Rising Stars
+                  if (provider.risingStars.isNotEmpty) ...[
+                    _buildRisingStars(provider.risingStars, isDark),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Filter chips
+                  _buildFilterChips(isDark),
+                  const SizedBox(height: 16),
+
+                  // Skin grid
+                  _buildSkinGrid(provider, isDark),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

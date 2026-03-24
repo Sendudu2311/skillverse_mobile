@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/course_provider.dart';
-import '../../widgets/course_card_v2.dart';
-import '../../widgets/glass_card.dart';
-import '../../widgets/shimmer_loading.dart';
+import '../../widgets/course_card_v3.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_state_widget.dart';
+import '../../widgets/shimmer_loading.dart';
+import '../../widgets/glass_card.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/course_models.dart';
 import '../../../core/utils/pagination_helper.dart';
@@ -23,7 +24,15 @@ class _CoursesPageState extends State<CoursesPage> {
   final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
   CourseLevel? _selectedLevel;
-  bool _showFilters = false;
+  String _sortBy = 'newest';
+
+  final _sortOptions = const [
+    {'value': 'newest', 'label': 'Mới nhất'},
+    {'value': 'oldest', 'label': 'Cũ nhất'},
+    {'value': 'price-low', 'label': 'Giá thấp → cao'},
+    {'value': 'price-high', 'label': 'Giá cao → thấp'},
+    {'value': 'popular', 'label': 'Phổ biến nhất'},
+  ];
 
   @override
   void initState() {
@@ -70,69 +79,21 @@ class _CoursesPageState extends State<CoursesPage> {
             controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              // Sci-Fi Header
-              SliverToBoxAdapter(child: _buildHeader(isDark, totalCourses)),
-
               // Search Bar
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                   child: _buildSearchBar(isDark, courseProvider),
                 ),
               ),
 
-              // Level Filters
+              // Level Filters (always visible, horizontal scroll)
               SliverToBoxAdapter(child: _buildLevelFilters(isDark)),
 
-              // Results count
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: Row(
-                    children: [
-                      Text(
-                        'KẾT QUẢ: ',
-                        style: TextStyle(
-                          color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary,
-                          fontSize: 12,
-                          fontFamily: 'monospace',
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlueDark.withValues(
-                            alpha: 0.2,
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: AppTheme.primaryBlueDark.withValues(
-                              alpha: 0.3,
-                            ),
-                          ),
-                        ),
-                        child: Text(
-                          '$totalCourses KHÓA HỌC',
-                          style: const TextStyle(
-                            color: AppTheme.primaryBlueDark,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // Results count + Sort
+              SliverToBoxAdapter(child: _buildResultsBar(isDark, totalCourses)),
 
-              // Course Grid/List
+              // Course List / Loading / Error / Empty
               ..._buildCourseContent(courseProvider, isDark),
 
               // Bottom spacing
@@ -144,97 +105,257 @@ class _CoursesPageState extends State<CoursesPage> {
     );
   }
 
-  Widget _buildHeader(bool isDark, int totalCourses) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  // ─── Search Bar ────────────────────────────────────────────────
+  Widget _buildSearchBar(bool isDark, CourseProvider courseProvider) {
+    return TextField(
+      controller: _searchController,
+      decoration: InputDecoration(
+        hintText: 'Tìm khóa học...',
+        hintStyle: TextStyle(
+          color: isDark
+              ? AppTheme.darkTextSecondary.withValues(alpha: 0.6)
+              : AppTheme.lightTextSecondary.withValues(alpha: 0.6),
+          fontSize: 14,
+        ),
+        filled: true,
+        fillColor: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white,
+        prefixIcon: Icon(
+          Icons.search,
+          color: isDark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
+          size: 20,
+        ),
+        suffixIcon: _searchQuery.isNotEmpty
+            ? IconButton(
+                icon: Icon(
+                  Icons.close,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                  size: 18,
+                ),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                  courseProvider.loadCourses(refresh: true);
+                },
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : AppTheme.lightBorderColor,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : AppTheme.lightBorderColor,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTheme.primaryBlueDark.withValues(alpha: 0.6),
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+      ),
+      style: TextStyle(
+        color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+        fontSize: 14,
+      ),
+      onChanged: (value) {
+        setState(() => _searchQuery = value);
+      },
+      onSubmitted: (value) {
+        if (value.isNotEmpty) {
+          courseProvider.searchCourses(value);
+        } else {
+          courseProvider.loadCourses(refresh: true);
+        }
+      },
+      textInputAction: TextInputAction.search,
+    );
+  }
+
+  // ─── Level Filters ─────────────────────────────────────────────
+  Widget _buildLevelFilters(bool isDark) {
+    return SizedBox(
+      height: 42,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          // Main title
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [AppTheme.primaryBlueDark, AppTheme.secondaryPurple],
-            ).createShader(bounds),
-            child: const Text(
-              'KHÁM PHÁ',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                fontFamily: 'monospace',
-                letterSpacing: 2,
-              ),
+          _buildFilterChip('Tất cả', null, isDark),
+          const SizedBox(width: 8),
+          _buildFilterChip('Cơ bản', CourseLevel.beginner, isDark),
+          const SizedBox(width: 8),
+          _buildFilterChip('Trung cấp', CourseLevel.intermediate, isDark),
+          const SizedBox(width: 8),
+          _buildFilterChip('Nâng cao', CourseLevel.advanced, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, CourseLevel? level, bool isDark) {
+    final isSelected = _selectedLevel == level;
+    final colors = _chipColors(level);
+
+    return GestureDetector(
+      onTap: () => _onLevelFilterChanged(level),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected ? LinearGradient(colors: colors) : null,
+          color: isSelected
+              ? null
+              : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? colors.first
+                : (isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : AppTheme.lightBorderColor),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected
+                ? Colors.white
+                : (isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary),
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Color> _chipColors(CourseLevel? level) {
+    switch (level) {
+      case CourseLevel.beginner:
+        return [const Color(0xFF4CAF50), const Color(0xFF66BB6A)];
+      case CourseLevel.intermediate:
+        return [const Color(0xFF2196F3), const Color(0xFF42A5F5)];
+      case CourseLevel.advanced:
+        return [const Color(0xFFFF6B35), const Color(0xFFFF8A65)];
+      case null:
+        return [AppTheme.themeBlueStart, AppTheme.themeBlueEnd];
+    }
+  }
+
+  // ─── Results Bar (count + sort) ────────────────────────────────
+  Widget _buildResultsBar(bool isDark, int totalCourses) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Row(
+        children: [
+          // Course count - prominent
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: '$totalCourses ',
+                  style: TextStyle(
+                    color: AppTheme.primaryBlueDark,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                TextSpan(
+                  text: 'khóa học',
+                  style: TextStyle(
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Text(
-                  'THIÊN HÀ TRI THỨC',
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                    letterSpacing: 1,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Module count badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: AppTheme.primaryBlueDark.withValues(alpha: 0.5),
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      'MODULES',
-                      style: TextStyle(
-                        color: isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary,
-                        fontSize: 8,
-                        fontFamily: 'monospace',
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    Text(
-                      '$totalCourses',
-                      style: const TextStyle(
-                        color: AppTheme.primaryBlueDark,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'DATA UPGRADE MODULES',
-            style: TextStyle(
+          const Spacer(),
+          // Sort dropdown
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
               color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-              fontSize: 10,
-              fontFamily: 'monospace',
-              letterSpacing: 2,
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : AppTheme.lightBorderColor,
+              ),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _sortBy,
+                isDense: true,
+                icon: Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 18,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+                style: TextStyle(
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                  fontSize: 12,
+                ),
+                dropdownColor: isDark
+                    ? AppTheme.darkCardBackground
+                    : Colors.white,
+                items: _sortOptions.map((opt) {
+                  return DropdownMenuItem(
+                    value: opt['value'],
+                    child: Text(opt['label']!),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _sortBy = value);
+                    // Map sort option to field + direction
+                    final courseProvider = context.read<CourseProvider>();
+                    switch (value) {
+                      case 'newest':
+                        courseProvider.setSortOrder('createdAt', 'desc');
+                        break;
+                      case 'oldest':
+                        courseProvider.setSortOrder('createdAt', 'asc');
+                        break;
+                      case 'price-low':
+                        courseProvider.setSortOrder('price', 'asc');
+                        break;
+                      case 'price-high':
+                        courseProvider.setSortOrder('price', 'desc');
+                        break;
+                      case 'popular':
+                        courseProvider.setSortOrder('enrollmentCount', 'desc');
+                        break;
+                    }
+                  }
+                },
+              ),
             ),
           ),
         ],
@@ -242,331 +363,65 @@ class _CoursesPageState extends State<CoursesPage> {
     );
   }
 
-  Widget _buildSearchBar(bool isDark, CourseProvider courseProvider) {
-    return Row(
-      children: [
-        // Search bar - single clean TextField
-        Expanded(
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'BẮT ĐẦU QUÉT DỮ LIỆU...',
-              hintStyle: TextStyle(
-                color: isDark
-                    ? AppTheme.darkTextSecondary.withValues(alpha: 0.5)
-                    : AppTheme.lightTextSecondary.withValues(alpha: 0.5),
-                fontSize: 13,
-                fontFamily: 'monospace',
-                letterSpacing: 1,
-              ),
-              filled: true,
-              fillColor: isDark
-                  ? Colors.black.withValues(alpha: 0.3)
-                  : Colors.white.withValues(alpha: 0.9),
-              prefixIcon: Icon(
-                Icons.radar,
-                color: AppTheme.primaryBlueDark.withValues(alpha: 0.7),
-                size: 22,
-              ),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(
-                        Icons.close,
-                        color: isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary,
-                        size: 20,
-                      ),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                        courseProvider.loadCourses(refresh: true);
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: isDark
-                      ? AppTheme.primaryBlueDark.withValues(alpha: 0.3)
-                      : AppTheme.lightBorderColor,
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: isDark
-                      ? AppTheme.primaryBlueDark.withValues(alpha: 0.3)
-                      : AppTheme.lightBorderColor,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppTheme.primaryBlueDark.withValues(alpha: 0.6),
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
-            ),
-            style: TextStyle(
-              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-              fontSize: 14,
-              fontFamily: 'monospace',
-            ),
-            onChanged: (value) {
-              setState(() => _searchQuery = value);
-            },
-            onSubmitted: (value) {
-              if (value.isNotEmpty) {
-                courseProvider.searchCourses(value);
-              } else {
-                courseProvider.loadCourses(refresh: true);
-              }
-            },
-            textInputAction: TextInputAction.search,
-          ),
-        ),
-        const SizedBox(width: 12),
-        // Filter button - outside search container
-        Container(
-          decoration: BoxDecoration(
-            color: _showFilters
-                ? AppTheme.primaryBlueDark.withValues(alpha: 0.2)
-                : (isDark
-                      ? Colors.black.withValues(alpha: 0.3)
-                      : Colors.white.withValues(alpha: 0.9)),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDark
-                  ? AppTheme.primaryBlueDark.withValues(alpha: 0.3)
-                  : AppTheme.lightBorderColor,
-            ),
-          ),
-          child: IconButton(
-            icon: Icon(
-              Icons.tune,
-              color: _showFilters
-                  ? AppTheme.primaryBlueDark
-                  : (isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary),
-              size: 20,
-            ),
-            onPressed: () {
-              setState(() => _showFilters = !_showFilters);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLevelFilters(bool isDark) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      height: _showFilters ? 100 : 0,
-      child: SingleChildScrollView(
-        physics: const NeverScrollableScrollPhysics(),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'CẤP ĐỘ',
-                style: TextStyle(
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                  fontSize: 10,
-                  fontFamily: 'monospace',
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 60,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _buildFilterChip('Tất cả', Icons.grid_view_rounded, null, [
-                      AppTheme.themeBlueStart,
-                      AppTheme.themeBlueEnd,
-                    ], isDark),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      'Cơ bản',
-                      Icons.rocket_launch_outlined,
-                      CourseLevel.beginner,
-                      [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
-                      isDark,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      'Trung cấp',
-                      Icons.trending_up,
-                      CourseLevel.intermediate,
-                      [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
-                      isDark,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      'Nâng cao',
-                      Icons.auto_awesome,
-                      CourseLevel.advanced,
-                      [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
-                      isDark,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(
-    String label,
-    IconData icon,
-    CourseLevel? level,
-    List<Color> colors,
-    bool isDark,
-  ) {
-    final isSelected = _selectedLevel == level;
-
-    return GestureDetector(
-      onTap: () => _onLevelFilterChanged(level),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: isSelected ? LinearGradient(colors: colors) : null,
-          color: isSelected
-              ? null
-              : (isDark
-                    ? Colors.black.withValues(alpha: 0.3)
-                    : Colors.white.withValues(alpha: 0.9)),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected
-                ? colors.first
-                : (isDark
-                      ? AppTheme.primaryBlueDark.withValues(alpha: 0.3)
-                      : AppTheme.lightBorderColor),
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: colors.first.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected
-                  ? Colors.white
-                  : (isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                color: isSelected
-                    ? Colors.white
-                    : (isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary),
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontFamily: 'monospace',
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
+  // ─── Course Content (list / skeleton / error / empty) ──────────
   List<Widget> _buildCourseContent(CourseProvider courseProvider, bool isDark) {
-    // Loading state
+    // Loading
     if (courseProvider.isInitialLoading ||
         courseProvider.pagination.isRefreshing) {
       return [
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 0.75,
-            ),
+          sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) => const CourseCardSkeleton(),
-              childCount: 6,
+              (_, __) => const _CourseCardSkeleton(),
+              childCount: 5,
             ),
           ),
         ),
       ];
     }
 
-    // Error state
+    // Error
     if (courseProvider.paginationError != null && courseProvider.isEmpty) {
       return [
         SliverFillRemaining(
-          child: Center(child: _buildErrorState(courseProvider, isDark)),
+          child: ErrorStateWidget(
+            message: courseProvider.paginationError!,
+            onRetry: () => courseProvider.refresh(),
+          ),
         ),
       ];
     }
 
-    // Empty state
+    // Empty
     if (courseProvider.isEmpty) {
       return [
-        SliverFillRemaining(
-          child: Center(child: _buildEmptyState(isDark)),
+        const SliverFillRemaining(
+          child: EmptyStateWidget(
+            icon: Icons.search_off_rounded,
+            title: 'Không tìm thấy',
+            subtitle: 'Không có khóa học nào phù hợp\nvới bộ lọc hiện tại',
+            iconGradient: AppTheme.blueGradient,
+          ),
         ),
       ];
     }
 
-    // Course grid + footer indicators
+    // Course list
     return [
       SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 0.75,
-          ),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final course = courseProvider.courses[index];
-              return CourseCardV2(
-                course: course,
-                onTap: () => context.push('/courses/${course.id}'),
-              );
-            },
-            childCount: courseProvider.courses.length,
-          ),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final course = courseProvider.courses[index];
+            return CourseCardV3(
+              course: course,
+              onTap: () => context.push('/courses/${course.id}'),
+            );
+          }, childCount: courseProvider.courses.length),
         ),
       ),
-      // Loading more indicator (separate from grid)
+      // Loading more indicator
       if (courseProvider.isLoadingMore)
         SliverToBoxAdapter(
           child: Padding(
@@ -576,20 +431,19 @@ class _CoursesPageState extends State<CoursesPage> {
             ),
           ),
         ),
-      // End of list indicator (separate from grid)
+      // End of list
       if (!courseProvider.hasMorePages && !courseProvider.isLoadingMore)
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Center(
               child: Text(
-                'ĐÃ HIỂN THỊ TẤT CẢ',
+                'Đã hiển thị tất cả',
                 style: TextStyle(
                   color: isDark
                       ? AppTheme.darkTextSecondary
                       : AppTheme.lightTextSecondary,
-                  fontSize: 10,
-                  fontFamily: 'monospace',
+                  fontSize: 12,
                 ),
               ),
             ),
@@ -597,105 +451,97 @@ class _CoursesPageState extends State<CoursesPage> {
         ),
     ];
   }
+}
 
-  Widget _buildErrorState(CourseProvider courseProvider, bool isDark) {
-    return GlassCard(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppTheme.errorColor.withValues(alpha: 0.1),
-            ),
-            child: const Icon(
-              Icons.error_outline,
-              size: 48,
-              color: AppTheme.errorColor,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'LỖI KẾT NỐI',
-            style: TextStyle(
-              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'monospace',
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            courseProvider.paginationError!,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 24),
-          _buildRetryButton(courseProvider),
-        ],
-      ),
-    );
-  }
+/// Skeleton matching CourseCardV3 layout
+class _CourseCardSkeleton extends StatelessWidget {
+  const _CourseCardSkeleton();
 
-  Widget _buildEmptyState(bool isDark) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      child: EmptyStateWidget(
-        icon: Icons.search_off_rounded,
-        title: 'KHÔNG TÌM THẤY',
-        subtitle: 'Không có khóa học nào phù hợp\nvới bộ lọc hiện tại',
-        iconGradient: AppTheme.blueGradient,
-      ),
-    );
-  }
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shimmerColor = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.grey.withValues(alpha: 0.15);
 
-  Widget _buildRetryButton(CourseProvider courseProvider) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
-        ),
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.themeBlueStart.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => courseProvider.refresh(),
-          borderRadius: BorderRadius.circular(10),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.refresh, color: Colors.white, size: 18),
-                SizedBox(width: 8),
-                Text(
-                  'THỬ LẠI',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                    letterSpacing: 1,
+    return ShimmerLoading(
+      child: GlassCard(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Thumbnail placeholder
+            Container(
+              width: 120,
+              height: 90,
+              decoration: BoxDecoration(
+                color: shimmerColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Text lines placeholder
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title line 1
+                  Container(
+                    height: 14,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: shimmerColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  // Title line 2
+                  Container(
+                    height: 14,
+                    width: 120,
+                    decoration: BoxDecoration(
+                      color: shimmerColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // Author line
+                  Container(
+                    height: 10,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: shimmerColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Stats row
+                  Row(
+                    children: [
+                      Container(
+                        height: 10,
+                        width: 60,
+                        decoration: BoxDecoration(
+                          color: shimmerColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        height: 22,
+                        width: 65,
+                        decoration: BoxDecoration(
+                          color: shimmerColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

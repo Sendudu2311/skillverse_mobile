@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skeleton_loaders.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/expert_chat_models.dart';
@@ -60,7 +61,16 @@ class DomainSelectionPage extends StatelessWidget {
       body: Consumer<ExpertChatProvider>(
         builder: (context, provider, _) {
           if (provider.loadingFields) {
-            return const Center(child: CircularProgressIndicator());
+            return GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: 6,
+              itemBuilder: (_, __) => const GridItemSkeleton(),
+            );
           }
 
           if (provider.expertFields.isEmpty) {

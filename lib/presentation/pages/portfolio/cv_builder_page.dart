@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../../data/models/portfolio_models.dart';
@@ -17,7 +18,11 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
   final List<Map<String, dynamic>> _templates = [
     {'id': 'default', 'name': 'Mẫu cơ bản', 'icon': Icons.description},
     {'id': 'modern', 'name': 'Hiện đại', 'icon': Icons.auto_awesome},
-    {'id': 'professional', 'name': 'Chuyên nghiệp', 'icon': Icons.business_center},
+    {
+      'id': 'professional',
+      'name': 'Chuyên nghiệp',
+      'icon': Icons.business_center,
+    },
     {'id': 'creative', 'name': 'Sáng tạo', 'icon': Icons.palette},
   ];
 
@@ -44,12 +49,14 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
 
     if (mounted) {
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tạo CV thành công!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Tạo CV thành công!')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(portfolioProvider.errorMessage ?? 'Có lỗi xảy ra')),
+          SnackBar(
+            content: Text(portfolioProvider.errorMessage ?? 'Có lỗi xảy ra'),
+          ),
         );
       }
     }
@@ -90,9 +97,9 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
       final success = await portfolioProvider.deleteCV(cvId);
 
       if (mounted && success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã xóa CV')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã xóa CV')));
       }
     }
   }
@@ -100,13 +107,20 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Quản lý CV'),
-      ),
+      appBar: AppBar(title: const Text('Quản lý CV')),
       body: Consumer<PortfolioProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  CardSkeleton(imageHeight: null),
+                  SizedBox(height: 16),
+                  TextSkeleton(lines: 6),
+                ],
+              ),
+            );
           }
 
           return SingleChildScrollView(
@@ -136,16 +150,21 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                     final isSelected = _selectedTemplate == template['id'];
 
                     return InkWell(
-                      onTap: () => setState(() => _selectedTemplate = template['id']),
+                      onTap: () =>
+                          setState(() => _selectedTemplate = template['id']),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey.shade300,
                             width: isSelected ? 2 : 1,
                           ),
                           borderRadius: BorderRadius.circular(12),
-                          color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primaryContainer
+                              : null,
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -153,14 +172,20 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                             Icon(
                               template['icon'],
                               size: 48,
-                              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.grey,
                             ),
                             const SizedBox(height: 8),
                             Text(
                               template['name'],
                               style: TextStyle(
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : null,
                               ),
                             ),
                           ],
@@ -206,7 +231,11 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                       padding: const EdgeInsets.all(32),
                       child: Column(
                         children: [
-                          Icon(Icons.description, size: 64, color: Colors.grey.shade400),
+                          Icon(
+                            Icons.description,
+                            size: 64,
+                            color: Colors.grey.shade400,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'Chưa có CV nào',
@@ -231,18 +260,24 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                           leading: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: isActive ? Colors.green.shade100 : Colors.grey.shade200,
+                              color: isActive
+                                  ? Colors.green.shade100
+                                  : Colors.grey.shade200,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
                               Icons.description,
-                              color: isActive ? Colors.green : Colors.grey.shade600,
+                              color: isActive
+                                  ? Colors.green
+                                  : Colors.grey.shade600,
                             ),
                           ),
                           title: Text(
                             cv.templateName ?? 'CV của tôi',
                             style: TextStyle(
-                              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: isActive
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                             ),
                           ),
                           subtitle: Text(
@@ -289,9 +324,16 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                                 value: 'delete',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.delete, size: 20, color: Colors.red),
+                                    Icon(
+                                      Icons.delete,
+                                      size: 20,
+                                      color: Colors.red,
+                                    ),
                                     SizedBox(width: 12),
-                                    Text('Xóa', style: TextStyle(color: Colors.red)),
+                                    Text(
+                                      'Xóa',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
                                   ],
                                 ),
                               ),

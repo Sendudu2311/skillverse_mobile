@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../../providers/job_provider.dart';
 import '../../../data/models/job_models.dart';
 import '../../widgets/glass_card.dart';
-import '../../widgets/shimmer_loading.dart';
+import '../../widgets/skeleton_loaders.dart';
+import '../../widgets/animated_list_item.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/error_state_widget.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/date_time_helper.dart';
 import 'job_detail_page.dart';
@@ -103,10 +105,7 @@ class _JobsPageState extends State<JobsPage>
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: [
-              _buildLongTermJobList(),
-              _buildShortTermJobList(),
-            ],
+            children: [_buildLongTermJobList(), _buildShortTermJobList()],
           ),
         ),
       ],
@@ -124,8 +123,7 @@ class _JobsPageState extends State<JobsPage>
         decoration: InputDecoration(
           prefixIcon: Icon(
             Icons.search,
-            color:
-                Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+            color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
           ),
           hintText: 'Tìm kiếm việc làm...',
           border: InputBorder.none,
@@ -133,11 +131,9 @@ class _JobsPageState extends State<JobsPage>
           focusedBorder: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
           hintStyle: TextStyle(
-            color: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.color
-                ?.withValues(alpha: 0.5),
+            color: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
           ),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
@@ -158,14 +154,16 @@ class _JobsPageState extends State<JobsPage>
   Widget _buildMyApplicationsButton() {
     return Consumer<JobProvider>(
       builder: (context, provider, _) {
-        final pendingCount = provider.myLongTermApplications
-                .where((a) =>
-                    a.status == JobApplicationStatus.pending ||
-                    a.status == JobApplicationStatus.reviewed)
+        final pendingCount =
+            provider.myLongTermApplications
+                .where(
+                  (a) =>
+                      a.status == JobApplicationStatus.pending ||
+                      a.status == JobApplicationStatus.reviewed,
+                )
                 .length +
             provider.myShortTermApplications
-                .where((a) =>
-                    a.status == 'PENDING' || a.status == 'APPLIED')
+                .where((a) => a.status == 'PENDING' || a.status == 'APPLIED')
                 .length;
 
         return GlassCard(
@@ -184,9 +182,7 @@ class _JobsPageState extends State<JobsPage>
                 },
                 icon: const Icon(Icons.assignment_outlined),
                 tooltip: 'Đơn ứng tuyển',
-                style: IconButton.styleFrom(
-                  fixedSize: const Size(48, 48),
-                ),
+                style: IconButton.styleFrom(fixedSize: const Size(48, 48)),
               ),
               if (pendingCount > 0)
                 Positioned(
@@ -207,9 +203,10 @@ class _JobsPageState extends State<JobsPage>
                     child: Text(
                       '$pendingCount',
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold),
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -244,8 +241,7 @@ class _JobsPageState extends State<JobsPage>
             isSelected: _filterUrgency == 'URGENT',
             onTap: () {
               setState(() {
-                _filterUrgency =
-                    _filterUrgency == 'URGENT' ? null : 'URGENT';
+                _filterUrgency = _filterUrgency == 'URGENT' ? null : 'URGENT';
               });
               _applyFilters();
             },
@@ -282,10 +278,9 @@ class _JobsPageState extends State<JobsPage>
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           gradient: isSelected
-              ? const LinearGradient(colors: [
-                  AppTheme.themeBlueStart,
-                  AppTheme.themeBlueEnd,
-                ])
+              ? const LinearGradient(
+                  colors: [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+                )
               : null,
           color: isSelected ? null : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20),
@@ -296,11 +291,11 @@ class _JobsPageState extends State<JobsPage>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon,
-                size: 14,
-                color: isSelected
-                    ? Colors.white
-                    : Theme.of(context).hintColor),
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? Colors.white : Theme.of(context).hintColor,
+            ),
             const SizedBox(width: 4),
             Text(
               label,
@@ -324,7 +319,9 @@ class _JobsPageState extends State<JobsPage>
   }
 
   /// Apply local filters to short-term jobs
-  List<ShortTermJobResponse> _getFilteredShortTermJobs(List<ShortTermJobResponse> jobs) {
+  List<ShortTermJobResponse> _getFilteredShortTermJobs(
+    List<ShortTermJobResponse> jobs,
+  ) {
     var filtered = jobs;
     if (_filterRemote) {
       filtered = filtered.where((j) => j.remote == true).toList();
@@ -333,7 +330,8 @@ class _JobsPageState extends State<JobsPage>
       filtered = filtered.where((j) {
         final u = j.urgency;
         if (_filterUrgency == 'URGENT') return u == JobUrgency.urgent;
-        if (_filterUrgency == 'VERY_URGENT') return u == JobUrgency.veryUrgent || u == JobUrgency.asap;
+        if (_filterUrgency == 'VERY_URGENT')
+          return u == JobUrgency.veryUrgent || u == JobUrgency.asap;
         return true;
       }).toList();
     }
@@ -360,12 +358,12 @@ class _JobsPageState extends State<JobsPage>
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
         labelColor: Colors.white,
-        unselectedLabelColor:
-            Theme.of(context).textTheme.bodyMedium?.color,
-        labelStyle: const TextStyle(
-            fontWeight: FontWeight.bold, fontSize: 13),
+        unselectedLabelColor: Theme.of(context).textTheme.bodyMedium?.color,
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
         unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.normal, fontSize: 13),
+          fontWeight: FontWeight.normal,
+          fontSize: 13,
+        ),
         tabs: const [
           Tab(text: 'Việc Làm'),
           Tab(text: 'Freelance'),
@@ -384,8 +382,10 @@ class _JobsPageState extends State<JobsPage>
         }
 
         if (provider.hasError) {
-          return _buildErrorState(provider.errorMessage ?? 'Lỗi tải dữ liệu',
-              () => provider.loadPublicJobs());
+          return ErrorStateWidget(
+            message: provider.errorMessage ?? 'Lỗi tải dữ liệu',
+            onRetry: () => provider.loadPublicJobs(),
+          );
         }
 
         final jobs = provider.filteredLongTermJobs;
@@ -402,8 +402,10 @@ class _JobsPageState extends State<JobsPage>
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: jobs.length,
-            itemBuilder: (context, index) =>
-                _buildAnimatedCard(index, _buildLongTermJobCard(jobs[index])),
+            itemBuilder: (context, index) => AnimatedListItem(
+              index: index,
+              child: _buildLongTermJobCard(jobs[index]),
+            ),
           ),
         );
       },
@@ -412,7 +414,9 @@ class _JobsPageState extends State<JobsPage>
 
   Widget _buildLongTermJobCard(JobPostingResponse job) {
     final gradientColors = _getGradientForIndex(job.id ?? 0);
-    final hasApplied = context.watch<JobProvider>().hasAppliedToJob(job.id ?? 0);
+    final hasApplied = context.watch<JobProvider>().hasAppliedToJob(
+      job.id ?? 0,
+    );
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 16),
@@ -420,10 +424,7 @@ class _JobsPageState extends State<JobsPage>
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => JobDetailPage(
-              jobId: job.id!,
-              isShortTerm: false,
-            ),
+            builder: (_) => JobDetailPage(jobId: job.id!, isShortTerm: false),
           ),
         );
       },
@@ -441,31 +442,26 @@ class _JobsPageState extends State<JobsPage>
                   children: [
                     Text(
                       job.title ?? 'Không có tiêu đề',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       job.recruiterCompanyName ?? 'Công ty',
-                      style:
-                          Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.color
-                                    ?.withValues(alpha: 0.7),
-                              ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                      ),
                     ),
                   ],
                 ),
               ),
               if (hasApplied) _buildAppliedBadge(),
-              if (!hasApplied && job.highlighted == true)
-                _buildHotBadge(),
+              if (!hasApplied && job.highlighted == true) _buildHotBadge(),
             ],
           ),
 
@@ -485,12 +481,10 @@ class _JobsPageState extends State<JobsPage>
             Text(
               job.description!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.color
-                        ?.withValues(alpha: 0.8),
-                  ),
+                color: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -505,8 +499,7 @@ class _JobsPageState extends State<JobsPage>
 
           // Info row
           _buildInfoRow([
-            if (job.remote == true)
-              _buildInfoChip(Icons.wifi, 'Remote'),
+            if (job.remote == true) _buildInfoChip(Icons.wifi, 'Remote'),
             if (job.location != null && job.remote != true)
               _buildInfoChip(Icons.location_on_outlined, job.location!),
             if (job.experienceLevel != null)
@@ -527,12 +520,10 @@ class _JobsPageState extends State<JobsPage>
                 Text(
                   '${job.applicantCount} ứng viên',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.color
-                            ?.withValues(alpha: 0.6),
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                  ),
                 ),
               if (job.createdAt != null && job.deadline == null)
                 Text(
@@ -540,12 +531,10 @@ class _JobsPageState extends State<JobsPage>
                     DateTime.parse(job.createdAt!),
                   ),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.color
-                            ?.withValues(alpha: 0.5),
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                  ),
                 ),
             ],
           ),
@@ -564,8 +553,10 @@ class _JobsPageState extends State<JobsPage>
         }
 
         if (provider.hasError) {
-          return _buildErrorState(provider.errorMessage ?? 'Lỗi tải dữ liệu',
-              () => provider.loadShortTermJobs());
+          return ErrorStateWidget(
+            message: provider.errorMessage ?? 'Lỗi tải dữ liệu',
+            onRetry: () => provider.loadShortTermJobs(),
+          );
         }
 
         final allJobs = provider.shortTermJobs;
@@ -587,8 +578,10 @@ class _JobsPageState extends State<JobsPage>
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: jobs.length,
-            itemBuilder: (context, index) =>
-                _buildAnimatedCard(index, _buildShortTermJobCard(jobs[index])),
+            itemBuilder: (context, index) => AnimatedListItem(
+              index: index,
+              child: _buildShortTermJobCard(jobs[index]),
+            ),
           ),
         );
       },
@@ -597,8 +590,9 @@ class _JobsPageState extends State<JobsPage>
 
   Widget _buildShortTermJobCard(ShortTermJobResponse job) {
     final gradientColors = _getGradientForIndex(job.id ?? 0);
-    final hasApplied =
-        context.watch<JobProvider>().hasAppliedToShortTermJob(job.id ?? 0);
+    final hasApplied = context.watch<JobProvider>().hasAppliedToShortTermJob(
+      job.id ?? 0,
+    );
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 16),
@@ -606,10 +600,7 @@ class _JobsPageState extends State<JobsPage>
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => JobDetailPage(
-              jobId: job.id!,
-              isShortTerm: true,
-            ),
+            builder: (_) => JobDetailPage(jobId: job.id!, isShortTerm: true),
           ),
         );
       },
@@ -627,10 +618,9 @@ class _JobsPageState extends State<JobsPage>
                   children: [
                     Text(
                       job.title ?? 'Không có tiêu đề',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -638,24 +628,18 @@ class _JobsPageState extends State<JobsPage>
                     if (job.recruiterInfo?.companyName != null)
                       Text(
                         job.recruiterInfo!.companyName!,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.color
-                                  ?.withValues(alpha: 0.7),
-                            ),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                        ),
                       ),
                   ],
                 ),
               ),
               if (hasApplied)
                 _buildAppliedBadge()
-              else if (job.urgency != null &&
-                  job.urgency != JobUrgency.normal)
+              else if (job.urgency != null && job.urgency != JobUrgency.normal)
                 _buildUrgencyBadge(job.urgency!),
             ],
           ),
@@ -676,12 +660,10 @@ class _JobsPageState extends State<JobsPage>
             Text(
               job.description!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.color
-                        ?.withValues(alpha: 0.8),
-                  ),
+                color: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -697,10 +679,8 @@ class _JobsPageState extends State<JobsPage>
           // Info row
           _buildInfoRow([
             if (job.estimatedDuration != null)
-              _buildInfoChip(
-                  Icons.schedule_outlined, job.estimatedDuration!),
-            if (job.remote == true)
-              _buildInfoChip(Icons.wifi, 'Remote'),
+              _buildInfoChip(Icons.schedule_outlined, job.estimatedDuration!),
+            if (job.remote == true) _buildInfoChip(Icons.wifi, 'Remote'),
             if (job.location != null && job.remote != true)
               _buildInfoChip(Icons.location_on_outlined, job.location!),
           ]),
@@ -719,14 +699,11 @@ class _JobsPageState extends State<JobsPage>
                     if (job.deadline != null) const SizedBox(width: 12),
                     Text(
                       '${job.applicantCount}${job.maxApplicants != null ? '/${job.maxApplicants}' : ''} ứng viên',
-                      style:
-                          Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.color
-                                    ?.withValues(alpha: 0.6),
-                              ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                      ),
                     ),
                   ],
                 ],
@@ -737,12 +714,10 @@ class _JobsPageState extends State<JobsPage>
                     DateTime.parse(job.createdAt!),
                   ),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.color
-                            ?.withValues(alpha: 0.5),
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                  ),
                 ),
             ],
           ),
@@ -771,8 +746,11 @@ class _JobsPageState extends State<JobsPage>
       ),
       child: Row(
         children: [
-          const Icon(Icons.payments_outlined,
-              size: 18, color: AppTheme.themeGreenStart),
+          const Icon(
+            Icons.payments_outlined,
+            size: 18,
+            color: AppTheme.themeGreenStart,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -786,8 +764,7 @@ class _JobsPageState extends State<JobsPage>
           ),
           if (isNegotiable)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: AppTheme.themeGreenStart.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
@@ -865,11 +842,14 @@ class _JobsPageState extends State<JobsPage>
         children: [
           Icon(Icons.check_circle, size: 12, color: AppTheme.themeGreenStart),
           SizedBox(width: 4),
-          Text('Đã ứng tuyển',
-              style: TextStyle(
-                  color: AppTheme.themeGreenStart,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold)),
+          Text(
+            'Đã ứng tuyển',
+            style: TextStyle(
+              color: AppTheme.themeGreenStart,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -885,28 +865,14 @@ class _JobsPageState extends State<JobsPage>
         ),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Text('HOT',
-          style: TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold)),
-    );
-  }
-
-  /// Staggered card animation
-  Widget _buildAnimatedCard(int index, Widget child) {
-    return TweenAnimationBuilder<double>(
-      key: ValueKey('card_$index'),
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 300 + (index * 60).clamp(0, 300)),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(opacity: value, child: child),
-        );
-      },
-      child: child,
+      child: const Text(
+        'HOT',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -950,10 +916,10 @@ class _JobsPageState extends State<JobsPage>
           child: Text(
             skill,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
-                ),
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
+            ),
           ),
         );
       }).toList(),
@@ -961,31 +927,28 @@ class _JobsPageState extends State<JobsPage>
   }
 
   Widget _buildInfoRow(List<Widget> chips) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 8,
-      children: chips,
-    );
+    return Wrap(spacing: 12, runSpacing: 8, children: chips);
   }
 
   Widget _buildInfoChip(IconData icon, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14,
-            color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6)),
+        Icon(
+          icon,
+          size: 14,
+          color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
+        ),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.color
-                      ?.withValues(alpha: 0.7),
-                  fontSize: 12,
-                ),
+              color: Theme.of(
+                context,
+              ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+              fontSize: 12,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -995,8 +958,14 @@ class _JobsPageState extends State<JobsPage>
 
   Widget _buildUrgencyBadge(JobUrgency urgency) {
     final (label, colors) = switch (urgency) {
-      JobUrgency.urgent => ('Gấp', [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd]),
-      JobUrgency.veryUrgent => ('Rất gấp', [Colors.red.shade400, Colors.red.shade600]),
+      JobUrgency.urgent => (
+        'Gấp',
+        [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
+      ),
+      JobUrgency.veryUrgent => (
+        'Rất gấp',
+        [Colors.red.shade400, Colors.red.shade600],
+      ),
       JobUrgency.asap => ('ASAP', [Colors.red.shade600, Colors.red.shade800]),
       _ => ('', <Color>[]),
     };
@@ -1012,7 +981,10 @@ class _JobsPageState extends State<JobsPage>
       child: Text(
         label,
         style: const TextStyle(
-            color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -1021,70 +993,7 @@ class _JobsPageState extends State<JobsPage>
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: 4,
-      itemBuilder: (context, index) {
-        return ShimmerLoading(
-          child: GlassCard(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 48, height: 48,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).dividerColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(width: 180, height: 16,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).dividerColor,
-                                borderRadius: BorderRadius.circular(4),
-                              )),
-                          const SizedBox(height: 8),
-                          Container(width: 120, height: 12,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).dividerColor,
-                                borderRadius: BorderRadius.circular(4),
-                              )),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                // Salary skeleton
-                Container(
-                  width: double.infinity, height: 36,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).dividerColor,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(width: double.infinity, height: 14,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).dividerColor,
-                      borderRadius: BorderRadius.circular(4),
-                    )),
-                const SizedBox(height: 8),
-                Container(width: 200, height: 14,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).dividerColor,
-                      borderRadius: BorderRadius.circular(4),
-                    )),
-              ],
-            ),
-          ),
-        );
-      },
+      itemBuilder: (_, __) => const JobCardSkeleton(),
     );
   }
 
@@ -1095,21 +1004,19 @@ class _JobsPageState extends State<JobsPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.work_off_outlined, size: 64,
-                color: Theme.of(context)
-                    .iconTheme
-                    .color
-                    ?.withValues(alpha: 0.3)),
+            Icon(
+              Icons.work_off_outlined,
+              size: 64,
+              color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.3),
+            ),
             const SizedBox(height: 16),
             Text(
               message,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.color
-                        ?.withValues(alpha: 0.6),
-                  ),
+                color: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -1120,31 +1027,6 @@ class _JobsPageState extends State<JobsPage>
               },
               icon: const Icon(Icons.refresh, size: 18),
               label: const Text('Tải lại'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(String message, VoidCallback onRetry) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64,
-                color: Colors.red.withValues(alpha: 0.5)),
-            const SizedBox(height: 16),
-            Text(message,
-                style: Theme.of(context).textTheme.bodyMedium,
-                textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Thử lại'),
             ),
           ],
         ),

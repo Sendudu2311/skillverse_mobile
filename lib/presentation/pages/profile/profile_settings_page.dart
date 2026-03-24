@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/user_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/section_header.dart';
 import '../../../core/utils/validation_helper.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
@@ -295,9 +296,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
                             const SizedBox(height: 24),
 
                             // Personal Information
-                            _buildSectionHeader(
-                              'Thông tin cá nhân',
-                              Icons.person_outline,
+                            SectionHeader(
+                              title: 'Thông tin cá nhân',
+                              icon: Icons.person_outline,
                             ),
                             const SizedBox(height: 16),
 
@@ -341,9 +342,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
                             const SizedBox(height: 12),
 
                             // Bio Section
-                            _buildSectionHeader(
-                              'Giới thiệu',
-                              Icons.info_outline,
+                            SectionHeader(
+                              title: 'Giới thiệu',
+                              icon: Icons.info_outline,
                             ),
                             const SizedBox(height: 16),
 
@@ -462,32 +463,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-      ],
     );
   }
 

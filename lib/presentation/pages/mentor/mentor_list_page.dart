@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skeleton_loaders.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/mentor_models.dart';
@@ -188,7 +189,11 @@ class _MentorListPageState extends State<MentorListPage> {
     return Consumer<MentorProvider>(
       builder: (context, provider, _) {
         if (provider.isLoadingMentors) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: 4,
+            itemBuilder: (_, __) => const ListItemSkeleton(lineCount: 3),
+          );
         }
 
         if (provider.mentors.isEmpty) {

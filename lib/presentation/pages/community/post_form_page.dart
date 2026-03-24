@@ -7,6 +7,7 @@ import '../../widgets/glass_card.dart';
 import '../../../data/models/post_models.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class PostFormPage extends StatefulWidget {
   final int? postId; // null for create, id for edit
@@ -64,10 +65,8 @@ class _PostFormPageState extends State<PostFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.postId == null ? 'Tạo bài viết' : 'Chỉnh sửa bài viết',
-        ),
+      appBar: SkillVerseAppBar(
+        title: widget.postId == null ? 'Tạo bài viết' : 'Chỉnh sửa bài viết',
         actions: [
           if (!_isLoading)
             TextButton(onPressed: _saveDraft, child: const Text('Lưu nháp')),
