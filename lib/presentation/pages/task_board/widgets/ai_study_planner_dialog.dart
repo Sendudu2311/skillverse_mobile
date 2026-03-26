@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/task_board_provider.dart';
 import '../../../themes/app_theme.dart';
+import '../../../widgets/common_loading.dart';
 import '../../../../data/models/study_planner_models.dart';
 import '../../../../data/services/study_planner_service.dart';
 import '../../../../core/utils/error_handler.dart';
@@ -278,7 +279,7 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
               backgroundColor: AppTheme.accentOrange, foregroundColor: Colors.black,
             ),
             icon: _isLoading
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                ? CommonLoading.small()
                 : const Icon(Icons.auto_awesome, size: 18),
             label: const Text('Tạo Đề Xuất Lịch Trình'),
           ),

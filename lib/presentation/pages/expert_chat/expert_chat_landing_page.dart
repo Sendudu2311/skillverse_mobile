@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/expert_chat_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 /// Expert Chat Landing Page
 /// Main entry point with stats and mode selection
@@ -27,34 +28,11 @@ class _ExpertChatLandingPageState extends State<ExpertChatLandingPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/dashboard'),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.psychology, color: AppTheme.primaryBlueDark, size: 28),
-            const SizedBox(width: 8),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
-              ).createShader(bounds),
-              child: const Text(
-                'HỆ THỐNG CHUYÊN GIA',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: Colors.white,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+      appBar: SkillVerseAppBar(
+        title: 'HỆ THỐNG CHUYÊN GIA',
+        icon: Icons.psychology,
+        useGradientTitle: true,
+        onBack: () => context.go('/dashboard'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

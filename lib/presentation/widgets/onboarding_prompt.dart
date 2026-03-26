@@ -5,6 +5,7 @@ import '../providers/journey_provider.dart';
 import '../themes/app_theme.dart';
 import '../../data/models/journey_models.dart';
 import 'glass_card.dart';
+import 'common_loading.dart';
 
 /// Onboarding Prompt for new users (shown on Dashboard after first login)
 class OnboardingPrompt extends StatefulWidget {
@@ -85,11 +86,9 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
 
               // Content
               if (_isLoading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: CircularProgressIndicator(),
-                  ),
+                Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: CommonLoading.center(),
                 )
               else if (_journeys.isNotEmpty)
                 _buildJourneyList(isDark)
@@ -203,7 +202,7 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
                   onPressed: () {
                     Navigator.of(context).pop();
                     widget.onDismiss();
-                    context.push('/journey');
+                    context.push('/journey/${journey.id}');
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

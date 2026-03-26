@@ -6,6 +6,7 @@ import '../../../data/models/mentor_models.dart';
 import '../../providers/mentor_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/error_state_widget.dart';
 import 'mentor_chat_dialog.dart';
 import 'mentor_booking_sheet.dart';
 
@@ -53,20 +54,9 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
 
           final mentor = provider.selectedMentor;
           if (mentor == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text('Không tìm thấy thông tin mentor'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => context.pop(),
-                    child: const Text('Quay lại'),
-                  ),
-                ],
-              ),
+            return ErrorStateWidget(
+              message: 'Không tìm thấy thông tin mentor',
+              onRetry: () => provider.loadMentorDetail(widget.mentorId),
             );
           }
 

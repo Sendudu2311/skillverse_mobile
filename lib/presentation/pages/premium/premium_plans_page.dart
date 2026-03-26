@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../../data/models/premium_models.dart';
 import '../../../data/models/payment_models.dart';
 import '../../../core/utils/number_formatter.dart';
@@ -11,6 +12,7 @@ import '../../providers/wallet_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/common_loading.dart';
 import '../payment/payment_webview_page.dart';
 import 'subscription_management_sheet.dart';
 
@@ -40,7 +42,7 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
         icon: Icons.workspace_premium,
         useGradientTitle: true,
         gradientColors: const [AppTheme.accentGold, AppTheme.themeOrangeStart],
-        onBack: () => context.go('/dashboard'),
+        onBack: () => context.canPop() ? context.pop() : context.go('/dashboard'),
       ),
       body: Consumer<PremiumProvider>(
         builder: (context, provider, child) {
@@ -155,6 +157,40 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
 
   // ==================== CURRENT SUBSCRIPTION ====================
 
+  Color _tierColorFromPlan(PlanType planType) {
+    switch (planType) {
+      case PlanType.studentPack:
+        return AppTheme.accentCyan;
+      case PlanType.premiumBasic:
+        return AppTheme.accentGold;
+      case PlanType.premiumPlus:
+        return const Color(0xFF7C3AED);
+      case PlanType.recruiterPro:
+        return AppTheme.themeOrangeStart;
+      default:
+        return AppTheme.primaryBlueDark;
+    }
+  }
+
+  String _tierIconFromPlan(PlanType planType) {
+    switch (planType) {
+      case PlanType.studentPack:
+        return '🎓';
+      case PlanType.premiumBasic:
+        return '⭐';
+      case PlanType.premiumPlus:
+        return '💎';
+      case PlanType.recruiterPro:
+        return '🚀';
+      default:
+        return '📦';
+    }
+  }
+
+  String _formatDate(DateTime dt) {
+    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+  }
+
   Widget _buildCurrentSubscriptionBanner(
     BuildContext context,
     PremiumProvider provider,
@@ -162,41 +198,28 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
   ) {
     final sub = provider.currentSubscription!;
     final daysLeft = sub.daysRemaining ?? 0;
+    final totalDays = sub.plan.durationMonths * 30;
+    final progress = totalDays > 0
+        ? (1.0 - (daysLeft / totalDays)).clamp(0.0, 1.0)
+        : 1.0;
+    final tierColor = _tierColorFromPlan(sub.plan.planType);
+    final tierIcon = _tierIconFromPlan(sub.plan.planType);
+    final secColor = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final priColor = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: GlassCard(
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppTheme.successColor.withValues(alpha: 0.15),
-                AppTheme.themeGreenStart.withValues(alpha: 0.1),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppTheme.successColor.withValues(alpha: 0.3),
-            ),
-          ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Header row ──────────────────────────────────
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppTheme.successColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.verified,
-                      color: AppTheme.successColor,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
+                  Text(tierIcon, style: const TextStyle(fontSize: 26)),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,96 +227,110 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
                         Text(
                           sub.plan.displayName,
                           style: TextStyle(
-                            fontSize: 17,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? AppTheme.darkTextPrimary
-                                : AppTheme.lightTextPrimary,
+                            color: tierColor,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.successColor.withValues(
-                                  alpha: 0.2,
-                                ),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'ACTIVE',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.successColor,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Còn $daysLeft ngày',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: daysLeft <= 7
-                                    ? AppTheme.errorColor
-                                    : (isDark
-                                          ? AppTheme.darkTextSecondary
-                                          : AppTheme.lightTextSecondary),
-                                fontWeight: daysLeft <= 7
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
+                        if (sub.plan.description != null)
+                          Text(
+                            sub.plan.description!,
+                            style: TextStyle(fontSize: 11, color: secColor),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                       ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.successColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      '● ACTIVE',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.successColor,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
 
-              // Auto-renewal info
+              // ── Progress ────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    daysLeft <= 7 ? '⚠️ Còn $daysLeft ngày' : 'Còn $daysLeft ngày',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: daysLeft <= 7 ? AppTheme.errorColor : priColor,
+                    ),
+                  ),
+                  Text(
+                    '${_formatDate(sub.startDate)} – ${_formatDate(sub.endDate)}',
+                    style: TextStyle(fontSize: 11, color: secColor),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 6,
+                  backgroundColor: tierColor.withValues(alpha: 0.12),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    daysLeft <= 7 ? AppTheme.errorColor : tierColor,
+                  ),
+                ),
+              ),
+
+              // ── Features ────────────────────────────────────
+              if (sub.plan.features != null && sub.plan.features!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ...sub.plan.features!.take(3).map(
+                  (f) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle_outline, size: 14, color: tierColor),
+                        const SizedBox(width: 6),
+                        Expanded(child: Text(f, style: TextStyle(fontSize: 12, color: priColor))),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+
+              // ── Footer ──────────────────────────────────────
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Icon(
-                    sub.autoRenew == true ? Icons.repeat : Icons.repeat_one,
-                    size: 16,
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
+                    sub.autoRenew == true ? Icons.repeat : Icons.event_busy,
+                    size: 13,
+                    color: secColor,
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 5),
                   Text(
-                    sub.autoRenew == true
-                        ? 'Tự động gia hạn'
-                        : 'Không tự động gia hạn',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
-                    ),
+                    sub.autoRenew == true ? 'Tự động gia hạn' : 'Không gia hạn',
+                    style: TextStyle(fontSize: 11, color: secColor),
                   ),
                   const Spacer(),
                   TextButton.icon(
                     onPressed: () => _openManagementSheet(context),
-                    icon: const Icon(Icons.settings, size: 16),
-                    label: const Text(
-                      'Quản lý',
-                      style: TextStyle(fontSize: 13),
-                    ),
+                    icon: const Icon(Icons.tune, size: 14),
+                    label: const Text('Quản lý', style: TextStyle(fontSize: 12)),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.accentCyan,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
+                      foregroundColor: tierColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     ),
                   ),
                 ],
@@ -468,9 +505,7 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
     if (!mounted) return;
     final authProvider = context.read<AuthProvider>();
     if (authProvider.user == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Vui lòng đăng nhập')));
+      ErrorHandler.showErrorSnackBar(context, 'Vui lòng đăng nhập');
       return;
     }
 
@@ -478,7 +513,7 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => CommonLoading.center(),
     );
 
     final paymentProvider = context.read<PaymentProvider>();
@@ -499,12 +534,7 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
 
     if (paymentResponse == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán');
       }
       return;
     }
@@ -529,18 +559,11 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
 
     if (!mounted) return;
     final isSuccess = result != null && result['success'] == true;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          isSuccess
-              ? '🎉 Đăng ký Premium thành công!'
-              : '⏳ Đang xử lý thanh toán...',
-        ),
-        backgroundColor: isSuccess
-            ? AppTheme.successColor
-            : AppTheme.accentCyan,
-      ),
-    );
+    if (isSuccess) {
+      ErrorHandler.showSuccessSnackBar(context, '🎉 Đăng ký Premium thành công!');
+    } else {
+      ErrorHandler.showWarningSnackBar(context, '⏳ Đang xử lý thanh toán...');
+    }
   }
 
   Future<void> _handleWalletPay(PremiumPlanDto plan) async {
@@ -632,7 +655,7 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => CommonLoading.center(),
     );
 
     final premiumProvider = context.read<PremiumProvider>();
@@ -647,35 +670,20 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
 
       if (subscription != null) {
         context.read<WalletProvider>().refresh();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('🎉 Đã kích hoạt ${plan.displayName}!'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, '🎉 Đã kích hoạt ${plan.displayName}!');
         // Reload plans to update current subscription
         premiumProvider.loadAll();
       } else {
         final errorMsg = premiumProvider.errorMessage ?? 'Thanh toán thất bại';
         // Clear provider error so page doesn't show error view
         premiumProvider.resetState();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, errorMsg);
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);
       if (!mounted) return;
       premiumProvider.resetState();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, e.toString().replaceAll('Exception: ', ''));
     }
   }
 

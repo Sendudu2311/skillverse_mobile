@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/post_provider.dart';
-import '../../widgets/glass_card.dart';
 import '../../widgets/post_card.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/error_state_widget.dart';
+import '../../widgets/common_loading.dart';
 import 'widgets/community_stats_widget.dart';
 import '../../themes/app_theme.dart';
 
@@ -203,32 +204,9 @@ class _CommunityPageState extends State<CommunityPage> {
 
     // Error state
     if (provider.paginationError != null && provider.isEmpty) {
-      return Center(
-        child: GlassCard(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                provider.paginationError!,
-                style: Theme.of(context).textTheme.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => provider.refresh(),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Thử lại'),
-              ),
-            ],
-          ),
-        ),
+      return ErrorStateWidget(
+        message: provider.paginationError!,
+        onRetry: () => provider.refresh(),
       );
     }
 
@@ -261,9 +239,9 @@ class _CommunityPageState extends State<CommunityPage> {
 
         // Loading more indicator
         if (postIndex == provider.posts.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: CommonLoading.center(),
           );
         }
 

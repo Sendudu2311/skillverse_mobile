@@ -107,8 +107,8 @@ class UserSubscriptionDto {
   final bool? currentlyActive;
   final String? cancellationReason;
   final DateTime? cancelledAt;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const UserSubscriptionDto({
     required this.id,
@@ -125,8 +125,8 @@ class UserSubscriptionDto {
     this.currentlyActive,
     this.cancellationReason,
     this.cancelledAt,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory UserSubscriptionDto.fromJson(Map<String, dynamic> json) =>

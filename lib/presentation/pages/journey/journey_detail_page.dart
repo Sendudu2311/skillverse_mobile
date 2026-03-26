@@ -5,7 +5,11 @@ import 'package:provider/provider.dart';
 import '../../providers/journey_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/journey_models.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../widgets/error_state_widget.dart';
+import '../../widgets/common_loading.dart';
 import '../../widgets/skeleton_loaders.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class JourneyDetailPage extends StatefulWidget {
   final String journeyId;
@@ -20,6 +24,7 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
   // Test-taking state
   final Map<String, String> _answers = {};
   List<dynamic>? _loadedQuestions;
+  bool _isLoadingQuestions = false;
 
   @override
   void initState() {
@@ -48,9 +53,17 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
 
     // Auto-load questions if test exists but questions not yet loaded
     if (_loadedQuestions == null && journey.assessmentTestId != null) {
-      final test = await provider.getAssessmentTest(
-        journeyId: journey.id,
-        testId: journey.assessmentTestId!,
+      await _loadQuestions(journey.id, journey.assessmentTestId!);
+    }
+  }
+
+  Future<void> _loadQuestions(int journeyId, int testId) async {
+    if (_isLoadingQuestions) return;
+    setState(() => _isLoadingQuestions = true);
+    try {
+      final test = await context.read<JourneyProvider>().getAssessmentTest(
+        journeyId: journeyId,
+        testId: testId,
       );
       if (test?.questionsJson != null && mounted) {
         setState(() {
@@ -59,6 +72,8 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
           } catch (_) {}
         });
       }
+    } finally {
+      if (mounted) setState(() => _isLoadingQuestions = false);
     }
   }
 
@@ -78,7 +93,7 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
       builder: (context, provider, child) {
         if (provider.isLoading && provider.currentJourney == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Hành trình')),
+            appBar: SkillVerseAppBar(title: 'Hành trình', onBack: () => context.go('/journey')),
             body: ListView(
               padding: const EdgeInsets.all(16),
               children: const [
@@ -94,18 +109,10 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
 
         if (provider.hasError && provider.currentJourney == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Hành trình')),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: AppTheme.errorColor),
-                  const SizedBox(height: 16),
-                  Text(provider.errorMessage ?? 'Đã xảy ra lỗi'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _loadJourney, child: const Text('Thử lại')),
-                ],
-              ),
+            appBar: SkillVerseAppBar(title: 'Hành trình', onBack: () => context.go('/journey')),
+            body: ErrorStateWidget(
+              message: provider.errorMessage ?? 'Đã xảy ra lỗi',
+              onRetry: _loadJourney,
             ),
           );
         }
@@ -113,21 +120,16 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
         final journey = provider.currentJourney;
         if (journey == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Hành trình')),
+            appBar: SkillVerseAppBar(title: 'Hành trình', onBack: () => context.go('/journey')),
             body: const Center(child: Text('Không tìm thấy hành trình')),
           );
         }
 
         return Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.go('/journey'),
-            ),
-            title: Text(journey.domain),
+          appBar: SkillVerseAppBar(
+            title: journey.domain,
+            onBack: () => context.go('/journey'),
             actions: _buildActions(context, journey),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
           ),
           body: RefreshIndicator(
             onRefresh: () async => _loadJourney(),
@@ -441,9 +443,7 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                   if (mounted) _loadJourney();
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: AppTheme.errorColor),
-                    );
+                    ErrorHandler.showErrorSnackBar(context, e.toString().replaceAll('Exception: ', ''));
                   }
                 }
               },
@@ -477,37 +477,21 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
     }
 
     if (questions.isEmpty && journey.assessmentTestId != null) {
-      // Need to load test
+      // Auto-trigger nếu chưa loading
+      if (!_isLoadingQuestions) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _loadedQuestions == null) {
+            _loadQuestions(journey.id, journey.assessmentTestId!);
+          }
+        });
+      }
       return _sectionCard(
         isDark: isDark,
         icon: Icons.edit_note,
-        title: 'Đang làm bài test',
-        child: Column(
-          children: [
-            const Text('Bài test đang chờ bạn hoàn thành.'),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: () async {
-                final test = await provider.getAssessmentTest(
-                  journeyId: journey.id,
-                  testId: journey.assessmentTestId!,
-                );
-                if (test?.questionsJson != null && mounted) {
-                  setState(() {
-                    try {
-                      _loadedQuestions = jsonDecode(test!.questionsJson!);
-                    } catch (_) {}
-                  });
-                }
-              },
-              icon: const Icon(Icons.download),
-              label: const Text('Tải câu hỏi'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlueDark,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
+        title: 'Đang tải bài test...',
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: CommonLoading.center(),
         ),
       );
     }
@@ -565,9 +549,7 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                 child: ElevatedButton.icon(
                   onPressed: isSubmitting ? null : () async {
                     if (_answers.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Vui lòng trả lời ít nhất một câu hỏi')),
-                      );
+                      ErrorHandler.showWarningSnackBar(context, 'Vui lòng trả lời ít nhất một câu hỏi');
                       return;
                     }
                     try {
@@ -578,9 +560,7 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                       await provider.submitTest(journeyId: journey.id, request: request);
                     } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: AppTheme.errorColor),
-                        );
+                        ErrorHandler.showErrorSnackBar(context, e.toString().replaceAll('Exception: ', ''));
                       }
                     }
                   },
@@ -755,12 +735,7 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                     await provider.generateRoadmap(journey.id);
                   } catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(e.toString().replaceAll('Exception: ', '')),
-                          backgroundColor: AppTheme.errorColor,
-                        ),
-                      );
+                      ErrorHandler.showErrorSnackBar(context, e.toString().replaceAll('Exception: ', ''));
                     }
                   }
                 },

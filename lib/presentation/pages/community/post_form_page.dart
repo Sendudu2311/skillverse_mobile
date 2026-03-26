@@ -8,6 +8,7 @@ import '../../../data/models/post_models.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/common_loading.dart';
 
 class PostFormPage extends StatefulWidget {
   final int? postId; // null for create, id for edit
@@ -73,7 +74,7 @@ class _PostFormPageState extends State<PostFormPage> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? CommonLoading.center()
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(
@@ -140,14 +141,7 @@ class _PostFormPageState extends State<PostFormPage> {
                         backgroundColor: AppTheme.themeOrangeStart,
                       ),
                       child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                          ? CommonLoading.small()
                           : const Text(
                               'Đăng bài',
                               style: TextStyle(fontSize: 16),

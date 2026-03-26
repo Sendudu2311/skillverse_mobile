@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../../data/models/module_with_content_models.dart';
 import '../../../data/models/lesson_models.dart';
 import '../../../data/services/module_service.dart';
@@ -10,6 +11,8 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/video_lesson_player.dart';
 import '../../widgets/reading_lesson_content.dart';
 import '../../widgets/quiz_lesson_widget.dart';
+import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/common_loading.dart';
 
 // ──────────────────────────────────────────────
 // Unified Curriculum Item (lesson / quiz / assignment)
@@ -114,9 +117,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     } catch (e) {
       setState(() => _isLoadingModules = false);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi tải nội dung: $e')));
+        ErrorHandler.showErrorSnackBar(context, 'Lỗi tải nội dung: $e');
       }
     }
   }
@@ -269,9 +270,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       } catch (e) {
         setState(() => _isLoadingLesson = false);
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Lỗi tải bài học: $e')));
+          ErrorHandler.showErrorSnackBar(context, 'Lỗi tải bài học: $e');
         }
       }
     }
@@ -285,9 +284,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       _selectCurriculumItem(_activeCurriculumIndex + 1);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🎉 Đã hoàn thành khóa học!')),
-        );
+        ErrorHandler.showSuccessSnackBar(context, '🎉 Đã hoàn thành khóa học!');
       }
     }
   }
@@ -321,9 +318,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Đã hoàn thành bài học!')),
-        );
+        ErrorHandler.showSuccessSnackBar(context, '✅ Đã hoàn thành bài học!');
       }
 
       // Track completion locally
@@ -336,9 +331,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     } catch (e) {
       debugPrint('Error marking lesson complete: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi đánh dấu hoàn thành: $e')));
+        ErrorHandler.showErrorSnackBar(context, 'Lỗi đánh dấu hoàn thành: $e');
       }
     } finally {
       setState(() => _isMarkingComplete = false);
@@ -529,14 +522,14 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
   Widget build(BuildContext context) {
     if (_isLoadingModules) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Đang tải...')),
-        body: const Center(child: CircularProgressIndicator()),
+        appBar: const SkillVerseAppBar(title: 'Đang tải...'),
+        body: CommonLoading.center(),
       );
     }
 
     if (_modules.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Khóa học')),
+        appBar: const SkillVerseAppBar(title: 'Khóa học'),
         body: const Center(child: Text('Khóa học chưa có nội dung')),
       );
     }
@@ -661,7 +654,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     if (_isLoadingLesson || _currentLessonDetail == null) {
       return const Padding(
         padding: EdgeInsets.all(48),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: CommonLoading()),
       );
     }
 

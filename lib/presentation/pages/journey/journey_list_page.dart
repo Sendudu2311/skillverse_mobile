@@ -7,6 +7,7 @@ import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/animated_list_item.dart';
 import '../../widgets/status_badge.dart';
 import '../../../data/models/journey_models.dart';
 
@@ -99,10 +100,13 @@ class _JourneyListPageState extends State<JourneyListPage> {
         padding: const EdgeInsets.all(16),
         itemCount: journeys.length,
         itemBuilder: (context, index) {
-          return _JourneyCard(
-            journey: journeys[index],
-            isDark: isDark,
-            onTap: () => context.push('/journey/${journeys[index].id}'),
+          return AnimatedListItem(
+            index: index,
+            child: _JourneyCard(
+              journey: journeys[index],
+              isDark: isDark,
+              onTap: () => context.push('/journey/${journeys[index].id}'),
+            ),
           );
         },
       ),

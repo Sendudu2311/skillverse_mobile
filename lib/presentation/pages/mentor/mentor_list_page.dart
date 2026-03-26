@@ -7,6 +7,8 @@ import '../../providers/mentor_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/animated_list_item.dart';
 
 class MentorListPage extends StatefulWidget {
   const MentorListPage({super.key});
@@ -197,28 +199,13 @@ class _MentorListPageState extends State<MentorListPage> {
         }
 
         if (provider.mentors.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.person_search,
-                  size: 64,
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Không tìm thấy mentor',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                  ),
-                ),
-              ],
-            ),
+          return EmptyStateWidget(
+            icon: Icons.person_search,
+            title: 'Không tìm thấy mentor',
+            subtitle: 'Thử tìm kiếm với từ khóa khác',
+            ctaLabel: 'Tải lại',
+            onCtaPressed: () => provider.loadMentors(refresh: true),
+            iconGradient: AppTheme.blueGradient,
           );
         }
 
@@ -229,7 +216,10 @@ class _MentorListPageState extends State<MentorListPage> {
             itemCount: provider.mentors.length,
             itemBuilder: (context, index) {
               final mentor = provider.mentors[index];
-              return _buildMentorCard(context, mentor, isDark, provider);
+              return AnimatedListItem(
+                index: index,
+                child: _buildMentorCard(context, mentor, isDark, provider),
+              );
             },
           ),
         );

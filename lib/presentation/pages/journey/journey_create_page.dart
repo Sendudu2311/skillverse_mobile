@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/journey_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/common_loading.dart';
+import '../../widgets/skillverse_app_bar.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../../data/models/journey_models.dart';
 
 class JourneyCreatePage extends StatefulWidget {
@@ -116,11 +119,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
     if (journey != null && mounted) {
       context.go('/journey/${journey.id}');
     } else if (provider.hasError && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage ?? 'Tạo hành trình thất bại'),
-          backgroundColor: AppTheme.errorColor,
-        ),
+      ErrorHandler.showErrorSnackBar(
+        context,
+        provider.errorMessage ?? 'Tạo hành trình thất bại',
       );
     }
   }
@@ -141,14 +142,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(
-                      width: 64,
-                      height: 64,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        color: AppTheme.primaryBlueDark,
-                      ),
-                    ),
+                    CommonLoading(size: 64, color: AppTheme.primaryBlueDark),
                     const SizedBox(height: 24),
                     Text(
                       'AI đang tạo bài test...',
@@ -172,14 +166,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
         }
 
         return Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: _handleBack,
-            ),
-            title: const Text('Tạo hành trình mới'),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
+          appBar: SkillVerseAppBar(
+            title: 'Tạo hành trình mới',
+            onBack: _handleBack,
           ),
           body: Column(
             children: [

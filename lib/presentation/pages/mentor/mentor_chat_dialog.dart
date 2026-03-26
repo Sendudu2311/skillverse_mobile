@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../widgets/skeleton_loaders.dart';
+import '../../widgets/common_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/mentor_models.dart';
 import '../../providers/mentor_provider.dart';
@@ -426,14 +427,7 @@ class _MentorChatDialogState extends State<MentorChatDialog> {
               child: IconButton(
                 onPressed: _isSending ? null : _sendMessage,
                 icon: _isSending
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
+                    ? CommonLoading.small()
                     : const Icon(Icons.send, color: Colors.white),
               ),
             ),

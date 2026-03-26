@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../../data/models/portfolio_models.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/common_loading.dart';
 
 class ExtendedProfileFormPage extends StatefulWidget {
   final ExtendedProfileDto? profile;
@@ -90,14 +93,10 @@ class _ExtendedProfileFormPageState extends State<ExtendedProfileFormPage> {
 
     if (mounted) {
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.profile == null ? 'Tạo profile thành công!' : 'Cập nhật profile thành công!')),
-        );
+        ErrorHandler.showSuccessSnackBar(context, widget.profile == null ? 'Tạo profile thành công!' : 'Cập nhật profile thành công!');
         Navigator.pop(context, true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(portfolioProvider.errorMessage ?? 'Có lỗi xảy ra')),
-        );
+        ErrorHandler.showErrorSnackBar(context, portfolioProvider.errorMessage ?? 'Có lỗi xảy ra');
       }
     }
   }
@@ -119,18 +118,14 @@ class _ExtendedProfileFormPageState extends State<ExtendedProfileFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.profile == null ? 'Tạo Portfolio' : 'Chỉnh sửa Portfolio'),
+      appBar: SkillVerseAppBar(
+        title: widget.profile == null ? 'Tạo Portfolio' : 'Chỉnh sửa Portfolio',
         actions: [
           if (_isSubmitting)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(16),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+                padding: const EdgeInsets.all(16),
+                child: CommonLoading.small(),
               ),
             )
           else

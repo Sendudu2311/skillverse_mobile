@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/notification_provider.dart';
 import '../themes/app_theme.dart';
 import 'galaxy_background.dart';
 
@@ -69,6 +70,10 @@ class _MainLayoutState extends State<MainLayout> {
   void initState() {
     super.initState();
     _updateSelectedIndex();
+    // Start polling unread count every 60s
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().startPolling();
+    });
   }
 
   @override
@@ -170,6 +175,47 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
+  Widget _buildNotificationBell(BuildContext context) {
+    return Consumer<NotificationProvider>(
+      builder: (_, provider, __) {
+        final count = provider.unreadCount;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () => context.push('/notifications'),
+            ),
+            if (count > 0)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: IgnorePointer(
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      count > 99 ? '99+' : '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   bool _shouldShowBackButton() {
     // Show back button for sub-pages (not main navigation items)
     // Special pages that need back button
@@ -201,12 +247,7 @@ class _MainLayoutState extends State<MainLayout> {
               automaticallyImplyLeading: _shouldShowBackButton(),
               elevation: 0,
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_outlined),
-                  onPressed: () {
-                    // TODO: Implement notifications
-                  },
-                ),
+                _buildNotificationBell(context),
                 IconButton(
                   icon: const Icon(Icons.logout),
                   onPressed: () => _showLogoutDialog(context),

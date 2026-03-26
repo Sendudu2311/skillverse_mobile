@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../widgets/common_loading.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -33,11 +36,7 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!_formKey.currentState!.validate()) return;
 
     if (!_agreeToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng đồng ý với điều khoản sử dụng'),
-        ),
-      );
+      ErrorHandler.showWarningSnackBar(context, 'Vui lòng đồng ý với điều khoản sử dụng');
       return;
     }
 
@@ -51,34 +50,21 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (mounted) {
       // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      
+      ErrorHandler.showSuccessSnackBar(context, 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
+
       // Navigate to verify email page
       context.go('/verify-email?email=${_emailController.text.trim()}');
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Đăng ký thất bại'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Đăng ký thất bại');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Đăng ký'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/login'),
-        ),
+      appBar: SkillVerseAppBar(
+        title: 'Đăng ký',
+        onBack: () => context.go('/login'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -276,11 +262,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     return ElevatedButton(
                       onPressed: authProvider.isLoading ? null : _handleRegister,
                       child: authProvider.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? CommonLoading.small()
                           : const Text('Đăng ký'),
                     );
                   },

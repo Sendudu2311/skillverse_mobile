@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../widgets/common_loading.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -36,12 +38,7 @@ class _LoginPageState extends State<LoginPage> {
     if (success && mounted) {
       context.go('/dashboard');
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Đăng nhập thất bại'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Đăng nhập thất bại');
     }
   }
 
@@ -53,14 +50,7 @@ class _LoginPageState extends State<LoginPage> {
     if (success && mounted) {
       context.go('/dashboard');
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            authProvider.errorMessage ?? 'Đăng nhập Google thất bại',
-          ),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Đăng nhập Google thất bại');
     }
   }
 
@@ -98,10 +88,13 @@ class _LoginPageState extends State<LoginPage> {
 
                       const SizedBox(height: 8),
 
-                      Text(
-                        'Chào mừng trở lại!',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                      Semantics(
+                        label: 'welcome_title',
+                        child: Text(
+                          'Chào mừng trở lại!',
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
                       ),
 
                       const SizedBox(height: 8),
@@ -194,11 +187,7 @@ class _LoginPageState extends State<LoginPage> {
                     return ElevatedButton(
                       onPressed: authProvider.isLoading ? null : _handleLogin,
                       child: authProvider.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? CommonLoading.small()
                           : const Text('Đăng nhập'),
                     );
                   },
@@ -235,11 +224,7 @@ class _LoginPageState extends State<LoginPage> {
                           ? null
                           : _handleGoogleSignIn,
                       icon: authProvider.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? CommonLoading.small()
                           : Image.asset(
                               'assets/google_logo.png',
                               height: 24,
@@ -291,14 +276,17 @@ class _LoginPageState extends State<LoginPage> {
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            'DEMO ACCOUNTS',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
+                          Semantics(
+                            label: 'demo_accounts_header',
+                            child: Text(
+                              'DEMO ACCOUNTS',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                            ),
                           ),
                         ],
                       ),

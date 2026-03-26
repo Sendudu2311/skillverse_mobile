@@ -12,6 +12,7 @@ import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/html_helper.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/common_loading.dart';
 
 class PostDetailPage extends StatefulWidget {
   final int postId;
@@ -325,9 +326,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   (comment) => _buildCommentCard(comment),
                 ),
                 if (provider.isLoadingMore)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: CommonLoading.center(),
                   ),
               ],
             );

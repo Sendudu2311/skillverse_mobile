@@ -8,6 +8,7 @@ import '../../themes/app_theme.dart';
 import '../../../data/models/portfolio_models.dart';
 import '../../../core/utils/validation_helper.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../widgets/common_loading.dart';
 
 class AddCertificatePage extends StatefulWidget {
   const AddCertificatePage({super.key});
@@ -240,7 +241,7 @@ class _AddCertificatePageState extends State<AddCertificatePage>
             if (_isLoading)
               Container(
                 color: Colors.black54,
-                child: const Center(child: CircularProgressIndicator()),
+                child: CommonLoading.center(),
               ),
           ],
         ),
@@ -578,14 +579,7 @@ class _AddCertificatePageState extends State<AddCertificatePage>
           borderRadius: BorderRadius.circular(12),
           child: Center(
             child: _isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
+                ? CommonLoading.small()
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [

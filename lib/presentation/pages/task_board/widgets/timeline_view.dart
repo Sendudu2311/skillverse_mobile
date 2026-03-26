@@ -6,9 +6,69 @@ import '../../../themes/app_theme.dart';
 import '../../../../data/models/task_board_models.dart';
 import 'task_detail_sheet.dart';
 
-/// Timeline View - Week Calendar showing board tasks
-class TimelineView extends StatelessWidget {
+class TimelineView extends StatefulWidget {
   const TimelineView({super.key});
+
+  @override
+  State<TimelineView> createState() => _TimelineViewState();
+}
+
+class _TimelineViewState extends State<TimelineView> {
+  late DateTime _selectedDay;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _selectedDay = DateTime(now.year, now.month, now.day);
+  }
+
+  static const _vnDays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
+
+  String _formatSelectedDay(DateTime d) {
+    final dayName = _vnDays[d.weekday - 1];
+    return '$dayName, ${d.day}/${d.month}/${d.year}';
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  DateTime _weekStart(DateTime d) {
+    return DateTime(d.year, d.month, d.day - (d.weekday - 1));
+  }
+
+  void _goToPreviousWeek(TaskBoardProvider provider) {
+    provider.goToPreviousWeek();
+    setState(() {
+      _selectedDay = _weekStart(_selectedDay).subtract(const Duration(days: 7));
+    });
+  }
+
+  void _goToNextWeek(TaskBoardProvider provider) {
+    provider.goToNextWeek();
+    setState(() {
+      _selectedDay = _weekStart(_selectedDay).add(const Duration(days: 7));
+    });
+  }
+
+  void _goToCurrentWeek(TaskBoardProvider provider) {
+    provider.goToCurrentWeek();
+    final now = DateTime.now();
+    setState(() {
+      _selectedDay = DateTime(now.year, now.month, now.day);
+    });
+  }
+
+  Color _priorityColor(TaskPriority priority) {
+    switch (priority) {
+      case TaskPriority.high:
+        return Colors.red;
+      case TaskPriority.medium:
+        return Colors.orange;
+      case TaskPriority.low:
+        return Colors.green;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,124 +76,146 @@ class TimelineView extends StatelessWidget {
       builder: (context, provider, _) {
         return Column(
           children: [
-            _buildMonthNavigation(context, provider),
-            _buildWeekHeader(context, provider),
-            Expanded(child: _buildTimeGrid(context, provider)),
+            _buildWeekNav(context, provider),
+            _buildDayTabs(context, provider),
+            const Divider(height: 1, thickness: 0.5),
+            Expanded(child: _buildDayTaskList(context, provider)),
           ],
         );
       },
     );
   }
 
-  Widget _buildMonthNavigation(BuildContext context, TaskBoardProvider provider) {
-    final monthYear = DateFormat('MMMM yyyy').format(provider.selectedWeekStart).toUpperCase();
+  Widget _buildWeekNav(BuildContext context, TaskBoardProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final weekStart = _weekStart(_selectedDay);
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    final label =
+        weekStart.month == weekEnd.month
+            ? DateFormat('MMMM yyyy').format(weekStart).toUpperCase()
+            : '${DateFormat('MMM').format(weekStart)} – ${DateFormat('MMM yyyy').format(weekEnd)}'.toUpperCase();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildNavButton(context, Icons.chevron_left, () => provider.goToPreviousWeek()),
-          const SizedBox(width: 16),
-          GestureDetector(
-            onTap: () => provider.goToCurrentWeek(),
-            child: Text(
-              monthYear,
-              style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold,
-                fontFamily: 'monospace', color: AppTheme.primaryBlueDark, letterSpacing: 2,
+          _buildNavButton(context, Icons.chevron_left, isDark, () => _goToPreviousWeek(provider)),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _goToCurrentWeek(provider),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  color: AppTheme.primaryBlueDark,
+                  letterSpacing: 1.5,
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
-          _buildNavButton(context, Icons.chevron_right, () => provider.goToNextWeek()),
+          _buildNavButton(context, Icons.chevron_right, isDark, () => _goToNextWeek(provider)),
         ],
       ),
     );
   }
 
-  Widget _buildNavButton(BuildContext context, IconData icon, VoidCallback onTap) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildNavButton(BuildContext context, IconData icon, bool isDark, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 36, height: 36,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
           color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.primaryBlueDark, width: 1),
+          border: Border.all(color: AppTheme.primaryBlueDark),
         ),
         child: Icon(icon, color: AppTheme.primaryBlueDark, size: 20),
       ),
     );
   }
 
-  Widget _buildWeekHeader(BuildContext context, TaskBoardProvider provider) {
+  Widget _buildDayTabs(BuildContext context, TaskBoardProvider provider) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final weekStart = provider.selectedWeekStart;
+    final weekStart = _weekStart(_selectedDay);
+    final dayLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
     final today = DateTime.now();
-    final days = ['TIME', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(
-          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-        )),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
-        children: List.generate(8, (index) {
-          if (index == 0) {
-            return SizedBox(
-              width: 50,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(days[index], style: TextStyle(
-                  fontSize: 10, fontWeight: FontWeight.w500, fontFamily: 'monospace',
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                )),
-              ),
-            );
-          }
+        children: List.generate(7, (index) {
+          final day = weekStart.add(Duration(days: index));
+          final isSelected = _isSameDay(day, _selectedDay);
+          final isToday = _isSameDay(day, today);
+          final isSunday = index == 6;
+          final hasTasks = provider.getTasksForDay(day).isNotEmpty;
 
-          final dayDate = weekStart.add(Duration(days: index - 1));
-          final isToday = dayDate.year == today.year && dayDate.month == today.month && dayDate.day == today.day;
-          final isSunday = index == 7;
-          final dayTaskCount = provider.getTasksForDay(dayDate).length;
+          final textColor = isSelected
+              ? Colors.white
+              : isSunday
+                  ? Colors.red
+                  : isToday
+                      ? AppTheme.primaryBlueDark
+                      : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary);
 
           return Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: isToday ? BoxDecoration(
-                color: AppTheme.primaryBlueDark.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ) : null,
-              child: Column(
-                children: [
-                  Text(days[index], style: TextStyle(
-                    fontSize: 10, fontWeight: FontWeight.w600, fontFamily: 'monospace',
-                    color: isSunday ? Colors.red : (isToday ? AppTheme.primaryBlueDark
-                        : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
-                  )),
-                  const SizedBox(height: 2),
-                  Text('${dayDate.day}/${dayDate.month}', style: TextStyle(
-                    fontSize: 10, fontFamily: 'monospace',
-                    color: isSunday ? Colors.red.withValues(alpha: 0.7)
-                        : (isToday ? AppTheme.primaryBlueDark.withValues(alpha: 0.8)
-                        : (isDark ? AppTheme.darkTextSecondary.withValues(alpha: 0.7)
-                        : AppTheme.lightTextSecondary.withValues(alpha: 0.7))),
-                  )),
-                  if (dayTaskCount > 0) ...[
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedDay = day),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppTheme.primaryBlueDark
+                      : isToday
+                          ? AppTheme.primaryBlueDark.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  border: isToday && !isSelected
+                      ? Border.all(
+                          color: AppTheme.primaryBlueDark.withValues(alpha: 0.4),
+                        )
+                      : null,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      dayLabels[index],
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'monospace',
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${day.day}',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                        color: textColor,
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Container(
-                      width: 6, height: 6,
+                      width: 4,
+                      height: 4,
                       decoration: BoxDecoration(
-                        color: AppTheme.accentCyan,
                         shape: BoxShape.circle,
+                        color: hasTasks
+                            ? (isSelected ? Colors.white : AppTheme.accentCyan)
+                            : Colors.transparent,
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
           );
@@ -142,126 +224,242 @@ class TimelineView extends StatelessWidget {
     );
   }
 
-  Color _getPriorityColor(TaskPriority priority) {
-    switch (priority) {
-      case TaskPriority.high: return Colors.red;
-      case TaskPriority.medium: return Colors.orange;
-      case TaskPriority.low: return Colors.green;
-    }
-  }
-
-  Widget _buildTimeGrid(BuildContext context, TaskBoardProvider provider) {
+  Widget _buildDayTaskList(BuildContext context, TaskBoardProvider provider) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hours = List.generate(19, (i) => i + 4); // 04:00 - 22:00
-    final weekStart = provider.selectedWeekStart;
+    var tasks = List<Task>.from(provider.getTasksForDay(_selectedDay));
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+    // Sort by startDate, fallback to deadline
+    tasks.sort((a, b) {
+      final aTime = a.startDate ?? a.deadline;
+      final bTime = b.startDate ?? b.deadline;
+      if (aTime == null && bTime == null) return 0;
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
+      return aTime.compareTo(bTime);
+    });
+
+    if (tasks.isEmpty) {
+      return Center(
         child: Column(
-          children: hours.map((hour) {
-            return Container(
-              height: 80,
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(
-                  color: (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor)
-                      .withValues(alpha: 0.3),
-                )),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.event_available_outlined,
+              size: 48,
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Không có nhiệm vụ nào',
+              style: TextStyle(
+                fontSize: 13,
+                fontFamily: 'monospace',
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 50,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        '${hour.toString().padLeft(2, '0')}:00',
-                        style: TextStyle(
-                          fontSize: 10, fontFamily: 'monospace',
-                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
-                  ...List.generate(7, (dayIndex) {
-                    final dayDate = weekStart.add(Duration(days: dayIndex));
-                    final tasks = provider.getTasksForDay(dayDate);
-                    final tasksAtHour = tasks.where((t) {
-                      final taskHour = t.startDate?.hour ?? t.deadline?.hour;
-                      return taskHour == hour;
-                    }).toList();
-
-                    return Expanded(
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 1),
-                        decoration: BoxDecoration(
-                          border: Border(left: BorderSide(
-                            color: (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor)
-                                .withValues(alpha: 0.2),
-                          )),
-                        ),
-                        child: tasksAtHour.isEmpty
-                            ? const SizedBox()
-                            : Column(
-                                children: tasksAtHour.take(2).map((task) =>
-                                  _buildTaskCard(context, task),
-                                ).toList(),
-                              ),
-                      ),
-                    );
-                  }),
-                ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _formatSelectedDay(_selectedDay),
+              style: TextStyle(
+                fontSize: 11,
+                fontFamily: 'monospace',
+                color: (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)
+                    .withValues(alpha: 0.6),
               ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTaskCard(BuildContext context, Task task) {
-    return GestureDetector(
-      onTap: () {
-        TaskDetailSheet.show(
-          context,
-          task: task,
-          columnId: task.columnId ?? '',
-        );
-      },
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.all(1),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        decoration: BoxDecoration(
-          color: _getPriorityColor(task.priority).withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(4),
-          boxShadow: [
-            BoxShadow(
-              color: _getPriorityColor(task.priority).withValues(alpha: 0.3),
-              blurRadius: 2,
             ),
           ],
         ),
-        child: Column(
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        return _buildTaskRow(context, tasks[index], isDark);
+      },
+    );
+  }
+
+  Widget _buildTaskRow(BuildContext context, Task task, bool isDark) {
+    final time = task.startDate ?? task.deadline;
+    final timeLabel = time != null ? DateFormat('HH:mm').format(time) : '--:--';
+    final color = _priorityColor(task.priority);
+
+    return GestureDetector(
+      onTap: () => TaskDetailSheet.show(context, task: task, columnId: task.columnId ?? ''),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              task.title,
-              style: const TextStyle(
-                fontSize: 8, fontWeight: FontWeight.bold,
-                fontFamily: 'monospace', color: Colors.white,
-              ),
-              maxLines: 2, overflow: TextOverflow.ellipsis,
-            ),
-            if (task.startDate != null)
-              Text(
-                DateFormat('HH:mm').format(task.startDate!),
-                style: const TextStyle(
-                  fontSize: 7, fontFamily: 'monospace', color: Colors.white70,
+            // Time column
+            SizedBox(
+              width: 44,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  timeLabel,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w600,
+                    color: task.isOverdue
+                        ? Colors.red
+                        : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                  ),
+                  textAlign: TextAlign.right,
                 ),
               ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // Timeline dot + line
+            Column(
+              children: [
+                const SizedBox(height: 14),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Container(
+                  width: 2,
+                  height: 60,
+                  color: color.withValues(alpha: 0.2),
+                ),
+              ],
+            ),
+
+            const SizedBox(width: 10),
+
+            // Task card
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppTheme.darkCardBackground
+                      : AppTheme.lightCardBackground,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.3),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            task.title,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'monospace',
+                              color: isDark
+                                  ? AppTheme.darkTextPrimary
+                                  : AppTheme.lightTextPrimary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    if (task.description != null && task.description!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        task.description!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        if (task.status != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              task.status!,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontFamily: 'monospace',
+                                color: color,
+                              ),
+                            ),
+                          ),
+                        const Spacer(),
+                        if (task.userProgress != null && task.userProgress! > 0) ...[
+                          SizedBox(
+                            width: 60,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(2),
+                              child: LinearProgressIndicator(
+                                value: task.userProgress! / 100,
+                                minHeight: 4,
+                                backgroundColor: color.withValues(alpha: 0.15),
+                                valueColor: AlwaysStoppedAnimation(color),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${task.userProgress}%',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontFamily: 'monospace',
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

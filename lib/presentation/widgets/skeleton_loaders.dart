@@ -490,3 +490,206 @@ class PostCardSkeleton extends StatelessWidget {
     );
   }
 }
+
+class MentorCardSkeleton extends StatelessWidget {
+  const MentorCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Row(
+          children: [
+            const ShimmerBox(width: 64, height: 64, borderRadius: 32),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ShimmerBox(
+                    width: double.infinity,
+                    height: 18,
+                    margin: EdgeInsets.only(bottom: 8),
+                  ),
+                  ShimmerBox(
+                    width: MediaQuery.of(context).size.width * 0.4,
+                    height: 14,
+                    margin: const EdgeInsets.only(bottom: 8),
+                  ),
+                  Row(
+                    children: [
+                      const ShimmerBox(width: 60, height: 12),
+                      const SizedBox(width: 12),
+                      const ShimmerBox(width: 60, height: 12),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class JourneyCardSkeleton extends StatelessWidget {
+  const JourneyCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const ShimmerBox(width: 80, height: 24, borderRadius: 8),
+                const Spacer(),
+                const ShimmerBox(width: 70, height: 24, borderRadius: 8),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const ShimmerBox(
+              width: double.infinity,
+              height: 18,
+              margin: EdgeInsets.only(bottom: 6),
+            ),
+            ShimmerBox(
+              width: MediaQuery.of(context).size.width * 0.65,
+              height: 14,
+              margin: const EdgeInsets.only(bottom: 12),
+            ),
+            const ShimmerBox(
+              width: double.infinity,
+              height: 6,
+              borderRadius: 4,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const ShimmerBox(width: 80, height: 12),
+                const Spacer(),
+                const ShimmerBox(width: 50, height: 12),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CourseCardSkeleton extends StatelessWidget {
+  const CourseCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const ShimmerBox(
+              width: double.infinity,
+              height: 160,
+              borderRadius: 16,
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ShimmerBox(
+                    width: double.infinity,
+                    height: 20,
+                    margin: EdgeInsets.only(bottom: 8),
+                  ),
+                  ShimmerBox(
+                    width: MediaQuery.of(context).size.width * 0.7,
+                    height: 18,
+                    margin: const EdgeInsets.only(bottom: 8),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const ShimmerBox(
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        margin: EdgeInsets.only(right: 8),
+                      ),
+                      Expanded(
+                        child: ShimmerBox(
+                          width: MediaQuery.of(context).size.width * 0.4,
+                          height: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      ShimmerBox(
+                        width: MediaQuery.of(context).size.width * 0.15,
+                        height: 14,
+                        margin: const EdgeInsets.only(right: 16),
+                      ),
+                      ShimmerBox(
+                        width: MediaQuery.of(context).size.width * 0.2,
+                        height: 14,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const ShimmerBox(
+                        width: 100,
+                        height: 36,
+                        borderRadius: 8,
+                      ),
+                      ShimmerBox(
+                        width: MediaQuery.of(context).size.width * 0.35,
+                        height: 40,
+                        borderRadius: 8,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

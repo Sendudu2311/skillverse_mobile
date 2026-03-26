@@ -22,6 +22,7 @@ import 'presentation/providers/expert_chat_provider.dart';
 import 'presentation/providers/job_provider.dart';
 import 'presentation/providers/journey_provider.dart';
 import 'presentation/providers/wallet_provider.dart';
+import 'presentation/providers/notification_provider.dart';
 import 'presentation/app.dart';
 import 'core/utils/storage_helper.dart';
 import 'core/utils/date_time_helper.dart';
@@ -69,6 +70,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => JobProvider()),
         ChangeNotifierProvider(create: (_) => JourneyProvider()),
         ChangeNotifierProvider(create: (_) => WalletProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: const SkillVerseApp(),
     ),

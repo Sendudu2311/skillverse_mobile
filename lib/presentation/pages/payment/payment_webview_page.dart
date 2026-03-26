@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/error_state_widget.dart';
+import '../../widgets/common_loading.dart';
 
 class PaymentWebViewPage extends StatefulWidget {
   final String checkoutUrl;
@@ -145,74 +148,39 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Thanh toán'),
+      appBar: SkillVerseAppBar(
+        title: 'Thanh toán',
+        icon: Icons.payment,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              _controller.reload();
-            },
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () => _controller.reload(),
           ),
           IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () {
-              _showCancelDialog();
-            },
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: _showCancelDialog,
           ),
         ],
       ),
       body: Stack(
         children: [
           if (_error != null)
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                    child: Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _error = null;
-                        _isLoading = true;
-                      });
-                      _controller.reload();
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Thử lại'),
-                  ),
-                ],
-              ),
+            ErrorStateWidget(
+              message: _error!,
+              onRetry: () {
+                setState(() {
+                  _error = null;
+                  _isLoading = true;
+                });
+                _controller.reload();
+              },
             )
           else
             WebViewWidget(controller: _controller),
           if (_isLoading)
             Container(
               color: Colors.white,
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Đang tải trang thanh toán...'),
-                  ],
-                ),
-              ),
+              child: CommonLoading.center(message: 'Đang tải trang thanh toán...'),
             ),
         ],
       ),

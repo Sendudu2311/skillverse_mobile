@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/common_loading.dart';
 import '../../../core/utils/number_formatter.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../../data/services/wallet_service.dart';
 
 /// Coin package data model (matching backend CoinService)
@@ -147,12 +149,7 @@ class _BuyCoinSheetState extends State<BuyCoinSheet> {
 
       widget.onSuccess();
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('🪙 Mua thành công ${_selectedPackage!.totalCoins} xu!'),
-          backgroundColor: AppTheme.successColor,
-        ),
-      );
+      ErrorHandler.showSuccessSnackBar(context, '🪙 Mua thành công ${_selectedPackage!.totalCoins} xu!');
     } catch (e) {
       setState(() {
         _error = e.toString().replaceAll('Exception: ', '');
@@ -312,7 +309,7 @@ class _BuyCoinSheetState extends State<BuyCoinSheet> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: _isLoading
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? CommonLoading.small()
                           : const Text('🪙 Mua Ngay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),

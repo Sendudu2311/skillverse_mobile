@@ -8,6 +8,9 @@ import '../../widgets/glass_card.dart';
 import '../../../data/models/enrollment_models.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/error_state_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/animated_list_item.dart';
 
 class MyCoursesPage extends StatefulWidget {
   const MyCoursesPage({super.key});
@@ -63,62 +66,20 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
               }
 
               if (enrollmentProvider.errorMessage != null) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        enrollmentProvider.errorMessage!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadEnrollments,
-                        child: const Text('Thử lại'),
-                      ),
-                    ],
-                  ),
+                return ErrorStateWidget(
+                  message: enrollmentProvider.errorMessage!,
+                  onRetry: _loadEnrollments,
                 );
               }
 
               if (enrollmentProvider.enrollments.isEmpty) {
-                return Center(
-                  child: GlassCard(
-                    padding: const EdgeInsets.all(32),
-                    margin: const EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.school_outlined,
-                          size: 64,
-                          color: Theme.of(context).disabledColor,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Bạn chưa đăng ký khóa học nào',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: () => context.go('/courses'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.themeBlueStart,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 16,
-                            ),
-                          ),
-                          child: const Text('Khám phá khóa học'),
-                        ),
-                      ],
-                    ),
-                  ),
+                return EmptyStateWidget(
+                  icon: Icons.school_outlined,
+                  title: 'Chưa đăng ký khóa học nào',
+                  subtitle: 'Khám phá và đăng ký khóa học để bắt đầu học',
+                  ctaLabel: 'Khám phá khóa học',
+                  onCtaPressed: () => context.go('/courses'),
+                  iconGradient: AppTheme.blueGradient,
                 );
               }
 
@@ -129,7 +90,10 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
                   itemCount: enrollmentProvider.enrollments.length,
                   itemBuilder: (context, index) {
                     final enrollment = enrollmentProvider.enrollments[index];
-                    return _buildEnrolledCourseCard(context, enrollment);
+                    return AnimatedListItem(
+                      index: index,
+                      child: _buildEnrolledCourseCard(context, enrollment),
+                    );
                   },
                 ),
               );

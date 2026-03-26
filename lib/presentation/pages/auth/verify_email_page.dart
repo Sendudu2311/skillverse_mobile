@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
 import '../../providers/auth_provider.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../widgets/common_loading.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class VerifyEmailPage extends StatefulWidget {
   final String email;
@@ -59,55 +62,32 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     );
 
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Xác thực email thành công!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      ErrorHandler.showSuccessSnackBar(context, 'Xác thực email thành công!');
       context.go('/login');
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Xác thực thất bại'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Xác thực thất bại');
     }
   }
 
   Future<void> _handleResendOtp() async {
     final authProvider = context.read<AuthProvider>();
-    
+
     final success = await authProvider.resendOtp(widget.email);
-    
+
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('OTP đã được gửi lại thành công'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      ErrorHandler.showSuccessSnackBar(context, 'OTP đã được gửi lại thành công');
       _startCountdown();
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Gửi lại OTP thất bại'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Gửi lại OTP thất bại');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Xác thực Email'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/register'),
-        ),
+      appBar: SkillVerseAppBar(
+        title: 'Xác thực Email',
+        onBack: () => context.go('/register'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -202,11 +182,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                     return ElevatedButton(
                       onPressed: authProvider.isLoading ? null : _handleVerification,
                       child: authProvider.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? CommonLoading.small()
                           : const Text('Xác thực'),
                     );
                   },

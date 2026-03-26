@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../data/models/post_models.dart';
+import '../../../widgets/common_loading.dart';
 
 class CommunityStatsWidget extends StatelessWidget {
   final PostStats? stats;
@@ -16,9 +17,9 @@ class CommunityStatsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const SizedBox(
+      return SizedBox(
         height: 100,
-        child: Center(child: CircularProgressIndicator()),
+        child: CommonLoading.center(),
       );
     }
 

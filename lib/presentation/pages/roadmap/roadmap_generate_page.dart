@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/roadmap_provider.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
@@ -715,12 +716,7 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
     // Check authentication
     final authProvider = context.read<AuthProvider>();
     if (!authProvider.isAuthenticated) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng đăng nhập để tạo lộ trình'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, 'Vui lòng đăng nhập để tạo lộ trình');
       context.push('/login');
       return;
     }

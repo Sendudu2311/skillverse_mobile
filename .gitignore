@@ -96,6 +96,8 @@ test/page_dumps/
 # Project-specific ignores
 assets/images/
 GEMINI.md
+CLAUDE.md
 DEVELOPMENT_AND_TESTING_LOG.md
 .serena/
 edit_profile_source.xml
+test/appium/

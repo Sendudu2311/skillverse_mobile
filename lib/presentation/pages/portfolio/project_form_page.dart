@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../../data/models/portfolio_models.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/common_loading.dart';
 
 class ProjectFormPage extends StatefulWidget {
   final ProjectDto? project;
@@ -94,14 +97,10 @@ class _ProjectFormPageState extends State<ProjectFormPage> {
 
     if (mounted) {
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.project == null ? 'Tạo dự án thành công!' : 'Cập nhật dự án thành công!')),
-        );
+        ErrorHandler.showSuccessSnackBar(context, widget.project == null ? 'Tạo dự án thành công!' : 'Cập nhật dự án thành công!');
         Navigator.pop(context, true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(portfolioProvider.errorMessage ?? 'Có lỗi xảy ra')),
-        );
+        ErrorHandler.showErrorSnackBar(context, portfolioProvider.errorMessage ?? 'Có lỗi xảy ra');
       }
     }
   }
@@ -109,14 +108,14 @@ class _ProjectFormPageState extends State<ProjectFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.project == null ? 'Thêm dự án' : 'Chỉnh sửa dự án'),
+      appBar: SkillVerseAppBar(
+        title: widget.project == null ? 'Thêm dự án' : 'Chỉnh sửa dự án',
         actions: [
           if (_isSubmitting)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(16),
-                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                padding: const EdgeInsets.all(16),
+                child: CommonLoading.small(),
               ),
             )
           else

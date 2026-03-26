@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class TermsPage extends StatelessWidget {
   const TermsPage({super.key});
@@ -6,7 +7,7 @@ class TermsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Terms of Service')),
+      appBar: const SkillVerseAppBar(title: 'Terms of Service'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class TermsOfServicePage extends StatelessWidget {
   const TermsOfServicePage({super.key});
@@ -7,12 +8,9 @@ class TermsOfServicePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Điều Khoản Sử Dụng'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/profile'),
-        ),
+      appBar: SkillVerseAppBar(
+        title: 'Điều Khoản Sử Dụng',
+        onBack: () => context.go('/profile'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

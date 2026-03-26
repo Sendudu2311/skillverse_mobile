@@ -161,48 +161,6 @@ class ErrorHandler {
     );
   }
 
-  /// Validate field is not empty
-  static String? validateNotEmpty(String? value, String fieldName) {
-    if (value == null || value.trim().isEmpty) {
-      return '$fieldName không được để trống';
-    }
-    return null;
-  }
-
-  /// Validate email format
-  static String? validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Email không được để trống';
-    }
-
-    final emailRegex = RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    );
-
-    if (!emailRegex.hasMatch(value.trim())) {
-      return 'Email không hợp lệ';
-    }
-
-    return null;
-  }
-
-  /// Validate URL format
-  static String? validateUrl(String? value, {bool required = false}) {
-    if (value == null || value.trim().isEmpty) {
-      return required ? 'URL không được để trống' : null;
-    }
-
-    final urlRegex = RegExp(
-      r'^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$',
-    );
-
-    if (!urlRegex.hasMatch(value.trim())) {
-      return 'URL không hợp lệ';
-    }
-
-    return null;
-  }
-
   /// Validate slug format (lowercase, numbers, hyphens only)
   static String? validateSlug(String? value, {bool required = false}) {
     if (value == null || value.trim().isEmpty) {
@@ -213,47 +171,6 @@ class ErrorHandler {
 
     if (!slugRegex.hasMatch(value.trim())) {
       return 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang';
-    }
-
-    return null;
-  }
-
-  /// Validate minimum length
-  static String? validateMinLength(
-    String? value,
-    int minLength,
-    String fieldName,
-  ) {
-    if (value == null || value.trim().isEmpty) {
-      return '$fieldName không được để trống';
-    }
-
-    if (value.trim().length < minLength) {
-      return '$fieldName phải có ít nhất $minLength ký tự';
-    }
-
-    return null;
-  }
-
-  /// Validate maximum length
-  static String? validateMaxLength(
-    String? value,
-    int maxLength,
-    String fieldName,
-  ) {
-    if (value != null && value.trim().length > maxLength) {
-      return '$fieldName không được vượt quá $maxLength ký tự';
-    }
-
-    return null;
-  }
-
-  /// Validate date range
-  static String? validateDateRange(DateTime? startDate, DateTime? endDate) {
-    if (startDate != null && endDate != null) {
-      if (endDate.isBefore(startDate)) {
-        return 'Ngày kết thúc phải sau ngày bắt đầu';
-      }
     }
 
     return null;

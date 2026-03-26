@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/painters/grid_painter.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../widgets/common_loading.dart';
 
 class RoadmapDetailPage extends StatefulWidget {
   final int sessionId;
@@ -61,7 +62,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
+          CommonLoading.center(),
           const SizedBox(height: 16),
           Text(
             'Đang tải lộ trình...',
@@ -1312,7 +1313,6 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
     bool completed,
   ) async {
     final provider = context.read<RoadmapProvider>();
-    final messenger = ScaffoldMessenger.of(context);
 
     final response = await provider.updateQuestProgress(
       sessionId: widget.sessionId,
@@ -1321,19 +1321,11 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
     );
 
     if (response != null && mounted) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            completed
-                ? 'Đã hoàn thành nhiệm vụ! 🎉'
-                : 'Đã bỏ đánh dấu hoàn thành',
-          ),
-          backgroundColor: completed
-              ? AppTheme.successColor
-              : AppTheme.warningColor,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      if (completed) {
+        ErrorHandler.showSuccessSnackBar(context, 'Đã hoàn thành nhiệm vụ! 🎉');
+      } else {
+        ErrorHandler.showWarningSnackBar(context, 'Đã bỏ đánh dấu hoàn thành');
+      }
     }
   }
 
@@ -1353,11 +1345,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
       child: OutlinedButton.icon(
         onPressed: isCreating ? null : () => _createStudyPlan(context, node),
         icon: isCreating
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+            ? CommonLoading.small()
             : Icon(
                 Icons.event_note_outlined,
                 size: 18,

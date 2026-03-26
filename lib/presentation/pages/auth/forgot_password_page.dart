@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../widgets/common_loading.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -37,12 +40,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn');
       }
     } catch (e) {
       setState(() {
@@ -50,12 +48,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Có lỗi xảy ra: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, 'Có lỗi xảy ra: ${e.toString()}');
       }
     }
   }
@@ -63,12 +56,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Quên mật khẩu'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/login'),
-        ),
+      appBar: SkillVerseAppBar(
+        title: 'Quên mật khẩu',
+        onBack: () => context.go('/login'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -153,11 +143,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleResetPassword,
                     child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? CommonLoading.small()
                         : const Text('Gửi hướng dẫn'),
                   ),
                 ] else ...[

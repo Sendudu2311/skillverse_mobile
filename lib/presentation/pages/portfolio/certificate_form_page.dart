@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../../data/models/portfolio_models.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/common_loading.dart';
 
 class CertificateFormPage extends StatefulWidget {
   const CertificateFormPage({super.key});
@@ -59,14 +62,10 @@ class _CertificateFormPageState extends State<CertificateFormPage> {
 
     if (mounted) {
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Thêm chứng chỉ thành công!')),
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Thêm chứng chỉ thành công!');
         Navigator.pop(context, true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(portfolioProvider.errorMessage ?? 'Có lỗi xảy ra')),
-        );
+        ErrorHandler.showErrorSnackBar(context, portfolioProvider.errorMessage ?? 'Có lỗi xảy ra');
       }
     }
   }
@@ -74,14 +73,14 @@ class _CertificateFormPageState extends State<CertificateFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Thêm chứng chỉ'),
+      appBar: SkillVerseAppBar(
+        title: 'Thêm chứng chỉ',
         actions: [
           if (_isSubmitting)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(16),
-                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                padding: const EdgeInsets.all(16),
+                child: CommonLoading.small(),
               ),
             )
           else

@@ -5,6 +5,7 @@ import '../../providers/course_provider.dart';
 import '../../providers/enrollment_provider.dart';
 import '../../widgets/course_card_v3.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/animated_list_item.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/shimmer_loading.dart';
@@ -417,10 +418,13 @@ class _CoursesPageState extends State<CoursesPage> {
             final course = courseProvider.courses[index];
             final enrollmentProvider = context.watch<EnrollmentProvider>();
             final isEnrolled = enrollmentProvider.isEnrolled(course.id);
-            return CourseCardV3(
-              course: course,
-              isEnrolled: isEnrolled,
-              onTap: () => context.push('/courses/${course.id}'),
+            return AnimatedListItem(
+              index: index,
+              child: CourseCardV3(
+                course: course,
+                isEnrolled: isEnrolled,
+                onTap: () => context.push('/courses/${course.id}'),
+              ),
             );
           }, childCount: courseProvider.courses.length),
         ),

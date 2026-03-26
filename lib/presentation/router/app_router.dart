@@ -43,6 +43,7 @@ import '../pages/help/help_center_page.dart';
 import '../pages/legal/privacy_policy_page.dart';
 import '../pages/terms/terms_of_service_page.dart';
 import '../pages/splash/splash_page.dart';
+import '../pages/notifications/notification_page.dart';
 import '../widgets/main_layout.dart';
 import '../providers/auth_provider.dart';
 
@@ -425,6 +426,13 @@ class AppRouter {
               ),
             ),
           ],
+        ),
+
+        // Notifications Route
+        GoRoute(
+          path: '/notifications',
+          name: 'notifications',
+          builder: (context, state) => const NotificationPage(),
         ),
 
         // Portfolio Route

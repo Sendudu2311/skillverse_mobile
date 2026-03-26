@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../providers/expert_chat_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/formatted_ai_response.dart';
+import '../../widgets/common_loading.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 /// Expert Chat Page with Session History Drawer
 /// Chat interface with the selected expert
@@ -69,7 +71,7 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
 
         if (expertContext == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Expert Chat')),
+            appBar: const SkillVerseAppBar(title: 'Expert Chat'),
             body: const Center(child: Text('Vui lòng chọn chuyên gia trước')),
           );
         }
@@ -385,7 +387,7 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
             // Sessions List
             Expanded(
               child: provider.loadingSessions
-                  ? const Center(child: CircularProgressIndicator())
+                  ? CommonLoading.center()
                   : provider.sessions.isEmpty
                   ? Center(
                       child: Column(

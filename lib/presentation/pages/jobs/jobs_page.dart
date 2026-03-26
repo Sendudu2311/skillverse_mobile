@@ -8,6 +8,7 @@ import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/animated_list_item.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/error_state_widget.dart';
+import '../../widgets/empty_state_widget.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/date_time_helper.dart';
 import 'job_detail_page.dart';
@@ -998,39 +999,13 @@ class _JobsPageState extends State<JobsPage>
   }
 
   Widget _buildEmptyState(String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.work_off_outlined,
-              size: 64,
-              color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.3),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            TextButton.icon(
-              onPressed: () {
-                final provider = context.read<JobProvider>();
-                provider.refresh();
-              },
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Tải lại'),
-            ),
-          ],
-        ),
-      ),
+    return EmptyStateWidget(
+      icon: Icons.work_off_outlined,
+      title: message,
+      subtitle: 'Thử tải lại hoặc thay đổi bộ lọc',
+      ctaLabel: 'Tải lại',
+      onCtaPressed: () => context.read<JobProvider>().refresh(),
+      iconGradient: AppTheme.blueGradient,
     );
   }
 

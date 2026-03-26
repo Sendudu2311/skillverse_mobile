@@ -5,7 +5,6 @@ import '../../../themes/app_theme.dart';
 import '../../../../data/models/task_board_models.dart';
 import 'task_detail_sheet.dart';
 
-/// Kanban View - Horizontal scrollable rows with drag & drop
 class KanbanView extends StatelessWidget {
   const KanbanView({super.key});
 
@@ -14,31 +13,30 @@ class KanbanView extends StatelessWidget {
     return Consumer<TaskBoardProvider>(
       builder: (context, provider, _) {
         return ListView.builder(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(12),
           itemCount: provider.columns.length,
           itemBuilder: (context, index) {
             final column = provider.columns[index];
-            return KanbanRow(
+            return KanbanColumn(
               column: column,
-              onAddTask: () => _showCreateTaskDialog(context, column.id),
+              onAddTask: () => TaskDetailSheet.show(context, columnId: column.id),
             );
           },
         );
       },
     );
   }
-
-  void _showCreateTaskDialog(BuildContext context, String columnId) {
-    TaskDetailSheet.show(context, columnId: columnId);
-  }
 }
 
-/// Kanban Row Widget - Horizontal scrollable row
-class KanbanRow extends StatelessWidget {
+class KanbanColumn extends StatelessWidget {
   final TaskColumn column;
   final VoidCallback onAddTask;
 
-  const KanbanRow({super.key, required this.column, required this.onAddTask});
+  const KanbanColumn({
+    super.key,
+    required this.column,
+    required this.onAddTask,
+  });
 
   Color get _columnColor {
     if (column.color != null) {
@@ -67,184 +65,162 @@ class KanbanRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: isDark
-                      ? AppTheme.darkBorderColor
-                      : AppTheme.lightBorderColor,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: _columnColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    column.name,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace',
-                      color: _columnColor,
-                      letterSpacing: 1,
+          _buildHeader(isDark),
+          DragTarget<Task>(
+            onAcceptWithDetails: (details) {
+              final task = details.data;
+              if (task.columnId != column.id) {
+                context.read<TaskBoardProvider>().moveTask(task.id, column.id);
+              }
+            },
+            builder: (context, candidateData, rejectedData) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                decoration: candidateData.isNotEmpty
+                    ? BoxDecoration(
+                        color: _columnColor.withValues(alpha: 0.08),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
+                      )
+                    : null,
+                child: Column(
+                  children: [
+                    if (column.tasks.isEmpty) _buildEmptyState(isDark),
+                    ...column.tasks.map(
+                      (task) => DraggableTaskCard(task: task),
                     ),
-                  ),
+                    _buildAddButton(isDark),
+                  ],
                 ),
-                Text(
-                  '(${column.tasks.length})',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.more_horiz,
-                  size: 18,
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                ),
-              ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 16,
+            decoration: BoxDecoration(
+              color: _columnColor,
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-
-          // Horizontal Scrollable Tasks
-          SizedBox(
-            height: 200,
-            child: DragTarget<Task>(
-              onAcceptWithDetails: (details) {
-                final task = details.data;
-                if (task.columnId != column.id) {
-                  context.read<TaskBoardProvider>().moveTask(
-                    task.id,
-                    column.id,
-                  );
-                }
-              },
-              builder: (context, candidateData, rejectedData) {
-                return Container(
-                  decoration: candidateData.isNotEmpty
-                      ? BoxDecoration(
-                          color: _columnColor.withValues(alpha: 0.1),
-                          borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(12),
-                            bottomRight: Radius.circular(12),
-                          ),
-                        )
-                      : null,
-                  child: column.tasks.isEmpty
-                      ? Center(
-                          child: GestureDetector(
-                            onTap: onAddTask,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.add,
-                                  size: 16,
-                                  color: isDark
-                                      ? AppTheme.darkTextSecondary
-                                      : AppTheme.lightTextSecondary,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Thêm Nhiệm Vụ',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontFamily: 'monospace',
-                                    color: isDark
-                                        ? AppTheme.darkTextSecondary
-                                        : AppTheme.lightTextSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 8,
-                          ),
-                          itemCount: column.tasks.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == column.tasks.length) {
-                              // Add task button at the end
-                              return GestureDetector(
-                                onTap: onAddTask,
-                                child: Container(
-                                  width: 120,
-                                  margin: const EdgeInsets.only(right: 8),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        (isDark ? Colors.white : Colors.black)
-                                            .withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: isDark
-                                          ? AppTheme.darkBorderColor
-                                          : AppTheme.lightBorderColor,
-                                      style: BorderStyle.solid,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.add,
-                                        size: 20,
-                                        color: isDark
-                                            ? AppTheme.darkTextSecondary
-                                            : AppTheme.lightTextSecondary,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Thêm',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontFamily: 'monospace',
-                                          color: isDark
-                                              ? AppTheme.darkTextSecondary
-                                              : AppTheme.lightTextSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }
-                            final task = column.tasks[index];
-                            return DraggableTaskCard(task: task);
-                          },
-                        ),
-                );
-              },
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              column.name,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+                color: _columnColor,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: _columnColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '${column.tasks.length}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+                color: _columnColor,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildEmptyState(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: Text(
+          'Chưa có nhiệm vụ',
+          style: TextStyle(
+            fontSize: 12,
+            fontFamily: 'monospace',
+            color: isDark
+                ? AppTheme.darkTextSecondary
+                : AppTheme.lightTextSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton(bool isDark) {
+    return InkWell(
+      onTap: onAddTask,
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(12),
+        bottomRight: Radius.circular(12),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: isDark
+                  ? AppTheme.darkBorderColor
+                  : AppTheme.lightBorderColor,
+            ),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add,
+              size: 15,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Thêm nhiệm vụ',
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: 'monospace',
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-/// Draggable Task Card Widget
 class DraggableTaskCard extends StatelessWidget {
   final Task task;
 
@@ -276,44 +252,40 @@ class DraggableTaskCard extends StatelessWidget {
         feedback: Material(
           elevation: 8,
           borderRadius: BorderRadius.circular(8),
-          child: Opacity(
-            opacity: 0.8,
-            child: _buildTaskCard(context, isDark, isDragging: true),
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width - 48,
+            child: Opacity(
+              opacity: 0.85,
+              child: _buildCard(isDark),
+            ),
           ),
         ),
         childWhenDragging: Opacity(
-          opacity: 0.3,
-          child: _buildTaskCard(context, isDark),
+          opacity: 0.25,
+          child: _buildCard(isDark),
         ),
-        child: _buildTaskCard(context, isDark),
+        child: _buildCard(isDark),
       ),
     );
   }
 
-  Widget _buildTaskCard(
-    BuildContext context,
-    bool isDark, {
-    bool isDragging = false,
-  }) {
+  Widget _buildCard(bool isDark) {
     return Container(
-      width: isDragging ? 220 : 200,
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark
             ? AppTheme.darkCardBackground
             : AppTheme.lightCardBackground,
         borderRadius: BorderRadius.circular(8),
         border: Border(left: BorderSide(color: _priorityColor, width: 3)),
-        boxShadow: isDragging
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,7 +294,7 @@ class DraggableTaskCard extends StatelessWidget {
           Text(
             task.title,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
               fontFamily: 'monospace',
               color: isDark
@@ -334,27 +306,27 @@ class DraggableTaskCard extends StatelessWidget {
           ),
 
           // Description
-          if (task.description != null) ...[
+          if (task.description != null && task.description!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               task.description!,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 11,
                 fontFamily: 'monospace',
                 color: isDark
                     ? AppTheme.darkTextSecondary
                     : AppTheme.lightTextSecondary,
               ),
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
           ],
 
           // User Notes
-          if (task.userNotes != null) ...[
+          if (task.userNotes != null && task.userNotes!.isNotEmpty) ...[
             const SizedBox(height: 6),
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: AppTheme.themeOrangeStart.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
@@ -364,13 +336,17 @@ class DraggableTaskCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.note, size: 10, color: AppTheme.themeOrangeStart),
+                  Icon(
+                    Icons.folder_outlined,
+                    size: 11,
+                    color: AppTheme.themeOrangeStart,
+                  ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       task.userNotes!,
                       style: TextStyle(
-                        fontSize: 9,
+                        fontSize: 10,
                         fontFamily: 'monospace',
                         color: AppTheme.themeOrangeStart,
                       ),
@@ -385,7 +361,7 @@ class DraggableTaskCard extends StatelessWidget {
 
           // Progress bar
           if (task.userProgress != null && task.userProgress! > 0) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -403,73 +379,87 @@ class DraggableTaskCard extends StatelessWidget {
                 Text(
                   '${task.userProgress}%',
                   style: TextStyle(
-                    fontSize: 9, fontFamily: 'monospace',
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
                   ),
                 ),
               ],
             ),
           ],
 
-          // Status + Satisfaction row
-          const SizedBox(height: 6),
+          // Status + satisfaction + deadline row
+          const SizedBox(height: 8),
           Row(
             children: [
-              // Status badge
-              if (task.status != null) ...[  
+              if (task.status != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: _priorityColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     task.status!,
-                    style: TextStyle(fontSize: 8, fontFamily: 'monospace', color: _priorityColor),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontFamily: 'monospace',
+                      color: _priorityColor,
+                    ),
                   ),
                 ),
-              ],
               const Spacer(),
-              // Satisfaction icon
-              if (task.satisfactionLevel != null)
+              if (task.satisfactionLevel != null) ...[
                 Icon(
                   task.satisfactionLevel == 'Satisfied'
                       ? Icons.sentiment_satisfied
                       : task.satisfactionLevel == 'Unsatisfied'
                           ? Icons.sentiment_dissatisfied
                           : Icons.sentiment_neutral,
-                  size: 14,
+                  size: 16,
                   color: task.satisfactionLevel == 'Satisfied'
                       ? Colors.green
                       : task.satisfactionLevel == 'Unsatisfied'
                           ? Colors.red
                           : Colors.orange,
                 ),
+                const SizedBox(width: 8),
+              ],
+              if (task.deadline != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 12,
+                      color: task.isOverdue
+                          ? Colors.red
+                          : (isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${task.deadline!.day}/${task.deadline!.month}/${task.deadline!.year}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        color: task.isOverdue
+                            ? Colors.red
+                            : (isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary),
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
-
-          // Deadline
-          if (task.deadline != null) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(
-                  Icons.access_time, size: 11,
-                  color: task.isOverdue ? Colors.red
-                      : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${task.deadline!.day}/${task.deadline!.month}/${task.deadline!.year}',
-                  style: TextStyle(
-                    fontSize: 10, fontFamily: 'monospace',
-                    color: task.isOverdue ? Colors.red
-                        : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                  ),
-                ),
-              ],
-            ),
-          ],
         ],
       ),
     );

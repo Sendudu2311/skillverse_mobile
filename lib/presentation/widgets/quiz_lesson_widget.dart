@@ -5,6 +5,7 @@ import '../../data/services/quiz_service.dart';
 import '../../presentation/providers/auth_provider.dart';
 import '../../presentation/widgets/glass_card.dart';
 import '../../presentation/themes/app_theme.dart';
+import '../../core/utils/error_handler.dart';
 
 class QuizLessonWidget extends StatefulWidget {
   final int quizId;
@@ -99,9 +100,7 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
   Future<void> _submitQuiz() async {
     final authProvider = context.read<AuthProvider>();
     if (authProvider.user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng đăng nhập để nộp bài')),
-      );
+      ErrorHandler.showWarningSnackBar(context, 'Vui lòng đăng nhập để nộp bài');
       return;
     }
 
@@ -109,9 +108,7 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
 
     // Check if all questions are answered
     if (_selectedOptions.length < _quiz!.questions!.length) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng trả lời tất cả các câu hỏi')),
-      );
+      ErrorHandler.showWarningSnackBar(context, 'Vui lòng trả lời tất cả các câu hỏi');
       return;
     }
 
@@ -126,13 +123,7 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
         message = 'Vui lòng chờ ${hours}h ${minutes}m để làm lại';
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.orange,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      ErrorHandler.showWarningSnackBar(context, message);
       return;
     }
 
@@ -178,13 +169,7 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
         errorMsg = e.toString();
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMsg),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      if (mounted) ErrorHandler.showErrorSnackBar(context, errorMsg);
 
       // Reload attempt status to update count
       _loadQuizData();
@@ -201,13 +186,7 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
         message = 'Vui lòng chờ ${hours}h ${minutes}m để làm lại';
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.orange,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      ErrorHandler.showWarningSnackBar(context, message);
       return;
     }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../widgets/skeleton_loaders.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/mentor_models.dart';
@@ -7,6 +8,7 @@ import '../../providers/mentor_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/glass_card.dart';
+import '../../../core/utils/error_handler.dart';
 
 class MyBookingsPage extends StatefulWidget {
   const MyBookingsPage({super.key});
@@ -71,26 +73,31 @@ class _MyBookingsPageState extends State<MyBookingsPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Lịch hẹn của tôi'),
-        leading: IconButton(
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Sắp tới'),
-            Tab(text: 'Hoàn thành'),
-            Tab(text: 'Đã hủy'),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight + kTextTabBarHeight),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SkillVerseAppBar(
+              title: 'Lịch hẹn của tôi',
+              onBack: () => context.pop(),
+            ),
+            TabBar(
+              controller: _tabController,
+              tabs: const [
+                Tab(text: 'Sắp tới'),
+                Tab(text: 'Hoàn thành'),
+                Tab(text: 'Đã hủy'),
+              ],
+              labelColor: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
+              unselectedLabelColor: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+              indicatorColor: isDark
+                  ? AppTheme.primaryBlueDark
+                  : AppTheme.primaryBlue,
+            ),
           ],
-          labelColor: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
-          unselectedLabelColor: isDark
-              ? AppTheme.darkTextSecondary
-              : AppTheme.lightTextSecondary,
-          indicatorColor: isDark
-              ? AppTheme.primaryBlueDark
-              : AppTheme.primaryBlue,
         ),
       ),
       body: Consumer<MentorProvider>(
@@ -341,12 +348,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               Navigator.of(context).pop();
               await provider.cancelBooking(booking.id);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Đã hủy lịch hẹn'),
-                    backgroundColor: AppTheme.successColor,
-                  ),
-                );
+                ErrorHandler.showSuccessSnackBar(context, 'Đã hủy lịch hẹn');
               }
             },
             style: ElevatedButton.styleFrom(
@@ -415,12 +417,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                       : null,
                 );
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Cảm ơn bạn đã đánh giá!'),
-                      backgroundColor: AppTheme.successColor,
-                    ),
-                  );
+                  ErrorHandler.showSuccessSnackBar(context, 'Cảm ơn bạn đã đánh giá!');
                 }
               },
               child: const Text('Gửi đánh giá'),

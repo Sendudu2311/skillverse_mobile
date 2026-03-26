@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/job_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../widgets/common_loading.dart';
 import 'my_applications_page.dart';
 
 class JobApplySheet extends StatefulWidget {
@@ -315,14 +317,7 @@ class _JobApplySheetState extends State<JobApplySheet>
                   ),
                 ),
                 child: _isSubmitting
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
+                    ? CommonLoading.small(color: Colors.white)
                     : const Text(
                         'Gửi Đơn Ứng Tuyển',
                         style: TextStyle(
@@ -374,12 +369,7 @@ class _JobApplySheetState extends State<JobApplySheet>
       setState(() => _isSuccess = true);
       _successAnimController.forward();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage ?? 'Ứng tuyển thất bại'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, provider.errorMessage ?? 'Ứng tuyển thất bại');
     }
   }
 }

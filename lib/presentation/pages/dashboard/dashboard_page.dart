@@ -10,6 +10,7 @@ import '../../../core/utils/storage_helper.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../widgets/onboarding_prompt.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/error_state_widget.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -74,20 +75,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
         if (dashboardProvider.errorMessage != null &&
             !dashboardProvider.hasData) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-                const SizedBox(height: 16),
-                Text('Không thể tải dữ liệu'),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: () => dashboardProvider.loadDashboard(),
-                  child: const Text('Thử lại'),
-                ),
-              ],
-            ),
+          return ErrorStateWidget(
+            message: dashboardProvider.errorMessage!,
+            onRetry: () => dashboardProvider.loadDashboard(),
           );
         }
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/common_loading.dart';
 import '../../../core/utils/number_formatter.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../../data/services/wallet_service.dart';
 import '../payment/payment_webview_page.dart';
 
@@ -111,14 +113,11 @@ class _DepositSheetState extends State<DepositSheet> {
       Navigator.pop(context);
 
       final isSuccess = result != null && result['success'] == true;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isSuccess
-              ? '🎉 Nạp tiền thành công!'
-              : '⏳ Đang xử lý thanh toán...'),
-          backgroundColor: isSuccess ? AppTheme.successColor : AppTheme.accentCyan,
-        ),
-      );
+      if (isSuccess) {
+        ErrorHandler.showSuccessSnackBar(context, '🎉 Nạp tiền thành công!');
+      } else {
+        ErrorHandler.showSuccessSnackBar(context, '⏳ Đang xử lý thanh toán...');
+      }
     } catch (e) {
       setState(() {
         _error = e.toString().replaceAll('Exception: ', '');
@@ -319,11 +318,7 @@ class _DepositSheetState extends State<DepositSheet> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
+                        ? CommonLoading.small()
                         : const Text('🚀 Tiến Hành Thanh Toán', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../presentation/providers/chat_provider.dart';
 import '../../../data/models/chat_models.dart';
 import '../../../core/utils/meowl_guard.dart';
+import '../../widgets/common_loading.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -225,11 +226,7 @@ class _ChatPageState extends State<ChatPage> {
           FloatingActionButton.small(
             onPressed: chatProvider.isLoading ? null : _sendMessage,
             child: chatProvider.isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? CommonLoading.small()
                 : const Icon(Icons.send),
           ),
         ],

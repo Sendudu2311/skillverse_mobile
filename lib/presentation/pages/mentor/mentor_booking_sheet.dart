@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../data/models/mentor_models.dart';
 import '../../providers/mentor_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/common_loading.dart';
 import '../../widgets/glass_card.dart';
+import '../../../core/utils/error_handler.dart';
 
 class MentorBookingSheet extends StatefulWidget {
   final MentorProfile mentor;
@@ -406,14 +408,7 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
                   : AppTheme.lightCardBackground,
             ),
             child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
+                ? CommonLoading.small()
                 : Text(
                     'TIẾP TỤC',
                     style: TextStyle(
@@ -448,23 +443,13 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
 
       if (booking != null && mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Đặt lịch thành công! Chờ mentor xác nhận.'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Đặt lịch thành công! Chờ mentor xác nhận.');
         // Navigate to bookings page
         context.push('/my-bookings');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, 'Lỗi: ${e.toString()}');
       }
     } finally {
       if (mounted) {

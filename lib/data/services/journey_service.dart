@@ -15,6 +15,39 @@ class JourneyService {
 
   final ApiClient _apiClient = ApiClient();
 
+  // AI calls thường mất 15-60s, dùng 2 phút/attempt thay vì 10 phút flat.
+  // Nếu timeout → tự retry tối đa maxRetries lần trước khi báo lỗi.
+  static const Duration _aiTimeout = Duration(minutes: 2);
+
+  /// Thực thi [call] với retry logic cho các AI endpoint.
+  /// Chỉ retry khi timeout (DioExceptionType.receiveTimeout / sendTimeout).
+  /// Các lỗi khác (4xx, 5xx) throw ngay không retry.
+  Future<T> _retryAiCall<T>({
+    required Future<T> Function() call,
+    required String errorMessage,
+    int maxRetries = 2,
+  }) async {
+    int attempt = 0;
+    while (true) {
+      try {
+        return await call();
+      } on DioException catch (e) {
+        final isTimeout = e.type == DioExceptionType.receiveTimeout ||
+            e.type == DioExceptionType.sendTimeout ||
+            e.type == DioExceptionType.connectionTimeout;
+        attempt++;
+        if (isTimeout && attempt < maxRetries) {
+          debugPrint('⏱ AI timeout (attempt $attempt/$maxRetries), retrying...');
+          continue;
+        }
+        throw _handleDioError(e, errorMessage);
+      } catch (e) {
+        if (e is AppException) rethrow;
+        throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      }
+    }
+  }
+
   // ============================================================
   // Journey Lifecycle
   // ============================================================
@@ -132,24 +165,23 @@ class JourneyService {
 
   /// Generate AI assessment test for a journey
   /// POST /api/v1/journey/{journeyId}/generate-test
-  Future<GenerateTestResponseDto> generateTest(int journeyId) async {
-    try {
-      final response = await _apiClient.dio.post(
-        '/v1/journey/$journeyId/generate-test',
-        data: {},
-        options: Options(
-          sendTimeout: const Duration(minutes: 10),
-          receiveTimeout: const Duration(minutes: 10),
-        ),
-      );
-      return GenerateTestResponseDto.fromJson(
-          response.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      throw _handleDioError(e, 'Tạo bài đánh giá thất bại');
-    } catch (e) {
-      if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
-    }
+  /// Retries up to [maxRetries] times with [_aiTimeout] per attempt.
+  Future<GenerateTestResponseDto> generateTest(int journeyId, {int maxRetries = 2}) async {
+    return _retryAiCall(
+      maxRetries: maxRetries,
+      call: () async {
+        final response = await _apiClient.dio.post(
+          '/v1/journey/$journeyId/generate-test',
+          data: {},
+          options: Options(
+            sendTimeout: _aiTimeout,
+            receiveTimeout: _aiTimeout,
+          ),
+        );
+        return GenerateTestResponseDto.fromJson(response.data as Map<String, dynamic>);
+      },
+      errorMessage: 'Tạo bài đánh giá thất bại',
+    );
   }
 
   /// Get assessment test details
@@ -177,23 +209,23 @@ class JourneyService {
   Future<TestResultDto> submitTest({
     required int journeyId,
     required SubmitTestRequest request,
+    int maxRetries = 2,
   }) async {
-    try {
-      final response = await _apiClient.dio.post(
-        '/v1/journey/$journeyId/submit-test',
-        data: request.toJson(),
-        options: Options(
-          sendTimeout: const Duration(minutes: 10),
-          receiveTimeout: const Duration(minutes: 10),
-        ),
-      );
-      return TestResultDto.fromJson(response.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      throw _handleDioError(e, 'Nộp bài đánh giá thất bại');
-    } catch (e) {
-      if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
-    }
+    return _retryAiCall(
+      maxRetries: maxRetries,
+      call: () async {
+        final response = await _apiClient.dio.post(
+          '/v1/journey/$journeyId/submit-test',
+          data: request.toJson(),
+          options: Options(
+            sendTimeout: _aiTimeout,
+            receiveTimeout: _aiTimeout,
+          ),
+        );
+        return TestResultDto.fromJson(response.data as Map<String, dynamic>);
+      },
+      errorMessage: 'Nộp bài đánh giá thất bại',
+    );
   }
 
   /// Get test result details
@@ -221,23 +253,22 @@ class JourneyService {
 
   /// Generate roadmap based on test results
   /// POST /api/v1/journey/{journeyId}/generate-roadmap
-  Future<JourneySummaryDto> generateRoadmap(int journeyId) async {
-    try {
-      final response = await _apiClient.dio.post(
-        '/v1/journey/$journeyId/generate-roadmap',
-        data: {},
-        options: Options(
-          sendTimeout: const Duration(minutes: 10),
-          receiveTimeout: const Duration(minutes: 10),
-        ),
-      );
-      return JourneySummaryDto.fromJson(response.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      throw _handleDioError(e, 'Tạo lộ trình thất bại');
-    } catch (e) {
-      if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
-    }
+  Future<JourneySummaryDto> generateRoadmap(int journeyId, {int maxRetries = 2}) async {
+    return _retryAiCall(
+      maxRetries: maxRetries,
+      call: () async {
+        final response = await _apiClient.dio.post(
+          '/v1/journey/$journeyId/generate-roadmap',
+          data: {},
+          options: Options(
+            sendTimeout: _aiTimeout,
+            receiveTimeout: _aiTimeout,
+          ),
+        );
+        return JourneySummaryDto.fromJson(response.data as Map<String, dynamic>);
+      },
+      errorMessage: 'Tạo lộ trình thất bại',
+    );
   }
 
   /// Get roadmap for a journey
@@ -313,23 +344,22 @@ class JourneyService {
 
   /// Generate AI summary report
   /// POST /api/v1/journey/{journeyId}/generate-report
-  Future<JourneySummaryDto> generateAiReport(int journeyId) async {
-    try {
-      final response = await _apiClient.dio.post(
-        '/v1/journey/$journeyId/generate-report',
-        data: {},
-        options: Options(
-          sendTimeout: const Duration(minutes: 10),
-          receiveTimeout: const Duration(minutes: 10),
-        ),
-      );
-      return JourneySummaryDto.fromJson(response.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      throw _handleDioError(e, 'Tạo báo cáo AI thất bại');
-    } catch (e) {
-      if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
-    }
+  Future<JourneySummaryDto> generateAiReport(int journeyId, {int maxRetries = 2}) async {
+    return _retryAiCall(
+      maxRetries: maxRetries,
+      call: () async {
+        final response = await _apiClient.dio.post(
+          '/v1/journey/$journeyId/generate-report',
+          data: {},
+          options: Options(
+            sendTimeout: _aiTimeout,
+            receiveTimeout: _aiTimeout,
+          ),
+        );
+        return JourneySummaryDto.fromJson(response.data as Map<String, dynamic>);
+      },
+      errorMessage: 'Tạo báo cáo AI thất bại',
+    );
   }
 
   // ============================================================

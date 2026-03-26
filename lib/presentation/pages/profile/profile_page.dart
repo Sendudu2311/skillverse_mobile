@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../widgets/skeleton_loaders.dart';
+import '../../widgets/common_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
@@ -9,8 +10,9 @@ import '../../providers/subscription_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_theme.dart';
-import '../../widgets/glass_card.dart';
 import '../../../core/utils/number_formatter.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../widgets/glass_card.dart';
 import '../../../data/services/user_service.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -58,21 +60,11 @@ class _ProfilePageState extends State<ProfilePage> {
       // Reload profile to get the new avatar URL
       if (mounted) {
         await context.read<UserProvider>().loadUserProfile();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cập nhật ảnh đại diện thành công!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Cập nhật ảnh đại diện thành công!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Upload thất bại: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, 'Upload thất bại: ${e.toString()}');
       }
     } finally {
       if (mounted) {
@@ -173,200 +165,231 @@ class _ProfilePageState extends State<ProfilePage> {
     final coinBalance = walletProvider.coinBalance;
     final status = subscription?.status ?? 'ACTIVE';
 
+    final tierColor = _getPlanColor(planType);
+    final isFree = planType == 'FREE_TIER';
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 28),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCardBackground : AppTheme.primaryBlueDark,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [AppTheme.darkCardBackground, const Color(0xFF0D1117)]
+              : [AppTheme.primaryBlueDark, const Color(0xFF3730A3)],
+        ),
       ),
       child: Column(
         children: [
-          // Avatar with Premium Frame (matching web PilotHeader)
-          SizedBox(
-            width: 160,
-            height: 160,
-            child: Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                // Avatar (smaller, centered inside Stack)
-                Container(
-                  width: 112,
-                  height: 112,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.themePurpleStart,
-                        AppTheme.themePurpleEnd,
-                      ],
-                    ),
-                  ),
-                  child: avatarUrl != null
-                      ? ClipOval(
-                          child: Image.network(
-                            avatarUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                _buildDefaultAvatar(displayName),
-                          ),
-                        )
-                      : _buildDefaultAvatar(displayName),
-                ),
-                // Premium frame overlay — wraps around avatar
-                if (_getAvatarFrame(planType) != null)
-                  Positioned(
-                    top: -4,
-                    left: -4,
-                    right: -4,
-                    bottom: -4,
-                    child: Image.asset(
-                      _getAvatarFrame(planType)!,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                // Camera button — tap to upload avatar
-                Positioned(
-                  bottom: 6,
-                  right: 10,
-                  child: GestureDetector(
-                    onTap: _isUploadingAvatar
-                        ? null
-                        : () => _pickAndUploadAvatar(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlueDark,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: _isUploadingAvatar
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Name with gradient + glow
+          // ── Avatar with tier ring ──────────────────────────
           Stack(
             alignment: Alignment.center,
+            clipBehavior: Clip.none,
             children: [
-              // Glow layer (blurred shadow behind text)
-              Text(
-                displayName.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  letterSpacing: 2,
-                  color: Colors.transparent,
-                  shadows: [
-                    Shadow(
-                      color: _getPlanColor(planType).withValues(alpha: 0.8),
-                      blurRadius: 30,
-                    ),
-                    Shadow(
-                      color: _getPlanColor(planType).withValues(alpha: 0.5),
-                      blurRadius: 16,
-                    ),
-                  ],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              // Gradient text layer
-              ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  colors: planType == 'FREE_TIER'
-                      ? [Colors.white, Colors.white70]
-                      : [
-                          _getPlanColor(planType),
-                          Colors.white,
-                          _getPlanColor(planType),
-                        ],
-                  stops: planType == 'FREE_TIER' ? null : const [0.0, 0.5, 1.0],
-                ).createShader(bounds),
-                child: Text(
-                  displayName.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontFamily: 'monospace',
-                    letterSpacing: 2,
+              // Outer colored ring (tier indicator, replaces PNG frame)
+              Container(
+                width: 108,
+                height: 108,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isFree
+                        ? Colors.white.withValues(alpha: 0.3)
+                        : tierColor,
+                    width: 3,
                   ),
-                  textAlign: TextAlign.center,
+                ),
+              ),
+              // Avatar
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
+                  ),
+                ),
+                child: avatarUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          avatarUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _buildDefaultAvatar(displayName),
+                        ),
+                      )
+                    : _buildDefaultAvatar(displayName),
+              ),
+              // Camera button
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: _isUploadingAvatar
+                      ? null
+                      : () => _pickAndUploadAvatar(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppTheme.darkCardBackground
+                          : AppTheme.primaryBlueDark,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: _isUploadingAvatar
+                        ? CommonLoading.small()
+                        : const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
 
-          // Level and Plan badges
+          // ── Name ──────────────────────────────────────────
+          ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              colors: isFree
+                  ? [Colors.white, Colors.white70]
+                  : [tierColor, Colors.white, tierColor],
+              stops: isFree ? null : const [0.0, 0.5, 1.0],
+            ).createShader(bounds),
+            child: Text(
+              displayName.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontFamily: 'monospace',
+                letterSpacing: 2,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // ── Single subtitle line ───────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildJoinedBadge(joinedYear),
-              const SizedBox(width: 12),
-              _buildPlanBadge(planName, planType),
+              Icon(Icons.calendar_today, size: 12, color: Colors.white54),
+              const SizedBox(width: 4),
+              Text(
+                joinedYear,
+                style: const TextStyle(fontSize: 12, color: Colors.white54),
+              ),
+              if (!isFree) ...[
+                const Text('  ·  ', style: TextStyle(color: Colors.white30)),
+                Text(
+                  planName,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: tierColor.withValues(alpha: 0.9),
+                  ),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Stats Row — real data from wallet
+          // ── Stats row ─────────────────────────────────────
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.18),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: isDark ? 0.08 : 0.12),
+              ),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem(
-                  'VÍ',
-                  NumberFormatter.formatCompact(cashBalance),
-                  isDark,
+                Expanded(
+                  child: _buildStatItem2(
+                    Icons.account_balance_wallet_outlined,
+                    'Ví',
+                    NumberFormatter.formatCompact(cashBalance),
+                  ),
                 ),
-                Container(
-                  width: 1,
-                  height: 40,
-                  color: Colors.white.withValues(alpha: 0.3),
+                Container(width: 1, height: 36, color: Colors.white24),
+                Expanded(
+                  child: _buildStatItem2(
+                    Icons.monetization_on_outlined,
+                    'Xu',
+                    NumberFormatter.formatCompact(coinBalance),
+                  ),
                 ),
-                _buildStatItem(
-                  'XU',
-                  NumberFormatter.formatCompact(coinBalance),
-                  isDark,
+                Container(width: 1, height: 36, color: Colors.white24),
+                Expanded(
+                  child: _buildStatItem2(
+                    Icons.verified_outlined,
+                    'Trạng thái',
+                    status,
+                    valueColor: status == 'ACTIVE'
+                        ? AppTheme.successColor
+                        : Colors.white70,
+                  ),
                 ),
-                Container(
-                  width: 1,
-                  height: 40,
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-                _buildStatItem('STATUS', status, isDark),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  // ==================== SUBSCRIPTION CARD (NEW) ====================
+  Widget _buildStatItem2(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, size: 16, color: Colors.white54),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: valueColor ?? Colors.white,
+            fontFamily: 'monospace',
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.white54,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ==================== SUBSCRIPTION CARD ====================
+
+  String _getPlanIcon(String planType) {
+    switch (planType) {
+      case 'STUDENT_PACK':
+        return '🎓';
+      case 'PREMIUM_BASIC':
+        return '⭐';
+      case 'PREMIUM_PLUS':
+        return '💎';
+      case 'RECRUITER_PRO':
+        return '🚀';
+      default:
+        return '📦';
+    }
+  }
 
   Widget _buildSubscriptionCard(
     BuildContext context,
@@ -374,90 +397,145 @@ class _ProfilePageState extends State<ProfilePage> {
     bool isDark,
   ) {
     if (subscription != null && subscription.currentlyActive) {
+      final planType = subscription.plan.planType as String;
+      final tierColor = _getPlanColor(planType);
+      final tierIcon = _getPlanIcon(planType);
+      final daysLeft = subscription.daysRemaining as int;
+      final totalDays = (subscription.plan.durationMonths as int) * 30;
+      final progress = totalDays > 0
+          ? (1.0 - (daysLeft / totalDays)).clamp(0.0, 1.0)
+          : 1.0;
+      final features = subscription.plan.features as List<String>;
+
+      final secColor = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+      final priColor = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
         child: GlassCard(
-          child: Container(
+          child: Padding(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  _getPlanColor(
-                    subscription.plan.planType,
-                  ).withValues(alpha: 0.12),
-                  _getPlanColor(
-                    subscription.plan.planType,
-                  ).withValues(alpha: 0.05),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: _getPlanColor(
-                      subscription.plan.planType,
-                    ).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.workspace_premium,
-                    color: _getPlanColor(subscription.plan.planType),
-                    size: 26,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        subscription.plan.displayName,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.lightTextPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
+                // ── Header ─────────────────────────────────
+                Row(
+                  children: [
+                    Text(tierIcon, style: const TextStyle(fontSize: 24)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            subscription.autoRenew
-                                ? Icons.repeat
-                                : Icons.event_busy,
-                            size: 13,
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.lightTextSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              subscription.autoRenew
-                                  ? 'Tự động gia hạn · Còn ${subscription.daysRemaining} ngày'
-                                  : 'Hết hạn ${_formatDate(subscription.endDate)} · Còn ${subscription.daysRemaining} ngày',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark
-                                    ? AppTheme.darkTextSecondary
-                                    : AppTheme.lightTextSecondary,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            subscription.plan.displayName,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: tierColor,
                             ),
+                          ),
+                          Text(
+                            subscription.plan.description as String,
+                            style: TextStyle(fontSize: 11, color: secColor),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
-                    ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.successColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        '● ACTIVE',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.successColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // ── Progress ───────────────────────────────
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      daysLeft <= 7 ? '⚠️ Còn $daysLeft ngày' : 'Còn $daysLeft ngày',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: daysLeft <= 7 ? AppTheme.errorColor : priColor,
+                      ),
+                    ),
+                    Text(
+                      'HH: ${_formatDate(subscription.endDate)}',
+                      style: TextStyle(fontSize: 11, color: secColor),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: tierColor.withValues(alpha: 0.12),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      daysLeft <= 7 ? AppTheme.errorColor : tierColor,
+                    ),
                   ),
                 ),
-                TextButton(
-                  onPressed: () => context.push('/premium'),
-                  child: const Text('Quản lý', style: TextStyle(fontSize: 12)),
+
+                // ── Features (top 2) ───────────────────────
+                if (features.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  ...features.take(2).map(
+                    (f) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle_outline, size: 13, color: tierColor),
+                          const SizedBox(width: 6),
+                          Expanded(child: Text(f, style: TextStyle(fontSize: 12, color: priColor))),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+
+                // ── Footer ─────────────────────────────────
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(
+                      subscription.autoRenew ? Icons.repeat : Icons.event_busy,
+                      size: 13,
+                      color: secColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      subscription.autoRenew ? 'Tự động gia hạn' : 'Không gia hạn',
+                      style: TextStyle(fontSize: 11, color: secColor),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => context.push('/premium'),
+                      icon: const Icon(Icons.tune, size: 13),
+                      label: const Text('Quản lý', style: TextStyle(fontSize: 12)),
+                      style: TextButton.styleFrom(
+                        foregroundColor: tierColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -469,65 +547,67 @@ class _ProfilePageState extends State<ProfilePage> {
     // CTA — no active subscription
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: GlassCard(
-        child: InkWell(
-          onTap: () => context.push('/premium'),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppTheme.accentGold.withValues(alpha: 0.12),
-                  AppTheme.themeOrangeStart.withValues(alpha: 0.06),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
+      child: GestureDetector(
+        onTap: () => context.push('/premium'),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppTheme.accentGold.withValues(alpha: 0.4),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentGold.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.auto_awesome,
-                    color: AppTheme.accentGold,
-                    size: 24,
-                  ),
+            gradient: LinearGradient(
+              colors: [
+                AppTheme.accentGold.withValues(alpha: isDark ? 0.15 : 0.08),
+                AppTheme.themeOrangeStart.withValues(
+                  alpha: isDark ? 0.08 : 0.04,
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Nâng cấp Premium',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.lightTextPrimary,
-                        ),
-                      ),
-                      Text(
-                        'Truy cập không giới hạn khóa học & AI',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right, color: AppTheme.accentGold),
               ],
             ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentGold.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: AppTheme.accentGold,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nâng cấp Premium',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Truy cập không giới hạn khóa học & AI',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppTheme.accentGold),
+            ],
           ),
         ),
       ),
@@ -549,140 +629,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildBadge(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.5),
-          width: 1,
-        ),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'monospace',
-        ),
-      ),
-    );
-  }
 
-  Widget _buildJoinedBadge(String text) {
-    final color = AppTheme.themeBlueStart;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [color.withValues(alpha: 0.7), color.withValues(alpha: 0.35)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.6), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 10,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.calendar_month, color: Colors.white, size: 14),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'monospace',
-              letterSpacing: 1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlanBadge(String planName, String planType) {
-    final color = _getPlanColor(planType);
-    final isFree = planType == 'FREE_TIER';
-
-    // Free tier → keep simple badge
-    if (isFree) return _buildBadge(planName, color);
-
-    // Paid plans → gradient + icon + glow
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [color.withValues(alpha: 0.9), color.withValues(alpha: 0.5)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.8), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.4),
-            blurRadius: 12,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.workspace_premium, color: Colors.white, size: 14),
-          const SizedBox(width: 6),
-          Text(
-            planName,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'monospace',
-              letterSpacing: 1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String value, bool isDark) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.white.withValues(alpha: 0.7),
-            fontFamily: 'monospace',
-            letterSpacing: 1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontFamily: 'monospace',
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildPersonalInfoSection(
     BuildContext context,
@@ -1013,20 +960,6 @@ class _ProfilePageState extends State<ProfilePage> {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
-  /// Returns the premium frame image asset path for the given plan type.
-  /// Matches web's PilotHeader.getAvatarFrame logic.
-  String? _getAvatarFrame(String planType) {
-    switch (planType) {
-      case 'STUDENT_PACK':
-        return 'assets/images/premium/silver_avatar.png';
-      case 'PREMIUM_BASIC':
-        return 'assets/images/premium/golden_avatar.png';
-      case 'PREMIUM_PLUS':
-        return 'assets/images/premium/diamond_avatar.png';
-      default:
-        return null;
-    }
-  }
 
   Color _getPlanColor(String planType) {
     switch (planType) {

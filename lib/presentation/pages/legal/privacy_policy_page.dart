@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class PrivacyPolicyPage extends StatelessWidget {
   const PrivacyPolicyPage({super.key});
@@ -6,7 +7,7 @@ class PrivacyPolicyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Privacy & Policy')),
+      appBar: const SkillVerseAppBar(title: 'Privacy & Policy'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(

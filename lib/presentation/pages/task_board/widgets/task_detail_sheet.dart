@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/task_board_provider.dart';
 import '../../../themes/app_theme.dart';
+import '../../../widgets/common_loading.dart';
 import '../../../../data/models/task_board_models.dart';
 import '../../../../core/utils/error_handler.dart';
 
@@ -367,7 +368,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
             TextButton.icon(
               onPressed: _isDeleting ? null : _deleteTask,
               icon: _isDeleting
-                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red))
+                  ? CommonLoading.small()
                   : const Icon(Icons.delete_outline, size: 18, color: Colors.red),
               label: const Text('Xóa', style: TextStyle(color: Colors.red)),
             ),
@@ -377,7 +378,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
           ElevatedButton.icon(
             onPressed: _isSaving ? null : _saveTask,
             icon: _isSaving
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? CommonLoading.small()
                 : Icon(isEditMode ? Icons.save : Icons.add_task, size: 18),
             label: Text(isEditMode ? 'Lưu' : 'Tạo'),
           ),

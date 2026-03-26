@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/common_loading.dart';
 import '../../../core/utils/number_formatter.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../../data/services/wallet_service.dart';
 
 /// Bottom sheet for creating a withdrawal request
@@ -108,12 +110,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
 
       widget.onSuccess();
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Yêu cầu rút tiền đã gửi! Chờ Admin duyệt.'),
-          backgroundColor: AppTheme.successColor,
-        ),
-      );
+      ErrorHandler.showSuccessSnackBar(context, '✅ Yêu cầu rút tiền đã gửi! Chờ Admin duyệt.');
     } catch (e) {
       setState(() {
         _error = e.toString().replaceAll('Exception: ', '');
@@ -379,7 +376,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: _isLoading
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? CommonLoading.small()
                         : const Text('💸 Gửi Yêu Cầu Rút Tiền', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),

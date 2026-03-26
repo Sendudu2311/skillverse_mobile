@@ -16,6 +16,7 @@ import '../../widgets/glass_card.dart';
 import '../../themes/app_theme.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../widgets/common_loading.dart';
 import '../../../core/mixins/loading_mixin.dart';
 import '../../../core/network/api_client.dart';
 
@@ -320,7 +321,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (context) => CommonLoading.center(),
     );
 
     final paymentResponse = await paymentProvider.createPayment(
@@ -405,7 +406,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                   : [Colors.grey.shade100, Colors.white],
             ),
           ),
-          child: const Center(child: CircularProgressIndicator()),
+          child: CommonLoading.center(),
         ),
       );
     }
@@ -1262,7 +1263,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               ),
                               const SizedBox(height: 16),
                               if (_isLoadingModules)
-                                const Center(child: CircularProgressIndicator())
+                                CommonLoading.center()
                               else if (_fullModules.isEmpty)
                                 Text(
                                   'Chưa có nội dung khóa học',
@@ -1386,16 +1387,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         child: _isEnrolling
-                            ? const Center(
-                                child: SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              )
+                            ? CommonLoading.small(color: Colors.white)
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -2046,14 +2038,7 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                     elevation: canAfford ? 4 : 0,
                   ),
                   child: _isPurchasing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
+                      ? CommonLoading.small(color: Colors.white)
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -2260,13 +2245,9 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
 
           // Balance
           if (_isLoadingWallet)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: CommonLoading.small(),
             )
           else ...[
             Align(

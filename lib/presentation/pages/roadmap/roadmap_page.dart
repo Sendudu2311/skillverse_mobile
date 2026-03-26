@@ -6,6 +6,7 @@ import '../../themes/app_theme.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/animated_list_item.dart';
 import 'package:go_router/go_router.dart';
 
 class RoadmapPage extends StatefulWidget {
@@ -395,9 +396,12 @@ class _RoadmapPageState extends State<RoadmapPage> {
         itemCount: roadmaps.length,
         itemBuilder: (context, index) {
           final roadmap = roadmaps[index];
-          return AiRoadmapCard(
-            roadmap: roadmap,
-            onTap: () => _navigateToDetail(context, roadmap.sessionId),
+          return AnimatedListItem(
+            index: index,
+            child: AiRoadmapCard(
+              roadmap: roadmap,
+              onTap: () => _navigateToDetail(context, roadmap.sessionId),
+            ),
           );
         },
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/premium_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/common_loading.dart';
 import '../../../core/utils/number_formatter.dart';
 
 /// BottomSheet for managing active premium subscription
@@ -348,9 +349,9 @@ class _SubscriptionManagementSheetState extends State<SubscriptionManagementShee
                 ),
 
                 if (_isLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 16),
-                    child: Center(child: CircularProgressIndicator()),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: CommonLoading.center(),
                   ),
 
                 const SizedBox(height: 16),

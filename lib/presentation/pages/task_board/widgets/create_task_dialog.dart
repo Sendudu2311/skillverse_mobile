@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/task_board_provider.dart';
 import '../../../themes/app_theme.dart';
+import '../../../widgets/common_loading.dart';
+import '../../../../core/utils/error_handler.dart';
 import '../../../../data/models/task_board_models.dart';
 
 /// Create Task Dialog
@@ -206,14 +208,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                   ElevatedButton.icon(
                     onPressed: _isLoading ? null : _createTask,
                     icon: _isLoading
-                        ? SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
+                        ? CommonLoading.small()
                         : const Icon(Icons.add_task, size: 18),
                     label: const Text('TẠO NHIỆM VỤ'),
                   ),
@@ -387,9 +382,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        ErrorHandler.showErrorSnackBar(context, 'Lỗi: $e');
       }
     } finally {
       if (mounted) {

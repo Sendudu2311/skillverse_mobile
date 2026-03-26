@@ -4,9 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/user_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/common_loading.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/section_header.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import '../../../core/utils/validation_helper.dart';
+import '../../../core/utils/error_handler.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({super.key});
@@ -175,23 +178,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
           _isSaving = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
-                Text('Cập nhật thông tin thành công!'),
-              ],
-            ),
-            backgroundColor: AppTheme.successColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Cập nhật thông tin thành công!');
 
         // Delay before popping to show success message
         await Future.delayed(const Duration(milliseconds: 500));
@@ -212,20 +199,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: AppTheme.errorColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    ErrorHandler.showErrorSnackBar(context, message);
   }
 
   @override
@@ -243,19 +217,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEditing ? 'Chỉnh sửa hồ sơ' : 'Hồ sơ cá nhân'),
+        appBar: SkillVerseAppBar(
+          title: _isEditing ? 'Chỉnh sửa hồ sơ' : 'Hồ sơ cá nhân',
           actions: [
             if (_isSaving)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: CommonLoading.small(),
               )
             else if (_isEditing)
               TextButton.icon(
@@ -391,9 +359,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          CommonLoading.center(),
           const SizedBox(height: 16),
           Text(
             'Đang tải thông tin...',

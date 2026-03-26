@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class HelpCenterPage extends StatefulWidget {
   const HelpCenterPage({super.key});
@@ -39,7 +40,7 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Trung Tâm Hỗ Trợ')),
+      appBar: const SkillVerseAppBar(title: 'Trung Tâm Hỗ Trợ'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

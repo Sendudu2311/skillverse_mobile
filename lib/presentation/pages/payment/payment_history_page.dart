@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import '../../../data/models/payment_models.dart';
 import '../../providers/payment_provider.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/error_state_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../widgets/animated_list_item.dart';
+import '../../themes/app_theme.dart';
 
 class PaymentHistoryPage extends StatefulWidget {
   const PaymentHistoryPage({super.key});
@@ -40,48 +44,20 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
           }
 
           if (paymentProvider.errorMessage != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    paymentProvider.errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: _loadHistory,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Thử lại'),
-                  ),
-                ],
-              ),
+            return ErrorStateWidget(
+              message: paymentProvider.errorMessage!,
+              onRetry: _loadHistory,
             );
           }
 
           final history = paymentProvider.paymentHistory;
 
           if (history.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.receipt_long, size: 80, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Chưa có giao dịch nào',
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Các giao dịch thanh toán sẽ hiển thị ở đây',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
+            return const EmptyStateWidget(
+              icon: Icons.receipt_long,
+              title: 'Chưa có giao dịch nào',
+              subtitle: 'Các giao dịch thanh toán sẽ hiển thị ở đây',
+              iconGradient: AppTheme.blueGradient,
             );
           }
 
@@ -92,7 +68,10 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
               itemCount: history.length,
               itemBuilder: (context, index) {
                 final transaction = history[index];
-                return _PaymentHistoryCard(transaction: transaction);
+                return AnimatedListItem(
+                  index: index,
+                  child: _PaymentHistoryCard(transaction: transaction),
+                );
               },
             ),
           );

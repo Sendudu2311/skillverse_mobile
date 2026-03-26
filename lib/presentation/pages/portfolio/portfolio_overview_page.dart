@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../../data/models/portfolio_models.dart';
 import '../../widgets/glass_card.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/common_loading.dart';
 import 'edit_extended_profile_page.dart';
 import 'edit_project_page.dart';
 import 'add_certificate_page.dart';
@@ -134,11 +135,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
               child: Consumer<PortfolioProvider>(
                 builder: (context, portfolioProvider, child) {
                   if (portfolioProvider.isLoading) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppTheme.themePurpleStart,
-                      ),
-                    );
+                    return CommonLoading.center();
                   }
 
                   if (portfolioProvider.errorMessage != null) {

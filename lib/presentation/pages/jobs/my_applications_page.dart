@@ -9,6 +9,7 @@ import '../../themes/app_theme.dart';
 import '../../widgets/status_badge.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/date_time_helper.dart';
+import '../../../core/utils/error_handler.dart';
 import 'job_detail_page.dart';
 
 class MyApplicationsPage extends StatefulWidget {
@@ -387,12 +388,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
               Navigator.of(ctx).pop();
               final success = await provider.withdrawApplication(applicationId);
               if (mounted && success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Đã rút đơn thành công'),
-                    backgroundColor: AppTheme.themeGreenStart,
-                  ),
-                );
+                ErrorHandler.showSuccessSnackBar(context, 'Đã rút đơn thành công');
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),

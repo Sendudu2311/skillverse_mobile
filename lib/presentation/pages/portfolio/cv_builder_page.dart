@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../widgets/skeleton_loaders.dart';
+import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/common_loading.dart';
 import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../../data/models/portfolio_models.dart';
+import '../../../core/utils/error_handler.dart';
 
 class CVBuilderPage extends StatefulWidget {
   const CVBuilderPage({super.key});
@@ -49,15 +52,9 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
 
     if (mounted) {
       if (success) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Tạo CV thành công!')));
+        ErrorHandler.showSuccessSnackBar(context, 'Tạo CV thành công!');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(portfolioProvider.errorMessage ?? 'Có lỗi xảy ra'),
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, portfolioProvider.errorMessage ?? 'Có lỗi xảy ra');
       }
     }
   }
@@ -67,9 +64,7 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
     final success = await portfolioProvider.setActiveCV(cvId);
 
     if (mounted && success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã thiết lập CV hoạt động')),
-      );
+      ErrorHandler.showSuccessSnackBar(context, 'Đã thiết lập CV hoạt động');
     }
   }
 
@@ -97,9 +92,7 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
       final success = await portfolioProvider.deleteCV(cvId);
 
       if (mounted && success) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Đã xóa CV')));
+        ErrorHandler.showSuccessSnackBar(context, 'Đã xóa CV');
       }
     }
   }
@@ -107,7 +100,7 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Quản lý CV')),
+      appBar: SkillVerseAppBar(title: 'Quản lý CV'),
       body: Consumer<PortfolioProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
@@ -203,11 +196,7 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                   child: ElevatedButton.icon(
                     onPressed: _isGenerating ? null : _generateCV,
                     icon: _isGenerating
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? CommonLoading.small()
                         : const Icon(Icons.auto_awesome),
                     label: Text(_isGenerating ? 'Đang tạo...' : 'Tạo CV'),
                     style: ElevatedButton.styleFrom(

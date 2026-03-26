@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class TermsOfServicePage extends StatelessWidget {
   const TermsOfServicePage({super.key});
@@ -6,11 +7,7 @@ class TermsOfServicePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Điều Khoản Dịch Vụ'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-      ),
+      appBar: const SkillVerseAppBar(title: 'Điều Khoản Dịch Vụ'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
