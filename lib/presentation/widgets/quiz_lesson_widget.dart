@@ -4,6 +4,7 @@ import '../../data/models/quiz_models.dart';
 import '../../data/services/quiz_service.dart';
 import '../../presentation/providers/auth_provider.dart';
 import '../../presentation/widgets/glass_card.dart';
+import 'common_loading.dart';
 import '../../presentation/themes/app_theme.dart';
 import '../../core/utils/error_handler.dart';
 
@@ -200,7 +201,7 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return CommonLoading.center();
     }
 
     if (_errorMessage != null) {
@@ -500,14 +501,7 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
                 foregroundColor: Colors.white,
               ),
               child: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
+                  ? CommonLoading.button()
                   : Text(
                       (_attemptStatus != null && !_attemptStatus!.canRetry)
                           ? 'Đã hết lượt'

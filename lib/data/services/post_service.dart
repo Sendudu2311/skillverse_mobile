@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/post_models.dart';
 import '../../core/network/api_client.dart';
@@ -35,27 +36,17 @@ class PostService {
       );
 
       try {
-        // Debug: Print raw response
-        print('📦 Raw API Response: ${response.data}');
-
         return PageResponse.fromJson(response.data, (json) {
           try {
             final jsonMap = json as Map<String, dynamic>;
-            print('🔍 Parsing post: ${jsonMap['id']} - ${jsonMap['title']}');
             return Post.fromJson(jsonMap);
           } catch (e, stackTrace) {
-            print('❌ Error parsing post JSON:');
-            print('Post ID: ${(json as Map<String, dynamic>?)?['id']}');
-            print('Error: $e');
-            print('JSON: $json');
-            print('StackTrace: $stackTrace');
+            debugPrint('❌ Error parsing post JSON: $e\nStackTrace: $stackTrace');
             rethrow;
           }
         });
       } catch (e, stackTrace) {
-        print('❌ Error in PageResponse.fromJson:');
-        print('Error: $e');
-        print('StackTrace: $stackTrace');
+        debugPrint('❌ Error in PageResponse.fromJson: $e\nStackTrace: $stackTrace');
         rethrow;
       }
     } catch (e) {

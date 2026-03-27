@@ -75,7 +75,7 @@ class ChatProvider with ChangeNotifier, LoadingProviderMixin {
 
       // Log reminders and notifications if available (for future use)
       if (response.reminders != null && response.reminders!.isNotEmpty) {
-        print('Reminders: ${response.reminders}');
+        debugPrint('Reminders: ${response.reminders}');
       }
 
       // Add AI response to UI

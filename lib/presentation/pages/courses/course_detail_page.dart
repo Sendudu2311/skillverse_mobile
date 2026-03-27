@@ -18,7 +18,7 @@ import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/common_loading.dart';
 import '../../../core/mixins/loading_mixin.dart';
-import '../../../core/network/api_client.dart';
+import '../../../data/services/enrollment_service.dart';
 
 class CourseDetailPage extends StatefulWidget {
   final String courseId;
@@ -102,11 +102,13 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       final fullModules = await _moduleService.listModulesWithContent(
         courseId: courseId,
       );
+      if (!mounted) return;
       setState(() {
         _fullModules = fullModules;
         _isLoadingModules = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoadingModules = false);
       debugPrint('Error loading modules: $e');
     }
@@ -121,16 +123,14 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       // Load enrollment progress if enrolled
       if (enrollmentProvider.isEnrolled(courseId)) {
         try {
-          final dio = ApiClient().dio;
-          final response = await dio.get(
-            '/enrollments/course/$courseId/user/${authProvider.user!.id}',
+          final enrollment = await EnrollmentService().getEnrollment(
+            courseId: courseId,
+            userId: authProvider.user!.id,
           );
-          if (response.data != null &&
-              response.data['progressPercent'] != null) {
-            setState(() {
-              _enrollmentProgress = response.data['progressPercent'] as int;
-            });
-          }
+          if (!mounted) return;
+          setState(() {
+            _enrollmentProgress = enrollment.progressPercent;
+          });
         } catch (e) {
           debugPrint('Error loading enrollment progress: $e');
         }
@@ -226,6 +226,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
         userId: authProvider.user!.id,
       );
 
+      if (!mounted) return;
       setState(() => _isEnrolling = false);
 
       if (enrolled && mounted) {
@@ -451,9 +452,8 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       );
     }
 
-    final enrollmentProvider = context.watch<EnrollmentProvider>();
-    final isEnrolled = enrollmentProvider.isEnrolled(
-      int.parse(widget.courseId),
+    final isEnrolled = context.select<EnrollmentProvider, bool>(
+      (p) => p.isEnrolled(int.parse(widget.courseId)),
     );
     final gradientColors = _getLevelGradient(_course!.level);
 

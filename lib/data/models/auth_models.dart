@@ -51,13 +51,9 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
-    // Debug: In ra để xem cấu trúc JSON
-    print('AuthResponse.fromJson: $json');
-    
     // Kiểm tra nếu có trường 'result' (wrapped response)
     if (json.containsKey('result') && json['result'] != null) {
       final result = json['result'] as Map<String, dynamic>;
-      print('Using result: $result');
       return _$AuthResponseFromJson(result);
     }
     // Ngược lại, parse trực tiếp
@@ -82,7 +78,6 @@ class UserDto {
   });
 
   factory UserDto.fromJson(Map<String, dynamic> json) {
-    print('UserDto.fromJson: $json');
     return _$UserDtoFromJson(json);
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pod_player/pod_player.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'common_loading.dart';
 
 class VideoLessonPlayer extends StatefulWidget {
   final String? videoUrl;
@@ -98,18 +99,9 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
   @override
   Widget build(BuildContext context) {
     if (_isInitializing) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Đang tải video...'),
-            ],
-          ),
-        ),
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: CommonLoading.center(message: 'Đang tải video...'),
       );
     }
 

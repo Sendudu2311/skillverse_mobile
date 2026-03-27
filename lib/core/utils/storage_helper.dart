@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -137,7 +138,7 @@ class StorageHelper {
       await _secureStorage.write(key: key.key, value: value);
     } catch (e) {
       // Log error but don't throw - graceful degradation
-      print('Error writing to secure storage: $e');
+      debugPrint('Error writing to secure storage: $e');
     }
   }
 
@@ -146,7 +147,7 @@ class StorageHelper {
     try {
       return await _secureStorage.read(key: key.key);
     } catch (e) {
-      print('Error reading from secure storage: $e');
+      debugPrint('Error reading from secure storage: $e');
       return null;
     }
   }
@@ -156,7 +157,7 @@ class StorageHelper {
     try {
       await _secureStorage.delete(key: key.key);
     } catch (e) {
-      print('Error deleting from secure storage: $e');
+      debugPrint('Error deleting from secure storage: $e');
     }
   }
 
@@ -165,7 +166,7 @@ class StorageHelper {
     try {
       await _secureStorage.deleteAll();
     } catch (e) {
-      print('Error clearing secure storage: $e');
+      debugPrint('Error clearing secure storage: $e');
     }
   }
 
@@ -176,7 +177,7 @@ class StorageHelper {
     try {
       return await _prefs.setString(key.key, value);
     } catch (e) {
-      print('Error writing string: $e');
+      debugPrint('Error writing string: $e');
       return false;
     }
   }
@@ -186,7 +187,7 @@ class StorageHelper {
     try {
       return _prefs.getString(key.key);
     } catch (e) {
-      print('Error reading string: $e');
+      debugPrint('Error reading string: $e');
       return null;
     }
   }
@@ -196,7 +197,7 @@ class StorageHelper {
     try {
       return await _prefs.setInt(key.key, value);
     } catch (e) {
-      print('Error writing int: $e');
+      debugPrint('Error writing int: $e');
       return false;
     }
   }
@@ -206,7 +207,7 @@ class StorageHelper {
     try {
       return _prefs.getInt(key.key);
     } catch (e) {
-      print('Error reading int: $e');
+      debugPrint('Error reading int: $e');
       return null;
     }
   }
@@ -216,7 +217,7 @@ class StorageHelper {
     try {
       return await _prefs.setBool(key.key, value);
     } catch (e) {
-      print('Error writing bool: $e');
+      debugPrint('Error writing bool: $e');
       return false;
     }
   }
@@ -226,7 +227,7 @@ class StorageHelper {
     try {
       return _prefs.getBool(key.key);
     } catch (e) {
-      print('Error reading bool: $e');
+      debugPrint('Error reading bool: $e');
       return null;
     }
   }
@@ -236,7 +237,7 @@ class StorageHelper {
     try {
       return await _prefs.setDouble(key.key, value);
     } catch (e) {
-      print('Error writing double: $e');
+      debugPrint('Error writing double: $e');
       return false;
     }
   }
@@ -246,7 +247,7 @@ class StorageHelper {
     try {
       return _prefs.getDouble(key.key);
     } catch (e) {
-      print('Error reading double: $e');
+      debugPrint('Error reading double: $e');
       return null;
     }
   }
@@ -256,7 +257,7 @@ class StorageHelper {
     try {
       return await _prefs.setStringList(key.key, value);
     } catch (e) {
-      print('Error writing string list: $e');
+      debugPrint('Error writing string list: $e');
       return false;
     }
   }
@@ -266,7 +267,7 @@ class StorageHelper {
     try {
       return _prefs.getStringList(key.key);
     } catch (e) {
-      print('Error reading string list: $e');
+      debugPrint('Error reading string list: $e');
       return null;
     }
   }
@@ -276,7 +277,7 @@ class StorageHelper {
     try {
       return await _prefs.remove(key.key);
     } catch (e) {
-      print('Error deleting key: $e');
+      debugPrint('Error deleting key: $e');
       return false;
     }
   }
@@ -286,7 +287,7 @@ class StorageHelper {
     try {
       return await _prefs.clear();
     } catch (e) {
-      print('Error clearing preferences: $e');
+      debugPrint('Error clearing preferences: $e');
       return false;
     }
   }
@@ -304,7 +305,7 @@ class StorageHelper {
       final jsonString = jsonEncode(json);
       return await writeString(key, jsonString);
     } catch (e) {
-      print('Error writing JSON: $e');
+      debugPrint('Error writing JSON: $e');
       return false;
     }
   }
@@ -316,7 +317,7 @@ class StorageHelper {
       if (jsonString == null) return null;
       return jsonDecode(jsonString) as Map<String, dynamic>;
     } catch (e) {
-      print('Error reading JSON: $e');
+      debugPrint('Error reading JSON: $e');
       return null;
     }
   }
@@ -327,7 +328,7 @@ class StorageHelper {
       final jsonString = jsonEncode(json);
       await writeSecure(key, jsonString);
     } catch (e) {
-      print('Error writing secure JSON: $e');
+      debugPrint('Error writing secure JSON: $e');
     }
   }
 
@@ -338,7 +339,7 @@ class StorageHelper {
       if (jsonString == null) return null;
       return jsonDecode(jsonString) as Map<String, dynamic>;
     } catch (e) {
-      print('Error reading secure JSON: $e');
+      debugPrint('Error reading secure JSON: $e');
       return null;
     }
   }

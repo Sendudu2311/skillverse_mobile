@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/exceptions/api_exception.dart';
@@ -41,7 +42,7 @@ class ChatService {
 
       return ChatResponse.fromJson(jsonData);
     } catch (e) {
-      print('Error in sendMessage: $e'); // Debug log
+      debugPrint('Error in sendMessage: $e');
       if (e is ApiException) rethrow;
       throw ApiException('Gửi tin nhắn thất bại: ${e.toString()}');
     }

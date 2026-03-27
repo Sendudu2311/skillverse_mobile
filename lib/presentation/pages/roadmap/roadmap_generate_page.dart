@@ -5,6 +5,7 @@ import '../../../core/utils/error_handler.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/common_loading.dart';
 import '../../../data/models/roadmap_models.dart';
 import 'package:go_router/go_router.dart';
 
@@ -674,7 +675,7 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
               ),
               borderRadius: BorderRadius.circular(100),
             ),
-            child: const CircularProgressIndicator(),
+            child: const CommonLoading(),
           ),
           const SizedBox(height: 24),
           Text(

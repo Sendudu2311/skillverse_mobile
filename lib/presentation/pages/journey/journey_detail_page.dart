@@ -357,14 +357,7 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
         child: Column(
           children: [
             const SizedBox(height: 8),
-            SizedBox(
-              width: 56,
-              height: 56,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                color: AppTheme.primaryBlueDark,
-              ),
-            ),
+            CommonLoading(size: 56, color: AppTheme.primaryBlueDark),
             const SizedBox(height: 16),
             Text(
               'AI đang phân tích lĩnh vực và tạo bài đánh giá phù hợp.\nVui lòng chờ trong giây lát...',
@@ -448,7 +441,7 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                 }
               },
               icon: isGenerating
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? CommonLoading.button()
                   : const Icon(Icons.auto_awesome),
               label: Text(isGenerating ? 'Đang tạo...' : 'Tạo bài test AI'),
               style: ElevatedButton.styleFrom(
@@ -565,7 +558,7 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                     }
                   },
                   icon: isSubmitting
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      ? CommonLoading.button()
                       : const Icon(Icons.send),
                   label: Text(isSubmitting ? 'Đang nộp bài...' : 'Nộp bài'),
                   style: ElevatedButton.styleFrom(
@@ -740,7 +733,7 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                   }
                 },
                 icon: isGenerating
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? CommonLoading.button()
                     : const Icon(Icons.auto_awesome),
                 label: Text(isGenerating ? 'Đang tạo...' : 'Tạo lộ trình AI'),
                 style: ElevatedButton.styleFrom(

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'common_loading.dart';
 
 class MeowlMessage {
   final String id;
@@ -202,7 +203,7 @@ class _MeowlChatWidgetState extends State<MeowlChatWidget> {
                             ),
                             const SizedBox(width: 8),
                             _isLoading
-                                ? const Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator())
+                                ? Padding(padding: const EdgeInsets.all(8.0), child: CommonLoading.small())
                                 : IconButton(onPressed: _send, icon: const Icon(Icons.send)),
                           ],
                         ),
@@ -224,7 +225,7 @@ class _MeowlChatWidgetState extends State<MeowlChatWidget> {
           margin: const EdgeInsets.symmetric(vertical: 6),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: const [SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))]),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [CommonLoading.small()]),
         ),
       );
 }

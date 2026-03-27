@@ -255,7 +255,15 @@ class _MainLayoutState extends State<MainLayout> {
               ],
             )
           : null,
-      body: isDarkMode ? GalaxyBackground(child: widget.child) : widget.child,
+      body: isDarkMode
+          ? GalaxyBackground(
+              child: widget.showAppBar
+                  ? widget.child
+                  : SafeArea(child: widget.child),
+            )
+          : (widget.showAppBar
+              ? widget.child
+              : SafeArea(child: widget.child)),
       bottomNavigationBar: _navigationItems.length >= 2
           ? BottomNavigationBar(
               currentIndex: _selectedIndex,

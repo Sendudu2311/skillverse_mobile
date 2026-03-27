@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'common_loading.dart';
 
 class MeowlGuard extends StatelessWidget {
   final Widget child;
@@ -11,7 +12,7 @@ class MeowlGuard extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     if (auth.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return CommonLoading.center();
     }
     if (!auth.isAuthenticated) {
       // redirect to login

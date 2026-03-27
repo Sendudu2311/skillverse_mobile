@@ -101,6 +101,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       // Sort modules by orderIndex
       modules.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
 
+      if (!mounted) return;
       setState(() {
         _modules = modules;
         _curriculumItems = _buildCurriculumItems(modules);
@@ -263,11 +264,13 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         final lessonDetail = await _lessonService.getLesson(
           lessonId: item.itemId,
         );
+        if (!mounted) return;
         setState(() {
           _currentLessonDetail = lessonDetail;
           _isLoadingLesson = false;
         });
       } catch (e) {
+        if (!mounted) return;
         setState(() => _isLoadingLesson = false);
         if (mounted) {
           ErrorHandler.showErrorSnackBar(context, 'Lỗi tải bài học: $e');
@@ -808,11 +811,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
               child: ElevatedButton.icon(
                 onPressed: canComplete ? onCompletePressed : null,
                 icon: _isMarkingComplete
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? CommonLoading.button()
                     : Icon(
                         isLesson
                             ? Icons.check

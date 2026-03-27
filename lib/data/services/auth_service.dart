@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:convert';
@@ -34,9 +35,6 @@ class AuthService {
         throw ApiException('Không có dữ liệu phản hồi');
       }
 
-      // Debug: In ra cấu trúc response để debug
-      print('Login response data: ${response.data}');
-
       final authResponse = AuthResponse.fromJson(response.data!);
 
       // Lưu tokens và user data
@@ -48,7 +46,7 @@ class AuthService {
 
       return authResponse;
     } catch (e) {
-      print('Login error: $e');
+      debugPrint('Login error: $e');
       if (e is ApiException) rethrow;
       throw ApiException('Đăng nhập thất bại: ${e.toString()}');
     }
@@ -245,7 +243,7 @@ class AuthService {
 
       return true; // No exp claim = expired
     } catch (e) {
-      print('Error checking token expiration: $e');
+      debugPrint('Error checking token expiration: $e');
       return true; // Error = treat as expired
     }
   }

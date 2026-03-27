@@ -89,8 +89,6 @@ class UserService {
         data['emailVerified'] = false; // Default to false if missing
       }
 
-      print('DEBUG: Raw profile data: $data'); // Debug print
-
       return UserProfileResponse.fromJson(data);
     } on DioException catch (e) {
       throw _handleError(e);
