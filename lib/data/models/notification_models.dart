@@ -1,5 +1,5 @@
 // Notification models — no build_runner needed (manual fromJson).
-// NotificationType covers all 45 backend enum values.
+// NotificationType covers all backend enum values (synced 2026-03-28).
 // AppNotification mirrors NotificationResponse DTO.
 // NotificationPage mirrors Spring Data Page of NotificationResponse.
 
@@ -32,6 +32,8 @@ enum NotificationType {
   bookingCompleted,
   bookingCancelled,
   bookingRefund,
+  bookingStarted,
+  bookingMentorCompleted,
 
   // Messaging
   prechatMessage,
@@ -62,10 +64,30 @@ enum NotificationType {
   jobBanned,
   jobUnbanned,
 
+  // Short-term Job Applications
+  shortTermApplicationSubmitted,
+  shortTermApplicationAccepted,
+  shortTermApplicationRejected,
+  shortTermWorkSubmitted,
+  shortTermWorkApproved,
+
+  // Fulltime Job Applications
+  fulltimeApplicationReviewed,
+  fulltimeApplicationAccepted,
+  fulltimeApplicationRejected,
+
+  // Worker Cancellation
+  workerCancellationRequested,
+  workerAutoCancelled,
+  workerAutoApproved,
+  recruiterAutoApprovedWarning,
+
   // Disputes
   disputeOpened,
   disputeResolved,
   reviewWindowExpiring,
+  adminDisputeEscalated,
+  disputeEligibilityUnlocked,
 
   // System
   welcome,
@@ -116,6 +138,10 @@ enum NotificationType {
         return bookingCancelled;
       case 'BOOKING_REFUND':
         return bookingRefund;
+      case 'BOOKING_STARTED':
+        return bookingStarted;
+      case 'BOOKING_MENTOR_COMPLETED':
+        return bookingMentorCompleted;
       case 'PRECHAT_MESSAGE':
         return prechatMessage;
       case 'RECRUITMENT_MESSAGE':
@@ -154,12 +180,40 @@ enum NotificationType {
         return jobBanned;
       case 'JOB_UNBANNED':
         return jobUnbanned;
+      case 'SHORT_TERM_APPLICATION_SUBMITTED':
+        return shortTermApplicationSubmitted;
+      case 'SHORT_TERM_APPLICATION_ACCEPTED':
+        return shortTermApplicationAccepted;
+      case 'SHORT_TERM_APPLICATION_REJECTED':
+        return shortTermApplicationRejected;
+      case 'SHORT_TERM_WORK_SUBMITTED':
+        return shortTermWorkSubmitted;
+      case 'SHORT_TERM_WORK_APPROVED':
+        return shortTermWorkApproved;
+      case 'FULLTIME_APPLICATION_REVIEWED':
+        return fulltimeApplicationReviewed;
+      case 'FULLTIME_APPLICATION_ACCEPTED':
+        return fulltimeApplicationAccepted;
+      case 'FULLTIME_APPLICATION_REJECTED':
+        return fulltimeApplicationRejected;
+      case 'WORKER_CANCELLATION_REQUESTED':
+        return workerCancellationRequested;
+      case 'WORKER_AUTO_CANCELLED':
+        return workerAutoCancelled;
+      case 'WORKER_AUTO_APPROVED':
+        return workerAutoApproved;
+      case 'RECRUITER_AUTO_APPROVED_WARNING':
+        return recruiterAutoApprovedWarning;
       case 'DISPUTE_OPENED':
         return disputeOpened;
       case 'DISPUTE_RESOLVED':
         return disputeResolved;
       case 'REVIEW_WINDOW_EXPIRING':
         return reviewWindowExpiring;
+      case 'ADMIN_DISPUTE_ESCALATED':
+        return adminDisputeEscalated;
+      case 'DISPUTE_ELIGIBILITY_UNLOCKED':
+        return disputeEligibilityUnlocked;
       case 'WELCOME':
         return welcome;
       case 'SYSTEM':

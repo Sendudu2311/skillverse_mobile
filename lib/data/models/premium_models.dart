@@ -53,6 +53,8 @@ class PremiumPlanDto {
   final String currency;
   final PlanType planType;
   final TargetRole? targetRole;
+  final double? discountPercent;
+  final double? discountedPrice;
   final double? studentDiscountPercent;
   final double? studentPrice;
   final List<String>? features;
@@ -73,6 +75,8 @@ class PremiumPlanDto {
     required this.currency,
     required this.planType,
     this.targetRole,
+    this.discountPercent,
+    this.discountedPrice,
     this.studentDiscountPercent,
     this.studentPrice,
     this.features,
@@ -95,13 +99,25 @@ class PremiumPlanDto {
 class UserSubscriptionDto {
   final int id;
   final int userId;
+  final String? userName;
+  final String? userEmail;
+  final String? userAvatarUrl;
   final PremiumPlanDto plan;
   final DateTime startDate;
   final DateTime endDate;
   final bool isActive;
   final SubscriptionStatus status;
   final bool? isStudentSubscription;
+  final bool? isDiscountedSubscription;
   final bool? autoRenew;
+  final double? renewalPrice;
+  final DateTime? renewalAttemptDate;
+  final DateTime? renewalPriceLockedAt;
+  final PremiumPlanDto? scheduledChangePlan;
+  final DateTime? scheduledChangeEffectiveDate;
+  final bool? scheduledChangeAutoRenew;
+  final double? scheduledChangeRenewalPrice;
+  final DateTime? scheduledChangeRenewalAttemptDate;
   final int? paymentTransactionId;
   final int? daysRemaining;
   final bool? currentlyActive;
@@ -113,13 +129,25 @@ class UserSubscriptionDto {
   const UserSubscriptionDto({
     required this.id,
     required this.userId,
+    this.userName,
+    this.userEmail,
+    this.userAvatarUrl,
     required this.plan,
     required this.startDate,
     required this.endDate,
     required this.isActive,
     required this.status,
     this.isStudentSubscription,
+    this.isDiscountedSubscription,
     this.autoRenew,
+    this.renewalPrice,
+    this.renewalAttemptDate,
+    this.renewalPriceLockedAt,
+    this.scheduledChangePlan,
+    this.scheduledChangeEffectiveDate,
+    this.scheduledChangeAutoRenew,
+    this.scheduledChangeRenewalPrice,
+    this.scheduledChangeRenewalAttemptDate,
     this.paymentTransactionId,
     this.daysRemaining,
     this.currentlyActive,
@@ -160,4 +188,79 @@ class CreateSubscriptionRequestDto {
       _$CreateSubscriptionRequestDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$CreateSubscriptionRequestDtoToJson(this);
+}
+
+// ==================== CHECKOUT PREVIEW ====================
+
+/// Pricing mode for checkout preview
+enum PricingMode {
+  @JsonValue('FULL_PURCHASE')
+  fullPurchase,
+  @JsonValue('UPGRADE_PRORATED')
+  upgradeProrated,
+  @JsonValue('UPGRADE_GRACE_WINDOW')
+  upgradeGraceWindow,
+  @JsonValue('UPGRADE_FULL_PRICE')
+  upgradeFullPrice,
+  @JsonValue('UPGRADE_NOT_ALLOWED')
+  upgradeNotAllowed,
+  @JsonValue('CURRENT_PLAN')
+  currentPlan,
+  @JsonValue('DOWNGRADE_NOT_ALLOWED')
+  downgradeNotAllowed,
+  @JsonValue('DOWNGRADE_SCHEDULED')
+  downgradeScheduled,
+}
+
+/// Checkout preview response — pricing info for upgrade/downgrade
+@JsonSerializable()
+class CheckoutPreviewDto {
+  final bool eligible;
+  final bool upgrade;
+  final bool samePlan;
+  final bool downgrade;
+  final int? buyerUserId;
+  final int? targetUserId;
+  final int? currentSubscriptionId;
+  final PremiumPlanDto? currentPlan;
+  final PremiumPlanDto? targetPlan;
+  final double? fullPrice;
+  final double? effectivePrice;
+  final double? amountDue;
+  final double? currentPlanCredit;
+  final double? proratedTargetPrice;
+  final int? remainingDays;
+  final DateTime? nextRenewalDate;
+  final String? currency;
+  @JsonKey(unknownEnumValue: PricingMode.fullPurchase)
+  final PricingMode? pricingMode;
+  final String? message;
+  final bool? discountApplied;
+
+  const CheckoutPreviewDto({
+    required this.eligible,
+    this.upgrade = false,
+    this.samePlan = false,
+    this.downgrade = false,
+    this.buyerUserId,
+    this.targetUserId,
+    this.currentSubscriptionId,
+    this.currentPlan,
+    this.targetPlan,
+    this.fullPrice,
+    this.effectivePrice,
+    this.amountDue,
+    this.currentPlanCredit,
+    this.proratedTargetPrice,
+    this.remainingDays,
+    this.nextRenewalDate,
+    this.currency,
+    this.pricingMode,
+    this.message,
+    this.discountApplied,
+  });
+
+  factory CheckoutPreviewDto.fromJson(Map<String, dynamic> json) =>
+      _$CheckoutPreviewDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$CheckoutPreviewDtoToJson(this);
 }

@@ -16,8 +16,7 @@ class PremiumService {
 
       final List<dynamic> data = response.data as List<dynamic>;
       return data
-          .map((json) =>
-              PremiumPlanDto.fromJson(json as Map<String, dynamic>))
+          .map((json) => PremiumPlanDto.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
       rethrow;
@@ -26,9 +25,7 @@ class PremiumService {
 
   /// Get premium plan by ID
   /// GET /premium/plans/{planId}
-  Future<PremiumPlanDto?> getPlanById({
-    required int planId,
-  }) async {
+  Future<PremiumPlanDto?> getPlanById({required int planId}) async {
     try {
       final response = await _apiClient.dio.get('/premium/plans/$planId');
       return PremiumPlanDto.fromJson(response.data);
@@ -58,8 +55,9 @@ class PremiumService {
   /// GET /premium/subscription/current
   Future<UserSubscriptionDto?> getCurrentSubscription() async {
     try {
-      final response =
-          await _apiClient.dio.get('/premium/subscription/current');
+      final response = await _apiClient.dio.get(
+        '/premium/subscription/current',
+      );
       return UserSubscriptionDto.fromJson(response.data);
     } catch (e) {
       // Return null if no active subscription (404)
@@ -71,13 +69,16 @@ class PremiumService {
   /// GET /premium/subscription/history
   Future<List<UserSubscriptionDto>> getSubscriptionHistory() async {
     try {
-      final response =
-          await _apiClient.dio.get('/premium/subscription/history');
+      final response = await _apiClient.dio.get(
+        '/premium/subscription/history',
+      );
 
       final List<dynamic> data = response.data as List<dynamic>;
       return data
-          .map((json) =>
-              UserSubscriptionDto.fromJson(json as Map<String, dynamic>))
+          .map(
+            (json) =>
+                UserSubscriptionDto.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } catch (e) {
       rethrow;
@@ -86,9 +87,7 @@ class PremiumService {
 
   /// Cancel subscription
   /// PUT /premium/subscription/cancel
-  Future<void> cancelSubscription({
-    String? reason,
-  }) async {
+  Future<void> cancelSubscription({String? reason}) async {
     try {
       await _apiClient.dio.put(
         '/premium/subscription/cancel',
@@ -134,7 +133,9 @@ class PremiumService {
   /// POST /premium/subscription/recover
   Future<Map<String, dynamic>> recoverPendingSubscriptions() async {
     try {
-      final response = await _apiClient.dio.post('/premium/subscription/recover');
+      final response = await _apiClient.dio.post(
+        '/premium/subscription/recover',
+      );
       return response.data as Map<String, dynamic>;
     } catch (e) {
       rethrow;
@@ -178,6 +179,26 @@ class PremiumService {
         '/premium/subscription/cancel-auto-renewal',
       );
       return response.data as Map<String, dynamic>;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get checkout preview (pricing for upgrade/downgrade)
+  /// GET /premium/checkout-preview
+  Future<CheckoutPreviewDto> getCheckoutPreview({
+    required int planId,
+    int? targetUserId,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{'planId': planId};
+      if (targetUserId != null) queryParams['targetUserId'] = targetUserId;
+
+      final response = await _apiClient.dio.get(
+        '/premium/checkout-preview',
+        queryParameters: queryParams,
+      );
+      return CheckoutPreviewDto.fromJson(response.data);
     } catch (e) {
       rethrow;
     }

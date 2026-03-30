@@ -22,8 +22,9 @@ class JobService {
       }
 
       return response.data!
-          .map((json) =>
-              JobPostingResponse.fromJson(json as Map<String, dynamic>))
+          .map(
+            (json) => JobPostingResponse.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -45,8 +46,7 @@ class JobService {
       return JobPostingResponse.fromJson(response.data!);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException(
-          'Lấy thông tin việc làm thất bại: ${e.toString()}');
+      throw ApiException('Lấy thông tin việc làm thất bại: ${e.toString()}');
     }
   }
 
@@ -86,13 +86,16 @@ class JobService {
       }
 
       return response.data!
-          .map((json) =>
-              JobApplicationResponse.fromJson(json as Map<String, dynamic>))
+          .map(
+            (json) =>
+                JobApplicationResponse.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-          'Lấy danh sách đơn ứng tuyển thất bại: ${e.toString()}');
+        'Lấy danh sách đơn ứng tuyển thất bại: ${e.toString()}',
+      );
     }
   }
 
@@ -110,13 +113,16 @@ class JobService {
       }
 
       return response.data!
-          .map((json) =>
-              ShortTermJobResponse.fromJson(json as Map<String, dynamic>))
+          .map(
+            (json) =>
+                ShortTermJobResponse.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-          'Lấy danh sách việc ngắn hạn thất bại: ${e.toString()}');
+        'Lấy danh sách việc ngắn hạn thất bại: ${e.toString()}',
+      );
     }
   }
 
@@ -149,8 +155,7 @@ class JobService {
 
       return JobPageResponse<ShortTermJobResponse>.fromJson(
         response.data!,
-        (json) =>
-            ShortTermJobResponse.fromJson(json as Map<String, dynamic>),
+        (json) => ShortTermJobResponse.fromJson(json as Map<String, dynamic>),
       );
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -173,7 +178,8 @@ class JobService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-          'Lấy thông tin việc ngắn hạn thất bại: ${e.toString()}');
+        'Lấy thông tin việc ngắn hạn thất bại: ${e.toString()}',
+      );
     }
   }
 
@@ -203,7 +209,7 @@ class JobService {
 
   /// Get current user's short-term job applications
   Future<List<ShortTermApplicationResponse>>
-      getMyShortTermApplications() async {
+  getMyShortTermApplications() async {
     try {
       final response = await _apiClient.dio.get<List<dynamic>>(
         '/short-term-jobs/my-applications',
@@ -214,13 +220,17 @@ class JobService {
       }
 
       return response.data!
-          .map((json) => ShortTermApplicationResponse.fromJson(
-              json as Map<String, dynamic>))
+          .map(
+            (json) => ShortTermApplicationResponse.fromJson(
+              json as Map<String, dynamic>,
+            ),
+          )
           .toList();
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-          'Lấy danh sách đơn ứng tuyển ngắn hạn thất bại: ${e.toString()}');
+        'Lấy danh sách đơn ứng tuyển ngắn hạn thất bại: ${e.toString()}',
+      );
     }
   }
 
@@ -236,6 +246,192 @@ class JobService {
     }
   }
 
+  // ==================== HANDOVER / WORK REVIEW ====================
+
+  /// Submit deliverables (worker bàn giao công việc)
+  /// POST /api/short-term-jobs/applications/submit-deliverables
+  Future<ShortTermApplicationResponse> submitDeliverables(
+    SubmitDeliverableRequest request,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/short-term-jobs/applications/submit-deliverables',
+        data: request.toJson(),
+      );
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      return ShortTermApplicationResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException(
+        _extractErrorMessage(e, 'Bàn giao công việc thất bại'),
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Bàn giao công việc thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Select a candidate for the job (recruiter)
+  /// POST /api/short-term-jobs/{jobId}/select-candidate/{applicationId}
+  Future<ShortTermApplicationResponse> selectCandidate(
+    int jobId,
+    int applicationId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/short-term-jobs/$jobId/select-candidate/$applicationId',
+      );
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      return ShortTermApplicationResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException(_extractErrorMessage(e, 'Chọn ứng viên thất bại'));
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Chọn ứng viên thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Approve submitted work (recruiter)
+  /// POST /api/short-term-jobs/applications/{applicationId}/approve
+  Future<ShortTermApplicationResponse> approveWork(
+    int applicationId, {
+    String? message,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (message != null) queryParams['message'] = message;
+
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/short-term-jobs/applications/$applicationId/approve',
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      return ShortTermApplicationResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException(_extractErrorMessage(e, 'Duyệt bàn giao thất bại'));
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Duyệt bàn giao thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Request revision on submitted work (recruiter)
+  /// POST /api/short-term-jobs/applications/request-revision
+  Future<ShortTermApplicationResponse> requestRevision({
+    required int applicationId,
+    required String note,
+    List<String>? specificIssues,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/short-term-jobs/applications/request-revision',
+        data: {
+          'applicationId': applicationId,
+          'note': note,
+          if (specificIssues != null) 'specificIssues': specificIssues,
+        },
+      );
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      return ShortTermApplicationResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException(_extractErrorMessage(e, 'Yêu cầu sửa thất bại'));
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Yêu cầu sửa thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Request admin cancellation review after ≥5 revisions (recruiter)
+  /// POST /api/short-term-jobs/applications/request-cancellation-review
+  Future<ShortTermApplicationResponse> requestCancellationReview(
+    int applicationId,
+    String reason,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/short-term-jobs/applications/request-cancellation-review',
+        data: {'applicationId': applicationId, 'reason': reason},
+      );
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      return ShortTermApplicationResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException(_extractErrorMessage(e, 'Gửi yêu cầu hủy thất bại'));
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Gửi yêu cầu hủy thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Accept cancellation requested by recruiter (worker)
+  /// POST /api/short-term-jobs/applications/{applicationId}/accept-cancellation
+  Future<ShortTermApplicationResponse> acceptCancellation(
+    int applicationId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/short-term-jobs/applications/$applicationId/accept-cancellation',
+      );
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      return ShortTermApplicationResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException(_extractErrorMessage(e, 'Chấp nhận hủy thất bại'));
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Chấp nhận hủy thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Mark job as completed (recruiter)
+  /// POST /api/short-term-jobs/{jobId}/complete
+  Future<ShortTermJobResponse> completeJob(int jobId) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/short-term-jobs/$jobId/complete',
+      );
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      return ShortTermJobResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException(_extractErrorMessage(e, 'Hoàn tất job thất bại'));
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Hoàn tất job thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Mark job as paid (recruiter)
+  /// POST /api/short-term-jobs/{jobId}/mark-paid
+  Future<ShortTermJobResponse> markAsPaid(int jobId) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/short-term-jobs/$jobId/mark-paid',
+      );
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      return ShortTermJobResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException(
+        _extractErrorMessage(e, 'Xác nhận thanh toán thất bại'),
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Xác nhận thanh toán thất bại: ${e.toString()}');
+    }
+  }
+
   /// Extract a user-friendly error message from DioException
   String _extractErrorMessage(DioException e, String fallback) {
     try {
@@ -245,7 +441,7 @@ class JobService {
         return data['message'] as String? ?? fallback;
       }
     } catch (_) {}
-    
+
     // Map common HTTP status codes
     final statusCode = e.response?.statusCode;
     if (statusCode == 409 || statusCode == 500) {

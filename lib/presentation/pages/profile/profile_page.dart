@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
-import '../../providers/subscription_provider.dart';
+import '../../providers/premium_provider.dart';
+import '../../../data/models/premium_models.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_theme.dart';
@@ -30,7 +31,7 @@ class _ProfilePageState extends State<ProfilePage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<UserProvider>().loadUserProfile();
-      context.read<SubscriptionProvider>().loadSubscription();
+      context.read<PremiumProvider>().loadCurrentSubscription();
       context.read<WalletProvider>().refresh();
     });
   }
@@ -60,11 +61,17 @@ class _ProfilePageState extends State<ProfilePage> {
       // Reload profile to get the new avatar URL
       if (mounted) {
         await context.read<UserProvider>().loadUserProfile();
-        ErrorHandler.showSuccessSnackBar(context, 'Cập nhật ảnh đại diện thành công!');
+        ErrorHandler.showSuccessSnackBar(
+          context,
+          'Cập nhật ảnh đại diện thành công!',
+        );
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, 'Upload thất bại: ${e.toString()}');
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Upload thất bại: ${e.toString()}',
+        );
       }
     } finally {
       if (mounted) {
@@ -77,11 +84,11 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final userProvider = context.watch<UserProvider>();
-    final subscriptionProvider = context.watch<SubscriptionProvider>();
+    final premiumProvider = context.watch<PremiumProvider>();
     final walletProvider = context.watch<WalletProvider>();
     final authProvider = context.watch<AuthProvider>();
 
-    if (userProvider.isLoading || subscriptionProvider.isLoading) {
+    if (userProvider.isLoading || premiumProvider.isLoading) {
       return const Scaffold(
         body: SingleChildScrollView(
           padding: EdgeInsets.all(16),
@@ -99,7 +106,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final user = authProvider.user;
     final userProfile = userProvider.userProfile;
-    final subscription = subscriptionProvider.subscription;
+    final subscription = premiumProvider.currentSubscription;
 
     return Scaffold(
       body: CustomScrollView(
@@ -147,7 +154,7 @@ class _ProfilePageState extends State<ProfilePage> {
     BuildContext context,
     dynamic user,
     dynamic userProfile,
-    dynamic subscription,
+    UserSubscriptionDto? subscription,
     WalletProvider walletProvider,
     bool isDark,
   ) {
@@ -157,16 +164,16 @@ class _ProfilePageState extends State<ProfilePage> {
 
     // Get subscription info
     final planName = subscription?.plan.displayName ?? 'Cadet';
-    final planType = subscription?.plan.planType ?? 'FREE_TIER';
+    final planType = subscription?.plan.planType ?? PlanType.freeTier;
     final joinedYear = userProfile?.createdAt != null
         ? 'Since ${DateTime.tryParse(userProfile!.createdAt)?.year ?? '---'}'
         : 'Since ---';
     final cashBalance = walletProvider.cashBalance;
     final coinBalance = walletProvider.coinBalance;
-    final status = subscription?.status ?? 'ACTIVE';
+    final statusText = _getStatusText(subscription?.status);
 
     final tierColor = _getPlanColor(planType);
-    final isFree = planType == 'FREE_TIER';
+    final isFree = planType == PlanType.freeTier;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 60, 20, 28),
@@ -207,7 +214,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [AppTheme.themePurpleStart, AppTheme.themePurpleEnd],
+                    colors: [
+                      AppTheme.themePurpleStart,
+                      AppTheme.themePurpleEnd,
+                    ],
                   ),
                 ),
                 child: avatarUrl != null
@@ -240,7 +250,11 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: _isUploadingAvatar
                         ? CommonLoading.small()
-                        : const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                        : const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 14,
+                          ),
                   ),
                 ),
               ),
@@ -327,8 +341,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: _buildStatItem2(
                     Icons.verified_outlined,
                     'Trạng thái',
-                    status,
-                    valueColor: status == 'ACTIVE'
+                    statusText,
+                    valueColor: statusText == 'ACTIVE'
                         ? AppTheme.successColor
                         : Colors.white70,
                   ),
@@ -376,15 +390,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // ==================== SUBSCRIPTION CARD ====================
 
-  String _getPlanIcon(String planType) {
+  String _getPlanIcon(PlanType planType) {
     switch (planType) {
-      case 'STUDENT_PACK':
+      case PlanType.studentPack:
         return '🎓';
-      case 'PREMIUM_BASIC':
+      case PlanType.premiumBasic:
         return '⭐';
-      case 'PREMIUM_PLUS':
+      case PlanType.premiumPlus:
         return '💎';
-      case 'RECRUITER_PRO':
+      case PlanType.recruiterPro:
         return '🚀';
       default:
         return '📦';
@@ -393,22 +407,26 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildSubscriptionCard(
     BuildContext context,
-    dynamic subscription,
+    UserSubscriptionDto? subscription,
     bool isDark,
   ) {
-    if (subscription != null && subscription.currentlyActive) {
-      final planType = subscription.plan.planType as String;
+    if (subscription != null && (subscription.currentlyActive ?? false)) {
+      final planType = subscription.plan.planType;
       final tierColor = _getPlanColor(planType);
       final tierIcon = _getPlanIcon(planType);
-      final daysLeft = subscription.daysRemaining as int;
-      final totalDays = (subscription.plan.durationMonths as int) * 30;
+      final daysLeft = subscription.daysRemaining ?? 0;
+      final totalDays = subscription.plan.durationMonths * 30;
       final progress = totalDays > 0
           ? (1.0 - (daysLeft / totalDays)).clamp(0.0, 1.0)
           : 1.0;
-      final features = subscription.plan.features as List<String>;
+      final features = subscription.plan.features ?? [];
 
-      final secColor = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-      final priColor = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+      final secColor = isDark
+          ? AppTheme.darkTextSecondary
+          : AppTheme.lightTextSecondary;
+      final priColor = isDark
+          ? AppTheme.darkTextPrimary
+          : AppTheme.lightTextPrimary;
 
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -436,7 +454,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                           Text(
-                            subscription.plan.description as String,
+                            subscription.plan.description ?? '',
                             style: TextStyle(fontSize: 11, color: secColor),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -445,7 +463,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.successColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
@@ -468,7 +489,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      daysLeft <= 7 ? '⚠️ Còn $daysLeft ngày' : 'Còn $daysLeft ngày',
+                      daysLeft <= 7
+                          ? '⚠️ Còn $daysLeft ngày'
+                          : 'Còn $daysLeft ngày',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -497,18 +520,32 @@ class _ProfilePageState extends State<ProfilePage> {
                 // ── Features (top 2) ───────────────────────
                 if (features.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  ...features.take(2).map(
-                    (f) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle_outline, size: 13, color: tierColor),
-                          const SizedBox(width: 6),
-                          Expanded(child: Text(f, style: TextStyle(fontSize: 12, color: priColor))),
-                        ],
+                  ...features
+                      .take(2)
+                      .map(
+                        (f) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle_outline,
+                                size: 13,
+                                color: tierColor,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  f,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: priColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
                 ],
 
                 // ── Footer ─────────────────────────────────
@@ -516,23 +553,33 @@ class _ProfilePageState extends State<ProfilePage> {
                 Row(
                   children: [
                     Icon(
-                      subscription.autoRenew ? Icons.repeat : Icons.event_busy,
+                      (subscription.autoRenew ?? false)
+                          ? Icons.repeat
+                          : Icons.event_busy,
                       size: 13,
                       color: secColor,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      subscription.autoRenew ? 'Tự động gia hạn' : 'Không gia hạn',
+                      (subscription.autoRenew ?? false)
+                          ? 'Tự động gia hạn'
+                          : 'Không gia hạn',
                       style: TextStyle(fontSize: 11, color: secColor),
                     ),
                     const Spacer(),
                     TextButton.icon(
                       onPressed: () => context.push('/premium'),
                       icon: const Icon(Icons.tune, size: 13),
-                      label: const Text('Quản lý', style: TextStyle(fontSize: 12)),
+                      label: const Text(
+                        'Quản lý',
+                        style: TextStyle(fontSize: 12),
+                      ),
                       style: TextButton.styleFrom(
                         foregroundColor: tierColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                       ),
                     ),
                   ],
@@ -628,8 +675,6 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-
-
 
   Widget _buildPersonalInfoSection(
     BuildContext context,
@@ -960,20 +1005,33 @@ class _ProfilePageState extends State<ProfilePage> {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
+  String _getStatusText(SubscriptionStatus? status) {
+    if (status == null) return 'ACTIVE';
+    switch (status) {
+      case SubscriptionStatus.active:
+        return 'ACTIVE';
+      case SubscriptionStatus.expired:
+        return 'EXPIRED';
+      case SubscriptionStatus.cancelled:
+        return 'CANCELLED';
+      case SubscriptionStatus.pending:
+        return 'PENDING';
+      case SubscriptionStatus.suspended:
+        return 'SUSPENDED';
+    }
+  }
 
-  Color _getPlanColor(String planType) {
+  Color _getPlanColor(PlanType planType) {
     switch (planType) {
-      case 'PREMIUM_PLUS':
+      case PlanType.premiumPlus:
         return AppTheme.accentCyan;
-      case 'PREMIUM_BASIC':
+      case PlanType.premiumBasic:
         return AppTheme.accentGold;
-      case 'STUDENT_PACK':
+      case PlanType.studentPack:
         return AppTheme.themeGreenStart;
-      case 'RECRUITER_PRO':
+      case PlanType.recruiterPro:
         return AppTheme.themeOrangeStart;
-      case 'FREE_TIER':
-        return Colors.grey;
-      default:
+      case PlanType.freeTier:
         return Colors.grey;
     }
   }

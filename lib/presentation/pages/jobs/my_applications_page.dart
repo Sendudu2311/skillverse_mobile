@@ -284,7 +284,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              StatusBadge(status: app.status ?? 'PENDING'),
+              StatusBadge(status: app.status?.name ?? 'PENDING'),
             ],
           ),
 
@@ -309,7 +309,10 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
 
           // Timeline progress
           const SizedBox(height: 12),
-          _buildStatusTimeline(app.status ?? 'PENDING', isLongTerm: false),
+          _buildStatusTimeline(
+            app.status?.name ?? 'PENDING',
+            isLongTerm: false,
+          ),
 
           // Applied date
           if (app.appliedAt != null) ...[
@@ -339,7 +342,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Withdraw for pending
-              if (app.status == 'PENDING' || app.status == 'APPLIED')
+              if (app.status == ShortTermApplicationStatus.pending)
                 TextButton.icon(
                   onPressed: () => _confirmWithdraw(app.id!, provider),
                   icon: const Icon(Icons.undo, size: 14),
@@ -388,7 +391,10 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
               Navigator.of(ctx).pop();
               final success = await provider.withdrawApplication(applicationId);
               if (mounted && success) {
-                ErrorHandler.showSuccessSnackBar(context, 'Đã rút đơn thành công');
+                ErrorHandler.showSuccessSnackBar(
+                  context,
+                  'Đã rút đơn thành công',
+                );
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),

@@ -16,7 +16,7 @@ import 'presentation/providers/post_provider.dart';
 import 'presentation/providers/comment_provider.dart';
 import 'presentation/providers/mentor_provider.dart';
 import 'presentation/providers/skin_provider.dart';
-import 'presentation/providers/subscription_provider.dart';
+
 import 'presentation/providers/task_board_provider.dart';
 import 'presentation/providers/expert_chat_provider.dart';
 import 'presentation/providers/job_provider.dart';
@@ -64,7 +64,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CommentProvider()),
         ChangeNotifierProvider(create: (_) => MentorProvider()),
         ChangeNotifierProvider(create: (_) => SkinProvider()),
-        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
+
         ChangeNotifierProvider(create: (_) => TaskBoardProvider()),
         ChangeNotifierProvider(create: (_) => ExpertChatProvider()),
         ChangeNotifierProvider(create: (_) => JobProvider()),

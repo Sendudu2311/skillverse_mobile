@@ -44,6 +44,10 @@ enum ShortTermJobStatus {
   cancelled,
   @JsonValue('DISPUTED')
   disputed,
+  @JsonValue('ESCALATED')
+  escalated,
+  @JsonValue('CLOSED')
+  closed,
 }
 
 enum JobApplicationStatus {
@@ -55,6 +59,43 @@ enum JobApplicationStatus {
   accepted,
   @JsonValue('REJECTED')
   rejected,
+}
+
+enum ShortTermApplicationStatus {
+  @JsonValue('PENDING')
+  pending,
+  @JsonValue('ACCEPTED')
+  accepted,
+  @JsonValue('REJECTED')
+  rejected,
+  @JsonValue('WORKING')
+  working,
+  @JsonValue('IN_PROGRESS')
+  inProgress,
+  @JsonValue('SUBMITTED')
+  submitted,
+  @JsonValue('SUBMITTED_OVERDUE')
+  submittedOverdue,
+  @JsonValue('REVISION_REQUIRED')
+  revisionRequired,
+  @JsonValue('REVISION_RESPONSE_OVERDUE')
+  revisionResponseOverdue,
+  @JsonValue('CANCELLATION_REQUESTED')
+  cancellationRequested,
+  @JsonValue('AUTO_CANCELLED')
+  autoCancelled,
+  @JsonValue('DISPUTE_OPENED')
+  disputeOpened,
+  @JsonValue('APPROVED')
+  approved,
+  @JsonValue('COMPLETED')
+  completed,
+  @JsonValue('PAID')
+  paid,
+  @JsonValue('CANCELLED')
+  cancelled,
+  @JsonValue('WITHDRAWN')
+  withdrawn,
 }
 
 enum JobUrgency {
@@ -384,6 +425,7 @@ class ShortTermApplicationResponse {
   final String? userFullName;
   final String? userEmail;
   final String? userAvatar;
+  final String? userProfessionalTitle;
   final double? userRating;
   final int? userCompletedJobs;
 
@@ -392,9 +434,11 @@ class ShortTermApplicationResponse {
   final double? proposedPrice;
   final String? proposedDuration;
   final List<String>? portfolio;
+  final String? portfolioSlug;
 
-  // Status
-  final String? status;
+  // Status (typed enum)
+  @JsonKey(unknownEnumValue: ShortTermApplicationStatus.pending)
+  final ShortTermApplicationStatus? status;
 
   // Timestamps
   final String? appliedAt;
@@ -409,7 +453,13 @@ class ShortTermApplicationResponse {
 
   // Revision
   final int? revisionCount;
+  final int? submissionCount;
   final List<RevisionNoteResponse>? revisionNotes;
+
+  // SLA / Cancellation / Dispute fields
+  final String? reviewDeadlineAt;
+  final String? responseDeadlineAt;
+  final bool? disputeEligibilityUnlocked;
 
   // Job info
   final ShortTermAppJobInfo? jobDetails;
@@ -423,12 +473,14 @@ class ShortTermApplicationResponse {
     this.userFullName,
     this.userEmail,
     this.userAvatar,
+    this.userProfessionalTitle,
     this.userRating,
     this.userCompletedJobs,
     this.coverLetter,
     this.proposedPrice,
     this.proposedDuration,
     this.portfolio,
+    this.portfolioSlug,
     this.status,
     this.appliedAt,
     this.acceptedAt,
@@ -438,7 +490,11 @@ class ShortTermApplicationResponse {
     this.deliverables,
     this.workNote,
     this.revisionCount,
+    this.submissionCount,
     this.revisionNotes,
+    this.reviewDeadlineAt,
+    this.responseDeadlineAt,
+    this.disputeEligibilityUnlocked,
     this.jobDetails,
   });
 
@@ -521,6 +577,51 @@ class ApplyShortTermJobRequest {
   factory ApplyShortTermJobRequest.fromJson(Map<String, dynamic> json) =>
       _$ApplyShortTermJobRequestFromJson(json);
   Map<String, dynamic> toJson() => _$ApplyShortTermJobRequestToJson(this);
+}
+
+@JsonSerializable()
+class SubmitDeliverableRequest {
+  final int applicationId;
+  final int? milestoneId;
+  final String? workNote;
+  final List<DeliverablePayload>? deliverables;
+  @JsonKey(name: 'isFinalSubmission')
+  final bool? finalSubmission;
+
+  SubmitDeliverableRequest({
+    required this.applicationId,
+    this.milestoneId,
+    this.workNote,
+    this.deliverables,
+    this.finalSubmission,
+  });
+
+  factory SubmitDeliverableRequest.fromJson(Map<String, dynamic> json) =>
+      _$SubmitDeliverableRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$SubmitDeliverableRequestToJson(this);
+}
+
+@JsonSerializable()
+class DeliverablePayload {
+  final String type;
+  final String fileName;
+  final String fileUrl;
+  final int? fileSize;
+  final String? mimeType;
+  final String? description;
+
+  DeliverablePayload({
+    required this.type,
+    required this.fileName,
+    required this.fileUrl,
+    this.fileSize,
+    this.mimeType,
+    this.description,
+  });
+
+  factory DeliverablePayload.fromJson(Map<String, dynamic> json) =>
+      _$DeliverablePayloadFromJson(json);
+  Map<String, dynamic> toJson() => _$DeliverablePayloadToJson(this);
 }
 
 // ==================== PAGE RESPONSE ====================

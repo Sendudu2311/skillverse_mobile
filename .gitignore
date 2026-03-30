@@ -101,3 +101,8 @@ DEVELOPMENT_AND_TESTING_LOG.md
 .serena/
 edit_profile_source.xml
 test/appium/
+
+# Appium / Allure test artifacts
+test/allure-report/
+test/allure-results/
+test/specs/
