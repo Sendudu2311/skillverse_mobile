@@ -3,12 +3,14 @@ import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../data/models/mentor_models.dart';
 import '../../providers/mentor_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/glass_card.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../../core/utils/date_time_helper.dart';
 
 class MyBookingsPage extends StatefulWidget {
   const MyBookingsPage({super.key});
@@ -47,7 +49,8 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               (b) =>
                   b.status == BookingStatus.pending ||
                   b.status == BookingStatus.confirmed ||
-                  b.status == BookingStatus.ongoing,
+                  b.status == BookingStatus.ongoing ||
+                  b.status == BookingStatus.pendingCompletion,
             )
             .toList();
       case 1: // Hoàn thành
@@ -73,31 +76,26 @@ class _MyBookingsPageState extends State<MyBookingsPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight + kTextTabBarHeight),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SkillVerseAppBar(
-              title: 'Lịch hẹn của tôi',
-              onBack: () => context.pop(),
-            ),
-            TabBar(
-              controller: _tabController,
-              tabs: const [
-                Tab(text: 'Sắp tới'),
-                Tab(text: 'Hoàn thành'),
-                Tab(text: 'Đã hủy'),
-              ],
-              labelColor: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
-              unselectedLabelColor: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-              indicatorColor: isDark
-                  ? AppTheme.primaryBlueDark
-                  : AppTheme.primaryBlue,
-            ),
+      appBar: SkillVerseAppBar(
+        title: 'LỊCH HẸN CỦA TÔI',
+        icon: Icons.calendar_today_outlined,
+        useGradientTitle: true,
+        onBack: () => context.pop(),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Sắp tới'),
+            Tab(text: 'Hoàn thành'),
+            Tab(text: 'Đã hủy'),
           ],
+          labelColor: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
+          unselectedLabelColor: isDark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
+          indicatorColor: isDark
+              ? AppTheme.primaryBlueDark
+              : AppTheme.primaryBlue,
+          dividerColor: Colors.transparent,
         ),
       ),
       body: Consumer<MentorProvider>(
@@ -245,7 +243,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _formatDate(booking.startTime),
+                  DateTimeHelper.formatDateWithWeekday(booking.startTime),
                   style: TextStyle(
                     color: isDark
                         ? AppTheme.darkTextPrimary
@@ -262,7 +260,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _formatTime(booking.startTime, booking.endTime),
+                  '${DateTimeHelper.formatTime(booking.startTime)} - ${DateTimeHelper.formatTime(booking.endTime)}',
                   style: TextStyle(
                     color: isDark
                         ? AppTheme.darkTextPrimary
@@ -309,8 +307,10 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // Open meeting link
-                    // launchUrl(Uri.parse(booking.meetingLink!));
+                    launchUrl(
+                      Uri.parse(booking.meetingLink!),
+                      mode: LaunchMode.externalApplication,
+                    );
                   },
                   icon: const Icon(Icons.video_call),
                   label: const Text('Tham gia cuộc họp'),
@@ -417,7 +417,10 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                       : null,
                 );
                 if (mounted) {
-                  ErrorHandler.showSuccessSnackBar(context, 'Cảm ơn bạn đã đánh giá!');
+                  ErrorHandler.showSuccessSnackBar(
+                    context,
+                    'Cảm ơn bạn đã đánh giá!',
+                  );
                 }
               },
               child: const Text('Gửi đánh giá'),
@@ -426,17 +429,5 @@ class _MyBookingsPageState extends State<MyBookingsPage>
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
-
-  String _formatTime(DateTime start, DateTime end) {
-    final startStr =
-        '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
-    final endStr =
-        '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
-    return '$startStr - $endStr';
   }
 }

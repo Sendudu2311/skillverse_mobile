@@ -41,19 +41,23 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: SkillVerseAppBar(title: 'Khóa học của tôi', centerTitle: true),
       extendBodyBehindAppBar: true,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppTheme.galaxyDarkest, AppTheme.galaxyDark],
-          ),
+        decoration: BoxDecoration(
+          gradient: isDark
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppTheme.galaxyDarkest, AppTheme.galaxyDark],
+                )
+              : null,
+          color: isDark ? null : AppTheme.lightBackgroundPrimary,
         ),
         child: SafeArea(
-          // Use SafeArea to avoid overlap with AppBar
           child: Consumer<EnrollmentProvider>(
             builder: (context, enrollmentProvider, child) {
               if (enrollmentProvider.isLoading) {
@@ -92,7 +96,11 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
                     final enrollment = enrollmentProvider.enrollments[index];
                     return AnimatedListItem(
                       index: index,
-                      child: _buildEnrolledCourseCard(context, enrollment),
+                      child: _buildEnrolledCourseCard(
+                        context,
+                        enrollment,
+                        isDark,
+                      ),
                     );
                   },
                 ),
@@ -107,28 +115,21 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
   Widget _buildEnrolledCourseCard(
     BuildContext context,
     EnrollmentDetailDto enrollment,
+    bool isDark,
   ) {
     final progress = enrollment.progressPercent;
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.zero, // Zero padding for image cover
+      padding: EdgeInsets.zero,
+      backgroundColor: isDark ? null : Colors.white,
+      borderColor: isDark ? null : AppTheme.lightBorderColor,
       child: InkWell(
-        onTap: () {
-          // Navigate to learning page
-          Navigator.pushNamed(
-            context,
-            '/courses/${enrollment.courseId}/learn',
-            // Pass object if needed or just ID
-          );
-          // Using GoRouter:
-          context.push('/courses/${enrollment.courseId}/learn');
-        },
+        onTap: () => context.push('/courses/${enrollment.courseId}/learn'),
         borderRadius: BorderRadius.circular(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Course Info Section
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -136,10 +137,12 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
                 children: [
                   Text(
                     enrollment.courseTitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -151,9 +154,11 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: progress / 100,
-                      backgroundColor: Colors.white10,
+                      backgroundColor: isDark
+                          ? Colors.white10
+                          : Colors.grey.shade200,
                       color: progress >= 100
-                          ? Colors.green
+                          ? AppTheme.successColor
                           : AppTheme.themeOrangeStart,
                       minHeight: 6,
                     ),
@@ -167,23 +172,25 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
                       Text(
                         '${progress}% hoàn thành',
                         style: TextStyle(
-                          color: Theme.of(context).hintColor,
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
                           fontSize: 12,
                         ),
                       ),
                       if (progress >= 100)
-                        const Row(
+                        Row(
                           children: [
                             Icon(
                               Icons.check_circle,
                               size: 14,
-                              color: Colors.green,
+                              color: AppTheme.successColor,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
                               'Đã hoàn thành',
                               style: TextStyle(
-                                color: Colors.green,
+                                color: AppTheme.successColor,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),

@@ -94,6 +94,7 @@ class StartJourneyRequest {
   @JsonKey(unknownEnumValue: JourneyType.skill)
   final JourneyType? type;
   final String domain;
+  final String? industry;
   final String goal;
   final String level;
   final String? jobRole;
@@ -106,6 +107,7 @@ class StartJourneyRequest {
   const StartJourneyRequest({
     this.type,
     required this.domain,
+    this.industry,
     required this.goal,
     required this.level,
     this.jobRole,
@@ -328,7 +330,7 @@ class AssessmentTestDto {
   Map<String, dynamic> toJson() => _$AssessmentTestDtoToJson(this);
 }
 
-/// Test result after AI evaluation
+/// Detailed test result with AI evaluation
 @JsonSerializable()
 class TestResultDto {
   final int id;
@@ -340,6 +342,8 @@ class TestResultDto {
   final String? skillGapsJson;
   final String? strengthsJson;
   final String? evaluationSummary;
+  final String? detailedFeedback;
+  final String? highlightKeywordsJson;
   final String? userAnswersJson;
   final String? correctAnswersJson;
   final String? evaluatedAt;
@@ -364,6 +368,8 @@ class TestResultDto {
     this.skillGapsJson,
     this.strengthsJson,
     this.evaluationSummary,
+    this.detailedFeedback,
+    this.highlightKeywordsJson,
     this.userAnswersJson,
     this.correctAnswersJson,
     this.evaluatedAt,

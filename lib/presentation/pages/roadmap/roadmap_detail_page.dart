@@ -207,7 +207,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
   ) {
     return Stack(
       children: [
-        // Background Image/Gradient
+        // Background gradient
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -215,19 +215,16 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
               end: Alignment.bottomRight,
               colors: isDark
                   ? [
-                      AppTheme.indigoDark, // Indigo 950
-                      Color(0xFF312E81), // Indigo 900
-                      Color(0xFF0F172A), // Slate 900
+                      AppTheme.indigoDark,
+                      const Color(0xFF312E81),
+                      const Color(0xFF0F172A),
                     ]
-                  : [
-                      Color(0xFFE0E7FF), // Indigo 100
-                      Color(0xFFF3F4F6), // Gray 100
-                    ],
+                  : [const Color(0xFFE0E7FF), const Color(0xFFF3F4F6)],
             ),
           ),
         ),
 
-        // Grid texture (optional)
+        // Grid texture
         if (isDark)
           Positioned.fill(
             child: Opacity(
@@ -236,7 +233,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
             ),
           ),
 
-        // Gradient overlay for text readability
+        // Gradient overlay
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -257,29 +254,6 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Tags row
-              Row(
-                children: [
-                  _buildTag(
-                    'System Online',
-                    AppTheme.successColor,
-                    Icons.circle,
-                    isDark,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildTag(
-                    roadmap.metadata.roadmapMode == RoadmapMode.careerBased
-                        ? 'Career Protocol'
-                        : 'Skill Protocol',
-                    const Color(0xFF60A5FA), // Blue 400
-                    Icons.schema,
-                    isDark,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Title
               Text(
                 roadmap.metadata.title,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -295,11 +269,9 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
                 ),
               ),
               const SizedBox(height: 8),
-
-              // Subtitle/Experience level
               Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.signal_cellular_alt,
                     size: 16,
                     color: Colors.white70,
@@ -307,14 +279,18 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
                   const SizedBox(width: 4),
                   Text(
                     roadmap.metadata.experienceLevel,
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                   const SizedBox(width: 16),
-                  Icon(Icons.timer_outlined, size: 16, color: Colors.white70),
+                  const Icon(
+                    Icons.timer_outlined,
+                    size: 16,
+                    color: Colors.white70,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     roadmap.metadata.duration,
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
               ),
@@ -322,34 +298,6 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildTag(String label, Color color, IconData? icon, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 8, color: color),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1356,8 +1304,8 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
           style: TextStyle(
             color: isCreating
                 ? (isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary)
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary)
                 : (isDark ? AppTheme.accentCyan : AppTheme.primaryBlue),
             fontWeight: FontWeight.w600,
           ),
@@ -1377,10 +1325,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
     );
   }
 
-  Future<void> _createStudyPlan(
-    BuildContext context,
-    RoadmapNode node,
-  ) async {
+  Future<void> _createStudyPlan(BuildContext context, RoadmapNode node) async {
     if (!mounted) return;
 
     setState(() => _creatingPlanNodeId = node.id);

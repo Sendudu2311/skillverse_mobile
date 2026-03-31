@@ -12,6 +12,8 @@ enum BookingStatus {
   rejected,
   @JsonValue('ONGOING')
   ongoing,
+  @JsonValue('PENDING_COMPLETION')
+  pendingCompletion,
   @JsonValue('COMPLETED')
   completed,
   @JsonValue('CANCELLED')
@@ -235,6 +237,12 @@ class MentorBooking {
   final String? mentorAvatar;
   final String? learnerName;
   final String? learnerAvatar;
+  final bool? confirmedByLearner;
+  final DateTime? mentorCompletedAt;
+  final DateTime? learnerConfirmedAt;
+  final DateTime? learnerCompletedAt;
+  final DateTime? completionDeadline;
+  final int? disputeId;
 
   MentorBooking({
     required this.id,
@@ -251,6 +259,12 @@ class MentorBooking {
     this.mentorAvatar,
     this.learnerName,
     this.learnerAvatar,
+    this.confirmedByLearner,
+    this.mentorCompletedAt,
+    this.learnerConfirmedAt,
+    this.learnerCompletedAt,
+    this.completionDeadline,
+    this.disputeId,
   });
 
   /// Get calculated duration
@@ -274,6 +288,8 @@ class MentorBooking {
         return 'Đã từ chối';
       case BookingStatus.ongoing:
         return 'Đang diễn ra';
+      case BookingStatus.pendingCompletion:
+        return 'Chờ xác nhận hoàn thành';
       case BookingStatus.completed:
         return 'Hoàn thành';
       case BookingStatus.cancelled:
@@ -311,6 +327,12 @@ class MentorBooking {
     String? mentorAvatar,
     String? learnerName,
     String? learnerAvatar,
+    bool? confirmedByLearner,
+    DateTime? mentorCompletedAt,
+    DateTime? learnerConfirmedAt,
+    DateTime? learnerCompletedAt,
+    DateTime? completionDeadline,
+    int? disputeId,
   }) {
     return MentorBooking(
       id: id ?? this.id,
@@ -327,6 +349,12 @@ class MentorBooking {
       mentorAvatar: mentorAvatar ?? this.mentorAvatar,
       learnerName: learnerName ?? this.learnerName,
       learnerAvatar: learnerAvatar ?? this.learnerAvatar,
+      confirmedByLearner: confirmedByLearner ?? this.confirmedByLearner,
+      mentorCompletedAt: mentorCompletedAt ?? this.mentorCompletedAt,
+      learnerConfirmedAt: learnerConfirmedAt ?? this.learnerConfirmedAt,
+      learnerCompletedAt: learnerCompletedAt ?? this.learnerCompletedAt,
+      completionDeadline: completionDeadline ?? this.completionDeadline,
+      disputeId: disputeId ?? this.disputeId,
     );
   }
 }

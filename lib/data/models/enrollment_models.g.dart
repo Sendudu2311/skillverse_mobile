@@ -23,9 +23,14 @@ EnrollmentDetailDto _$EnrollmentDetailDtoFromJson(Map<String, dynamic> json) =>
       progressPercent: (json['progressPercent'] as num).toInt(),
       entitlementSource: json['entitlementSource'] as String?,
       entitlementRef: json['entitlementRef'] as String?,
+      learningRevisionId: (json['learningRevisionId'] as num?)?.toInt(),
+      upgradePolicySnapshot: json['upgradePolicySnapshot'] as String?,
       enrolledAt: json['enrolledAt'] == null
           ? null
           : DateTime.parse(json['enrolledAt'] as String),
+      lastUpgradedAt: json['lastUpgradedAt'] == null
+          ? null
+          : DateTime.parse(json['lastUpgradedAt'] as String),
       completedAt: json['completedAt'] == null
           ? null
           : DateTime.parse(json['completedAt'] as String),
@@ -44,7 +49,10 @@ Map<String, dynamic> _$EnrollmentDetailDtoToJson(
   'progressPercent': instance.progressPercent,
   'entitlementSource': instance.entitlementSource,
   'entitlementRef': instance.entitlementRef,
+  'learningRevisionId': instance.learningRevisionId,
+  'upgradePolicySnapshot': instance.upgradePolicySnapshot,
   'enrolledAt': instance.enrolledAt?.toIso8601String(),
+  'lastUpgradedAt': instance.lastUpgradedAt?.toIso8601String(),
   'completedAt': instance.completedAt?.toIso8601String(),
   'completed': instance.completed,
 };

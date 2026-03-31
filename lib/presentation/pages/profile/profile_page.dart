@@ -820,6 +820,13 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           _buildMenuItem(
             context,
+            'Lịch hẹn của tôi',
+            Icons.calendar_today_outlined,
+            () => context.push('/my-bookings'),
+            isDark,
+          ),
+          _buildMenuItem(
+            context,
             'Cài đặt tài khoản',
             Icons.settings_outlined,
             () => context.push('/profile/settings'),

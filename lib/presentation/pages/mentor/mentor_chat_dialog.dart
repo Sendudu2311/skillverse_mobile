@@ -147,26 +147,18 @@ class _MentorChatDialogState extends State<MentorChatDialog> {
                         : AppTheme.lightTextPrimary,
                   ),
                 ),
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.successColor,
-                        shape: BoxShape.circle,
-                      ),
+                if (widget.mentor.specialization != null)
+                  Text(
+                    widget.mentor.specialization!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Trực tuyến',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.successColor,
-                      ),
-                    ),
-                  ],
-                ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             ),
           ),

@@ -23,9 +23,12 @@ class _RoadmapPageState extends State<RoadmapPage> {
   void initState() {
     super.initState();
 
-    // Load initial data
+    // Reset filters and load fresh data
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<RoadmapProvider>().loadUserRoadmaps();
+      final provider = context.read<RoadmapProvider>();
+      provider.clearFilters();
+      _searchController.clear();
+      provider.loadUserRoadmaps();
     });
   }
 

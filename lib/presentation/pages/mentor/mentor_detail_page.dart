@@ -210,7 +210,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                       textAlign: TextAlign.center,
                     ),
                   const SizedBox(height: 8),
-                  // Online status
+                  // Pre-chat support badge
                   if (mentor.preChatEnabled)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -218,26 +218,23 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.successColor.withOpacity(0.2),
+                        color: AppTheme.infoColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppTheme.successColor,
-                              shape: BoxShape.circle,
-                            ),
+                          const Icon(
+                            Icons.chat_bubble_outline,
+                            size: 12,
+                            color: AppTheme.infoColor,
                           ),
                           const SizedBox(width: 6),
                           const Text(
-                            'Trực tuyến',
+                            'Hỗ trợ Chat',
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.successColor,
+                              color: AppTheme.infoColor,
                               fontWeight: FontWeight.w500,
                             ),
                           ),

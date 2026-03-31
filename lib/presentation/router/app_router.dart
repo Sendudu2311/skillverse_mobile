@@ -310,10 +310,7 @@ class AppRouter {
         GoRoute(
           path: '/my-bookings',
           name: 'my-bookings',
-          builder: (context, state) => MainLayout(
-            currentPath: state.matchedLocation,
-            child: const MyBookingsPage(),
-          ),
+          builder: (context, state) => const MyBookingsPage(),
         ),
 
         // Skin Shop Route

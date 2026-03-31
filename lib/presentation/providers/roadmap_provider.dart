@@ -3,6 +3,7 @@ import '../../data/models/roadmap_models.dart';
 import '../../data/services/roadmap_service.dart';
 import '../../data/services/journey_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/string_helper.dart';
 
 enum SortOption { newest, oldest, progress, title }
 
@@ -58,25 +59,29 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
 
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase();
+      final query = StringHelper.removeDiacritics(_searchQuery);
       filtered = filtered
           .where(
             (r) =>
-                r.title.toLowerCase().contains(query) ||
-                r.originalGoal.toLowerCase().contains(query),
+                StringHelper.removeDiacritics(r.title).contains(query) ||
+                StringHelper.removeDiacritics(r.originalGoal).contains(query),
           )
           .toList();
     }
 
     // Apply experience filter
     if (_filterExperience != 'all') {
-      filtered = filtered
-          .where(
-            (r) =>
-                r.experienceLevel.toLowerCase() ==
-                _filterExperience.toLowerCase(),
-          )
-          .toList();
+      filtered = filtered.where((r) {
+        final exp = r.experienceLevel.toLowerCase();
+        final normalizedExp = (exp == 'mới bắt đầu')
+            ? 'beginner'
+            : (exp == 'trung cấp')
+            ? 'intermediate'
+            : (exp == 'nâng cao')
+            ? 'advanced'
+            : exp;
+        return normalizedExp == _filterExperience.toLowerCase();
+      }).toList();
     }
 
     // Apply sorting

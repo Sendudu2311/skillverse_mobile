@@ -13,6 +13,7 @@ class SkillVerseAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final VoidCallback? onBack;
   final bool centerTitle;
+  final PreferredSizeWidget? bottom;
 
   const SkillVerseAppBar({
     super.key,
@@ -23,10 +24,12 @@ class SkillVerseAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.onBack,
     this.centerTitle = false,
+    this.bottom,
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize =>
+      Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0.0));
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +42,7 @@ class SkillVerseAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Colors.transparent,
       elevation: 0,
       actions: actions,
+      bottom: bottom,
     );
   }
 

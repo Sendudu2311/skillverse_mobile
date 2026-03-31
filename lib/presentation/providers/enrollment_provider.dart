@@ -31,20 +31,24 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
     required int courseId,
     required int userId,
   }) async {
-    final result = await executeAsync(() async {
-      final enrollment = await _enrollmentService.enrollUser(
-        courseId: courseId,
-        userId: userId,
-      );
+    final result = await executeAsync(
+      () async {
+        final enrollment = await _enrollmentService.enrollUser(
+          courseId: courseId,
+          userId: userId,
+        );
 
-      // Add to enrollments list
-      _enrollments.add(enrollment);
+        // Add to enrollments list
+        _enrollments.add(enrollment);
 
-      // Update cache
-      _enrollmentStatusCache[courseId] = true;
-      notifyListeners();
-      return true;
-    }, errorMessageBuilder: (e) => _extractErrorMessage(e, 'Failed to enroll in course'));
+        // Update cache
+        _enrollmentStatusCache[courseId] = true;
+        notifyListeners();
+        return true;
+      },
+      errorMessageBuilder: (e) =>
+          _extractErrorMessage(e, 'Failed to enroll in course'),
+    );
     return result ?? false;
   }
 
@@ -53,20 +57,24 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
     required int courseId,
     required int userId,
   }) async {
-    final result = await executeAsync(() async {
-      await _enrollmentService.unenrollUser(
-        courseId: courseId,
-        userId: userId,
-      );
+    final result = await executeAsync(
+      () async {
+        await _enrollmentService.unenrollUser(
+          courseId: courseId,
+          userId: userId,
+        );
 
-      // Remove from enrollments list
-      _enrollments.removeWhere((e) => e.courseId == courseId);
+        // Remove from enrollments list
+        _enrollments.removeWhere((e) => e.courseId == courseId);
 
-      // Update cache
-      _enrollmentStatusCache[courseId] = false;
-      notifyListeners();
-      return true;
-    }, errorMessageBuilder: (e) => _extractErrorMessage(e, 'Failed to unenroll from course'));
+        // Update cache
+        _enrollmentStatusCache[courseId] = false;
+        notifyListeners();
+        return true;
+      },
+      errorMessageBuilder: (e) =>
+          _extractErrorMessage(e, 'Failed to unenroll from course'),
+    );
     return result ?? false;
   }
 
@@ -96,25 +104,29 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
     int page = 0,
     int size = 20,
   }) async {
-    await executeAsync(() async {
-      final response = await _enrollmentService.getUserEnrollments(
-        userId: userId,
-        page: page,
-        size: size,
-      );
+    await executeAsync(
+      () async {
+        final response = await _enrollmentService.getUserEnrollments(
+          userId: userId,
+          page: page,
+          size: size,
+        );
 
-      if (page == 0) {
-        _enrollments = response.content ?? [];
-      } else {
-        _enrollments.addAll(response.content ?? []);
-      }
+        if (page == 0) {
+          _enrollments = response.content ?? [];
+        } else {
+          _enrollments.addAll(response.content ?? []);
+        }
 
-      // Update cache
-      for (var enrollment in response.content ?? []) {
-        _enrollmentStatusCache[enrollment.courseId] = true;
-      }
-      notifyListeners();
-    }, errorMessageBuilder: (e) => _extractErrorMessage(e, 'Failed to fetch enrollments'));
+        // Update cache
+        for (var enrollment in response.content ?? []) {
+          _enrollmentStatusCache[enrollment.courseId] = true;
+        }
+        notifyListeners();
+      },
+      errorMessageBuilder: (e) =>
+          _extractErrorMessage(e, 'Failed to fetch enrollments'),
+    );
   }
 
   /// Update course progress
@@ -130,26 +142,8 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
         progressPercentage: progressPercentage,
       );
 
-      // Update local enrollment
-      final index = _enrollments.indexWhere((e) => e.courseId == courseId);
-      if (index != -1) {
-        _enrollments[index] = EnrollmentDetailDto(
-          id: _enrollments[index].id,
-          courseId: _enrollments[index].courseId,
-          courseTitle: _enrollments[index].courseTitle,
-          courseSlug: _enrollments[index].courseSlug,
-          userId: _enrollments[index].userId,
-          status: _enrollments[index].status,
-          progressPercent: progressPercentage,
-          entitlementSource: _enrollments[index].entitlementSource,
-          entitlementRef: _enrollments[index].entitlementRef,
-          enrolledAt: _enrollments[index].enrolledAt,
-          completedAt: _enrollments[index].completedAt,
-          completed: _enrollments[index].completed,
-        );
-        notifyListeners();
-      }
-
+      // Re-fetch from server to keep all fields in sync
+      await _refreshEnrollment(courseId, userId);
       return true;
     } catch (e) {
       debugPrint('Error updating progress: $e');
@@ -169,26 +163,8 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
         completed: true,
       );
 
-      // Update local enrollment
-      final index = _enrollments.indexWhere((e) => e.courseId == courseId);
-      if (index != -1) {
-        _enrollments[index] = EnrollmentDetailDto(
-          id: _enrollments[index].id,
-          courseId: _enrollments[index].courseId,
-          courseTitle: _enrollments[index].courseTitle,
-          courseSlug: _enrollments[index].courseSlug,
-          userId: _enrollments[index].userId,
-          status: 'COMPLETED',
-          progressPercent: 100,
-          entitlementSource: _enrollments[index].entitlementSource,
-          entitlementRef: _enrollments[index].entitlementRef,
-          enrolledAt: _enrollments[index].enrolledAt,
-          completedAt: DateTime.now(),
-          completed: true,
-        );
-        notifyListeners();
-      }
-
+      // Re-fetch from server to keep all fields in sync
+      await _refreshEnrollment(courseId, userId);
       return true;
     } catch (e) {
       debugPrint('Error marking as completed: $e');
@@ -202,6 +178,23 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
       return _enrollments.firstWhere((e) => e.courseId == courseId);
     } catch (e) {
       return null;
+    }
+  }
+
+  // Helper: refresh a single enrollment from the server
+  Future<void> _refreshEnrollment(int courseId, int userId) async {
+    try {
+      final fresh = await _enrollmentService.getEnrollment(
+        courseId: courseId,
+        userId: userId,
+      );
+      final idx = _enrollments.indexWhere((e) => e.courseId == courseId);
+      if (idx != -1) {
+        _enrollments[idx] = fresh;
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error refreshing enrollment: $e');
     }
   }
 

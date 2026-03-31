@@ -7,9 +7,7 @@ part 'enrollment_models.g.dart';
 class EnrollRequestDto {
   final int courseId;
 
-  const EnrollRequestDto({
-    required this.courseId,
-  });
+  const EnrollRequestDto({required this.courseId});
 
   factory EnrollRequestDto.fromJson(Map<String, dynamic> json) =>
       _$EnrollRequestDtoFromJson(json);
@@ -29,7 +27,10 @@ class EnrollmentDetailDto {
   final int progressPercent;
   final String? entitlementSource;
   final String? entitlementRef;
+  final int? learningRevisionId;
+  final String? upgradePolicySnapshot;
   final DateTime? enrolledAt;
+  final DateTime? lastUpgradedAt;
   final DateTime? completedAt;
   final bool completed;
 
@@ -43,7 +44,10 @@ class EnrollmentDetailDto {
     required this.progressPercent,
     this.entitlementSource,
     this.entitlementRef,
+    this.learningRevisionId,
+    this.upgradePolicySnapshot,
     this.enrolledAt,
+    this.lastUpgradedAt,
     this.completedAt,
     required this.completed,
   });
@@ -59,9 +63,7 @@ class EnrollmentDetailDto {
 class EnrollmentStatusDto {
   final bool enrolled;
 
-  const EnrollmentStatusDto({
-    required this.enrolled,
-  });
+  const EnrollmentStatusDto({required this.enrolled});
 
   factory EnrollmentStatusDto.fromJson(Map<String, dynamic> json) =>
       _$EnrollmentStatusDtoFromJson(json);

@@ -140,8 +140,6 @@ class _MainLayoutState extends State<MainLayout> {
         return 'AI Roadmap';
       case '/mentors':
         return 'Mentor Network';
-      case '/my-bookings':
-        return 'Lịch hẹn';
       case '/skins':
         return 'Meowl Skin Shop';
       default:
@@ -193,7 +191,10 @@ class _MainLayoutState extends State<MainLayout> {
                 child: IgnorePointer(
                   child: Container(
                     padding: const EdgeInsets.all(2),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
                     decoration: const BoxDecoration(
                       color: Colors.red,
                       shape: BoxShape.circle,
@@ -222,7 +223,6 @@ class _MainLayoutState extends State<MainLayout> {
     final pagesWithBackButton = [
       '/portfolio',
       '/mentors',
-      '/my-bookings',
       '/roadmap',
       '/skins',
     ];
@@ -261,9 +261,7 @@ class _MainLayoutState extends State<MainLayout> {
                   ? widget.child
                   : SafeArea(child: widget.child),
             )
-          : (widget.showAppBar
-              ? widget.child
-              : SafeArea(child: widget.child)),
+          : (widget.showAppBar ? widget.child : SafeArea(child: widget.child)),
       bottomNavigationBar: _navigationItems.length >= 2
           ? BottomNavigationBar(
               currentIndex: _selectedIndex,
