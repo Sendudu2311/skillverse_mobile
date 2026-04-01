@@ -7,10 +7,7 @@ class LoginRequest {
   final String email;
   final String password;
 
-  LoginRequest({
-    required this.email,
-    required this.password,
-  });
+  LoginRequest({required this.email, required this.password});
 
   factory LoginRequest.fromJson(Map<String, dynamic> json) =>
       _$LoginRequestFromJson(json);
@@ -43,11 +40,13 @@ class AuthResponse {
   final String accessToken;
   final String? refreshToken;
   final UserDto user;
+  final String? deviceSessionId;
 
   AuthResponse({
     required this.accessToken,
     this.refreshToken,
     required this.user,
+    this.deviceSessionId,
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
@@ -70,12 +69,7 @@ class UserDto {
   final String? fullName;
   final List<String>? roles;
 
-  UserDto({
-    required this.id,
-    required this.email,
-    this.fullName,
-    this.roles,
-  });
+  UserDto({required this.id, required this.email, this.fullName, this.roles});
 
   factory UserDto.fromJson(Map<String, dynamic> json) {
     return _$UserDtoFromJson(json);
@@ -87,8 +81,9 @@ class UserDto {
 @JsonSerializable()
 class RefreshTokenRequest {
   final String refreshToken;
+  final String? deviceSessionId;
 
-  RefreshTokenRequest({required this.refreshToken});
+  RefreshTokenRequest({required this.refreshToken, this.deviceSessionId});
 
   factory RefreshTokenRequest.fromJson(Map<String, dynamic> json) =>
       _$RefreshTokenRequestFromJson(json);
@@ -101,10 +96,7 @@ class VerifyEmailRequest {
   final String email;
   final String otp;
 
-  VerifyEmailRequest({
-    required this.email,
-    required this.otp,
-  });
+  VerifyEmailRequest({required this.email, required this.otp});
 
   factory VerifyEmailRequest.fromJson(Map<String, dynamic> json) =>
       _$VerifyEmailRequestFromJson(json);
@@ -130,11 +122,7 @@ class ApiErrorResponse {
   final String? code;
   final Map<String, dynamic>? details;
 
-  ApiErrorResponse({
-    required this.message,
-    this.code,
-    this.details,
-  });
+  ApiErrorResponse({required this.message, this.code, this.details});
 
   factory ApiErrorResponse.fromJson(Map<String, dynamic> json) =>
       _$ApiErrorResponseFromJson(json);

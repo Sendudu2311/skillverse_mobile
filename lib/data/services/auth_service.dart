@@ -37,8 +37,12 @@ class AuthService {
 
       final authResponse = AuthResponse.fromJson(response.data!);
 
-      // Lưu tokens và user data
-      await _saveTokens(authResponse.accessToken, authResponse.refreshToken);
+      // Lưu tokens, deviceSessionId và user data
+      await _saveTokens(
+        authResponse.accessToken,
+        authResponse.refreshToken,
+        authResponse.deviceSessionId,
+      );
       await _saveUserData(authResponse.user);
 
       // Set auth token cho các request tiếp theo
@@ -109,8 +113,12 @@ class AuthService {
 
       final authResponse = AuthResponse.fromJson(response.data!);
 
-      // Lưu tokens và user data
-      await _saveTokens(authResponse.accessToken, authResponse.refreshToken);
+      // Lưu tokens, deviceSessionId và user data
+      await _saveTokens(
+        authResponse.accessToken,
+        authResponse.refreshToken,
+        authResponse.deviceSessionId,
+      );
       await _saveUserData(authResponse.user);
 
       // Set auth token cho các request tiếp theo
@@ -198,24 +206,44 @@ class AuthService {
       final refreshToken = await getRefreshToken();
       if (refreshToken == null) return null;
 
+      final deviceSessionId = await getDeviceSessionId();
+
       final response = await _apiClient.dio.post<Map<String, dynamic>>(
         '/auth/refresh',
-        data: {'refreshToken': refreshToken},
+        data: {
+          'refreshToken': refreshToken,
+          if (deviceSessionId != null) 'deviceSessionId': deviceSessionId,
+        },
       );
 
       if (response.data == null) return null;
 
       final newAccessToken = response.data!['accessToken'] as String?;
       final newRefreshToken = response.data!['refreshToken'] as String?;
+      final newDeviceSessionId = response.data!['deviceSessionId'] as String?;
 
       if (newAccessToken != null) {
-        await _saveTokens(newAccessToken, newRefreshToken);
+        await _saveTokens(newAccessToken, newRefreshToken, newDeviceSessionId);
         _apiClient.setAuthToken(newAccessToken);
         return newAccessToken;
       }
 
       return null;
     } catch (e) {
+      // Check for single-device login enforcement
+      if (e is ApiException && e.message.contains('ACCOUNT_LOGGED_ELSEWHERE')) {
+        await _clearLocalData();
+        throw ApiException(
+          'Tài khoản của bạn đã được đăng nhập ở nơi khác. Vui lòng đăng nhập lại.',
+        );
+      }
+      // Also catch DioException with ACCOUNT_LOGGED_ELSEWHERE code
+      if (e.toString().contains('ACCOUNT_LOGGED_ELSEWHERE')) {
+        await _clearLocalData();
+        throw ApiException(
+          'Tài khoản của bạn đã được đăng nhập ở nơi khác. Vui lòng đăng nhập lại.',
+        );
+      }
       await _clearLocalData();
       return null;
     }
@@ -287,8 +315,12 @@ class AuthService {
     }
   }
 
-  /// Lưu tokens
-  Future<void> _saveTokens(String accessToken, String? refreshToken) async {
+  /// Lưu tokens và deviceSessionId
+  Future<void> _saveTokens(
+    String accessToken,
+    String? refreshToken,
+    String? deviceSessionId,
+  ) async {
     await _secureStorage.write(
       key: AppConstants.accessTokenKey,
       value: accessToken,
@@ -297,6 +329,12 @@ class AuthService {
       await _secureStorage.write(
         key: AppConstants.refreshTokenKey,
         value: refreshToken,
+      );
+    }
+    if (deviceSessionId != null) {
+      await _secureStorage.write(
+        key: AppConstants.deviceSessionIdKey,
+        value: deviceSessionId,
       );
     }
   }
@@ -313,11 +351,17 @@ class AuthService {
     await signOutGoogle();
   }
 
+  /// Lấy device session ID
+  Future<String?> getDeviceSessionId() async {
+    return await _secureStorage.read(key: AppConstants.deviceSessionIdKey);
+  }
+
   /// Xóa toàn bộ dữ liệu local
   Future<void> _clearLocalData() async {
     await _secureStorage.delete(key: AppConstants.accessTokenKey);
     await _secureStorage.delete(key: AppConstants.refreshTokenKey);
     await _secureStorage.delete(key: AppConstants.userDataKey);
+    await _secureStorage.delete(key: AppConstants.deviceSessionIdKey);
     _apiClient.clearAuthToken();
   }
 }

@@ -34,6 +34,7 @@ AuthResponse _$AuthResponseFromJson(Map<String, dynamic> json) => AuthResponse(
   accessToken: json['accessToken'] as String,
   refreshToken: json['refreshToken'] as String?,
   user: UserDto.fromJson(json['user'] as Map<String, dynamic>),
+  deviceSessionId: json['deviceSessionId'] as String?,
 );
 
 Map<String, dynamic> _$AuthResponseToJson(AuthResponse instance) =>
@@ -41,6 +42,7 @@ Map<String, dynamic> _$AuthResponseToJson(AuthResponse instance) =>
       'accessToken': instance.accessToken,
       'refreshToken': instance.refreshToken,
       'user': instance.user,
+      'deviceSessionId': instance.deviceSessionId,
     };
 
 UserDto _$UserDtoFromJson(Map<String, dynamic> json) => UserDto(
@@ -58,11 +60,17 @@ Map<String, dynamic> _$UserDtoToJson(UserDto instance) => <String, dynamic>{
 };
 
 RefreshTokenRequest _$RefreshTokenRequestFromJson(Map<String, dynamic> json) =>
-    RefreshTokenRequest(refreshToken: json['refreshToken'] as String);
+    RefreshTokenRequest(
+      refreshToken: json['refreshToken'] as String,
+      deviceSessionId: json['deviceSessionId'] as String?,
+    );
 
 Map<String, dynamic> _$RefreshTokenRequestToJson(
   RefreshTokenRequest instance,
-) => <String, dynamic>{'refreshToken': instance.refreshToken};
+) => <String, dynamic>{
+  'refreshToken': instance.refreshToken,
+  'deviceSessionId': instance.deviceSessionId,
+};
 
 VerifyEmailRequest _$VerifyEmailRequestFromJson(Map<String, dynamic> json) =>
     VerifyEmailRequest(
