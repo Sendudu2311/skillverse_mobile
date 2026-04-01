@@ -60,6 +60,7 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
           yt.close();
         } catch (e) {
           debugPrint('Error extracting YouTube URL: $e');
+          if (!mounted) return;
           setState(() {
             _isInitializing = false;
             _errorMessage =
@@ -78,10 +79,12 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
         ),
       )..initialise();
 
+      if (!mounted) return;
       setState(() {
         _isInitializing = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isInitializing = false;
         _errorMessage = 'Lỗi khởi tạo video: ${e.toString()}';

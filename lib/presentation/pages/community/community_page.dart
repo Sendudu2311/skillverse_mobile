@@ -6,6 +6,7 @@ import '../../widgets/post_card.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
+import '../../widgets/app_search_bar.dart';
 import '../../widgets/common_loading.dart';
 import 'widgets/community_stats_widget.dart';
 import '../../themes/app_theme.dart';
@@ -58,7 +59,13 @@ class _CommunityPageState extends State<CommunityPage> {
       body: Column(
         children: [
           // Search bar
-          _buildSearchBar(),
+          AppSearchBar(
+            controller: _searchController,
+            hintText: 'Tìm kiếm bài viết...',
+            padding: const EdgeInsets.all(16),
+            onSubmitted: (v) => context.read<PostProvider>().searchPosts(v),
+            onClear: () => context.read<PostProvider>().searchPosts(''),
+          ),
 
           // Filter chips
           _buildFilterChips(),
@@ -83,33 +90,6 @@ class _CommunityPageState extends State<CommunityPage> {
         onPressed: () => context.push('/community/create'),
         backgroundColor: AppTheme.themeOrangeStart,
         child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Tìm kiếm bài viết...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    context.read<PostProvider>().searchPosts('');
-                  },
-                )
-              : null,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          filled: true,
-        ),
-        onSubmitted: (value) {
-          context.read<PostProvider>().searchPosts(value);
-        },
       ),
     );
   }

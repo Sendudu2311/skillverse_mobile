@@ -101,6 +101,7 @@ class _MeowlChatWidgetState extends State<MeowlChatWidget> {
 
     // Simulate AI response with delay
     await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
     String ai = _mockAiResponse(text);
     if (!guardModelOutput(ai)) ai = pickFallback('output', widget.locale);
 
@@ -178,10 +179,12 @@ class _MeowlChatWidgetState extends State<MeowlChatWidget> {
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               constraints: const BoxConstraints(maxWidth: 520),
                               decoration: BoxDecoration(
-                                color: isAssistant ? Colors.grey[100] : Theme.of(context).colorScheme.primary,
+                                color: isAssistant
+                                    ? Theme.of(context).colorScheme.surfaceContainerHighest
+                                    : Theme.of(context).colorScheme.primary,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Text(m.content, style: TextStyle(color: isAssistant ? Colors.black : Colors.white)),
+                              child: Text(m.content, style: TextStyle(color: isAssistant ? Theme.of(context).colorScheme.onSurface : Colors.white)),
                             ),
                           );
                         },
@@ -224,7 +227,7 @@ class _MeowlChatWidgetState extends State<MeowlChatWidget> {
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 6),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [CommonLoading.small()]),
         ),
       );

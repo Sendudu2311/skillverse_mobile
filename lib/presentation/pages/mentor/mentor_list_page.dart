@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import '../../../data/models/mentor_models.dart';
 import '../../providers/mentor_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/app_search_bar.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/selectable_chip_row.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/animated_list_item.dart';
@@ -54,137 +56,40 @@ class _MentorListPageState extends State<MentorListPage> {
         top: false,
         child: Column(
           children: [
-            _buildSearchBar(context, isDark),
-            _buildSkillFilter(context, isDark),
+            AppSearchBar(
+              controller: _searchController,
+              hintText: 'Tìm kiếm mentor...',
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              onChanged: (v) => context.read<MentorProvider>().searchMentors(v),
+              onClear: () => context.read<MentorProvider>().searchMentors(''),
+            ),
+            Consumer<MentorProvider>(
+              builder: (context, provider, _) {
+                if (provider.availableSkills.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                final labels = ['Tất cả', ...provider.availableSkills];
+                final selectedIndex = _selectedSkill == null
+                    ? 0
+                    : provider.availableSkills.indexOf(_selectedSkill!) + 1;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 4),
+                  child: SelectableChipRow(
+                    labels: labels,
+                    selectedIndex: selectedIndex.clamp(0, labels.length - 1),
+                    onSelected: (i) {
+                      final skill = i == 0 ? null : provider.availableSkills[i - 1];
+                      setState(() => _selectedSkill = skill);
+                      provider.filterBySkill(skill);
+                    },
+                  ),
+                );
+              },
+            ),
             Expanded(child: _buildMentorList(context, isDark)),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSearchBar(BuildContext context, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: GlassCard(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        showBorder: false,
-        child: TextField(
-          controller: _searchController,
-          style: TextStyle(
-            color: isDark
-                ? AppTheme.darkTextPrimary
-                : AppTheme.lightTextPrimary,
-          ),
-          decoration: InputDecoration(
-            hintText: 'Tìm kiếm mentor...',
-            hintStyle: TextStyle(
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-            ),
-            border: InputBorder.none,
-            prefixIcon: Icon(
-              Icons.search,
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-            ),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchController.clear();
-                      context.read<MentorProvider>().searchMentors('');
-                    },
-                  )
-                : null,
-          ),
-          onChanged: (value) {
-            context.read<MentorProvider>().searchMentors(value);
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSkillFilter(BuildContext context, bool isDark) {
-    return Consumer<MentorProvider>(
-      builder: (context, provider, _) {
-        if (provider.availableSkills.isEmpty) return const SizedBox.shrink();
-
-        return Container(
-          height: 50,
-          margin: const EdgeInsets.only(top: 12),
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: provider.availableSkills.length + 1,
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                final isSelected = _selectedSkill == null;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: const Text('Tất cả'),
-                    selected: isSelected,
-                    onSelected: (_) {
-                      setState(() => _selectedSkill = null);
-                      provider.filterBySkill(null);
-                    },
-                    backgroundColor: isDark
-                        ? AppTheme.darkCardBackground
-                        : AppTheme.lightCardBackground,
-                    selectedColor: AppTheme.primaryBlueDark.withOpacity(0.3),
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? (isDark
-                                ? AppTheme.primaryBlueDark
-                                : AppTheme.primaryBlue)
-                          : (isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.lightTextSecondary),
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
-                );
-              }
-
-              final skill = provider.availableSkills[index - 1];
-              final isSelected = _selectedSkill == skill;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(skill),
-                  selected: isSelected,
-                  onSelected: (_) {
-                    setState(() => _selectedSkill = isSelected ? null : skill);
-                    provider.filterBySkill(isSelected ? null : skill);
-                  },
-                  backgroundColor: isDark
-                      ? AppTheme.darkCardBackground
-                      : AppTheme.lightCardBackground,
-                  selectedColor: AppTheme.primaryBlueDark.withOpacity(0.3),
-                  labelStyle: TextStyle(
-                    color: isSelected
-                        ? (isDark
-                              ? AppTheme.primaryBlueDark
-                              : AppTheme.primaryBlue)
-                        : (isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary),
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
     );
   }
 

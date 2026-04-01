@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/enrollment_provider.dart';
 import '../../widgets/course_card_v3.dart';
+import '../../widgets/app_search_bar.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/animated_list_item.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
+import '../../widgets/selectable_chip_row.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../../widgets/glass_card.dart';
 import '../../themes/app_theme.dart';
@@ -24,7 +26,6 @@ class CoursesPage extends StatefulWidget {
 class _CoursesPageState extends State<CoursesPage> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  String _searchQuery = '';
   CourseLevel? _selectedLevel;
   String _sortBy = 'newest';
 
@@ -57,11 +58,6 @@ class _CoursesPageState extends State<CoursesPage> {
     super.dispose();
   }
 
-  void _onLevelFilterChanged(CourseLevel? level) {
-    setState(() => _selectedLevel = level);
-    context.read<CourseProvider>().setLevelFilter(level);
-  }
-
   Future<void> _onRefresh() async {
     await context.read<CourseProvider>().refresh();
   }
@@ -83,14 +79,42 @@ class _CoursesPageState extends State<CoursesPage> {
             slivers: [
               // Search Bar
               SliverToBoxAdapter(
-                child: Padding(
+                child: AppSearchBar(
+                  controller: _searchController,
+                  hintText: 'Tìm khóa học...',
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: _buildSearchBar(isDark, courseProvider),
+                  onChanged: (_) {},
+                  onSubmitted: (value) {
+                    if (value.isNotEmpty) {
+                      courseProvider.searchCourses(value);
+                    } else {
+                      courseProvider.loadCourses(refresh: true);
+                    }
+                  },
+                  onClear: () => courseProvider.loadCourses(refresh: true),
                 ),
               ),
 
               // Level Filters (always visible, horizontal scroll)
-              SliverToBoxAdapter(child: _buildLevelFilters(isDark)),
+              SliverToBoxAdapter(
+                child: SelectableChipRow(
+                  labels: const ['Tất cả', 'Cơ bản', 'Trung cấp', 'Nâng cao'],
+                  selectedIndex: _selectedLevel == null
+                      ? 0
+                      : CourseLevel.values.indexOf(_selectedLevel!) + 1,
+                  onSelected: (i) {
+                    final level = i == 0 ? null : CourseLevel.values[i - 1];
+                    setState(() => _selectedLevel = level);
+                    courseProvider.setLevelFilter(level);
+                  },
+                  gradients: const [
+                    [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
+                    [Color(0xFF4CAF50), Color(0xFF66BB6A)],
+                    [Color(0xFF2196F3), Color(0xFF42A5F5)],
+                    [Color(0xFFFF6B35), Color(0xFFFF8A65)],
+                  ],
+                ),
+              ),
 
               // Results count + Sort
               SliverToBoxAdapter(child: _buildResultsBar(isDark, totalCourses)),
@@ -105,160 +129,6 @@ class _CoursesPageState extends State<CoursesPage> {
         );
       },
     );
-  }
-
-  // ─── Search Bar ────────────────────────────────────────────────
-  Widget _buildSearchBar(bool isDark, CourseProvider courseProvider) {
-    return TextField(
-      controller: _searchController,
-      decoration: InputDecoration(
-        hintText: 'Tìm khóa học...',
-        hintStyle: TextStyle(
-          color: isDark
-              ? AppTheme.darkTextSecondary.withValues(alpha: 0.6)
-              : AppTheme.lightTextSecondary.withValues(alpha: 0.6),
-          fontSize: 14,
-        ),
-        filled: true,
-        fillColor: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white,
-        prefixIcon: Icon(
-          Icons.search,
-          color: isDark
-              ? AppTheme.darkTextSecondary
-              : AppTheme.lightTextSecondary,
-          size: 20,
-        ),
-        suffixIcon: _searchQuery.isNotEmpty
-            ? IconButton(
-                icon: Icon(
-                  Icons.close,
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                  size: 18,
-                ),
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() => _searchQuery = '');
-                  courseProvider.loadCourses(refresh: true);
-                },
-              )
-            : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.1)
-                : AppTheme.lightBorderColor,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.1)
-                : AppTheme.lightBorderColor,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: AppTheme.primaryBlueDark.withValues(alpha: 0.6),
-          ),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-      ),
-      style: TextStyle(
-        color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-        fontSize: 14,
-      ),
-      onChanged: (value) {
-        setState(() => _searchQuery = value);
-      },
-      onSubmitted: (value) {
-        if (value.isNotEmpty) {
-          courseProvider.searchCourses(value);
-        } else {
-          courseProvider.loadCourses(refresh: true);
-        }
-      },
-      textInputAction: TextInputAction.search,
-    );
-  }
-
-  // ─── Level Filters ─────────────────────────────────────────────
-  Widget _buildLevelFilters(bool isDark) {
-    return SizedBox(
-      height: 42,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          _buildFilterChip('Tất cả', null, isDark),
-          const SizedBox(width: 8),
-          _buildFilterChip('Cơ bản', CourseLevel.beginner, isDark),
-          const SizedBox(width: 8),
-          _buildFilterChip('Trung cấp', CourseLevel.intermediate, isDark),
-          const SizedBox(width: 8),
-          _buildFilterChip('Nâng cao', CourseLevel.advanced, isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, CourseLevel? level, bool isDark) {
-    final isSelected = _selectedLevel == level;
-    final colors = _chipColors(level);
-
-    return GestureDetector(
-      onTap: () => _onLevelFilterChanged(level),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: isSelected ? LinearGradient(colors: colors) : null,
-          color: isSelected
-              ? null
-              : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? colors.first
-                : (isDark
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : AppTheme.lightBorderColor),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected
-                ? Colors.white
-                : (isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary),
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Color> _chipColors(CourseLevel? level) {
-    switch (level) {
-      case CourseLevel.beginner:
-        return [const Color(0xFF4CAF50), const Color(0xFF66BB6A)];
-      case CourseLevel.intermediate:
-        return [const Color(0xFF2196F3), const Color(0xFF42A5F5)];
-      case CourseLevel.advanced:
-        return [const Color(0xFFFF6B35), const Color(0xFFFF8A65)];
-      case null:
-        return [AppTheme.themeBlueStart, AppTheme.themeBlueEnd];
-    }
   }
 
   // ─── Results Bar (count + sort) ────────────────────────────────

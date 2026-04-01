@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'enrollment_models.dart';
 
 part 'dashboard_models.g.dart';
 
@@ -209,12 +210,14 @@ class DashboardData {
   final UsageStatsResponse? usageStats;
   final SubscriptionResponse? subscription;
   final List<RoadmapSession> roadmaps;
+  final EnrollmentDetailDto? continueLearning;
 
   DashboardData({
     this.wallet,
     this.usageStats,
     this.subscription,
     this.roadmaps = const [],
+    this.continueLearning,
   });
 
   DashboardData copyWith({
@@ -222,12 +225,14 @@ class DashboardData {
     UsageStatsResponse? usageStats,
     SubscriptionResponse? subscription,
     List<RoadmapSession>? roadmaps,
+    EnrollmentDetailDto? continueLearning,
   }) {
     return DashboardData(
       wallet: wallet ?? this.wallet,
       usageStats: usageStats ?? this.usageStats,
       subscription: subscription ?? this.subscription,
       roadmaps: roadmaps ?? this.roadmaps,
+      continueLearning: continueLearning ?? this.continueLearning,
     );
   }
 }

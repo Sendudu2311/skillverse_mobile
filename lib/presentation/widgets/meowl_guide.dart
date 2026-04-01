@@ -11,6 +11,7 @@ class MeowlGuide extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: FloatingActionButton.extended(
+          heroTag: 'meowl_guide_fab',
           onPressed: () {
             showModalBottomSheet(
               context: context,

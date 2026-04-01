@@ -11,6 +11,8 @@ import '../../../core/utils/number_formatter.dart';
 import '../../widgets/onboarding_prompt.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/error_state_widget.dart';
+import '../../../data/models/enrollment_models.dart';
+import '../../../data/models/dashboard_models.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -20,14 +22,15 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  bool _showAllActions = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DashboardProvider>().loadDashboard();
+      final userId = context.read<AuthProvider>().user?.id;
+      context.read<DashboardProvider>().loadDashboard(userId: userId);
       context.read<SkinProvider>().loadAllSkins();
-
-      // Check if we should show onboarding prompt
       _checkAndShowOnboarding();
     });
   }
@@ -40,7 +43,6 @@ class _DashboardPageState extends State<DashboardPage> {
       OnboardingPrompt.show(
         context,
         onDismiss: () {
-          // Clear flag so it doesn't show again
           StorageHelper.instance.writeBool(
             StorageKey.showOnboardingPrompt,
             false,
@@ -48,6 +50,13 @@ class _DashboardPageState extends State<DashboardPage> {
         },
       );
     }
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Chào buổi sáng,';
+    if (hour < 18) return 'Chào buổi chiều,';
+    return 'Chào buổi tối,';
   }
 
   @override
@@ -77,53 +86,336 @@ class _DashboardPageState extends State<DashboardPage> {
             !dashboardProvider.hasData) {
           return ErrorStateWidget(
             message: dashboardProvider.errorMessage!,
-            onRetry: () => dashboardProvider.loadDashboard(),
+            onRetry: () {
+              final userId = authProvider.user?.id;
+              dashboardProvider.loadDashboard(userId: userId);
+            },
           );
         }
 
         return RefreshIndicator(
-          onRefresh: () => dashboardProvider.refreshDashboard(),
+          onRefresh: () {
+            final userId = authProvider.user?.id;
+            return dashboardProvider.refreshDashboard(userId: userId);
+          },
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Welcome Header - Futuristic
-                _buildWelcomeHeader(context, user?.fullName ?? 'Pilot', isDark),
-                const SizedBox(height: 24),
+                // 1. Hero: greeting + streak + weekly dots + Meowl
+                _buildHeroCard(
+                  context,
+                  user?.fullName ?? 'Pilot',
+                  dashboardProvider,
+                  isDark,
+                ),
+                const SizedBox(height: 16),
 
-                // Wallet Card
-                _buildWalletCard(context, dashboardProvider, isDark),
-                const SizedBox(height: 24),
+                // 2. Continue Learning
+                _buildContinueLearning(
+                  context,
+                  dashboardProvider.continueCourse,
+                  isDark,
+                ),
+                const SizedBox(height: 16),
 
-                // Quick Actions
-                _buildQuickActions(context, isDark),
-                const SizedBox(height: 24),
-
-                // Streak Tracker
-                _buildStreakTracker(context, dashboardProvider, isDark),
-                const SizedBox(height: 24),
-
-                // Stats Grid
-                _buildStatsGrid(context, dashboardProvider, isDark),
-                const SizedBox(height: 24),
-
-                // Analyst Track (Roadmap Progress)
+                // 3. Active Roadmap (compact, conditional)
                 if (dashboardProvider.activeRoadmap != null) ...[
-                  _buildAnalystTrack(context, dashboardProvider, isDark),
-                  const SizedBox(height: 24),
+                  _buildActiveRoadmap(
+                    context,
+                    dashboardProvider.activeRoadmap!,
+                    isDark,
+                  ),
+                  const SizedBox(height: 16),
                 ],
 
-                // System Limits (Subscription Features)
+                // 4. Quick Actions (4-col, expandable)
+                _buildQuickActions(context, isDark),
+                const SizedBox(height: 16),
+
+                // 5. Stats Grid (2×2)
+                _buildStatsGrid(context, dashboardProvider, isDark),
+                const SizedBox(height: 16),
+
+                // 6. Wallet (compact)
+                _buildWalletCompact(context, dashboardProvider, isDark),
+
+                // 7. Premium (compact, conditional)
                 if (dashboardProvider.hasPremium) ...[
-                  _buildSystemLimits(context, dashboardProvider, isDark),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  _buildPremiumCompact(context, dashboardProvider, isDark),
                 ],
+
+                const SizedBox(height: 24),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  // ─── 1. Hero Card ────────────────────────────────────────────────────────────
+
+  Future<void> _handleCheckIn(BuildContext context) async {
+    final provider = context.read<DashboardProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await provider.checkIn();
+    if (!mounted) return;
+    if (result == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Điểm danh thất bại, thử lại sau')),
+      );
+      return;
+    }
+    if (result.alreadyCheckedIn) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Bạn đã điểm danh hôm nay rồi!')),
+      );
+    } else {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Điểm danh thành công! +${result.coinsAwarded} SC 🔥 Streak: ${result.currentStreak} ngày',
+          ),
+          backgroundColor: AppTheme.themeOrangeStart,
+        ),
+      );
+    }
+  }
+
+  Widget _buildHeroCard(
+    BuildContext context,
+    String userName,
+    DashboardProvider provider,
+    bool isDark,
+  ) {
+    final weeklyActivity = provider.weeklyActivity;
+    final streak = provider.currentStreak;
+    final daysOfWeek = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+    return Semantics(
+      label: 'welcome_header',
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Left: greeting + name + streak row
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _getGreeting(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                      color: AppTheme.accentCyan,
+                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Gradient name text
+                  ShaderMask(
+                    shaderCallback: (bounds) => LinearGradient(
+                      colors: [
+                        AppTheme.accentCyan,
+                        isDark ? Colors.white : AppTheme.lightTextPrimary,
+                        AppTheme.accentCyan,
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ).createShader(bounds),
+                    child: Text(
+                      userName,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // Streak badge + weekly dots
+                  Row(
+                    children: [
+                      // Streak badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.themeOrangeStart.withValues(
+                            alpha: 0.15,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppTheme.themeOrangeStart.withValues(
+                              alpha: 0.5,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.local_fire_department,
+                              color: AppTheme.themeOrangeStart,
+                              size: 13,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              '$streak ngày',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.themeOrangeStart,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Weekly dots
+                      Row(
+                        children: List.generate(7, (i) {
+                          final isActive = weeklyActivity.length > i
+                              ? weeklyActivity[i]
+                              : false;
+                          return Tooltip(
+                            message: daysOfWeek[i],
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              margin: const EdgeInsets.only(right: 4),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? AppTheme.themeOrangeStart
+                                    : (isDark
+                                          ? AppTheme.darkBorderColor
+                                          : AppTheme.lightBorderColor),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Check-in button
+                  _buildCheckInButton(context, provider),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Right: Meowl avatar
+            Consumer<SkinProvider>(
+              builder: (context, skinProvider, _) {
+                final skin = skinProvider.selectedSkin;
+                if (skin != null && skin.imageUrl != null) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.secondaryPurple.withValues(
+                            alpha: 0.4,
+                          ),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Image.network(
+                      skin.imageUrl!,
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+                    ),
+                  );
+                }
+                return _buildDefaultAvatar();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCheckInButton(BuildContext context, DashboardProvider provider) {
+    final checkedIn = provider.isCheckedInToday;
+    final loading = provider.isCheckingIn;
+
+    return SizedBox(
+      height: 30,
+      child: ElevatedButton.icon(
+        onPressed: (checkedIn || loading)
+            ? null
+            : () => _handleCheckIn(context),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: checkedIn
+              ? AppTheme.themeGreenStart.withValues(alpha: 0.2)
+              : AppTheme.themeOrangeStart,
+          foregroundColor: checkedIn ? AppTheme.themeGreenStart : Colors.white,
+          disabledBackgroundColor: checkedIn
+              ? AppTheme.themeGreenStart.withValues(alpha: 0.15)
+              : null,
+          disabledForegroundColor:
+              checkedIn ? AppTheme.themeGreenStart : null,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: checkedIn
+                  ? AppTheme.themeGreenStart.withValues(alpha: 0.5)
+                  : Colors.transparent,
+            ),
+          ),
+          elevation: 0,
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        icon: loading
+            ? SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Icon(
+                checkedIn ? Icons.check_circle_outline : Icons.today_outlined,
+                size: 14,
+              ),
+        label: Text(
+          checkedIn ? 'Đã điểm danh' : 'Điểm danh',
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'monospace',
+          ),
+        ),
+      ),
     );
   }
 
@@ -142,84 +434,92 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildWelcomeHeader(
+  // ─── 2. Continue Learning ────────────────────────────────────────────────────
+
+  Widget _buildContinueLearning(
     BuildContext context,
-    String userName,
+    EnrollmentDetailDto? course,
     bool isDark,
   ) {
-    return Semantics(
-      label: 'welcome_header',
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        clipBehavior: Clip.none,
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppTheme.darkCardBackground
-              : AppTheme.lightCardBackground,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark
-                ? AppTheme.darkBorderColor
-                : AppTheme.lightBorderColor,
-          ),
-        ),
+    if (course != null) {
+      final progress = course.progressPercent / 100.0;
+      return GradientGlassCard(
+        gradientColors: [
+          AppTheme.primaryBlueDark.withValues(alpha: 0.9),
+          AppTheme.secondaryPurple.withValues(alpha: 0.9),
+        ],
+        borderRadius: 14,
+        padding: const EdgeInsets.all(16),
+        onTap: () => context.push('/courses/${course.courseId}'),
         child: Row(
           children: [
-            // Left: Text content
+            // Icon block
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.school_outlined,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Course info + progress
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'WELCOME BACK,',
+                    'TIẾP TỤC HỌC',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 10,
                       fontFamily: 'monospace',
                       color: AppTheme.accentCyan,
-                      letterSpacing: 1.5,
+                      letterSpacing: 1.2,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Stack(
-                    alignment: Alignment.centerLeft,
+                  const SizedBox(height: 3),
+                  Text(
+                    course.courseTitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
                     children: [
-                      // Glow layer
-                      Text(
-                        userName,
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.transparent,
-                          shadows: [
-                            Shadow(
-                              color: AppTheme.accentCyan.withValues(alpha: 0.7),
-                              blurRadius: 24,
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 4,
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.2,
                             ),
-                          ],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      // Gradient text
-                      ShaderMask(
-                        shaderCallback: (bounds) => LinearGradient(
-                          colors: [
-                            AppTheme.accentCyan,
-                            isDark ? Colors.white : AppTheme.lightTextPrimary,
-                            AppTheme.accentCyan,
-                          ],
-                          stops: const [0.0, 0.5, 1.0],
-                        ).createShader(bounds),
-                        child: Text(
-                          userName,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${course.progressPercent}%',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
@@ -227,216 +527,146 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
-
             const SizedBox(width: 8),
-
-            // Right: Meowl avatar
-            Consumer<SkinProvider>(
-              builder: (context, skinProvider, _) {
-                final skin = skinProvider.selectedSkin;
-                if (skin != null && skin.imageUrl != null) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.secondaryPurple.withValues(
-                            alpha: 0.4,
-                          ),
-                          blurRadius: 20,
-                          spreadRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: Image.network(
-                      skin.imageUrl!,
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
-                    ),
-                  );
-                }
-                return _buildDefaultAvatar();
-              },
-            ),
+            const Icon(Icons.chevron_right, color: Colors.white, size: 20),
           ],
         ),
+      );
+    }
+
+    // Placeholder — no active enrollment
+    return GlassCard(
+      onTap: () => context.push('/courses'),
+      padding: const EdgeInsets.all(16),
+      borderRadius: 14,
+      borderColor: AppTheme.primaryBlueDark.withValues(alpha: 0.4),
+      child: Row(
+        children: [
+          Icon(
+            Icons.add_circle_outline,
+            color: AppTheme.primaryBlueDark,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Bắt đầu khóa học mới',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary,
+              ),
+            ),
+          ),
+          Icon(
+            Icons.chevron_right,
+            color: isDark
+                ? AppTheme.darkTextSecondary
+                : AppTheme.lightTextSecondary,
+            size: 20,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildWalletCard(
+  // ─── 3. Active Roadmap (compact) ─────────────────────────────────────────────
+
+  Widget _buildActiveRoadmap(
     BuildContext context,
-    DashboardProvider provider,
+    RoadmapSession roadmap,
     bool isDark,
   ) {
-    return Semantics(
-      label: 'wallet_card',
-      child: GlassCard(
-        onTap: () => context.push('/wallet'),
-        padding: const EdgeInsets.all(20),
-        borderColor: AppTheme.primaryBlueDark.withValues(alpha: 0.4),
+    final progress = roadmap.progressPercentage / 100.0;
+
+    return GestureDetector(
+      onTap: () => context.push('/roadmap'),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppTheme.primaryBlueDark.withValues(alpha: 0.3),
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryBlueDark.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.account_balance_wallet,
-                    color: AppTheme.primaryBlueDark,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
+                Icon(Icons.route, color: AppTheme.primaryBlueDark, size: 18),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'VÍ VŨ TRỤ',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'monospace',
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.lightTextPrimary,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Quản lý tài sản của bạn',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                          color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    roadmap.title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
+                Text(
+                  '${roadmap.progressPercentage}%',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                    color: AppTheme.primaryBlueDark,
+                  ),
+                ),
+                const SizedBox(width: 4),
                 Icon(
                   Icons.chevron_right,
                   color: isDark
                       ? AppTheme.darkTextSecondary
                       : AppTheme.lightTextSecondary,
+                  size: 18,
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.attach_money,
-                            size: 16,
-                            color: AppTheme.themeGreenStart,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Tiền Mặt',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontFamily: 'monospace',
-                              color: isDark
-                                  ? AppTheme.darkTextSecondary
-                                  : AppTheme.lightTextSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          NumberFormatter.formatCurrency(
-                            provider.cashBalance.toDouble(),
-                            currency: 'đ',
-                          ),
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                            color: AppTheme.themeGreenStart,
-                          ),
-                          maxLines: 1,
-                        ),
-                      ),
-                    ],
-                  ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 6,
+                backgroundColor: isDark
+                    ? AppTheme.darkBackgroundSecondary
+                    : AppTheme.lightBackgroundSecondary,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppTheme.primaryBlueDark,
                 ),
-                Container(
-                  width: 1,
-                  height: 50,
-                  color: isDark
-                      ? AppTheme.darkBorderColor
-                      : AppTheme.lightBorderColor,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.monetization_on,
-                            size: 16,
-                            color: AppTheme.accentGold,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'SkillCoin',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontFamily: 'monospace',
-                              color: isDark
-                                  ? AppTheme.darkTextSecondary
-                                  : AppTheme.lightTextSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          NumberFormatter.formatNumber(provider.coinBalance),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                            color: AppTheme.accentGold,
-                          ),
-                          maxLines: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${roadmap.completedQuests}/${roadmap.totalQuests} quests',
+              style: TextStyle(
+                fontSize: 11,
+                fontFamily: 'monospace',
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  // ─── 4. Quick Actions ────────────────────────────────────────────────────────
 
   Widget _buildQuickActions(BuildContext context, bool isDark) {
     final actions = [
@@ -508,33 +738,36 @@ class _DashboardPageState extends State<DashboardPage> {
       },
     ];
 
+    final visible = _showAllActions ? actions : actions.sublist(0, 8);
+    final remaining = actions.length - 8;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Truy cập nhanh',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             color: isDark
                 ? AppTheme.darkTextPrimary
                 : AppTheme.lightTextPrimary,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.0,
+            crossAxisCount: 4,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 0.85,
           ),
-          itemCount: actions.length,
+          itemCount: visible.length,
           itemBuilder: (context, index) {
-            final action = actions[index];
-            return _buildQuickActionCard(
+            final action = visible[index];
+            return _buildQuickActionCell(
               context,
               icon: action['icon'] as IconData,
               label: action['label'] as String,
@@ -544,11 +777,41 @@ class _DashboardPageState extends State<DashboardPage> {
             );
           },
         ),
+        if (!_showAllActions) ...[
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => setState(() => _showAllActions = true),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.expand_more,
+                    size: 16,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Xem thêm ($remaining)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildQuickActionCard(
+  Widget _buildQuickActionCell(
     BuildContext context, {
     required IconData icon,
     required String label,
@@ -566,31 +829,32 @@ class _DashboardPageState extends State<DashboardPage> {
                 ? AppTheme.darkCardBackground
                 : AppTheme.lightCardBackground,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: 0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.25)),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: color, size: 28),
+                child: Icon(icon, color: color, size: 20),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.w500,
                   color: isDark
                       ? AppTheme.darkTextPrimary
                       : AppTheme.lightTextPrimary,
                 ),
                 textAlign: TextAlign.center,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
@@ -600,194 +864,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildStreakTracker(
-    BuildContext context,
-    DashboardProvider provider,
-    bool isDark,
-  ) {
-    final daysOfWeek = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-    return Semantics(
-      label: 'streak_tracker',
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppTheme.darkCardBackground
-              : AppTheme.lightCardBackground,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark
-                ? AppTheme.darkBorderColor
-                : AppTheme.lightBorderColor,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.local_fire_department,
-                  color: AppTheme.themeOrangeStart,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'CHUỖI HỌC TẬP',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Current Streak
-            Row(
-              children: [
-                ShaderMask(
-                  shaderCallback: (bounds) => LinearGradient(
-                    colors: [
-                      AppTheme.themeOrangeStart,
-                      AppTheme.themeOrangeEnd,
-                    ],
-                  ).createShader(bounds),
-                  child: Text(
-                    '${provider.currentStreak}',
-                    style: const TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace',
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'NGÀY',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontFamily: 'monospace',
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Weekly Activity Grid
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(7, (index) {
-                final isActive = provider.weeklyActivity.length > index
-                    ? provider.weeklyActivity[index]
-                    : false;
-                return Column(
-                  children: [
-                    Text(
-                      daysOfWeek[index],
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'monospace',
-                        color: isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? AppTheme.themeOrangeStart
-                            : (isDark
-                                  ? AppTheme.darkBackgroundSecondary
-                                  : AppTheme.lightBackgroundSecondary),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isActive
-                              ? AppTheme.themeOrangeStart
-                              : (isDark
-                                    ? AppTheme.darkBorderColor
-                                    : AppTheme.lightBorderColor),
-                        ),
-                      ),
-                      child: isActive
-                          ? const Icon(
-                              Icons.check,
-                              size: 16,
-                              color: Colors.white,
-                            )
-                          : null,
-                    ),
-                  ],
-                );
-              }),
-            ),
-            const SizedBox(height: 16),
-
-            // Power Level
-            Row(
-              children: [
-                Text(
-                  'POWER LEVEL:',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: provider.currentStreak > 0
-                          ? (provider.currentStreak / 30).clamp(0.0, 1.0)
-                          : 0.0,
-                      minHeight: 8,
-                      backgroundColor: isDark
-                          ? AppTheme.darkBackgroundSecondary
-                          : AppTheme.lightBackgroundSecondary,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppTheme.themeOrangeStart,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  provider.currentStreak > 0
-                      ? '${(provider.currentStreak / 30 * 100).toInt()}%'
-                      : 'N/A',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.themeOrangeStart,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // ─── 5. Stats Grid (2×2) ─────────────────────────────────────────────────────
 
   Widget _buildStatsGrid(
     BuildContext context,
@@ -797,31 +874,27 @@ class _DashboardPageState extends State<DashboardPage> {
     final stats = [
       {
         'icon': Icons.school_outlined,
-        'label': 'KHÓA HỌC ĐANG HỌC',
         'value': provider.enrolledCoursesCount,
-        'change': '+${provider.enrolledCoursesCount} this cycle',
+        'label': 'Khóa học đang học',
         'color': AppTheme.primaryBlueDark,
       },
       {
-        'icon': Icons.work_outline,
-        'label': 'DỰ ÁN ĐÃ HOÀN THÀNH',
-        'value': provider.completedProjectsCount,
-        'change': '+${provider.completedProjectsCount} this cycle',
-        'color': AppTheme.themeGreenStart,
-      },
-      {
         'icon': Icons.emoji_events_outlined,
-        'label': 'CHỨNG CHỈ ĐÃ ĐẠT',
         'value': provider.certificatesCount,
-        'change': '+${provider.certificatesCount} this cycle',
+        'label': 'Chứng chỉ đạt được',
         'color': AppTheme.themePurpleStart,
       },
       {
-        'icon': Icons.access_time,
-        'label': 'TỔNG SỐ GIỜ HỌC',
+        'icon': Icons.access_time_outlined,
         'value': provider.totalHoursStudied,
-        'change': '+${provider.totalHoursStudied} this cycle',
+        'label': 'Giờ học tích lũy',
         'color': AppTheme.themeOrangeStart,
+      },
+      {
+        'icon': Icons.work_outline,
+        'value': provider.completedProjectsCount,
+        'label': 'Dự án hoàn thành',
+        'color': AppTheme.themeGreenStart,
       },
     ];
 
@@ -832,105 +905,169 @@ class _DashboardPageState extends State<DashboardPage> {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.3,
+        childAspectRatio: 1.6,
       ),
       itemCount: stats.length,
       itemBuilder: (context, index) {
-        final stat = stats[index];
+        final s = stats[index];
         return _buildStatCard(
-          context,
-          icon: stat['icon'] as IconData,
-          label: stat['label'] as String,
-          value: stat['value'] as int,
-          change: stat['change'] as String,
-          color: stat['color'] as Color,
+          icon: s['icon'] as IconData,
+          value: s['value'] as int,
+          label: s['label'] as String,
+          color: s['color'] as Color,
           isDark: isDark,
         );
       },
     );
   }
 
-  Widget _buildStatCard(
-    BuildContext context, {
+  Widget _buildStatCard({
     required IconData icon,
-    required String label,
     required int value,
-    required String change,
+    required String label,
     required Color color,
     required bool isDark,
   }) {
-    return Semantics(
-      label: 'stat_card_$label',
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppTheme.darkCardBackground
-              : AppTheme.lightCardBackground,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: color, size: 24),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
+                Text(
+                  '$value',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                    color: color,
+                    height: 1,
                   ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.successColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── 6. Wallet (compact) ─────────────────────────────────────────────────────
+
+  Widget _buildWalletCompact(
+    BuildContext context,
+    DashboardProvider provider,
+    bool isDark,
+  ) {
+    return Semantics(
+      label: 'wallet_card',
+      child: GlassCard(
+        onTap: () => context.push('/wallet'),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        borderColor: AppTheme.primaryBlueDark.withValues(alpha: 0.3),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlueDark.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.account_balance_wallet_outlined,
+                color: AppTheme.primaryBlueDark,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Ví vũ trụ',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
                     children: [
-                      Icon(
-                        Icons.trending_up,
-                        size: 10,
-                        color: AppTheme.successColor,
-                      ),
-                      const SizedBox(width: 2),
                       Text(
-                        '+${value}',
+                        NumberFormatter.formatCurrency(
+                          provider.cashBalance.toDouble(),
+                          currency: 'đ',
+                        ),
                         style: TextStyle(
-                          fontSize: 9,
-                          fontFamily: 'monospace',
-                          color: AppTheme.successColor,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
+                          fontFamily: 'monospace',
+                          color: AppTheme.themeGreenStart,
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        width: 1,
+                        height: 12,
+                        color: isDark
+                            ? AppTheme.darkBorderColor
+                            : AppTheme.lightBorderColor,
+                      ),
+                      Text(
+                        '${NumberFormatter.formatNumber(provider.coinBalance)} SC',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'monospace',
+                          color: AppTheme.accentGold,
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-            Text(
-              '$value',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
-                color: color,
+                ],
               ),
             ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontFamily: 'monospace',
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
-                letterSpacing: 0.5,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            Icon(
+              Icons.chevron_right,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+              size: 18,
             ),
           ],
         ),
@@ -938,288 +1075,61 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildAnalystTrack(
+  // ─── 7. Premium (compact, conditional) ───────────────────────────────────────
+
+  Widget _buildPremiumCompact(
     BuildContext context,
     DashboardProvider provider,
     bool isDark,
   ) {
-    final roadmap = provider.activeRoadmap!;
-
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.darkCardBackground
-            : AppTheme.lightCardBackground,
-        borderRadius: BorderRadius.circular(16),
+        color: AppTheme.accentGold.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppTheme.primaryBlueDark.withValues(alpha: 0.3),
+          color: AppTheme.accentGold.withValues(alpha: 0.35),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(Icons.route, color: AppTheme.primaryBlueDark, size: 24),
-              const SizedBox(width: 12),
-              Text(
-                'ANALYST TRACK',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: isDark
-                      ? AppTheme.darkTextPrimary
-                      : AppTheme.lightTextPrimary,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () => context.push('/roadmap'),
-                child: const Text(
-                  'VIEW ALL',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-            ],
+          const Icon(
+            Icons.workspace_premium,
+            color: AppTheme.accentGold,
+            size: 18,
           ),
-          const SizedBox(height: 16),
-          Text(
-            roadmap.title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: isDark
-                  ? AppTheme.darkTextPrimary
-                  : AppTheme.lightTextPrimary,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${provider.premiumPlanName} • Còn ${provider.premiumDaysRemaining} ngày',
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary,
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryBlueDark.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  roadmap.difficultyLevel.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontFamily: 'monospace',
-                    color: AppTheme.primaryBlueDark,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '${roadmap.completedQuests}/${roadmap.totalQuests} quests',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontFamily: 'monospace',
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: roadmap.progressPercentage / 100,
-                    minHeight: 12,
-                    backgroundColor: isDark
-                        ? AppTheme.darkBackgroundSecondary
-                        : AppTheme.lightBackgroundSecondary,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppTheme.primaryBlueDark,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '${roadmap.progressPercentage}%',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: AppTheme.primaryBlueDark,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSystemLimits(
-    BuildContext context,
-    DashboardProvider provider,
-    bool isDark,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.darkCardBackground
-            : AppTheme.lightCardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.accentGold.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.workspace_premium,
+          TextButton(
+            onPressed: () => context.push('/premium'),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Gia hạn',
+              style: TextStyle(
+                fontSize: 11,
                 color: AppTheme.accentGold,
-                size: 24,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(width: 12),
-              Text(
-                'SYSTEM LIMITS & CAPABILITIES',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                  color: isDark
-                      ? AppTheme.darkTextPrimary
-                      : AppTheme.lightTextPrimary,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildLimitRow(
-            'AI CHATBOT REQUESTS',
-            'INF',
-            Icons.chat_bubble_outline,
-            AppTheme.accentCyan,
-            isDark,
-          ),
-          const SizedBox(height: 12),
-          _buildLimitRow(
-            'AI ROADMAP GENERATION',
-            'INF',
-            Icons.map_outlined,
-            AppTheme.primaryBlueDark,
-            isDark,
-          ),
-          const SizedBox(height: 12),
-          _buildLimitRow(
-            'PRIORITY SUPPORT',
-            'INF',
-            Icons.support_agent,
-            AppTheme.themePurpleStart,
-            isDark,
-          ),
-          const SizedBox(height: 12),
-          _buildLimitRow(
-            'COIN EARNING MULTIPLIER',
-            'x2',
-            Icons.monetization_on_outlined,
-            AppTheme.accentGold,
-            isDark,
-            isBadge: true,
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.successColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  color: AppTheme.successColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    '${provider.premiumPlanName} • ${provider.premiumDaysRemaining} days remaining',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'monospace',
-                      color: AppTheme.successColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildLimitRow(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-    bool isDark, {
-    bool isBadge = false,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 18),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontFamily: 'monospace',
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: isBadge
-                ? color.withValues(alpha: 0.2)
-                : (isDark
-                      ? AppTheme.darkBackgroundSecondary
-                      : AppTheme.lightBackgroundSecondary),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: color.withValues(alpha: 0.5)),
-          ),
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              fontFamily: 'monospace',
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/job_provider.dart';
 import '../../../data/models/job_models.dart';
+import '../../widgets/app_search_bar.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/animated_list_item.dart';
@@ -79,7 +80,14 @@ class _JobsPageState extends State<JobsPage>
             children: [
               Row(
                 children: [
-                  Expanded(child: _buildSearchBar()),
+                  Expanded(
+                    child: AppSearchBar(
+                      controller: _searchController,
+                      hintText: 'Tìm kiếm việc làm...',
+                      onChanged: _onSearchChanged,
+                      onClear: () => context.read<JobProvider>().searchJobs(''),
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   _buildMyApplicationsButton(),
                 ],
@@ -113,45 +121,6 @@ class _JobsPageState extends State<JobsPage>
     );
   }
 
-  // ==================== SEARCH BAR ====================
-
-  Widget _buildSearchBar() {
-    return GlassCard(
-      showBorder: false,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          prefixIcon: Icon(
-            Icons.search,
-            color: Theme.of(context).iconTheme.color?.withValues(alpha: 0.6),
-          ),
-          hintText: 'Tìm kiếm việc làm...',
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 14),
-          hintStyle: TextStyle(
-            color: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
-          ),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, size: 20),
-                  onPressed: () {
-                    _searchController.clear();
-                    context.read<JobProvider>().searchJobs('');
-                    setState(() {});
-                  },
-                )
-              : null,
-        ),
-        onChanged: _onSearchChanged,
-      ),
-    );
-  }
-
   Widget _buildMyApplicationsButton() {
     return Consumer<JobProvider>(
       builder: (context, provider, _) {
@@ -164,7 +133,7 @@ class _JobsPageState extends State<JobsPage>
                 )
                 .length +
             provider.myShortTermApplications
-                .where((a) => a.status == 'PENDING' || a.status == 'APPLIED')
+                .where((a) => a.status == ShortTermApplicationStatus.pending)
                 .length;
 
         return GlassCard(

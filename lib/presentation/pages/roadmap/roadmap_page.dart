@@ -5,6 +5,7 @@ import '../../widgets/ai_roadmap_card.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
+import '../../widgets/app_search_bar.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/animated_list_item.dart';
 import 'package:go_router/go_router.dart';
@@ -153,40 +154,11 @@ class _RoadmapPageState extends State<RoadmapPage> {
           child: Column(
             children: [
               // Search bar
-              TextField(
+              AppSearchBar(
                 controller: _searchController,
-                onChanged: (value) => provider.setSearchQuery(value),
-                style: TextStyle(
-                  color: isDark
-                      ? AppTheme.darkTextPrimary
-                      : AppTheme.lightTextPrimary,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Tìm kiếm lộ trình...',
-                  hintStyle: TextStyle(
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: isDark
-                        ? AppTheme.primaryBlueDark
-                        : AppTheme.primaryBlue,
-                  ),
-                  filled: true,
-                  fillColor: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.grey.withValues(alpha: 0.1),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                ),
+                hintText: 'Tìm kiếm lộ trình...',
+                onChanged: provider.setSearchQuery,
+                onClear: () => provider.setSearchQuery(''),
               ),
               const SizedBox(height: 12),
 

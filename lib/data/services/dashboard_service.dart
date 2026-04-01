@@ -1,6 +1,8 @@
 import '../../../core/exceptions/api_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../models/dashboard_models.dart';
+import '../models/enrollment_models.dart';
+import 'enrollment_service.dart';
 
 /// Service for fetching Dashboard data from multiple endpoints
 class DashboardService {
@@ -88,14 +90,39 @@ class DashboardService {
     }
   }
 
+  /// Fetch the most relevant in-progress enrollment for "Continue Learning"
+  Future<EnrollmentDetailDto?> fetchContinueLearning(int userId) async {
+    try {
+      final page = await EnrollmentService().getUserEnrollments(
+        userId: userId,
+        page: 0,
+        size: 10,
+      );
+      final items = page.content ?? [];
+      // Prefer courses already started (progress > 0, not completed)
+      final inProgress =
+          items.where((e) => !e.completed && e.progressPercent > 0).toList();
+      if (inProgress.isNotEmpty) return inProgress.first;
+      // Fallback: enrolled but not yet started
+      final enrolled = items.where((e) => !e.completed).toList();
+      return enrolled.isNotEmpty ? enrolled.first : null;
+    } catch (_) {
+      return null; // non-critical — fail silently
+    }
+  }
+
   /// Fetch all dashboard data in parallel
-  Future<DashboardData> fetchAllDashboardData() async {
+  Future<DashboardData> fetchAllDashboardData({int? userId}) async {
     try {
       final results = await Future.wait([
         fetchWallet().catchError((_) => null as WalletResponse?),
         fetchUsageStats().catchError((_) => null as UsageStatsResponse?),
         fetchSubscription().catchError((_) => null as SubscriptionResponse?),
         fetchRoadmaps().catchError((_) => <RoadmapSession>[]),
+        if (userId != null)
+          fetchContinueLearning(userId)
+        else
+          Future<EnrollmentDetailDto?>.value(null),
       ]);
 
       return DashboardData(
@@ -103,6 +130,7 @@ class DashboardService {
         usageStats: results[1] as UsageStatsResponse?,
         subscription: results[2] as SubscriptionResponse?,
         roadmaps: results[3] as List<RoadmapSession>,
+        continueLearning: results[4] as EnrollmentDetailDto?,
       );
     } catch (e) {
       throw ApiException('Failed to fetch dashboard data: ${e.toString()}');

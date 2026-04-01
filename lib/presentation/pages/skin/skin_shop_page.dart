@@ -5,6 +5,7 @@ import '../../../data/models/skin_models.dart';
 import '../../providers/skin_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/selectable_chip_row.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import 'widgets/skin_card_widget.dart';
 import 'widgets/purchase_dialog.dart';
@@ -92,7 +93,16 @@ class _SkinShopPageState extends State<SkinShopPage> {
                   ],
 
                   // Filter chips
-                  _buildFilterChips(isDark),
+                  SelectableChipRow(
+                    labels: const ['Tất cả', 'Common', 'Rare', 'Legendary'],
+                    selectedIndex: const ['all', 'common', 'rare', 'legendary']
+                        .indexOf(_selectedFilter),
+                    onSelected: (i) {
+                      final key = const ['all', 'common', 'rare', 'legendary'][i];
+                      setState(() => _selectedFilter = key);
+                      _resetPagination();
+                    },
+                  ),
                   const SizedBox(height: 16),
 
                   // Skin grid

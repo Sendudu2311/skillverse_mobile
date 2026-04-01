@@ -584,12 +584,12 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
 
     // Find result for this question if in review mode
     if (_result != null && _result!.attempt.answers != null) {
-      try {
-        answerResult = _result!.attempt.answers!.firstWhere(
-          (a) => a.questionId == question.id,
-        );
+      answerResult = _result!.attempt.answers!
+          .where((a) => a.questionId == question.id)
+          .firstOrNull;
+      if (answerResult != null) {
         isAnswerCorrect = answerResult.isCorrect;
-      } catch (_) {}
+      }
     }
 
     return GlassCard(
