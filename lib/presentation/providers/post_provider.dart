@@ -138,11 +138,20 @@ class PostProvider with ChangeNotifier, LoadingStateProviderMixin {
     await loadPosts(refresh: true);
   }
 
-  /// Filter by category (client-side)
-  void filterByCategory(String? category) {
+  /// Filter by category.
+  /// Client-side when already in normal mode; reloads from API when
+  /// transitioning out of saved-posts mode (pagination holds wrong dataset).
+  Future<void> filterByCategory(String? category) async {
     _categoryFilter = category;
-    _showSavedOnly = false;
-    notifyListeners();
+    if (_showSavedOnly) {
+      // Must reload: pagination was fetching saved posts, need regular posts.
+      _showSavedOnly = false;
+      _paginationHelper = null;
+      await loadPosts(refresh: true);
+    } else {
+      _showSavedOnly = false;
+      notifyListeners();
+    }
   }
 
   /// Show saved posts only

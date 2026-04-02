@@ -278,7 +278,7 @@ class _SkinShopPageState extends State<SkinShopPage> {
             bottom: BorderSide(
               color: isDark
                   ? AppTheme.darkBorderColor
-                  : AppTheme.lightBorderColor.withOpacity(0.3),
+                  : AppTheme.lightBorderColor.withValues(alpha:0.3),
             ),
           ),
         ),
@@ -344,7 +344,7 @@ class _SkinShopPageState extends State<SkinShopPage> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryBlueDark.withOpacity(0.1),
+                      color: AppTheme.primaryBlueDark.withValues(alpha:0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -361,56 +361,6 @@ class _SkinShopPageState extends State<SkinShopPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChips(bool isDark) {
-    final filters = [
-      {'key': 'all', 'label': 'Tất cả'},
-      {'key': 'common', 'label': 'Common'},
-      {'key': 'rare', 'label': 'Rare'},
-      {'key': 'legendary', 'label': 'Legendary'},
-    ];
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: filters.map((f) {
-          final isSelected = _selectedFilter == f['key'];
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              selected: isSelected,
-              label: Text(
-                f['label']!,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontFamily: 'monospace',
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary),
-                ),
-              ),
-              selectedColor: AppTheme.primaryBlueDark,
-              backgroundColor: isDark
-                  ? AppTheme.darkCardBackground
-                  : AppTheme.lightCardBackground,
-              checkmarkColor: Colors.white,
-              onSelected: (_) {
-                setState(() => _selectedFilter = f['key']!);
-                _resetPagination();
-
-                // Load my skins when "Đã sở hữu" is selected
-                if (f['key'] == 'owned') {
-                  context.read<SkinProvider>().loadMySkins();
-                }
-              },
-            ),
-          );
-        }).toList(),
       ),
     );
   }
@@ -646,13 +596,13 @@ class _SkinShopPageState extends State<SkinShopPage> {
   Widget _buildPlaceholder() {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.primaryBlueDark.withOpacity(0.1),
+        color: AppTheme.primaryBlueDark.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Icon(
         Icons.pets,
         size: 40,
-        color: AppTheme.primaryBlueDark.withOpacity(0.5),
+        color: AppTheme.primaryBlueDark.withValues(alpha:0.5),
       ),
     );
   }
@@ -660,13 +610,13 @@ class _SkinShopPageState extends State<SkinShopPage> {
   Widget _buildSmallPlaceholder() {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.primaryBlueDark.withOpacity(0.1),
+        color: AppTheme.primaryBlueDark.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(
         Icons.pets,
         size: 24,
-        color: AppTheme.primaryBlueDark.withOpacity(0.5),
+        color: AppTheme.primaryBlueDark.withValues(alpha:0.5),
       ),
     );
   }

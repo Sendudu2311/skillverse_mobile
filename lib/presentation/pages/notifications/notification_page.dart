@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../providers/notification_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/selectable_chip_row.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/animated_list_item.dart';
@@ -66,62 +67,27 @@ class _NotificationPageState extends State<NotificationPage> {
       ),
       body: Column(
         children: [
-          _buildFilterBar(),
+          Consumer<NotificationProvider>(
+            builder: (_, provider, __) {
+              final selected = NotificationFilter.values.indexOf(provider.filter);
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: SelectableChipRow(
+                  labels: const ['Tất cả', 'Chưa đọc', 'Đã đọc'],
+                  selectedIndex: selected,
+                  onSelected: (i) {
+                    final filter = NotificationFilter.values[i];
+                    if (provider.filter != filter) {
+                      provider.loadNotifications(filter: filter);
+                    }
+                  },
+                ),
+              );
+            },
+          ),
           const Divider(height: 1),
           Expanded(child: _buildBody()),
         ],
-      ),
-    );
-  }
-
-  // ── Filter tabs ───────────────────────────────────────────────────────────
-
-  Widget _buildFilterBar() {
-    return Consumer<NotificationProvider>(
-      builder: (_, provider, __) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              _filterChip('Tất cả', NotificationFilter.all, provider),
-              const SizedBox(width: 8),
-              _filterChip('Chưa đọc', NotificationFilter.unread, provider),
-              const SizedBox(width: 8),
-              _filterChip('Đã đọc', NotificationFilter.read, provider),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _filterChip(
-    String label,
-    NotificationFilter value,
-    NotificationProvider provider,
-  ) {
-    final isActive = provider.filter == value;
-    return GestureDetector(
-      onTap: () {
-        if (!isActive) provider.loadNotifications(filter: value);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppTheme.primaryBlueDark
-              : AppTheme.primaryBlueDark.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            color: isActive ? Colors.white : AppTheme.primaryBlueDark,
-          ),
-        ),
       ),
     );
   }

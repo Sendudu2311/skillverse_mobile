@@ -98,6 +98,8 @@ class _AppSearchBarState extends State<AppSearchBar> {
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
+          filled: true,
+          fillColor: Colors.transparent,
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
           prefixIcon: Icon(
             Icons.search_rounded,

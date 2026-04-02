@@ -8,6 +8,7 @@ import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/app_search_bar.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/selectable_chip_row.dart';
 import 'widgets/community_stats_widget.dart';
 import '../../themes/app_theme.dart';
 
@@ -68,7 +69,34 @@ class _CommunityPageState extends State<CommunityPage> {
           ),
 
           // Filter chips
-          _buildFilterChips(),
+          SelectableChipRow(
+            labels: const ['Tất cả', 'Thảo luận', 'Mẹo hay', 'Tin tức', 'Đã lưu'],
+            icons: const [
+              Icons.dashboard_outlined,
+              Icons.forum_outlined,
+              Icons.lightbulb_outline,
+              Icons.newspaper_outlined,
+              Icons.bookmark_outline,
+            ],
+            selectedIndex: const ['all', 'discussion', 'tips', 'news', 'saved']
+                .indexOf(_selectedFilter),
+            onSelected: (i) {
+              const keys = ['all', 'discussion', 'tips', 'news', 'saved'];
+              final value = keys[i];
+              setState(() => _selectedFilter = value);
+              final provider = context.read<PostProvider>();
+              switch (value) {
+                case 'all':
+                  provider.clearFilters();
+                case 'discussion':
+                case 'tips':
+                case 'news':
+                  provider.filterByCategory(value);
+                case 'saved':
+                  provider.showSavedPosts();
+              }
+            },
+          ),
 
           // Post list
           Expanded(
@@ -91,84 +119,6 @@ class _CommunityPageState extends State<CommunityPage> {
         backgroundColor: AppTheme.themeOrangeStart,
         child: const Icon(Icons.add, color: Colors.white),
       ),
-    );
-  }
-
-  Widget _buildFilterChips() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          _buildFilterChip(
-            label: 'Tất cả',
-            value: 'all',
-            icon: Icons.dashboard_outlined,
-          ),
-          const SizedBox(width: 8),
-          _buildFilterChip(
-            label: 'Thảo luận',
-            value: 'discussion',
-            icon: Icons.forum_outlined,
-          ),
-          const SizedBox(width: 8),
-          _buildFilterChip(
-            label: 'Mẹo hay',
-            value: 'tips',
-            icon: Icons.lightbulb_outline,
-          ),
-          const SizedBox(width: 8),
-          _buildFilterChip(
-            label: 'Tin tức',
-            value: 'news',
-            icon: Icons.newspaper_outlined,
-          ),
-          const SizedBox(width: 8),
-          _buildFilterChip(
-            label: 'Đã lưu',
-            value: 'saved',
-            icon: Icons.bookmark_outline,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip({
-    required String label,
-    required String value,
-    required IconData icon,
-  }) {
-    final isSelected = _selectedFilter == value;
-
-    return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [Icon(icon, size: 16), const SizedBox(width: 4), Text(label)],
-      ),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _selectedFilter = value;
-        });
-
-        final provider = context.read<PostProvider>();
-        switch (value) {
-          case 'all':
-            provider.clearFilters();
-            break;
-          case 'discussion':
-          case 'tips':
-          case 'news':
-            provider.filterByCategory(value);
-            break;
-          case 'saved':
-            provider.showSavedPosts();
-            break;
-        }
-      },
-      selectedColor: AppTheme.themeOrangeStart.withValues(alpha: 0.2),
-      checkmarkColor: AppTheme.themeOrangeStart,
     );
   }
 
