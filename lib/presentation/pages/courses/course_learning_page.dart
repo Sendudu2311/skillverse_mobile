@@ -77,6 +77,10 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
   int _activeCurriculumIndex = -1;
   LessonDetailDto? _currentLessonDetail; // Only for lesson items
 
+  // GlobalKey giữ state VideoLessonPlayer sống sót khi tree restructure (portrait ↔ landscape)
+  // Reset key khi đổi bài để buộc tạo player mới
+  GlobalKey _videoPlayerKey = GlobalKey(); // ignore: prefer_final_fields
+
   bool _isLoadingModules = true;
   bool _isLoadingLesson = false;
   bool _isMarkingComplete = false;
@@ -257,6 +261,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       _activeCurriculumIndex = index;
       _currentLessonDetail = null;
       _isLoadingLesson = item.itemType == 'lesson';
+      if (item.itemType == 'lesson') _videoPlayerKey = GlobalKey();
     });
 
     if (item.itemType == 'lesson') {
@@ -581,59 +586,165 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
 
     final item = _curriculumItems[_activeCurriculumIndex];
 
-    return Column(
-      children: [
-        // Content area
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Item info header
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  color: Theme.of(context).cardColor,
-                  child: Wrap(
-                    spacing: 16,
-                    runSpacing: 8,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(_getItemIcon(item), size: 18),
-                          const SizedBox(width: 6),
-                          Text(
-                            _getItemTypeName(item),
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                      if (item.durationSec != null)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
+    final isVideoLesson = item.itemType == 'lesson' &&
+        !_isLoadingLesson &&
+        _currentLessonDetail != null &&
+        _currentLessonDetail!.lessonType == LessonType.video;
+
+    // Tạo video widget MỘT LẦN trước OrientationBuilder
+    // → Flutter reparent thay vì destroy+recreate khi xoay màn hình
+    final videoWidget = isVideoLesson
+        ? VideoLessonPlayer(
+            key: _videoPlayerKey,
+            videoUrl: _currentLessonDetail!.videoUrl,
+            lessonId: _currentLessonDetail!.id,
+          )
+        : null;
+
+    return OrientationBuilder(
+      builder: (context, orientation) {
+        if (orientation == Orientation.landscape && videoWidget != null) {
+          // Landscape + video: Row layout — video trái, nav + metadata phải
+          return Row(
+            children: [
+              Expanded(flex: 6, child: videoWidget),
+              Expanded(
+                flex: 4,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Icon(Icons.schedule, size: 18),
-                            const SizedBox(width: 6),
-                            Text(
-                              _formatDuration(item.durationSec!),
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
+                            _buildVideoLessonInfo(),
                           ],
                         ),
-                    ],
-                  ),
+                      ),
+                    ),
+                    _buildBottomBar(item),
+                  ],
                 ),
-                // Content
-                _buildItemContent(item),
+              ),
+            ],
+          );
+        }
+
+        // Portrait layout (hoặc non-video landscape)
+        return Column(
+          children: [
+            if (videoWidget != null) videoWidget,
+
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (isVideoLesson)
+                      _buildVideoLessonInfo()
+                    else ...[
+                      _buildInfoHeader(item),
+                      _buildItemContent(item),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            _buildBottomBar(item),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoHeader(_CurriculumItem item) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Theme.of(context).cardColor,
+      child: Wrap(
+        spacing: 16,
+        runSpacing: 8,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_getItemIcon(item), size: 18),
+              const SizedBox(width: 6),
+              Text(
+                _getItemTypeName(item),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+          if (item.durationSec != null)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.schedule, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  _formatDuration(item.durationSec!),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ],
             ),
-          ),
-        ),
+        ],
+      ),
+    );
+  }
 
-        // Bottom Navigation Bar
-        if (MediaQuery.of(context).orientation == Orientation.portrait)
-          _buildBottomBar(item),
-      ],
+  Widget _buildVideoLessonInfo() {
+    final lesson = _currentLessonDetail;
+    if (lesson == null) return const SizedBox.shrink();
+
+    final activeItem = _activeCurriculumIndex >= 0
+        ? _curriculumItems[_activeCurriculumIndex]
+        : null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Tiêu đề bài học
+          Text(
+            lesson.title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          // Thời lượng nếu có
+          if (activeItem?.durationSec != null && activeItem!.durationSec! > 0) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.schedule, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Text(
+                  _formatDuration(activeItem.durationSec!),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          // Mô tả nếu có
+          if (lesson.contentText != null && lesson.contentText!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            Text(
+              lesson.contentText!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).textTheme.bodySmall?.color,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -666,6 +777,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     switch (lesson.lessonType) {
       case LessonType.video:
         return VideoLessonPlayer(
+          key: ValueKey(lesson.id),
           videoUrl: lesson.videoUrl,
           lessonId: lesson.id,
         );
@@ -781,7 +893,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -918,10 +1030,8 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
   String _formatDuration(int seconds) {
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;
-    if (minutes > 0) {
-      return '${minutes}p ${secs}s';
-    } else {
-      return '${secs}s';
-    }
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 }
+
+

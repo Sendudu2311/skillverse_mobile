@@ -43,6 +43,8 @@ class DashboardService {
 
       return UsageStatsResponse.fromJson(response.data!);
     } catch (e) {
+      // ignore: avoid_print
+      print('[Dashboard] fetchUsageStats error: $e');
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch usage stats: ${e.toString()}');
     }

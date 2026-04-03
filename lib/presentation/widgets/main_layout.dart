@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
-import '../providers/notification_provider.dart';
 import '../themes/app_theme.dart';
 import 'galaxy_background.dart';
 
 class MainLayout extends StatefulWidget {
   final Widget child;
   final String currentPath;
-  final bool showAppBar;
 
   const MainLayout({
     super.key,
     required this.child,
     required this.currentPath,
-    this.showAppBar = true,
   });
 
   @override
@@ -70,10 +66,6 @@ class _MainLayoutState extends State<MainLayout> {
   void initState() {
     super.initState();
     _updateSelectedIndex();
-    // Start polling unread count every 60s
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NotificationProvider>().startPolling();
-    });
   }
 
   @override
@@ -120,148 +112,13 @@ class _MainLayoutState extends State<MainLayout> {
     }
   }
 
-  String _getPageTitle() {
-    switch (widget.currentPath) {
-      case '/dashboard':
-        return 'Dashboard';
-      case '/courses':
-        return 'Khóa học';
-      case '/jobs':
-        return 'Việc làm';
-      case '/community':
-        return 'Cộng đồng';
-      case '/chat':
-        return 'Chat';
-      case '/profile':
-        return 'Hồ sơ';
-      case '/portfolio':
-        return 'Portfolio';
-      case '/roadmap':
-        return 'AI Roadmap';
-      case '/mentors':
-        return 'Mentor Network';
-      case '/skins':
-        return 'Meowl Skin Shop';
-      default:
-        return 'SkillVerse';
-    }
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Đăng xuất'),
-          content: const Text('Bạn có chắc chắn muốn đăng xuất?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.read<AuthProvider>().logout();
-                context.go('/login');
-              },
-              child: const Text('Đăng xuất'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildNotificationBell(BuildContext context) {
-    return Consumer<NotificationProvider>(
-      builder: (_, provider, __) {
-        final count = provider.unreadCount;
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () => context.push('/notifications'),
-            ),
-            if (count > 0)
-              Positioned(
-                top: 6,
-                right: 6,
-                child: IgnorePointer(
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      count > 99 ? '99+' : '$count',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  bool _shouldShowBackButton() {
-    // Show back button for sub-pages (not main navigation items)
-    // Special pages that need back button
-    final pagesWithBackButton = [
-      '/portfolio',
-      '/mentors',
-      '/roadmap',
-      '/skins',
-    ];
-
-    if (pagesWithBackButton.any(
-      (path) => widget.currentPath.startsWith(path),
-    )) {
-      return true;
-    }
-
-    return !_navigationItems.any((item) => item.route == widget.currentPath);
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDarkMode = context.watch<ThemeProvider>().isDarkMode;
+    final body = SafeArea(child: widget.child);
 
     return Scaffold(
-      appBar: widget.showAppBar
-          ? AppBar(
-              title: Text(_getPageTitle()),
-              automaticallyImplyLeading: _shouldShowBackButton(),
-              elevation: 0,
-              actions: [
-                _buildNotificationBell(context),
-                IconButton(
-                  icon: const Icon(Icons.logout),
-                  onPressed: () => _showLogoutDialog(context),
-                ),
-              ],
-            )
-          : null,
-      body: isDarkMode
-          ? GalaxyBackground(
-              child: widget.showAppBar
-                  ? widget.child
-                  : SafeArea(child: widget.child),
-            )
-          : (widget.showAppBar ? widget.child : SafeArea(child: widget.child)),
+      body: isDarkMode ? GalaxyBackground(child: body) : body,
       bottomNavigationBar: _navigationItems.length >= 2
           ? BottomNavigationBar(
               currentIndex: _selectedIndex,
@@ -303,8 +160,9 @@ class _MainLayoutState extends State<MainLayout> {
                           color: Theme.of(context).colorScheme.primary,
                         ),
                         onPressed: () {
-                          if (_selectedIndex != 0)
+                          if (_selectedIndex != 0) {
                             context.go(_navigationItems[0].route);
+                          }
                         },
                       ),
                       const SizedBox(width: 8),

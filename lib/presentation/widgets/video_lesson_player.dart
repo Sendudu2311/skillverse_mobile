@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pod_player/pod_player.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'common_loading.dart';
+import 'error_state_widget.dart';
 
 class VideoLessonPlayer extends StatefulWidget {
   final String? videoUrl;
@@ -17,7 +18,7 @@ class VideoLessonPlayer extends StatefulWidget {
   State<VideoLessonPlayer> createState() => _VideoLessonPlayerState();
 }
 
-class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
+class _VideoLessonPlayerState extends State<VideoLessonPlayer> with WidgetsBindingObserver {
   PodPlayerController? _controller;
   bool _isInitializing = true;
   String? _errorMessage;
@@ -25,13 +26,53 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializePlayer();
   }
 
   @override
+  void didUpdateWidget(VideoLessonPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.videoUrl != widget.videoUrl || oldWidget.lessonId != widget.lessonId) {
+      _disposeController();
+      setState(() {
+        _isInitializing = true;
+        _errorMessage = null;
+      });
+      _initializePlayer();
+    }
+  }
+
+  @override
   void dispose() {
-    _controller?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _disposeController();
     super.dispose();
+  }
+
+  Future<void> _disposeController() async {
+    final controller = _controller;
+    _controller = null;
+    if (controller == null) return;
+    try {
+      if (controller.isInitialised) {
+        controller.pause();
+        // Cho native player (ExoPlayer/AVPlayer) thời gian giải phóng audio decoder
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+    } catch (_) {
+      // Ignore errors during cleanup
+    }
+    controller.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      if (_controller?.isInitialised == true && (_controller?.isVideoPlaying ?? false)) {
+        _controller?.pause();
+      }
+    }
   }
 
   Future<void> _initializePlayer() async {
@@ -48,26 +89,7 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
 
       // Check if it's a YouTube URL
       if (_isYouTubeUrl(widget.videoUrl!)) {
-        try {
-          final yt = YoutubeExplode();
-          final videoId = VideoId(widget.videoUrl!);
-          final manifest = await yt.videos.streamsClient.getManifest(videoId);
-
-          // Get the best quality muxed stream (video + audio)
-          final streamInfo = manifest.muxed.bestQuality;
-          playUrl = streamInfo.url.toString();
-
-          yt.close();
-        } catch (e) {
-          debugPrint('Error extracting YouTube URL: $e');
-          if (!mounted) return;
-          setState(() {
-            _isInitializing = false;
-            _errorMessage =
-                'Không thể tải video YouTube. Vui lòng thử lại sau.';
-          });
-          return;
-        }
+        playUrl = await _extractYouTubeUrl(widget.videoUrl!);
       }
 
       _controller = PodPlayerController(
@@ -77,7 +99,8 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
           isLooping: false,
           videoQualityPriority: [720, 360],
         ),
-      )..initialise();
+      );
+      await _controller!.initialise();
 
       if (!mounted) return;
       setState(() {
@@ -90,6 +113,32 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
         _errorMessage = 'Lỗi khởi tạo video: ${e.toString()}';
       });
       debugPrint('Error initializing video player: $e');
+    }
+  }
+
+  /// Trích xuất URL stream từ YouTube với retry 1 lần (phòng URL hết hạn)
+  Future<String> _extractYouTubeUrl(String youtubeUrl, {bool isRetry = false}) async {
+    final yt = YoutubeExplode();
+    try {
+      final videoId = VideoId(youtubeUrl);
+      final manifest = await yt.videos.streamsClient.getManifest(videoId);
+      final streamInfo = manifest.muxed.bestQuality;
+      return streamInfo.url.toString();
+    } catch (e) {
+      debugPrint('Error extracting YouTube URL${isRetry ? " (retry)" : ""}: $e');
+      if (!isRetry) {
+        // Retry 1 lần — YouTube stream URL có thể hết hạn
+        yt.close();
+        return _extractYouTubeUrl(youtubeUrl, isRetry: true);
+      }
+      if (!mounted) rethrow;
+      setState(() {
+        _isInitializing = false;
+        _errorMessage = 'Không thể tải video YouTube. Vui lòng thử lại sau.';
+      });
+      rethrow;
+    } finally {
+      yt.close();
     }
   }
 
@@ -109,67 +158,38 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
     }
 
     if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.video_library_outlined,
-                size: 64,
-                color: Colors.grey,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _isInitializing = true;
-                    _errorMessage = null;
-                  });
-                  _initializePlayer();
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Thử lại'),
-              ),
-            ],
-          ),
-        ),
+      return ErrorStateWidget(
+        icon: Icons.video_library_outlined,
+        message: _errorMessage!,
+        onRetry: () {
+          setState(() {
+            _isInitializing = true;
+            _errorMessage = null;
+          });
+          _initializePlayer();
+        },
       );
     }
 
     if (_controller == null) {
-      return const Center(child: Text('Video không khả dụng'));
+      return ErrorStateWidget(
+        message: 'Video không khả dụng',
+        onRetry: () {
+          setState(() {
+            _isInitializing = true;
+          });
+          _initializePlayer();
+        },
+      );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        PodVideoPlayer(
-          controller: _controller!,
-          frameAspectRatio: 16 / 9,
-          videoAspectRatio: 16 / 9,
-          alwaysShowProgressBar: false,
-          matchVideoAspectRatioToFrame: true,
-          matchFrameAspectRatioToVideo: true,
-        ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            _isYouTubeUrl(widget.videoUrl!) ? 'YouTube Video' : 'Video',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-          ),
-        ),
-      ],
+    return PodVideoPlayer(
+      controller: _controller!,
+      frameAspectRatio: 16 / 9,
+      videoAspectRatio: 16 / 9,
+      alwaysShowProgressBar: false,
+      matchVideoAspectRatioToFrame: true,
+      matchFrameAspectRatioToVideo: true,
     );
   }
 }

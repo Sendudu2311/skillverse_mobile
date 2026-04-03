@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/skin_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../../core/utils/storage_helper.dart';
@@ -31,6 +32,7 @@ class _DashboardPageState extends State<DashboardPage> {
       final userId = context.read<AuthProvider>().user?.id;
       context.read<DashboardProvider>().loadDashboard(userId: userId);
       context.read<SkinProvider>().loadAllSkins();
+      context.read<NotificationProvider>().startPolling();
       _checkAndShowOnboarding();
     });
   }
@@ -198,7 +200,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return Semantics(
       label: 'welcome_header',
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 8, 8, 20),
         decoration: BoxDecoration(
           color: isDark
               ? AppTheme.darkCardBackground
@@ -210,9 +212,18 @@ class _DashboardPageState extends State<DashboardPage> {
                 : AppTheme.lightBorderColor,
           ),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Top bar: notification bell (compact)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [_buildNotificationBell(context)],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
             // Left: greeting + name + streak row
             Expanded(
               child: Column(
@@ -221,7 +232,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   Text(
                     _getGreeting(),
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontFamily: 'monospace',
                       color: AppTheme.accentCyan,
                       letterSpacing: 1.2,
@@ -242,7 +253,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: Text(
                       userName,
                       style: const TextStyle(
-                        fontSize: 24,
+                        fontSize: 27,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -277,13 +288,13 @@ class _DashboardPageState extends State<DashboardPage> {
                             Icon(
                               Icons.local_fire_department,
                               color: AppTheme.themeOrangeStart,
-                              size: 13,
+                              size: 15,
                             ),
-                            const SizedBox(width: 3),
+                            const SizedBox(width: 4),
                             Text(
                               '$streak ngày',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.themeOrangeStart,
                                 fontFamily: 'monospace',
@@ -302,9 +313,9 @@ class _DashboardPageState extends State<DashboardPage> {
                           return Tooltip(
                             message: daysOfWeek[i],
                             child: Container(
-                              width: 8,
-                              height: 8,
-                              margin: const EdgeInsets.only(right: 4),
+                              width: 10,
+                              height: 10,
+                              margin: const EdgeInsets.only(right: 5),
                               decoration: BoxDecoration(
                                 color: isActive
                                     ? AppTheme.themeOrangeStart
@@ -345,8 +356,8 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                     child: Image.network(
                       skin.imageUrl!,
-                      width: 72,
-                      height: 72,
+                      width: 92,
+                      height: 92,
                       fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
                     ),
@@ -355,9 +366,54 @@ class _DashboardPageState extends State<DashboardPage> {
                 return _buildDefaultAvatar();
               },
             ),
+              ],
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildNotificationBell(BuildContext context) {
+    return Consumer<NotificationProvider>(
+      builder: (_, provider, __) {
+        final count = provider.unreadCount;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined, size: 22),
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              padding: EdgeInsets.zero,
+              onPressed: () => context.push('/notifications'),
+            ),
+            if (count > 0)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: IgnorePointer(
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      count > 99 ? '99+' : '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -421,16 +477,16 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildDefaultAvatar() {
     return Container(
-      width: 48,
-      height: 48,
-      padding: const EdgeInsets.all(10),
+      width: 92,
+      height: 92,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [AppTheme.primaryBlueDark, AppTheme.secondaryPurple],
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: const Icon(Icons.waving_hand, color: Colors.white, size: 24),
+      child: const Icon(Icons.waving_hand, color: Colors.white, size: 36),
     );
   }
 
@@ -444,10 +500,7 @@ class _DashboardPageState extends State<DashboardPage> {
     if (course != null) {
       final progress = course.progressPercent / 100.0;
       return GradientGlassCard(
-        gradientColors: [
-          AppTheme.primaryBlueDark.withValues(alpha: 0.9),
-          AppTheme.secondaryPurple.withValues(alpha: 0.9),
-        ],
+        gradientColors: AppTheme.blueGradient.colors,
         borderRadius: 14,
         padding: const EdgeInsets.all(16),
         onTap: () => context.push('/courses/${course.courseId}'),

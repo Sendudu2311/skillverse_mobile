@@ -161,7 +161,6 @@ class AppRouter {
           name: 'courses',
           builder: (context, state) => MainLayout(
             currentPath: state.matchedLocation,
-            showAppBar: false, // Custom header in CoursesPage
             child: const CoursesPage(),
           ),
         ),
@@ -326,7 +325,6 @@ class AppRouter {
           name: 'wallet',
           builder: (context, state) => MainLayout(
             currentPath: state.matchedLocation,
-            showAppBar: false,
             child: const WalletPage(),
           ),
         ),
