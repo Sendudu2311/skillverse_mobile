@@ -358,12 +358,18 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
   }
 
   /// Rate booking
-  Future<void> rateBooking(int bookingId, int rating, {String? review}) async {
+  Future<void> rateBooking(
+    int bookingId,
+    int stars, {
+    String? comment,
+    String? skillEndorsed,
+  }) async {
     await executeAsync(() async {
       await _mentorService.rateBooking(
         bookingId,
-        rating: rating,
-        review: review,
+        stars: stars,
+        comment: comment,
+        skillEndorsed: skillEndorsed,
       );
 
       // Update booking status
@@ -375,6 +381,33 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
         notifyListeners();
       }
     }, errorMessageBuilder: (e) => 'Lỗi đánh giá: ${e.toString()}');
+  }
+
+  /// Learner confirms session completion → releases payment
+  Future<void> confirmComplete(int bookingId) async {
+    await executeAsync(() async {
+      final updatedBooking = await _mentorService.confirmComplete(bookingId);
+
+      final index = _bookings.indexWhere((b) => b.id == bookingId);
+      if (index != -1) {
+        _bookings[index] = updatedBooking;
+        notifyListeners();
+      }
+    }, errorMessageBuilder: (e) => 'Lỗi xác nhận hoàn thành: ${e.toString()}');
+  }
+
+  /// Refresh single booking detail from server
+  Future<void> refreshBookingDetail(int bookingId) async {
+    try {
+      final updated = await _mentorService.getBookingDetail(bookingId);
+      final index = _bookings.indexWhere((b) => b.id == bookingId);
+      if (index != -1) {
+        _bookings[index] = updated;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error refreshing booking detail: $e');
+    }
   }
 
   // ==================== Pre-Chat ====================

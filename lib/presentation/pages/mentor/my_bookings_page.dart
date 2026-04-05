@@ -270,7 +270,9 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               ],
             ),
             // Actions
-            if (booking.canCancel || booking.canRate) ...[
+            if (booking.canCancel ||
+                booking.canRate ||
+                booking.canConfirmComplete) ...[
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -286,13 +288,26 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                         child: const Text('Hủy'),
                       ),
                     ),
-                  if (booking.canCancel && booking.canRate)
-                    const SizedBox(width: 12),
+                  if (booking.canConfirmComplete)
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _showConfirmCompleteDialog(
+                          context,
+                          booking,
+                          provider,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.successColor,
+                        ),
+                        child: const Text('Xác nhận hoàn thành'),
+                      ),
+                    ),
                   if (booking.canRate)
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () =>
-                            _showRatingDialog(context, booking, provider),
+                        onPressed: () => context.push(
+                          '/booking-review/${booking.id}?mentorName=${Uri.encodeComponent(booking.mentorName ?? '')}',
+                        ),
                         child: const Text('Đánh giá'),
                       ),
                     ),
@@ -348,7 +363,14 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               Navigator.of(context).pop();
               await provider.cancelBooking(booking.id);
               if (mounted) {
-                ErrorHandler.showSuccessSnackBar(context, 'Đã hủy lịch hẹn');
+                if (provider.hasError) {
+                  ErrorHandler.showErrorSnackBar(
+                    context,
+                    provider.errorMessage ?? 'Có lỗi xảy ra',
+                  );
+                } else {
+                  ErrorHandler.showSuccessSnackBar(context, 'Đã hủy lịch hẹn');
+                }
               }
             },
             style: ElevatedButton.styleFrom(
@@ -361,72 +383,47 @@ class _MyBookingsPageState extends State<MyBookingsPage>
     );
   }
 
-  void _showRatingDialog(
+  void _showConfirmCompleteDialog(
     BuildContext context,
     MentorBooking booking,
     MentorProvider provider,
   ) {
-    int rating = 5;
-    final reviewController = TextEditingController();
-
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Đánh giá buổi mentoring'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (i) {
-                  return IconButton(
-                    onPressed: () => setState(() => rating = i + 1),
-                    icon: Icon(
-                      i < rating ? Icons.star : Icons.star_border,
-                      color: AppTheme.warningColor,
-                      size: 32,
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: reviewController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  hintText: 'Nhận xét của bạn (tùy chọn)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận hoàn thành'),
+        content: const Text(
+          'Bạn xác nhận buổi mentoring đã hoàn thành? Tiền sẽ được chuyển cho mentor.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Chưa'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await provider.rateBooking(
-                  booking.id,
-                  rating,
-                  review: reviewController.text.isNotEmpty
-                      ? reviewController.text
-                      : null,
-                );
-                if (mounted) {
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await provider.confirmComplete(booking.id);
+              if (mounted) {
+                if (provider.hasError) {
+                  ErrorHandler.showErrorSnackBar(
+                    context,
+                    provider.errorMessage ?? 'Có lỗi xảy ra',
+                  );
+                } else {
                   ErrorHandler.showSuccessSnackBar(
                     context,
-                    'Cảm ơn bạn đã đánh giá!',
+                    'Đã xác nhận hoàn thành! Cảm ơn bạn.',
                   );
                 }
-              },
-              child: const Text('Gửi đánh giá'),
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.successColor,
             ),
-          ],
-        ),
+            child: const Text('Xác nhận'),
+          ),
+        ],
       ),
     );
   }

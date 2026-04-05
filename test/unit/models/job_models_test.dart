@@ -19,33 +19,40 @@ void main() {
 
   group('ShortTermJobStatus enum', () {
     test('values contain all expected statuses', () {
-      expect(ShortTermJobStatus.values.length, 13);
+      expect(ShortTermJobStatus.values.length, 15);
       expect(ShortTermJobStatus.values, contains(ShortTermJobStatus.draft));
+      expect(ShortTermJobStatus.values, contains(ShortTermJobStatus.published));
       expect(
-          ShortTermJobStatus.values, contains(ShortTermJobStatus.published));
-      expect(
-          ShortTermJobStatus.values, contains(ShortTermJobStatus.inProgress));
-      expect(
-          ShortTermJobStatus.values, contains(ShortTermJobStatus.completed));
+        ShortTermJobStatus.values,
+        contains(ShortTermJobStatus.inProgress),
+      );
+      expect(ShortTermJobStatus.values, contains(ShortTermJobStatus.completed));
       expect(ShortTermJobStatus.values, contains(ShortTermJobStatus.paid));
-      expect(
-          ShortTermJobStatus.values, contains(ShortTermJobStatus.cancelled));
-      expect(
-          ShortTermJobStatus.values, contains(ShortTermJobStatus.disputed));
+      expect(ShortTermJobStatus.values, contains(ShortTermJobStatus.cancelled));
+      expect(ShortTermJobStatus.values, contains(ShortTermJobStatus.disputed));
+      expect(ShortTermJobStatus.values, contains(ShortTermJobStatus.escalated));
     });
   });
 
   group('JobApplicationStatus enum', () {
     test('values contain all expected statuses', () {
       expect(JobApplicationStatus.values.length, 4);
-      expect(JobApplicationStatus.values,
-          contains(JobApplicationStatus.pending));
-      expect(JobApplicationStatus.values,
-          contains(JobApplicationStatus.reviewed));
-      expect(JobApplicationStatus.values,
-          contains(JobApplicationStatus.accepted));
-      expect(JobApplicationStatus.values,
-          contains(JobApplicationStatus.rejected));
+      expect(
+        JobApplicationStatus.values,
+        contains(JobApplicationStatus.pending),
+      );
+      expect(
+        JobApplicationStatus.values,
+        contains(JobApplicationStatus.reviewed),
+      );
+      expect(
+        JobApplicationStatus.values,
+        contains(JobApplicationStatus.accepted),
+      );
+      expect(
+        JobApplicationStatus.values,
+        contains(JobApplicationStatus.rejected),
+      );
     });
   });
 
@@ -65,30 +72,30 @@ void main() {
 
   group('JobPostingResponse', () {
     Map<String, dynamic> fullJobJson() => {
-          'id': 1,
-          'title': 'Flutter Developer',
-          'description': 'Build amazing mobile apps',
-          'requiredSkills': ['Flutter', 'Dart', 'Firebase'],
-          'minBudget': 5000000.0,
-          'maxBudget': 10000000.0,
-          'deadline': '2026-04-01',
-          'isRemote': true,
-          'location': 'Ho Chi Minh',
-          'status': 'OPEN',
-          'applicantCount': 5,
-          'experienceLevel': 'Senior',
-          'jobType': 'Full-time',
-          'hiringQuantity': 2,
-          'benefits': 'Flexible hours, 13th month salary',
-          'genderRequirement': null,
-          'isNegotiable': true,
-          'isHighlighted': false,
-          'recruiterCompanyName': 'TechViet',
-          'recruiterEmail': 'hr@techviet.com',
-          'recruiterUserId': 10,
-          'createdAt': '2026-03-01T10:00:00',
-          'updatedAt': '2026-03-10T14:00:00',
-        };
+      'id': 1,
+      'title': 'Flutter Developer',
+      'description': 'Build amazing mobile apps',
+      'requiredSkills': ['Flutter', 'Dart', 'Firebase'],
+      'minBudget': 5000000.0,
+      'maxBudget': 10000000.0,
+      'deadline': '2026-04-01',
+      'isRemote': true,
+      'location': 'Ho Chi Minh',
+      'status': 'OPEN',
+      'applicantCount': 5,
+      'experienceLevel': 'Senior',
+      'jobType': 'Full-time',
+      'hiringQuantity': 2,
+      'benefits': 'Flexible hours, 13th month salary',
+      'genderRequirement': null,
+      'isNegotiable': true,
+      'isHighlighted': false,
+      'recruiterCompanyName': 'TechViet',
+      'recruiterEmail': 'hr@techviet.com',
+      'recruiterUserId': 10,
+      'createdAt': '2026-03-01T10:00:00',
+      'updatedAt': '2026-03-10T14:00:00',
+    };
 
     test('fromJson() with full data', () {
       final job = JobPostingResponse.fromJson(fullJobJson());
@@ -111,10 +118,7 @@ void main() {
     });
 
     test('fromJson() with minimal data (nulls)', () {
-      final json = <String, dynamic>{
-        'id': 2,
-        'title': 'Backend Dev',
-      };
+      final json = <String, dynamic>{'id': 2, 'title': 'Backend Dev'};
       final job = JobPostingResponse.fromJson(json);
 
       expect(job.id, 2);
@@ -155,53 +159,53 @@ void main() {
 
   group('ShortTermJobResponse', () {
     Map<String, dynamic> fullShortTermJson() => {
-          'id': 10,
-          'title': 'Logo Design',
-          'description': 'Design a logo for startup',
-          'requiredSkills': ['Illustrator', 'Photoshop'],
-          'budget': 3000000.0,
-          'isNegotiable': true,
-          'paymentMethod': 'BANK_TRANSFER',
-          'deadline': '2026-04-15T23:59:59',
-          'estimatedDuration': '3 ngày',
-          'urgency': 'URGENT',
-          'startTime': null,
-          'isRemote': true,
-          'location': null,
-          'isHighlighted': true,
-          'status': 'PUBLISHED',
-          'applicantCount': 3,
-          'selectedApplicantId': null,
-          'maxApplicants': 10,
-          'minRating': 4.0,
-          'recruiterId': 5,
-          'recruiterInfo': {
-            'id': 5,
-            'companyName': 'DesignCo',
-            'rating': 4.8,
-            'totalJobsPosted': 15,
-            'completionRate': 0.95,
-          },
-          'milestones': [
-            {
-              'id': 1,
-              'title': 'Concept',
-              'description': 'Initial concepts',
-              'amount': 500000.0,
-              'order': 1,
-            },
-            {
-              'id': 2,
-              'title': 'Final',
-              'description': 'Final delivery',
-              'amount': 2500000.0,
-              'order': 2,
-            },
-          ],
-          'createdAt': '2026-03-01T08:00:00',
-          'isExpired': false,
-          'canApply': true,
-        };
+      'id': 10,
+      'title': 'Logo Design',
+      'description': 'Design a logo for startup',
+      'requiredSkills': ['Illustrator', 'Photoshop'],
+      'budget': 3000000.0,
+      'isNegotiable': true,
+      'paymentMethod': 'BANK_TRANSFER',
+      'deadline': '2026-04-15T23:59:59',
+      'estimatedDuration': '3 ngày',
+      'urgency': 'URGENT',
+      'startTime': null,
+      'isRemote': true,
+      'location': null,
+      'isHighlighted': true,
+      'status': 'PUBLISHED',
+      'applicantCount': 3,
+      'selectedApplicantId': null,
+      'maxApplicants': 10,
+      'minRating': 4.0,
+      'recruiterId': 5,
+      'recruiterInfo': {
+        'id': 5,
+        'companyName': 'DesignCo',
+        'rating': 4.8,
+        'totalJobsPosted': 15,
+        'completionRate': 0.95,
+      },
+      'milestones': [
+        {
+          'id': 1,
+          'title': 'Concept',
+          'description': 'Initial concepts',
+          'amount': 500000.0,
+          'order': 1,
+        },
+        {
+          'id': 2,
+          'title': 'Final',
+          'description': 'Final delivery',
+          'amount': 2500000.0,
+          'order': 2,
+        },
+      ],
+      'createdAt': '2026-03-01T08:00:00',
+      'isExpired': false,
+      'canApply': true,
+    };
 
     test('fromJson() with full data', () {
       final job = ShortTermJobResponse.fromJson(fullShortTermJson());
@@ -379,8 +383,12 @@ void main() {
       expect(app.jobTitle, 'Logo Design');
       expect(app.proposedPrice, 2500000.0);
       expect(app.proposedDuration, '3 ngày');
-      expect(app.portfolio, ['https://portfolio1.com', 'https://portfolio2.com']);
-      expect(app.status, 'APPLIED');
+      expect(app.portfolio, [
+        'https://portfolio1.com',
+        'https://portfolio2.com',
+      ]);
+      // APPLIED is not in ShortTermApplicationStatus enum, so it falls back to pending (unknownEnumValue)
+      expect(app.status, ShortTermApplicationStatus.pending);
       expect(app.userRating, 4.5);
       expect(app.userCompletedJobs, 8);
     });

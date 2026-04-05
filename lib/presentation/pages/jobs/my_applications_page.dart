@@ -11,6 +11,7 @@ import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/date_time_helper.dart';
 import '../../../core/utils/error_handler.dart';
 import 'job_detail_page.dart';
+import 'short_term_submit_sheet.dart';
 
 class MyApplicationsPage extends StatefulWidget {
   const MyApplicationsPage({super.key});
@@ -336,6 +337,14 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
             ),
           ],
 
+          // Revision notes (khi bị yêu cầu sửa)
+          if (app.status == ShortTermApplicationStatus.revisionRequired &&
+              app.revisionNotes != null &&
+              app.revisionNotes!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _buildRevisionNotes(app.revisionNotes!),
+          ],
+
           // Actions row
           const SizedBox(height: 8),
           Row(
@@ -352,6 +361,37 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 4,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                )
+              // Nộp bài khi đang làm hoặc cần sửa lại
+              else if (app.status == ShortTermApplicationStatus.working ||
+                  app.status == ShortTermApplicationStatus.inProgress ||
+                  app.status == ShortTermApplicationStatus.revisionRequired)
+                ElevatedButton.icon(
+                  onPressed: app.id != null
+                      ? () => _showSubmitSheet(app, provider)
+                      : null,
+                  icon: const Icon(Icons.upload_rounded, size: 14),
+                  label: Text(
+                    app.status == ShortTermApplicationStatus.revisionRequired
+                        ? 'Nộp lại'
+                        : 'Nộp bài',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        app.status == ShortTermApplicationStatus.revisionRequired
+                            ? AppTheme.themeOrangeStart
+                            : AppTheme.themePurpleStart,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -405,6 +445,86 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     );
   }
 
+  void _showSubmitSheet(ShortTermApplicationResponse app, JobProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => ShortTermSubmitSheet(
+        applicationId: app.id!,
+        jobTitle: app.jobTitle ?? 'Freelance Job',
+        existingDeliverables: app.deliverables,
+      ),
+    ).then((submitted) {
+      if (submitted == true) {
+        provider.loadMyShortTermApplications();
+      }
+    });
+  }
+
+  Widget _buildRevisionNotes(List<RevisionNoteResponse> notes) {
+    final latest = notes.last;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.themeOrangeStart.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.themeOrangeStart.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.rate_review_outlined, size: 14, color: AppTheme.themeOrangeStart),
+              const SizedBox(width: 6),
+              Text(
+                'Yêu cầu chỉnh sửa',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.themeOrangeStart,
+                ),
+              ),
+              if (notes.length > 1) ...[
+                const SizedBox(width: 4),
+                Text(
+                  '(lần ${notes.length})',
+                  style: TextStyle(fontSize: 11, color: AppTheme.themeOrangeStart),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            latest.note ?? '',
+            style: const TextStyle(fontSize: 12),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (latest.specificIssues != null && latest.specificIssues!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            ...latest.specificIssues!.map(
+              (issue) => Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• ', style: TextStyle(fontSize: 12)),
+                    Expanded(child: Text(issue, style: const TextStyle(fontSize: 12))),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   // ==================== TIMELINE WIDGET ====================
 
   Widget _buildStatusTimeline(
@@ -413,13 +533,15 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
   }) {
     final steps = isLongTerm
         ? ['PENDING', 'REVIEWED', 'ACCEPTED']
-        : ['APPLIED', 'REVIEWED', 'APPROVED', 'IN_PROGRESS', 'COMPLETED'];
+        : ['PENDING', 'WORKING', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'COMPLETED'];
 
     // Check if rejected/cancelled (show as failed state)
     final isRejected =
         currentStatus == 'REJECTED' ||
         currentStatus == 'CANCELLED' ||
-        currentStatus == 'WITHDRAWN';
+        currentStatus == 'WITHDRAWN' ||
+        currentStatus == 'AUTO_CANCELLED' ||
+        currentStatus == 'CANCELLATION_REQUESTED';
 
     final currentIndex = steps.indexOf(currentStatus.toUpperCase());
 

@@ -23,6 +23,7 @@ import 'presentation/providers/job_provider.dart';
 import 'presentation/providers/journey_provider.dart';
 import 'presentation/providers/wallet_provider.dart';
 import 'presentation/providers/notification_provider.dart';
+import 'presentation/providers/learning_report_provider.dart';
 import 'presentation/app.dart';
 import 'core/utils/storage_helper.dart';
 import 'core/utils/date_time_helper.dart';
@@ -71,6 +72,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => JourneyProvider()),
         ChangeNotifierProvider(create: (_) => WalletProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => LearningReportProvider()),
       ],
       child: const SkillVerseApp(),
     ),
@@ -86,8 +88,8 @@ Future<void> _initializeHelpers() async {
     await StorageHelper.initialize();
     debugPrint('✅ StorageHelper initialized');
 
-    // Initialize DateTimeHelper (Vietnamese locale for timeago)
-    DateTimeHelper.initialize();
+    // Initialize DateTimeHelper (Vietnamese locale for intl + timeago)
+    await DateTimeHelper.initialize();
     debugPrint('✅ DateTimeHelper initialized');
 
     // Initialize ApiClient

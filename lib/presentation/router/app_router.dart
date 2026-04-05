@@ -26,6 +26,8 @@ import '../pages/roadmap/roadmap_detail_page.dart';
 import '../pages/mentor/mentor_list_page.dart';
 import '../pages/mentor/mentor_detail_page.dart';
 import '../pages/mentor/my_bookings_page.dart';
+import '../pages/mentor/booking_review_page.dart';
+import '../pages/profile/learning_report_page.dart';
 import '../pages/skin/skin_shop_page.dart';
 import '../pages/task_board/task_board_page.dart';
 import '../pages/jobs/jobs_page.dart';
@@ -311,6 +313,18 @@ class AppRouter {
           name: 'my-bookings',
           builder: (context, state) => const MyBookingsPage(),
         ),
+        GoRoute(
+          path: '/booking-review/:bookingId',
+          name: 'booking-review',
+          builder: (context, state) {
+            final bookingId = int.parse(state.pathParameters['bookingId']!);
+            final mentorName = state.uri.queryParameters['mentorName'];
+            return BookingReviewPage(
+              bookingId: bookingId,
+              mentorName: mentorName,
+            );
+          },
+        ),
 
         // Skin Shop Route
         GoRoute(
@@ -411,6 +425,11 @@ class AppRouter {
               path: 'payments',
               name: 'profile-payments',
               builder: (context, state) => const PaymentHistoryPage(),
+            ),
+            GoRoute(
+              path: 'learning-report',
+              name: 'learning-report',
+              builder: (context, state) => const LearningReportPage(),
             ),
             GoRoute(
               path: 'settings',

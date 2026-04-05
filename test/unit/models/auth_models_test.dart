@@ -187,10 +187,14 @@ void main() {
   // ============================================================
   group('RefreshTokenRequest', () {
     test('fromJson() and toJson() round-trip', () {
-      final json = {'refreshToken': 'my_refresh_token'};
+      final json = {
+        'refreshToken': 'my_refresh_token',
+        'deviceSessionId': 'dev_123',
+      };
       final request = RefreshTokenRequest.fromJson(json);
 
       expect(request.refreshToken, 'my_refresh_token');
+      expect(request.deviceSessionId, 'dev_123');
       expect(request.toJson(), json);
     });
   });

@@ -7,11 +7,13 @@ void main() {
   // ============================================================
   group('CourseStatus enum', () {
     test('values contain all expected statuses', () {
-      expect(CourseStatus.values.length, 4);
+      expect(CourseStatus.values.length, 6);
       expect(CourseStatus.values, contains(CourseStatus.draft));
       expect(CourseStatus.values, contains(CourseStatus.pending));
       expect(CourseStatus.values, contains(CourseStatus.public));
       expect(CourseStatus.values, contains(CourseStatus.archived));
+      expect(CourseStatus.values, contains(CourseStatus.rejected));
+      expect(CourseStatus.values, contains(CourseStatus.suspended));
     });
   });
 

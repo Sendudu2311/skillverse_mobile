@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 /// DateTimeHelper - Centralized date/time formatting utility
@@ -18,7 +19,10 @@ class DateTimeHelper {
   static final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
   /// Date with weekday: Thứ 6, 15/12/2025
-  static final DateFormat _dateWithWeekday = DateFormat('EEEE, dd/MM/yyyy', 'vi_VN');
+  static final DateFormat _dateWithWeekday = DateFormat(
+    'EEEE, dd/MM/yyyy',
+    'vi_VN',
+  );
 
   /// Short date: 15/12
   static final DateFormat _shortDate = DateFormat('dd/MM');
@@ -36,13 +40,17 @@ class DateTimeHelper {
   static final DateFormat _timeWithSeconds = DateFormat('HH:mm:ss');
 
   /// ISO 8601 format for API: 2025-12-15T14:30:00Z
-  static final DateFormat _iso8601Format = DateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+  static final DateFormat _iso8601Format = DateFormat(
+    "yyyy-MM-dd'T'HH:mm:ss'Z'",
+  );
 
   // === INITIALIZATION ===
 
-  /// Initialize Vietnamese locale for timeago
+  /// Initialize Vietnamese locale for intl and timeago
   /// Call this in main() before runApp()
-  static void initialize() {
+  static Future<void> initialize() async {
+    // Initialize Vietnamese locale data for intl DateFormat
+    await initializeDateFormatting('vi_VN', null);
     // Register Vietnamese messages for timeago
     timeago.setLocaleMessages('vi', VietnameseMessages());
   }
@@ -108,11 +116,7 @@ class DateTimeHelper {
       return formatDateTime(dateTime);
     }
 
-    return timeago.format(
-      dateTime,
-      locale: 'vi',
-      allowFromNow: allowFromNow,
-    );
+    return timeago.format(dateTime, locale: 'vi', allowFromNow: allowFromNow);
   }
 
   /// Smart relative time: Shows "Hôm nay 14:30" or "Hôm qua 09:15" or relative
@@ -172,16 +176,16 @@ class DateTimeHelper {
   static bool isToday(DateTime date) {
     final now = DateTime.now();
     return date.year == now.year &&
-           date.month == now.month &&
-           date.day == now.day;
+        date.month == now.month &&
+        date.day == now.day;
   }
 
   /// Check if date is yesterday
   static bool isYesterday(DateTime date) {
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
     return date.year == yesterday.year &&
-           date.month == yesterday.month &&
-           date.day == yesterday.day;
+        date.month == yesterday.month &&
+        date.day == yesterday.day;
   }
 
   /// Check if date is this week
@@ -242,8 +246,8 @@ class DateTimeHelper {
   /// Check if two dates are the same day
   static bool isSameDay(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&
-           date1.month == date2.month &&
-           date1.day == date2.day;
+        date1.month == date2.month &&
+        date1.day == date2.day;
   }
 
   /// Check if date is in the past

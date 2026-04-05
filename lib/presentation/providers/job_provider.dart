@@ -26,6 +26,7 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool _isLoadingJobs = false;
   bool _isLoadingApplications = false;
   bool _isApplying = false;
+  bool _isSubmittingDeliverable = false;
 
   // ==================== GETTERS ====================
 
@@ -42,6 +43,7 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool get isLoadingJobs => _isLoadingJobs;
   bool get isLoadingApplications => _isLoadingApplications;
   bool get isApplying => _isApplying;
+  bool get isSubmittingDeliverable => _isSubmittingDeliverable;
 
   /// Check if user has already applied to a long-term job
   bool hasAppliedToJob(int jobId) {
@@ -223,6 +225,29 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
       setError('Lỗi tải đơn ứng tuyển: ${e.toString()}');
     } finally {
       _isLoadingApplications = false;
+      notifyListeners();
+    }
+  }
+
+  /// Submit deliverables for a short-term job (worker bàn giao công việc)
+  Future<bool> submitDeliverables(SubmitDeliverableRequest request) async {
+    _isSubmittingDeliverable = true;
+    notifyListeners();
+
+    try {
+      final updated = await _jobService.submitDeliverables(request);
+      final idx = _myShortTermApplications.indexWhere((a) => a.id == updated.id);
+      if (idx != -1) {
+        _myShortTermApplications[idx] = updated;
+      }
+      setError(null);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      setError('Nộp bài thất bại: ${e.toString()}');
+      return false;
+    } finally {
+      _isSubmittingDeliverable = false;
       notifyListeners();
     }
   }

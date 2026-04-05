@@ -827,6 +827,13 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           _buildMenuItem(
             context,
+            'Báo cáo học tập AI',
+            Icons.analytics_outlined,
+            () => context.push('/profile/learning-report'),
+            isDark,
+          ),
+          _buildMenuItem(
+            context,
             'Cài đặt tài khoản',
             Icons.settings_outlined,
             () => context.push('/profile/settings'),

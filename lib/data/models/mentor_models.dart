@@ -226,6 +226,7 @@ class MentorBooking {
   final int id;
   final int mentorId;
   final int learnerId;
+  final DateTime? createdAt;
   final DateTime startTime;
   final DateTime endTime;
   final int? durationMinutes;
@@ -248,6 +249,7 @@ class MentorBooking {
     required this.id,
     required this.mentorId,
     required this.learnerId,
+    this.createdAt,
     required this.startTime,
     required this.endTime,
     this.durationMinutes,
@@ -308,6 +310,9 @@ class MentorBooking {
   /// Check if booking can be rated
   bool get canRate => status == BookingStatus.completed;
 
+  /// Check if learner can confirm session completion
+  bool get canConfirmComplete => status == BookingStatus.pendingCompletion;
+
   factory MentorBooking.fromJson(Map<String, dynamic> json) =>
       _$MentorBookingFromJson(json);
   Map<String, dynamic> toJson() => _$MentorBookingToJson(this);
@@ -316,6 +321,7 @@ class MentorBooking {
     int? id,
     int? mentorId,
     int? learnerId,
+    DateTime? createdAt,
     DateTime? startTime,
     DateTime? endTime,
     int? durationMinutes,
@@ -338,6 +344,7 @@ class MentorBooking {
       id: id ?? this.id,
       mentorId: mentorId ?? this.mentorId,
       learnerId: learnerId ?? this.learnerId,
+      createdAt: createdAt ?? this.createdAt,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       durationMinutes: durationMinutes ?? this.durationMinutes,
@@ -492,10 +499,11 @@ class PageResponse<T> {
 /// Rating request for booking
 @JsonSerializable()
 class BookingRatingRequest {
-  final int rating;
-  final String? review;
+  final int stars;
+  final String? comment;
+  final String? skillEndorsed;
 
-  BookingRatingRequest({required this.rating, this.review});
+  BookingRatingRequest({required this.stars, this.comment, this.skillEndorsed});
 
   factory BookingRatingRequest.fromJson(Map<String, dynamic> json) =>
       _$BookingRatingRequestFromJson(json);

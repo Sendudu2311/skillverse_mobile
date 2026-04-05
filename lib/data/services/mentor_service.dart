@@ -120,9 +120,12 @@ class MentorService {
     CreateBookingRequest request,
   ) async {
     try {
+      final json = request.toJson();
+      // Backend expects ZonedDateTime — ensure UTC 'Z' suffix
+      json['startTime'] = request.startTime.toUtc().toIso8601String();
       final response = await _apiClient.post(
         '/mentor-bookings/intent',
-        data: request.toJson(),
+        data: json,
       );
       return response.data;
     } catch (e) {
@@ -142,9 +145,14 @@ class MentorService {
         priceVnd: request.priceVnd,
         paymentMethod: 'WALLET',
       );
+      final json = walletRequest.toJson();
+      // Backend expects ZonedDateTime (ISO-8601 with timezone offset).
+      // Dart's DateTime.toIso8601String() omits the offset, causing 400.
+      // Convert to UTC so the 'Z' suffix is appended.
+      json['startTime'] = request.startTime.toUtc().toIso8601String();
       final response = await _apiClient.post(
         '/mentor-bookings/wallet',
-        data: walletRequest.toJson(),
+        data: json,
       );
       return MentorBooking.fromJson(response.data);
     } catch (e) {
@@ -185,14 +193,64 @@ class MentorService {
   /// Rate booking
   Future<void> rateBooking(
     int bookingId, {
-    required int rating,
-    String? review,
+    required int stars,
+    String? comment,
+    String? skillEndorsed,
   }) async {
     try {
       await _apiClient.post(
         '/mentor-bookings/$bookingId/rating',
-        data: BookingRatingRequest(rating: rating, review: review).toJson(),
+        data: BookingRatingRequest(
+          stars: stars,
+          comment: comment,
+          skillEndorsed: skillEndorsed,
+        ).toJson(),
       );
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Learner confirms session completion → releases payment to mentor
+  Future<MentorBooking> confirmComplete(int bookingId) async {
+    try {
+      final response = await _apiClient.put(
+        '/mentor-bookings/$bookingId/confirm-complete',
+      );
+      return MentorBooking.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Get single booking detail
+  Future<MentorBooking> getBookingDetail(int bookingId) async {
+    try {
+      final response = await _apiClient.get('/mentor-bookings/$bookingId');
+      return MentorBooking.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Get mentor's active bookings for a date range (to detect slot conflicts)
+  Future<List<MentorBooking>> getMentorActiveBookings(
+    int mentorId, {
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    try {
+      final response = await _apiClient.get(
+        '/mentor-bookings/mentor/$mentorId/bookings',
+        queryParameters: {
+          'from': from.toIso8601String(),
+          'to': to.toIso8601String(),
+        },
+      );
+      final List<dynamic> data = response.data;
+      return data
+          .map((json) => MentorBooking.fromJson(json as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       throw _handleError(e);
     }

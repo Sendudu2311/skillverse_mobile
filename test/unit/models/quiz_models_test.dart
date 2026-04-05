@@ -255,7 +255,7 @@ void main() {
   // QuizAttemptDto Tests
   // ============================================================
   group('QuizAttemptDto', () {
-    test('fromJson() maps userId to studentId', () {
+    test('fromJson() maps userId correctly', () {
       final json = {
         'id': 1,
         'quizId': 10,
@@ -271,7 +271,7 @@ void main() {
       expect(attempt.id, 1);
       expect(attempt.quizId, 10);
       expect(attempt.quizTitle, 'Test Quiz');
-      expect(attempt.studentId, 42); // mapped from 'userId'
+      expect(attempt.userId, 42); // correctly mapped from 'userId'
       expect(attempt.score, 85);
       expect(attempt.passed, true);
       expect(attempt.correctAnswers, 8);
@@ -286,10 +286,10 @@ void main() {
       expect(attempt.score, 30);
     });
 
-    test('toJson() maps studentId back to userId', () {
+    test('toJson() maps userId correctly', () {
       final attempt = QuizAttemptDto(
         quizId: 1,
-        studentId: 42,
+        userId: 42,
         score: 90,
         passed: true,
       );
@@ -321,7 +321,7 @@ void main() {
       expect(response.score, 85);
       expect(response.passed, true);
       expect(response.attempt.quizId, 10);
-      expect(response.attempt.studentId, 42);
+      expect(response.attempt.userId, 42);
     });
   });
 

@@ -90,6 +90,7 @@ dependencies:
   html: ^0.15.6
   flutter_markdown: ^0.7.7+1
   pod_player: ^0.2.2
+  markdown: ^7.3.1
 
 dev_dependencies:
   flutter_test:
