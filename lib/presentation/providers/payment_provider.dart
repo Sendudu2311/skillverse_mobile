@@ -84,6 +84,7 @@ class PaymentProvider with ChangeNotifier, LoadingStateProviderMixin {
   }
 
   /// Clear error message
+  @override
   void clearError() => super.clearError();
 
   /// Clear last payment response

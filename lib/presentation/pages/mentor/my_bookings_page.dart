@@ -5,11 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/models/mentor_models.dart';
-import '../../providers/mentor_provider.dart';
+import '../../providers/mentor_booking_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/glass_card.dart';
-import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/date_time_helper.dart';
 
 class MyBookingsPage extends StatefulWidget {
@@ -28,7 +27,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MentorProvider>().loadBookings(refresh: true);
+      context.read<MentorBookingProvider>().loadBookings(refresh: true);
     });
   }
 
@@ -98,7 +97,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
           dividerColor: Colors.transparent,
         ),
       ),
-      body: Consumer<MentorProvider>(
+      body: Consumer<MentorBookingProvider>(
         builder: (context, provider, _) {
           if (provider.isLoadingBookings && provider.bookings.isEmpty) {
             return ListView.builder(
@@ -123,7 +122,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
 
   Widget _buildBookingList(
     BuildContext context,
-    MentorProvider provider,
+    MentorBookingProvider provider,
     int tabIndex,
     bool isDark,
   ) {
@@ -172,7 +171,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
     BuildContext context,
     MentorBooking booking,
     bool isDark,
-    MentorProvider provider,
+    MentorBookingProvider provider,
   ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -344,33 +343,42 @@ class _MyBookingsPageState extends State<MyBookingsPage>
   void _showCancelDialog(
     BuildContext context,
     MentorBooking booking,
-    MentorProvider provider,
+    MentorBookingProvider provider,
   ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Xác nhận hủy'),
         content: const Text(
           'Bạn có chắc chắn muốn hủy lịch hẹn này? Tiền sẽ được hoàn lại vào ví.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Không'),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
               await provider.cancelBooking(booking.id);
-              if (mounted) {
-                if (provider.hasError) {
-                  ErrorHandler.showErrorSnackBar(
-                    context,
-                    provider.errorMessage ?? 'Có lỗi xảy ra',
-                  );
-                } else {
-                  ErrorHandler.showSuccessSnackBar(context, 'Đã hủy lịch hẹn');
-                }
+              if (!mounted) return;
+              // Re-lookup ScaffoldMessenger from State's own context
+              // (guaranteed stable when mounted == true)
+              final messenger = ScaffoldMessenger.of(this.context);
+              if (provider.hasError) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(provider.errorMessage ?? 'Có lỗi xảy ra'),
+                    backgroundColor: AppTheme.errorColor,
+                  ),
+                );
+              } else {
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Đã hủy lịch hẹn'),
+                    backgroundColor: AppTheme.successColor,
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(
@@ -386,36 +394,40 @@ class _MyBookingsPageState extends State<MyBookingsPage>
   void _showConfirmCompleteDialog(
     BuildContext context,
     MentorBooking booking,
-    MentorProvider provider,
+    MentorBookingProvider provider,
   ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Xác nhận hoàn thành'),
         content: const Text(
           'Bạn xác nhận buổi mentoring đã hoàn thành? Tiền sẽ được chuyển cho mentor.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Chưa'),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
               await provider.confirmComplete(booking.id);
-              if (mounted) {
-                if (provider.hasError) {
-                  ErrorHandler.showErrorSnackBar(
-                    context,
-                    provider.errorMessage ?? 'Có lỗi xảy ra',
-                  );
-                } else {
-                  ErrorHandler.showSuccessSnackBar(
-                    context,
-                    'Đã xác nhận hoàn thành! Cảm ơn bạn.',
-                  );
-                }
+              if (!mounted) return;
+              final messenger = ScaffoldMessenger.of(this.context);
+              if (provider.hasError) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(provider.errorMessage ?? 'Có lỗi xảy ra'),
+                    backgroundColor: AppTheme.errorColor,
+                  ),
+                );
+              } else {
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Đã xác nhận hoàn thành! Cảm ơn bạn.'),
+                    backgroundColor: AppTheme.successColor,
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(

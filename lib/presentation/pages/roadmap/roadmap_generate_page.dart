@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/roadmap_provider.dart';
+import '../../providers/roadmap_generate_provider.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/app_theme.dart';
@@ -75,7 +75,7 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Consumer<RoadmapProvider>(
+        child: Consumer<RoadmapGenerateProvider>(
           builder: (context, provider, child) {
             if (provider.isGenerating) {
               return _buildGeneratingState(context, isDark);
@@ -696,7 +696,7 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage> {
       return;
     }
 
-    final provider = context.read<RoadmapProvider>();
+    final provider = context.read<RoadmapGenerateProvider>();
 
     // Clear previous results
     provider.clearValidationResults();

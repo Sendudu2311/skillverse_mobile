@@ -148,7 +148,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                     // Filter dropdown
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: _selectedIndustryFilter,
+                        initialValue: _selectedIndustryFilter,
                         decoration: InputDecoration(
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(

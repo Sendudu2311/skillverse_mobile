@@ -88,7 +88,7 @@ class FormattedAIResponse extends StatelessWidget {
       }
 
       // Add line to current content
-      currentContent += line + '\n';
+      currentContent += '$line\n';
     }
 
     // Add remaining content

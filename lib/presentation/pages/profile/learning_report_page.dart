@@ -10,7 +10,6 @@ import '../../widgets/common_loading.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../../data/models/learning_report_model.dart';
-import '../../../core/utils/error_handler.dart';
 
 class LearningReportPage extends StatefulWidget {
   const LearningReportPage({super.key});
@@ -73,12 +72,16 @@ class _LearningReportPageState extends State<LearningReportPage>
             onPressed: provider.isGenerating
                 ? null
                 : () async {
+                    final messenger = ScaffoldMessenger.of(context);
                     await provider.generateQuickReport();
-                    if (mounted && provider.errorMessage == null) {
+                    if (!mounted) return;
+                    if (provider.errorMessage == null) {
                       _tabController.animateTo(0);
-                      ErrorHandler.showSuccessSnackBar(
-                        context,
-                        'Đã tạo báo cáo mới!',
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Đã tạo báo cáo mới!'),
+                          backgroundColor: AppTheme.successColor,
+                        ),
                       );
                     }
                   },
@@ -337,7 +340,7 @@ class _LearningReportPageState extends State<LearningReportPage>
     };
 
     if (titleContinuationMap.containsKey(title)) {
-      final continuation = titleContinuationMap[title]!;
+      var continuation = titleContinuationMap[title]!;
       if (continuation.isNotEmpty) {
         displayTitle = '$title $continuation';
       }
@@ -482,9 +485,10 @@ class _LearningReportPageState extends State<LearningReportPage>
         color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
       ),
       h3: TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlueDark,
+        letterSpacing: 0.5,
       ),
       strong: TextStyle(
         fontWeight: FontWeight.bold,
@@ -613,23 +617,8 @@ class _LearningReportPageState extends State<LearningReportPage>
         .replaceAll('<br />', '  \n')
         .replaceAll('\\n', '\n');
 
-    // Step 1: Remove empty bold markers: "** **" or "****"
-    result = result.replaceAll(RegExp(r'\*\*\s*\*\*'), ' ');
-
-    // Step 2: Convert **text** bold to plain text.
-    // Add space before/after if adjacent characters are word chars.
-    // e.g., "đã**đăng ký**3" → "đã đăng ký 3"
-    result = result.replaceAllMapped(RegExp(r'(\S)?\*\*(.+?)\*\*(\S)?'), (m) {
-      final before = m.group(1) ?? '';
-      final inner = m.group(2)!;
-      final after = m.group(3) ?? '';
-      final spaceBefore = before.isNotEmpty ? '$before ' : '';
-      final spaceAfter = after.isNotEmpty ? ' $after' : '';
-      return '$spaceBefore$inner$spaceAfter';
-    });
-
-    // Step 3: Clean any remaining orphaned "**"
-    result = result.replaceAll('**', '');
+    // Step 1 & 2: Legacy bold-stripping removed to support Backend Prompt Fix
+    // Keep internal spacing cleanup
 
     // Step 4: Fix dash-lists without space: "-Text" → "- Text"
     result = result.replaceAllMapped(

@@ -4,6 +4,7 @@
 /// - ErrorHandler for catching exceptions and showing errors
 /// - ValidationHelper for form field validation
 /// - ErrorDialog for custom error dialogs
+library;
 
 // ignore_for_file: unused_element, unused_local_variable
 
@@ -19,7 +20,7 @@ class _FormValidationExample extends StatelessWidget {
   final _websiteController = TextEditingController();
   final _slugController = TextEditingController();
 
-  _FormValidationExample({super.key});
+  _FormValidationExample();
 
   @override
   Widget build(BuildContext context) {
@@ -246,7 +247,7 @@ class _ConfirmationDialogExample {
 
 /// Example 6: Complete form with error handling
 class _CompleteFormExample extends StatefulWidget {
-  const _CompleteFormExample({super.key});
+  const _CompleteFormExample();
 
   @override
   State<_CompleteFormExample> createState() => _CompleteFormExampleState();

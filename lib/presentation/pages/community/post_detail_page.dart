@@ -129,8 +129,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
+          final commentProvider = context.read<CommentProvider>();
           await _loadPost();
-          await context.read<CommentProvider>().refresh();
+          if (!mounted) return;
+          await commentProvider.refresh();
         },
         child: SingleChildScrollView(
           controller: _scrollController,
@@ -475,12 +477,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
     if (content.isEmpty) return;
 
     final provider = context.read<CommentProvider>();
+    final postProvider = context.read<PostProvider>();
+    final messenger = ScaffoldMessenger.of(context);
     _commentController.clear();
 
     try {
       await provider.addComment(widget.postId, content);
+      if (!mounted) return;
       // Update comment count in post
-      final postProvider = context.read<PostProvider>();
       final postIndex = postProvider.posts.indexWhere(
         (p) => p.id == widget.postId,
       );
@@ -492,34 +496,53 @@ class _PostDetailPageState extends State<PostDetailPage> {
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, e);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
       }
     }
   }
 
   void _showDeleteDialog() {
+    final postProvider = context.read<PostProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Xóa bài viết'),
         content: const Text('Bạn có chắc chắn muốn xóa bài viết này?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Hủy'),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               try {
-                await context.read<PostProvider>().deletePost(widget.postId);
+                await postProvider.deletePost(widget.postId);
                 if (mounted) {
-                  context.pop();
-                  ErrorHandler.showSuccessSnackBar(context, 'Đã xóa bài viết');
+                  router.pop();
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Đã xóa bài viết'),
+                      backgroundColor: AppTheme.successColor,
+                    ),
+                  );
                 }
               } catch (e) {
                 if (mounted) {
-                  ErrorHandler.showErrorSnackBar(context, e);
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Lỗi: ${e.toString()}'),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
                 }
               }
             },

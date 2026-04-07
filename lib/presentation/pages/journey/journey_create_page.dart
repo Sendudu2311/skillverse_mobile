@@ -22,14 +22,14 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   JourneyType? _selectedType;
   String _selectedDomain = '';
   String _selectedIndustry = '';
-  String _selectedSubCategory = '';
+  final String _selectedSubCategory = '';
   String _selectedJobRole = '';
   String _selectedRoleKeywords = '';
   String _selectedGoal = '';
   String _selectedLevel = 'BEGINNER';
   String _selectedLanguage = 'VI';
   String _selectedDuration = 'STANDARD';
-  List<String> _selectedSkills = [];
+  final List<String> _selectedSkills = [];
 
   int _currentStep = 1;
   int _careerStep = 1; // 1: Domain, 2: Industry, 3: Role
@@ -500,51 +500,62 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   IconData _getIconForDomain(String domain) {
     final lower = domain.toLowerCase();
     if (lower.contains('information technology') ||
-        lower.contains('công nghệ thông tin'))
+        lower.contains('công nghệ thông tin')) {
       return Icons.computer;
+    }
     if (lower.contains('thiết kế') ||
         lower.contains('sáng tạo') ||
-        lower.contains('design'))
+        lower.contains('design')) {
       return Icons.palette;
+    }
     if (lower.contains('kinh doanh') ||
         lower.contains('marketing') ||
         lower.contains('quản trị') ||
-        lower.contains('business'))
+        lower.contains('business')) {
       return Icons.business;
+    }
     if (lower.contains('kỹ thuật') ||
         lower.contains('công nghiệp') ||
         lower.contains('sản xuất') ||
-        lower.contains('engineering'))
+        lower.contains('engineering')) {
       return Icons.engineering;
+    }
     if (lower.contains('healthcare') ||
         lower.contains('y tế') ||
-        lower.contains('sức khỏe'))
+        lower.contains('sức khỏe')) {
       return Icons.health_and_safety;
+    }
     if (lower.contains('education') ||
         lower.contains('giáo dục') ||
         lower.contains('đào tạo') ||
-        lower.contains('edtech'))
+        lower.contains('edtech')) {
       return Icons.school;
+    }
     if (lower.contains('logistics')) return Icons.local_shipping;
     if (lower.contains('legal') ||
         lower.contains('pháp luật') ||
-        lower.contains('law'))
+        lower.contains('law')) {
       return Icons.gavel;
+    }
     if (lower.contains('arts') ||
         lower.contains('nghệ thuật') ||
-        lower.contains('entertainment'))
+        lower.contains('entertainment')) {
       return Icons.brush;
+    }
     if (lower.contains('service') ||
         lower.contains('hospitality') ||
-        lower.contains('dịch vụ'))
+        lower.contains('dịch vụ')) {
       return Icons.room_service;
-    if (lower.contains('cộng đồng') || lower.contains('social'))
+    }
+    if (lower.contains('cộng đồng') || lower.contains('social')) {
       return Icons.public;
+    }
     if (lower.contains('agriculture') ||
         lower.contains('nông nghiệp') ||
         lower.contains('môi trường') ||
-        lower.contains('environment'))
+        lower.contains('environment')) {
       return Icons.eco;
+    }
     return Icons.explore;
   }
 

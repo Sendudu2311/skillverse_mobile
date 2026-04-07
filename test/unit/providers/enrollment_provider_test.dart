@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skillverse_mobile/presentation/providers/enrollment_provider.dart';
-import 'package:skillverse_mobile/data/models/enrollment_models.dart';
 
 /// ============================================================
 /// ENROLLMENT PROVIDER TEST

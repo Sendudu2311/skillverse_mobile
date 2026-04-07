@@ -3,7 +3,7 @@ import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/common_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/mentor_models.dart';
-import '../../providers/mentor_provider.dart';
+import '../../providers/mentor_booking_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
@@ -26,7 +26,7 @@ class _MentorChatDialogState extends State<MentorChatDialog> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MentorProvider>().loadChatHistory(widget.mentor.id);
+      context.read<MentorBookingProvider>().loadChatHistory(widget.mentor.id);
     });
   }
 
@@ -54,7 +54,7 @@ class _MentorChatDialogState extends State<MentorChatDialog> {
     setState(() => _isSending = true);
     _messageController.clear();
 
-    final success = await context.read<MentorProvider>().sendPreChatMessage(
+    final success = await context.read<MentorBookingProvider>().sendPreChatMessage(
       widget.mentor.id,
       content,
     );
@@ -180,7 +180,7 @@ class _MentorChatDialogState extends State<MentorChatDialog> {
   Widget _buildMessageList(BuildContext context, bool isDark) {
     final currentUserId = context.read<AuthProvider>().user?.id;
 
-    return Consumer<MentorProvider>(
+    return Consumer<MentorBookingProvider>(
       builder: (context, provider, _) {
         if (provider.isLoadingChat) {
           return ListView.builder(

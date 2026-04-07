@@ -207,11 +207,11 @@ class PageResponse<T> {
 class CourseDetailDto {
   final int id;
   final String title;
-  final String description;
+  final String? description;
   final String? shortDescription;
   final String? category;
-  final String level;
-  final String status;
+  final String? level;
+  final String? status;
   final AuthorDto author;
   final MediaDto? thumbnail;
   final double? price;
@@ -241,11 +241,11 @@ class CourseDetailDto {
   CourseDetailDto({
     required this.id,
     required this.title,
-    required this.description,
+    this.description,
     this.shortDescription,
     this.category,
-    required this.level,
-    required this.status,
+    this.level,
+    this.status,
     required this.author,
     this.thumbnail,
     this.price,

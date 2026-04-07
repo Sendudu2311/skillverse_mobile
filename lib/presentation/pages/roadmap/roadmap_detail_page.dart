@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/roadmap_provider.dart';
+import '../../providers/roadmap_detail_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/roadmap_models.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +9,7 @@ import '../../widgets/status_badge.dart';
 import '../../widgets/painters/grid_painter.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/common_loading.dart';
+import 'roadmap_node_card.dart';
 
 class RoadmapDetailPage extends StatefulWidget {
   final int sessionId;
@@ -27,7 +28,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<RoadmapProvider>().loadRoadmapById(widget.sessionId);
+      context.read<RoadmapDetailProvider>().loadRoadmapById(widget.sessionId);
     });
   }
 
@@ -37,7 +38,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      body: Consumer<RoadmapProvider>(
+      body: Consumer<RoadmapDetailProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
             return _buildLoadingState(context, isDark);
@@ -128,7 +129,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
   Widget _buildContent(
     BuildContext context,
     RoadmapResponse roadmap,
-    RoadmapProvider provider,
+    RoadmapDetailProvider provider,
     bool isDark,
   ) {
     return CustomScrollView(
@@ -1050,7 +1051,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
   Widget _buildNodesSection(
     BuildContext context,
     RoadmapResponse roadmap,
-    RoadmapProvider provider,
+    RoadmapDetailProvider provider,
     bool isDark,
   ) {
     return Padding(
@@ -1074,7 +1075,20 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
 
           // Node list
           ...roadmap.roadmap.map(
-            (node) => _buildNodeCard(context, node, provider, isDark),
+            (node) => RoadmapNodeCard(
+              key: ValueKey(node.id),
+              node: node,
+              isExpanded: _expandedNodeId == node.id,
+              isCompleted: provider.isQuestCompleted(node.id),
+              isDark: isDark,
+              sessionId: widget.sessionId,
+              onToggleExpand: () => setState(() {
+                _expandedNodeId =
+                    _expandedNodeId == node.id ? null : node.id;
+              }),
+              onToggleQuestCompletion: (questId, completed) =>
+                  _toggleQuestCompletion(context, questId, completed),
+            ),
           ),
         ],
       ),
@@ -1161,365 +1175,12 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
     );
   }
 
-  Widget _buildNodeCard(
-    BuildContext context,
-    RoadmapNode node,
-    RoadmapProvider provider,
-    bool isDark,
-  ) {
-    final isExpanded = _expandedNodeId == node.id;
-    final isCompleted = provider.isQuestCompleted(node.id);
-    final isMainQuest = node.isMainQuest;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.darkCardBackground
-            : AppTheme.lightCardBackground,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isMainQuest
-              ? (isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue)
-                    .withValues(alpha: 0.3)
-              : isDark
-              ? AppTheme.darkBorderColor
-              : AppTheme.lightBorderColor,
-          style: isMainQuest ? BorderStyle.solid : BorderStyle.solid,
-        ),
-      ),
-      child: Column(
-        children: [
-          // Header
-          InkWell(
-            onTap: () {
-              setState(() {
-                _expandedNodeId = isExpanded ? null : node.id;
-              });
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Type badge & checkbox
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isMainQuest
-                              ? AppTheme.primaryBlueDark.withValues(alpha: 0.15)
-                              : AppTheme.secondaryPurple.withValues(
-                                  alpha: 0.15,
-                                ),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isMainQuest ? Icons.star : Icons.bookmark_outline,
-                              size: 12,
-                              color: isMainQuest
-                                  ? AppTheme.primaryBlueDark
-                                  : AppTheme.secondaryPurple,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isMainQuest ? 'Nhiệm vụ chính' : 'Nhiệm vụ phụ',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: isMainQuest
-                                    ? AppTheme.primaryBlueDark
-                                    : AppTheme.secondaryPurple,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (node.nodeStatus != null) ...[
-                        const SizedBox(width: 8),
-                        StatusBadge(
-                          status: node.nodeStatus!,
-                          icon: _getNodeStatusIcon(node.nodeStatus!),
-                        ),
-                      ],
-                      const Spacer(),
-                      Checkbox(
-                        value: isCompleted,
-                        onChanged: (value) => _toggleQuestCompletion(
-                          context,
-                          node.id,
-                          value ?? false,
-                        ),
-                        activeColor: AppTheme.successColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Title
-                  Text(
-                    _cleanAiText(node.title),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? AppTheme.darkTextPrimary
-                          : AppTheme.lightTextPrimary,
-                      decoration: isCompleted
-                          ? TextDecoration.lineThrough
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Description
-                  Text(
-                    _cleanAiText(node.description),
-                    maxLines: isExpanded ? null : 2,
-                    overflow: isExpanded ? null : TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Stats row
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.schedule_outlined,
-                        size: 14,
-                        color: isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${node.estimatedTimeHours.toStringAsFixed(0)}h',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (node.difficulty != null)
-                        _buildDifficultyBadge(
-                          context,
-                          node.difficulty!,
-                          isDark,
-                        ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        isExpanded ? Icons.expand_less : Icons.expand_more,
-                        color: isDark
-                            ? AppTheme.primaryBlueDark
-                            : AppTheme.primaryBlue,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Expanded content
-          if (isExpanded) _buildExpandedContent(context, node, isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDifficultyBadge(
-    BuildContext context,
-    DifficultyLevel difficulty,
-    bool isDark,
-  ) {
-    String label;
-    Color color;
-
-    switch (difficulty) {
-      case DifficultyLevel.easy:
-      case DifficultyLevel.beginner:
-        label = 'EASY';
-        color = AppTheme.successColor;
-        break;
-      case DifficultyLevel.medium:
-      case DifficultyLevel.intermediate:
-        label = 'MEDIUM';
-        color = AppTheme.warningColor;
-        break;
-      case DifficultyLevel.hard:
-      case DifficultyLevel.advanced:
-        label = 'HARD';
-        color = AppTheme.errorColor;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildExpandedContent(
-    BuildContext context,
-    RoadmapNode node,
-    bool isDark,
-  ) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Divider(),
-          const SizedBox(height: 12),
-
-          // Learning objectives
-          if (node.learningObjectives != null &&
-              node.learningObjectives!.isNotEmpty)
-            _buildExpandedSection(
-              context,
-              'Mục tiêu học tập',
-              Icons.check_circle_outline,
-              node.learningObjectives!,
-              isDark,
-            ),
-
-          // Key concepts
-          if (node.keyConcepts != null && node.keyConcepts!.isNotEmpty)
-            _buildExpandedSection(
-              context,
-              'Khái niệm chính',
-              Icons.lightbulb_outline,
-              node.keyConcepts!,
-              isDark,
-            ),
-
-          // Practical exercises
-          if (node.practicalExercises != null &&
-              node.practicalExercises!.isNotEmpty)
-            _buildExpandedSection(
-              context,
-              'Bài tập thực hành',
-              Icons.code,
-              node.practicalExercises!,
-              isDark,
-            ),
-
-          // Resources
-          if (node.suggestedResources != null &&
-              node.suggestedResources!.isNotEmpty)
-            _buildExpandedSection(
-              context,
-              'Tài nguyên đề xuất',
-              Icons.link,
-              node.suggestedResources!,
-              isDark,
-            ),
-
-          // Study Plan button
-          const SizedBox(height: 8),
-          _buildCreateStudyPlanButton(context, node, isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExpandedSection(
-    BuildContext context,
-    String title,
-    IconData icon,
-    List<String> items,
-    bool isDark,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: isDark
-                      ? AppTheme.darkTextPrimary
-                      : AppTheme.lightTextPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ...items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(left: 24, bottom: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '• ',
-                    style: TextStyle(
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _toggleQuestCompletion(
     BuildContext context,
     String questId,
     bool completed,
   ) async {
-    final provider = context.read<RoadmapProvider>();
+    final provider = context.read<RoadmapDetailProvider>();
 
     final response = await provider.updateQuestProgress(
       sessionId: widget.sessionId,
@@ -1536,91 +1197,4 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
     }
   }
 
-  IconData _getNodeStatusIcon(String status) {
-    return switch (status.toUpperCase()) {
-      'LOCKED' => Icons.lock_outline,
-      'AVAILABLE' => Icons.lock_open,
-      'IN_PROGRESS' => Icons.play_circle_outline,
-      'COMPLETED' => Icons.check_circle_outline,
-      _ => Icons.help_outline,
-    };
-  }
-
-  // ===========================================================================
-  // STUDY PLAN FROM NODE
-  // ===========================================================================
-
-  Widget _buildCreateStudyPlanButton(
-    BuildContext context,
-    RoadmapNode node,
-    bool isDark,
-  ) {
-    final isCreating = _creatingPlanNodeId == node.id;
-
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: isCreating ? null : () => _createStudyPlan(context, node),
-        icon: isCreating
-            ? CommonLoading.small()
-            : Icon(
-                Icons.event_note_outlined,
-                size: 18,
-                color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
-              ),
-        label: Text(
-          isCreating ? 'Đang tạo kế hoạch...' : '📋 Tạo kế hoạch học',
-          style: TextStyle(
-            color: isCreating
-                ? (isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary)
-                : (isDark ? AppTheme.accentCyan : AppTheme.primaryBlue),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          side: BorderSide(
-            color: isDark
-                ? AppTheme.accentCyan.withValues(alpha: 0.4)
-                : AppTheme.primaryBlue.withValues(alpha: 0.4),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _createStudyPlan(BuildContext context, RoadmapNode node) async {
-    if (!mounted) return;
-
-    setState(() => _creatingPlanNodeId = node.id);
-
-    try {
-      final provider = context.read<RoadmapProvider>();
-      final result = await provider.createStudyPlanForNode(
-        roadmapSessionId: widget.sessionId,
-        nodeId: node.id,
-      );
-
-      if (!mounted) return;
-
-      final message =
-          result?['message'] as String? ?? 'Đã tạo kế hoạch học tập!';
-      final taskCount = result?['taskCount'] as int? ?? 0;
-      final displayMsg = taskCount > 0 ? '$message ($taskCount task)' : message;
-
-      ErrorHandler.showSuccessSnackBar(context, displayMsg);
-    } catch (e) {
-      if (!mounted) return;
-      ErrorHandler.showErrorSnackBar(context, e);
-    } finally {
-      if (mounted) {
-        setState(() => _creatingPlanNodeId = null);
-      }
-    }
-  }
 }

@@ -102,8 +102,9 @@ class DashboardService {
       );
       final items = page.content ?? [];
       // Prefer courses already started (progress > 0, not completed)
-      final inProgress =
-          items.where((e) => !e.completed && e.progressPercent > 0).toList();
+      final inProgress = items
+          .where((e) => !e.completed && e.progressPercent > 0)
+          .toList();
       if (inProgress.isNotEmpty) return inProgress.first;
       // Fallback: enrolled but not yet started
       final enrolled = items.where((e) => !e.completed).toList();
@@ -117,8 +118,12 @@ class DashboardService {
   Future<DashboardData> fetchAllDashboardData({int? userId}) async {
     try {
       final results = await Future.wait([
-        fetchWallet().catchError((_) => null as WalletResponse?),
-        fetchUsageStats().catchError((_) => null as UsageStatsResponse?),
+        fetchWallet()
+            .then<WalletResponse?>((v) => v)
+            .catchError((_) => null as WalletResponse?),
+        fetchUsageStats()
+            .then<UsageStatsResponse?>((v) => v)
+            .catchError((_) => null as UsageStatsResponse?),
         fetchSubscription().catchError((_) => null as SubscriptionResponse?),
         fetchRoadmaps().catchError((_) => <RoadmapSession>[]),
         if (userId != null)

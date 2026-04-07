@@ -165,11 +165,11 @@ CourseDetailDto _$CourseDetailDtoFromJson(Map<String, dynamic> json) =>
     CourseDetailDto(
       id: (json['id'] as num).toInt(),
       title: json['title'] as String,
-      description: json['description'] as String,
+      description: json['description'] as String?,
       shortDescription: json['shortDescription'] as String?,
       category: json['category'] as String?,
-      level: json['level'] as String,
-      status: json['status'] as String,
+      level: json['level'] as String?,
+      status: json['status'] as String?,
       author: AuthorDto.fromJson(json['author'] as Map<String, dynamic>),
       thumbnail: json['thumbnail'] == null
           ? null

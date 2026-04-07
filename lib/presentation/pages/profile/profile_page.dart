@@ -12,7 +12,7 @@ import '../../providers/wallet_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../../core/utils/number_formatter.dart';
-import '../../../core/utils/error_handler.dart';
+
 import '../../widgets/glass_card.dart';
 import '../../../data/services/user_service.dart';
 
@@ -37,6 +37,11 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _pickAndUploadAvatar(BuildContext context) async {
+    // Capture references before any async gap
+    final authProvider = context.read<AuthProvider>();
+    final userProvider = context.read<UserProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
       allowMultiple: false,
@@ -49,7 +54,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     final filePath = result.files.first.path!;
-    final authProvider = context.read<AuthProvider>();
     final userId = authProvider.user?.id;
     if (userId == null) return;
 
@@ -60,17 +64,21 @@ class _ProfilePageState extends State<ProfilePage> {
 
       // Reload profile to get the new avatar URL
       if (mounted) {
-        await context.read<UserProvider>().loadUserProfile();
-        ErrorHandler.showSuccessSnackBar(
-          context,
-          'Cập nhật ảnh đại diện thành công!',
+        await userProvider.loadUserProfile();
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Cập nhật ảnh đại diện thành công!'),
+            backgroundColor: AppTheme.successColor,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(
-          context,
-          'Upload thất bại: ${e.toString()}',
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Upload thất bại: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
       }
     } finally {

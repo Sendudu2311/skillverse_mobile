@@ -701,7 +701,7 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
     if (hours > 0) {
       return '${hours}h ${minutes}m';
     }
-    return '${minutes} phút';
+    return '$minutes phút';
   }
 
   String _formatDate(DateTime date) {

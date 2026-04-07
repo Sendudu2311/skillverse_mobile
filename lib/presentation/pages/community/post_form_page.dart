@@ -5,7 +5,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../../providers/post_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../../data/models/post_models.dart';
-import '../../../core/utils/error_handler.dart';
+
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
@@ -36,6 +36,8 @@ class _PostFormPageState extends State<PostFormPage> {
 
   Future<void> _loadPost() async {
     setState(() => _isLoading = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
     try {
       final provider = context.read<PostProvider>();
       final post = provider.posts.firstWhere(
@@ -44,12 +46,16 @@ class _PostFormPageState extends State<PostFormPage> {
       );
 
       _titleController.text = post.title ?? '';
-      // Parse content as plain text for now (rich text would need HTML parsing)
       _quillController.document = quill.Document()..insert(0, post.content);
     } catch (e) {
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, e);
-        context.pop();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        router.pop();
       }
     } finally {
       setState(() => _isLoading = false);
@@ -168,18 +174,21 @@ class _PostFormPageState extends State<PostFormPage> {
     // Get plain text from quill document
     final content = _quillController.document.toPlainText().trim();
     if (content.isEmpty) {
-      ErrorHandler.showWarningSnackBar(
-        context,
-        'Vui lòng nhập nội dung bài viết',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng nhập nội dung bài viết'),
+          backgroundColor: AppTheme.accentGold,
+        ),
       );
       return;
     }
 
     setState(() => _isLoading = true);
+    final provider = context.read<PostProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
 
     try {
-      final provider = context.read<PostProvider>();
-
       if (widget.postId == null) {
         // Create new post
         final post = await provider.createPost(
@@ -190,10 +199,12 @@ class _PostFormPageState extends State<PostFormPage> {
         );
 
         if (post != null && mounted) {
-          context.pop();
-          ErrorHandler.showSuccessSnackBar(
-            context,
-            isDraft ? 'Đã lưu nháp' : 'Đã đăng bài viết',
+          router.pop();
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(isDraft ? 'Đã lưu nháp' : 'Đã đăng bài viết'),
+              backgroundColor: AppTheme.successColor,
+            ),
           );
         }
       } else {
@@ -208,13 +219,23 @@ class _PostFormPageState extends State<PostFormPage> {
         );
 
         if (mounted) {
-          context.pop();
-          ErrorHandler.showSuccessSnackBar(context, 'Đã cập nhật bài viết');
+          router.pop();
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('Đã cập nhật bài viết'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
         }
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, e);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
       }
     } finally {
       if (mounted) {

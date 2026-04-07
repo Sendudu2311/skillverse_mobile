@@ -5,7 +5,6 @@ import '../../../themes/app_theme.dart';
 import '../../../widgets/common_loading.dart';
 import '../../../../data/models/study_planner_models.dart';
 import '../../../../data/services/study_planner_service.dart';
-import '../../../../core/utils/error_handler.dart';
 
 /// AI Study Planner Dialog
 class AIStudyPlannerDialog extends StatefulWidget {
@@ -33,7 +32,11 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
   bool _isLoading = false;
 
   final List<String> _selectedDays = [
-    'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY',
+    'MONDAY',
+    'TUESDAY',
+    'WEDNESDAY',
+    'THURSDAY',
+    'FRIDAY',
   ];
   String _timeWindowStart = '09:00';
   String _timeWindowEnd = '17:00';
@@ -69,7 +72,9 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
     final size = MediaQuery.of(context).size;
 
     return Dialog(
-      backgroundColor: isDark ? AppTheme.galaxyDark : AppTheme.lightCardBackground,
+      backgroundColor: isDark
+          ? AppTheme.galaxyDark
+          : AppTheme.lightCardBackground,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: AppTheme.accentOrange.withValues(alpha: 0.3)),
@@ -93,9 +98,13 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(
-          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-        )),
+        border: Border(
+          bottom: BorderSide(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -112,14 +121,20 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
                   child: const Text(
                     'AI STUDY PLANNER',
                     style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace', color: Colors.white, letterSpacing: 1,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'monospace',
+                      color: Colors.white,
+                      letterSpacing: 1,
                     ),
                   ),
                 ),
                 Container(
                   margin: const EdgeInsets.only(top: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFA500).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
@@ -127,8 +142,10 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
                   child: const Text(
                     '⚡ MISTRAL LARGE (PREMIUM)',
                     style: TextStyle(
-                      fontSize: 10, fontFamily: 'monospace',
-                      color: AppTheme.accentOrange, fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                      fontFamily: 'monospace',
+                      color: AppTheme.accentOrange,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -157,102 +174,201 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
             _buildLabel('Môn Học / Chủ Đề Chính'),
             TextFormField(
               controller: _subjectController,
-              decoration: const InputDecoration(hintText: 'VD: Lập trình Java, IELTS Reading...'),
+              decoration: const InputDecoration(
+                hintText: 'VD: Lập trình Java, IELTS Reading...',
+              ),
               validator: (v) => v?.isEmpty == true ? 'Bắt buộc' : null,
             ),
             const SizedBox(height: 12),
             _buildLabel('Các Chủ Đề Con (Nhấn Enter để thêm)'),
             TextFormField(
               controller: _topicsController,
-              decoration: const InputDecoration(hintText: 'VD: OOP, Collections, Streams...'),
+              decoration: const InputDecoration(
+                hintText: 'VD: OOP, Collections, Streams...',
+              ),
               onFieldSubmitted: (value) {
                 if (value.isNotEmpty) {
-                  setState(() { _topics.add(value); _topicsController.clear(); });
+                  setState(() {
+                    _topics.add(value);
+                    _topicsController.clear();
+                  });
                 }
               },
             ),
             if (_topics.isNotEmpty) ...[
               const SizedBox(height: 8),
               Wrap(
-                spacing: 6, runSpacing: 6,
-                children: _topics.map((topic) => Chip(
-                  label: Text(topic, style: const TextStyle(fontSize: 11)),
-                  deleteIcon: const Icon(Icons.close, size: 14),
-                  onDeleted: () => setState(() => _topics.remove(topic)),
-                )).toList(),
+                spacing: 6,
+                runSpacing: 6,
+                children: _topics
+                    .map(
+                      (topic) => Chip(
+                        label: Text(
+                          topic,
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        deleteIcon: const Icon(Icons.close, size: 14),
+                        onDeleted: () => setState(() => _topics.remove(topic)),
+                      ),
+                    )
+                    .toList(),
               ),
             ],
             const SizedBox(height: 12),
             _buildLabel('Mục Tiêu Đầu Ra'),
             TextFormField(
-              controller: _outcomeController, maxLines: 2,
-              decoration: const InputDecoration(hintText: 'VD: Nắm vững kiến thức cơ bản...'),
+              controller: _outcomeController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'VD: Nắm vững kiến thức cơ bản...',
+              ),
               validator: (v) => v?.isEmpty == true ? 'Bắt buộc' : null,
             ),
             const SizedBox(height: 20),
 
             _buildSectionHeader('THỜI GIAN & LỊCH TRÌNH', Icons.calendar_month),
             const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _buildLabel('Ngày Bắt Đầu'),
-                _buildDateButton(_startDate, (d) => setState(() => _startDate = d)),
-              ])),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _buildLabel('Hạn Chót (Deadline)'),
-                _buildDateButton(_deadline, (d) => setState(() => _deadline = d)),
-              ])),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Ngày Bắt Đầu'),
+                      _buildDateButton(
+                        _startDate,
+                        (d) => setState(() => _startDate = d),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Hạn Chót (Deadline)'),
+                      _buildDateButton(
+                        _deadline,
+                        (d) => setState(() => _deadline = d),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _buildLabel('Tổng Thời Gian (Phút)'),
-                TextFormField(controller: _durationController, keyboardType: TextInputType.number),
-              ])),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _buildLabel('Nghỉ Giữa Các Phiên (Phút)'),
-                TextFormField(controller: _breakController, keyboardType: TextInputType.number),
-              ])),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Tổng Thời Gian (Phút)'),
+                      TextFormField(
+                        controller: _durationController,
+                        keyboardType: TextInputType.number,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Nghỉ Giữa Các Phiên (Phút)'),
+                      TextFormField(
+                        controller: _breakController,
+                        keyboardType: TextInputType.number,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             _buildLabel('Ngày Học Ưu Tiên'),
             _buildDaySelector(),
             const SizedBox(height: 12),
             _buildLabel('Khung Giờ Rảnh'),
-            Row(children: [
-              Expanded(child: _buildTimeButton(_timeWindowStart, (t) => setState(() => _timeWindowStart = t))),
-              const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('-')),
-              Expanded(child: _buildTimeButton(_timeWindowEnd, (t) => setState(() => _timeWindowEnd = t))),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTimeButton(
+                    _timeWindowStart,
+                    (t) => setState(() => _timeWindowStart = t),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text('-'),
+                ),
+                Expanded(
+                  child: _buildTimeButton(
+                    _timeWindowEnd,
+                    (t) => setState(() => _timeWindowEnd = t),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 20),
 
             _buildSectionHeader('THÓI QUEN & SỞ THÍCH', Icons.tune),
             const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _buildLabel('Phương Pháp Học'),
-                _buildDropdown(_studyMethod, studyMethods, (v) => setState(() => _studyMethod = v!)),
-              ])),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _buildLabel('Chronotype (Nhịp sinh học)'),
-                _buildDropdown(_chronotype, chronotypes, (v) => setState(() => _chronotype = v!)),
-              ])),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Phương Pháp Học'),
+                      _buildDropdown(
+                        _studyMethod,
+                        studyMethods,
+                        (v) => setState(() => _studyMethod = v!),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Chronotype (Nhịp sinh học)'),
+                      _buildDropdown(
+                        _chronotype,
+                        chronotypes,
+                        (v) => setState(() => _chronotype = v!),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             CheckboxListTile(
-              value: _avoidLateNight, onChanged: (v) => setState(() => _avoidLateNight = v!),
-              title: const Text('Tránh học khuya (sau 23h)', style: TextStyle(fontSize: 13)),
+              value: _avoidLateNight,
+              onChanged: (v) => setState(() => _avoidLateNight = v!),
+              title: const Text(
+                'Tránh học khuya (sau 23h)',
+                style: TextStyle(fontSize: 13),
+              ),
               controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero, activeColor: AppTheme.accentOrange,
+              contentPadding: EdgeInsets.zero,
+              activeColor: AppTheme.accentOrange,
             ),
             CheckboxListTile(
-              value: _allowLateNight, onChanged: (v) => setState(() => _allowLateNight = v!),
-              title: const Text('Cho phép học khuya nếu cần', style: TextStyle(fontSize: 13)),
+              value: _allowLateNight,
+              onChanged: (v) => setState(() => _allowLateNight = v!),
+              title: const Text(
+                'Cho phép học khuya nếu cần',
+                style: TextStyle(fontSize: 13),
+              ),
               controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero, activeColor: AppTheme.accentOrange,
+              contentPadding: EdgeInsets.zero,
+              activeColor: AppTheme.accentOrange,
             ),
           ],
         ),
@@ -264,19 +380,27 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(
-          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-        )),
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
+          ),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
           const SizedBox(width: 12),
           ElevatedButton.icon(
             onPressed: _isLoading ? null : _generateProposal,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentOrange, foregroundColor: Colors.black,
+              backgroundColor: AppTheme.accentOrange,
+              foregroundColor: Colors.black,
             ),
             icon: _isLoading
                 ? CommonLoading.small()
@@ -291,24 +415,37 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
   // === Helper Widgets ===
 
   Widget _buildSectionHeader(String label, IconData icon) {
-    return Row(children: [
-      Icon(icon, size: 16, color: AppTheme.accentOrange),
-      const SizedBox(width: 6),
-      Text(label, style: const TextStyle(
-        fontSize: 12, fontWeight: FontWeight.bold,
-        fontFamily: 'monospace', color: AppTheme.accentOrange, letterSpacing: 1,
-      )),
-    ]);
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppTheme.accentOrange),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'monospace',
+            color: AppTheme.accentOrange,
+            letterSpacing: 1,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Text(label, style: TextStyle(
-        fontSize: 12, fontFamily: 'monospace',
-        color: Theme.of(context).brightness == Brightness.dark
-            ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-      )),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontFamily: 'monospace',
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
+        ),
+      ),
     );
   }
 
@@ -317,25 +454,41 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
     return GestureDetector(
       onTap: () async {
         final picked = await showDatePicker(
-          context: context, initialDate: date,
-          firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)),
+          context: context,
+          initialDate: date,
+          firstDate: DateTime.now(),
+          lastDate: DateTime.now().add(const Duration(days: 365)),
         );
         if (picked != null) onChanged(picked);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+          border: Border.all(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
+          ),
         ),
-        child: Row(children: [
-          Expanded(child: Text(
-            '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}',
-            style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-          )),
-          Icon(Icons.calendar_today, size: 16, color: AppTheme.primaryBlueDark),
-        ]),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}',
+                style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+              ),
+            ),
+            Icon(
+              Icons.calendar_today,
+              size: 16,
+              color: AppTheme.primaryBlueDark,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -347,70 +500,124 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
         final parts = time.split(':');
         final picked = await showTimePicker(
           context: context,
-          initialTime: TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1])),
+          initialTime: TimeOfDay(
+            hour: int.parse(parts[0]),
+            minute: int.parse(parts[1]),
+          ),
         );
         if (picked != null) {
-          onChanged('${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}');
+          onChanged(
+            '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}',
+          );
         }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+          border: Border.all(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
+          ),
         ),
-        child: Row(children: [
-          Expanded(child: Text(time, style: const TextStyle(fontSize: 13, fontFamily: 'monospace'))),
-          Icon(Icons.access_time, size: 16, color: AppTheme.primaryBlueDark),
-        ]),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                time,
+                style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+              ),
+            ),
+            Icon(Icons.access_time, size: 16, color: AppTheme.primaryBlueDark),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildDaySelector() {
     const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-    const dayValues = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+    const dayValues = [
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+      'SUNDAY',
+    ];
     return Wrap(
       spacing: 6,
       children: List.generate(7, (i) {
         final isSelected = _selectedDays.contains(dayValues[i]);
         return GestureDetector(
           onTap: () => setState(() {
-            isSelected ? _selectedDays.remove(dayValues[i]) : _selectedDays.add(dayValues[i]);
+            isSelected
+                ? _selectedDays.remove(dayValues[i])
+                : _selectedDays.add(dayValues[i]);
           }),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: isSelected ? AppTheme.primaryBlueDark : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: isSelected ? AppTheme.primaryBlueDark : AppTheme.darkBorderColor),
+              border: Border.all(
+                color: isSelected
+                    ? AppTheme.primaryBlueDark
+                    : AppTheme.darkBorderColor,
+              ),
             ),
-            child: Text(days[i], style: TextStyle(
-              fontSize: 11, fontFamily: 'monospace',
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? Colors.white : AppTheme.darkTextSecondary,
-            )),
+            child: Text(
+              days[i],
+              style: TextStyle(
+                fontSize: 11,
+                fontFamily: 'monospace',
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? Colors.white : AppTheme.darkTextSecondary,
+              ),
+            ),
           ),
         );
       }),
     );
   }
 
-  Widget _buildDropdown(String value, Map<String, String> items, ValueChanged<String?> onChanged) {
+  Widget _buildDropdown(
+    String value,
+    Map<String, String> items,
+    ValueChanged<String?> onChanged,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+        ),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: value, isExpanded: true,
-          dropdownColor: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
-          items: items.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, style: const TextStyle(fontSize: 12)))).toList(),
+          value: value,
+          isExpanded: true,
+          dropdownColor: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          items: items.entries
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e.key,
+                  child: Text(e.value, style: const TextStyle(fontSize: 12)),
+                ),
+              )
+              .toList(),
           onChanged: onChanged,
         ),
       ),
@@ -423,14 +630,20 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final taskProvider = context.read<TaskBoardProvider>();
+
     try {
       final request = GenerateScheduleRequest(
         subjectName: _subjectController.text,
         topics: _topics.isEmpty ? [_subjectController.text] : _topics,
         desiredOutcome: _outcomeController.text,
         studyMethod: _studyMethod,
-        startDate: '${_startDate.year}-${_startDate.month.toString().padLeft(2, '0')}-${_startDate.day.toString().padLeft(2, '0')}',
-        deadline: '${_deadline.year}-${_deadline.month.toString().padLeft(2, '0')}-${_deadline.day.toString().padLeft(2, '0')}',
+        startDate:
+            '${_startDate.year}-${_startDate.month.toString().padLeft(2, '0')}-${_startDate.day.toString().padLeft(2, '0')}',
+        deadline:
+            '${_deadline.year}-${_deadline.month.toString().padLeft(2, '0')}-${_deadline.day.toString().padLeft(2, '0')}',
         durationMinutes: int.tryParse(_durationController.text) ?? 600,
         breakMinutesBetweenSessions: int.tryParse(_breakController.text) ?? 15,
         preferredDays: _selectedDays,
@@ -443,13 +656,23 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
       final sessions = await _studyPlannerService.generateProposal(request);
 
       if (mounted) {
-        Navigator.pop(context);
-        ErrorHandler.showSuccessSnackBar(context, 'Đã tạo ${sessions.length} phiên học! 🎉');
-        context.read<TaskBoardProvider>().setSelectedTab(1);
+        navigator.pop();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Đã tạo ${sessions.length} phiên học! 🎉'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+        taskProvider.setSelectedTab(1);
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, e);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

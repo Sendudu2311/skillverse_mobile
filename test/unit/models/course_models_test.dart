@@ -161,7 +161,7 @@ void main() {
   // CourseSummaryDto Tests
   // ============================================================
   group('CourseSummaryDto', () {
-    Map<String, dynamic> _fullCourseJson() => {
+    Map<String, dynamic> fullCourseJson() => {
       'id': 1,
       'title': 'Flutter Development',
       'description': 'Learn Flutter from scratch',
@@ -189,7 +189,7 @@ void main() {
     };
 
     test('fromJson() with full data', () {
-      final course = CourseSummaryDto.fromJson(_fullCourseJson());
+      final course = CourseSummaryDto.fromJson(fullCourseJson());
 
       expect(course.id, 1);
       expect(course.title, 'Flutter Development');
@@ -223,7 +223,7 @@ void main() {
     });
 
     test('toJson() includes all fields', () {
-      final course = CourseSummaryDto.fromJson(_fullCourseJson());
+      final course = CourseSummaryDto.fromJson(fullCourseJson());
       final json = course.toJson();
 
       expect(json['id'], 1);

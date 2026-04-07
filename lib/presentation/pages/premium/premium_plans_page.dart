@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/utils/error_handler.dart';
+
 import '../../../data/models/premium_models.dart';
 import '../../../data/models/payment_models.dart';
 import '../../../core/utils/number_formatter.dart';
@@ -42,7 +42,8 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
         icon: Icons.workspace_premium,
         useGradientTitle: true,
         gradientColors: const [AppTheme.accentGold, AppTheme.themeOrangeStart],
-        onBack: () => context.canPop() ? context.pop() : context.go('/dashboard'),
+        onBack: () =>
+            context.canPop() ? context.pop() : context.go('/dashboard'),
       ),
       body: Consumer<PremiumProvider>(
         builder: (context, provider, child) {
@@ -204,8 +205,12 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
         : 1.0;
     final tierColor = _tierColorFromPlan(sub.plan.planType);
     final tierIcon = _tierIconFromPlan(sub.plan.planType);
-    final secColor = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final priColor = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final secColor = isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
+    final priColor = isDark
+        ? AppTheme.darkTextPrimary
+        : AppTheme.lightTextPrimary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
@@ -243,7 +248,10 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.successColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
@@ -266,7 +274,9 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    daysLeft <= 7 ? '⚠️ Còn $daysLeft ngày' : 'Còn $daysLeft ngày',
+                    daysLeft <= 7
+                        ? '⚠️ Còn $daysLeft ngày'
+                        : 'Còn $daysLeft ngày',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -293,20 +303,32 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
               ),
 
               // ── Features ────────────────────────────────────
-              if (sub.plan.features != null && sub.plan.features!.isNotEmpty) ...[
+              if (sub.plan.features != null &&
+                  sub.plan.features!.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                ...sub.plan.features!.take(3).map(
-                  (f) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      children: [
-                        Icon(Icons.check_circle_outline, size: 14, color: tierColor),
-                        const SizedBox(width: 6),
-                        Expanded(child: Text(f, style: TextStyle(fontSize: 12, color: priColor))),
-                      ],
+                ...sub.plan.features!
+                    .take(3)
+                    .map(
+                      (f) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline,
+                              size: 14,
+                              color: tierColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                f,
+                                style: TextStyle(fontSize: 12, color: priColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
               ],
 
               // ── Footer ──────────────────────────────────────
@@ -327,10 +349,16 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
                   TextButton.icon(
                     onPressed: () => _openManagementSheet(context),
                     icon: const Icon(Icons.tune, size: 14),
-                    label: const Text('Quản lý', style: TextStyle(fontSize: 12)),
+                    label: const Text(
+                      'Quản lý',
+                      style: TextStyle(fontSize: 12),
+                    ),
                     style: TextButton.styleFrom(
                       foregroundColor: tierColor,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                     ),
                   ),
                 ],
@@ -504,8 +532,16 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
   Future<void> _handlePayOS(PremiumPlanDto plan) async {
     if (!mounted) return;
     final authProvider = context.read<AuthProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     if (authProvider.user == null) {
-      ErrorHandler.showErrorSnackBar(context, 'Vui lòng đăng nhập');
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng đăng nhập'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
       return;
     }
 
@@ -517,6 +553,7 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
     );
 
     final paymentProvider = context.read<PaymentProvider>();
+    final premiumProvider = context.read<PremiumProvider>();
     const successUrl = 'https://skillverse.vn/payment/transactional';
     const cancelUrl = 'https://skillverse.vn/payment/transactional?cancel=1';
 
@@ -530,11 +567,16 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
       cancelUrl: cancelUrl,
     );
 
-    if (mounted) Navigator.pop(context); // close loading
+    if (mounted) navigator.pop(); // close loading
 
     if (paymentResponse == null) {
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán');
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
       }
       return;
     }
@@ -554,23 +596,35 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
     if (!mounted) return;
 
     // Refresh regardless — backend PayOS callback handles activation
-    final premiumProvider = context.read<PremiumProvider>();
     await premiumProvider.loadAll();
 
     if (!mounted) return;
     final isSuccess = result != null && result['success'] == true;
     if (isSuccess) {
-      ErrorHandler.showSuccessSnackBar(context, '🎉 Đăng ký Premium thành công!');
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('🎉 Đăng ký Premium thành công!'),
+          backgroundColor: AppTheme.successColor,
+        ),
+      );
     } else {
-      ErrorHandler.showWarningSnackBar(context, '⏳ Đang xử lý thanh toán...');
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('⏳ Đang xử lý thanh toán...'),
+          backgroundColor: AppTheme.accentGold,
+        ),
+      );
     }
   }
 
   Future<void> _handleWalletPay(PremiumPlanDto plan) async {
     if (!mounted) return;
 
-    // Ensure wallet is loaded before showing dialog
+    // Capture references before async gaps
     final walletProvider = context.read<WalletProvider>();
+    final premiumProvider = context.read<PremiumProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     await walletProvider.refresh();
 
     if (!mounted) return;
@@ -658,32 +712,45 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
       builder: (_) => CommonLoading.center(),
     );
 
-    final premiumProvider = context.read<PremiumProvider>();
-
     try {
       final subscription = await premiumProvider.purchaseWithWallet(
         planId: plan.id,
       );
 
-      if (mounted) Navigator.pop(context); // close loading
+      if (mounted) navigator.pop(); // close loading
       if (!mounted) return;
 
       if (subscription != null) {
-        context.read<WalletProvider>().refresh();
-        ErrorHandler.showSuccessSnackBar(context, '🎉 Đã kích hoạt ${plan.displayName}!');
+        walletProvider.refresh();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('🎉 Đã kích hoạt ${plan.displayName}!'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
         // Reload plans to update current subscription
         premiumProvider.loadAll();
       } else {
         final errorMsg = premiumProvider.errorMessage ?? 'Thanh toán thất bại';
         // Clear provider error so page doesn't show error view
         premiumProvider.resetState();
-        ErrorHandler.showErrorSnackBar(context, errorMsg);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context);
+      if (mounted) navigator.pop();
       if (!mounted) return;
       premiumProvider.resetState();
-      ErrorHandler.showErrorSnackBar(context, e.toString().replaceAll('Exception: ', ''));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
     }
   }
 

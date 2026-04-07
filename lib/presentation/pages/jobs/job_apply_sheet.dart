@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/job_provider.dart';
 import '../../themes/app_theme.dart';
-import '../../../core/utils/error_handler.dart';
+
 import '../../widgets/common_loading.dart';
 import 'my_applications_page.dart';
 
@@ -43,13 +43,13 @@ class _JobApplySheetState extends State<JobApplySheet>
       duration: const Duration(milliseconds: 600),
     );
     _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-          parent: _successAnimController, curve: Curves.elasticOut),
+      CurvedAnimation(parent: _successAnimController, curve: Curves.elasticOut),
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-          parent: _successAnimController,
-          curve: const Interval(0.0, 0.5, curve: Curves.easeIn)),
+        parent: _successAnimController,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+      ),
     );
   }
 
@@ -74,7 +74,11 @@ class _JobApplySheetState extends State<JobApplySheet>
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-            20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+          20,
+          16,
+          20,
+          MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
         child: _isSuccess ? _buildSuccessState() : _buildFormState(),
       ),
     );
@@ -110,10 +114,7 @@ class _JobApplySheetState extends State<JobApplySheet>
                 height: 80,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [
-                      AppTheme.themeGreenStart,
-                      AppTheme.themeGreenEnd,
-                    ],
+                    colors: [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -126,8 +127,11 @@ class _JobApplySheetState extends State<JobApplySheet>
                     ),
                   ],
                 ),
-                child: const Icon(Icons.check_rounded,
-                    color: Colors.white, size: 40),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: 40,
+                ),
               ),
             ),
 
@@ -140,15 +144,15 @@ class _JobApplySheetState extends State<JobApplySheet>
                   Text(
                     'Ứng tuyển thành công! 🎉',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     widget.jobTitle,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).hintColor,
-                        ),
+                      color: Theme.of(context).hintColor,
+                    ),
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -175,9 +179,11 @@ class _JobApplySheetState extends State<JobApplySheet>
                         child: ElevatedButton.icon(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => const MyApplicationsPage(),
-                            ));
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const MyApplicationsPage(),
+                              ),
+                            );
                           },
                           icon: const Icon(Icons.assignment_outlined, size: 18),
                           label: const Text('Xem đơn'),
@@ -229,17 +235,16 @@ class _JobApplySheetState extends State<JobApplySheet>
             // Title
             Text(
               'Ứng Tuyển',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
               widget.jobTitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).hintColor,
-                  ),
+                color: Theme.of(context).hintColor,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -321,7 +326,9 @@ class _JobApplySheetState extends State<JobApplySheet>
                     : const Text(
                         'Gửi Đơn Ứng Tuyển',
                         style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
               ),
             ),
@@ -337,6 +344,8 @@ class _JobApplySheetState extends State<JobApplySheet>
     setState(() => _isSubmitting = true);
 
     final provider = context.read<JobProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     bool success;
 
     if (widget.isShortTerm) {
@@ -369,7 +378,13 @@ class _JobApplySheetState extends State<JobApplySheet>
       setState(() => _isSuccess = true);
       _successAnimController.forward();
     } else {
-      ErrorHandler.showErrorSnackBar(context, provider.errorMessage ?? 'Ứng tuyển thất bại');
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(provider.errorMessage ?? 'Ứng tuyển thất bại'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
     }
   }
 }

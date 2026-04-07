@@ -1,8 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:skillverse_mobile/presentation/providers/auth_provider.dart';
-import 'package:skillverse_mobile/data/models/auth_models.dart';
-import 'package:skillverse_mobile/core/exceptions/api_exception.dart';
 
 /// ============================================================
 /// AUTH PROVIDER TEST

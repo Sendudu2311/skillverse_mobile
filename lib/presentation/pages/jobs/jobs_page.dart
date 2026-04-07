@@ -300,8 +300,9 @@ class _JobsPageState extends State<JobsPage>
       filtered = filtered.where((j) {
         final u = j.urgency;
         if (_filterUrgency == 'URGENT') return u == JobUrgency.urgent;
-        if (_filterUrgency == 'VERY_URGENT')
+        if (_filterUrgency == 'VERY_URGENT') {
           return u == JobUrgency.veryUrgent || u == JobUrgency.asap;
+        }
         return true;
       }).toList();
     }

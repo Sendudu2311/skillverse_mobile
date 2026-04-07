@@ -9,6 +9,7 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/error_state_widget.dart';
 import 'mentor_chat_dialog.dart';
 import 'mentor_booking_sheet.dart';
+import '../../providers/auth_provider.dart';
 
 class MentorDetailPage extends StatefulWidget {
   final int mentorId;
@@ -112,7 +113,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
         icon: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             shape: BoxShape.circle,
           ),
           child: const Icon(Icons.arrow_back, color: Colors.white),
@@ -122,9 +123,8 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
         IconButton(
           onPressed: () => provider.toggleFavorite(mentor.id),
           icon: Container(
-            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -168,7 +168,9 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                   // Avatar
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor: AppTheme.primaryBlueDark.withOpacity(0.2),
+                    backgroundColor: AppTheme.primaryBlueDark.withValues(
+                      alpha: 0.2,
+                    ),
                     backgroundImage: mentor.avatar != null
                         ? NetworkImage(mentor.avatar!)
                         : null,
@@ -349,8 +351,9 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     MentorProfile mentor,
     bool isDark,
   ) {
-    if (mentor.bio == null || mentor.bio!.isEmpty)
+    if (mentor.bio == null || mentor.bio!.isEmpty) {
       return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,8 +389,9 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     MentorProfile mentor,
     bool isDark,
   ) {
-    if (mentor.skills == null || mentor.skills!.isEmpty)
+    if (mentor.skills == null || mentor.skills!.isEmpty) {
       return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,13 +415,13 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppTheme.primaryBlueDark.withOpacity(0.2),
-                    AppTheme.themePurpleStart.withOpacity(0.1),
+                    AppTheme.primaryBlueDark.withValues(alpha: 0.2),
+                    AppTheme.themePurpleStart.withValues(alpha: 0.1),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppTheme.primaryBlueDark.withOpacity(0.3),
+                  color: AppTheme.primaryBlueDark.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
@@ -500,6 +504,40 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     bool isDark,
     MentorProvider provider,
   ) {
+    final currentUser = context.read<AuthProvider>().user;
+    final isSelf = currentUser?.id == mentor.id;
+
+    if (isSelf) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          border: Border(
+            top: BorderSide(
+              color: isDark
+                  ? AppTheme.darkBorderColor
+                  : AppTheme.lightBorderColor,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          child: Text(
+            'Đây là hồ sơ của bạn. Bạn không thể tự đặt lịch với chính mình.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              fontStyle: FontStyle.italic,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

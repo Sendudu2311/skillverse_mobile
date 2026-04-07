@@ -162,8 +162,9 @@ class Task {
     final s = status?.toUpperCase() ?? '';
     if (s.contains('DONE') || s.contains('HOÀN THÀNH')) return Colors.green;
     if (s.contains('PROGRESS') || s.contains('ĐANG LÀM')) return Colors.orange;
-    if (s.contains('OVERDUE') || s.contains('QUÁ HẠN') || isOverdue)
+    if (s.contains('OVERDUE') || s.contains('QUÁ HẠN') || isOverdue) {
       return Colors.red;
+    }
     return Colors.blue; // Default for TODO
   }
 }

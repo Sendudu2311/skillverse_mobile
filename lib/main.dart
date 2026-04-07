@@ -16,6 +16,9 @@ import 'presentation/providers/user_provider.dart';
 import 'presentation/providers/post_provider.dart';
 import 'presentation/providers/comment_provider.dart';
 import 'presentation/providers/mentor_provider.dart';
+import 'presentation/providers/mentor_booking_provider.dart';
+import 'presentation/providers/roadmap_detail_provider.dart';
+import 'presentation/providers/roadmap_generate_provider.dart';
 import 'presentation/providers/skin_provider.dart';
 
 import 'presentation/providers/task_board_provider.dart';
@@ -65,10 +68,13 @@ void main() async {
         ChangeNotifierProvider(create: (_) => PortfolioProvider()),
         ChangeNotifierProvider(create: (_) => PremiumProvider()),
         ChangeNotifierProvider(create: (_) => RoadmapProvider()),
+        ChangeNotifierProvider(create: (_) => RoadmapDetailProvider()),
+        ChangeNotifierProvider(create: (_) => RoadmapGenerateProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => PostProvider()),
         ChangeNotifierProvider(create: (_) => CommentProvider()),
         ChangeNotifierProvider(create: (_) => MentorProvider()),
+        ChangeNotifierProvider(create: (_) => MentorBookingProvider()),
         ChangeNotifierProvider(create: (_) => SkinProvider()),
 
         ChangeNotifierProvider(create: (_) => TaskBoardProvider()),

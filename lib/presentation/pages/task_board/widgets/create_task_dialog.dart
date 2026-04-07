@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/task_board_provider.dart';
 import '../../../themes/app_theme.dart';
 import '../../../widgets/common_loading.dart';
-import '../../../../core/utils/error_handler.dart';
+
 import '../../../../data/models/task_board_models.dart';
 
 /// Create Task Dialog
@@ -355,10 +355,11 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+    final provider = context.read<TaskBoardProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
     try {
-      final provider = context.read<TaskBoardProvider>();
-
       final request = CreateTaskRequest(
         title: _titleController.text,
         description: _descriptionController.text.isNotEmpty
@@ -378,11 +379,16 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
       await provider.createTask(request);
 
       if (mounted) {
-        Navigator.pop(context);
+        navigator.pop();
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, 'Lỗi: $e');
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
       }
     } finally {
       if (mounted) {

@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:dio/dio.dart';
 import '../models/post_models.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/error_handler.dart';

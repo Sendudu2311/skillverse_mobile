@@ -170,7 +170,7 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${progress}% hoàn thành',
+                        '$progress% hoàn thành',
                         style: TextStyle(
                           color: isDark
                               ? AppTheme.darkTextSecondary

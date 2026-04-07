@@ -197,6 +197,7 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
   }
 
   /// Xóa lỗi hiện tại
+  @override
   void clearError() => super.clearError();
 
   /// Register FCM token with backend (fire-and-forget, non-blocking).
