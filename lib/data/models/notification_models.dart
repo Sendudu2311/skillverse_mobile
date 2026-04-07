@@ -3,6 +3,8 @@
 // AppNotification mirrors NotificationResponse DTO.
 // NotificationPage mirrors Spring Data Page of NotificationResponse.
 
+import '../../core/utils/date_time_helper.dart';
+
 // ── Notification Type Enum ────────────────────────────────────────────────────
 
 enum NotificationType {
@@ -270,7 +272,7 @@ class AppNotification {
       senderName: json['senderName'] as String?,
       senderAvatar: json['senderAvatar'] as String?,
       postTitle: json['postTitle'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTimeHelper.tryParseIso8601(json['createdAt'] as String?) ?? DateTime.now(),
     );
   }
 

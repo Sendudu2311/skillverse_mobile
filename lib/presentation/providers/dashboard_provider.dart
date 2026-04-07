@@ -50,8 +50,24 @@ class DashboardProvider extends ChangeNotifier with LoadingStateProviderMixin {
   String get premiumPlanName => subscription?.plan.displayName ?? 'Free';
   int get premiumDaysRemaining => subscription?.daysRemaining ?? 0;
 
-  RoadmapSession? get activeRoadmap =>
-      roadmaps.isNotEmpty ? roadmaps.first : null;
+  RoadmapSession? get activeRoadmap {
+    if (roadmaps.isEmpty) return null;
+    // Prefer the explicitly ACTIVE roadmap
+    try {
+      return roadmaps.firstWhere(
+        (r) => (r.status ?? 'ACTIVE').toUpperCase() == 'ACTIVE',
+      );
+    } catch (_) {
+      // Fallback: first non-deleted roadmap (backward compat)
+      try {
+        return roadmaps.firstWhere(
+          (r) => (r.status ?? 'ACTIVE').toUpperCase() != 'DELETED',
+        );
+      } catch (_) {
+        return null;
+      }
+    }
+  }
 
   EnrollmentDetailDto? get continueCourse => _dashboardData?.continueLearning;
 
@@ -74,9 +90,12 @@ class DashboardProvider extends ChangeNotifier with LoadingStateProviderMixin {
       // Update streak state locally so UI reflects immediately
       if (_dashboardData?.usageStats != null) {
         final updated = UsageStatsResponse(
-          enrolledCoursesCount: _dashboardData!.usageStats!.enrolledCoursesCount,
-          completedCoursesCount: _dashboardData!.usageStats!.completedCoursesCount,
-          completedProjectsCount: _dashboardData!.usageStats!.completedProjectsCount,
+          enrolledCoursesCount:
+              _dashboardData!.usageStats!.enrolledCoursesCount,
+          completedCoursesCount:
+              _dashboardData!.usageStats!.completedCoursesCount,
+          completedProjectsCount:
+              _dashboardData!.usageStats!.completedProjectsCount,
           certificatesCount: _dashboardData!.usageStats!.certificatesCount,
           totalHoursStudied: _dashboardData!.usageStats!.totalHoursStudied,
           currentStreak: result.currentStreak,
@@ -102,13 +121,16 @@ class DashboardProvider extends ChangeNotifier with LoadingStateProviderMixin {
   Future<void> loadDashboard({int? userId}) async {
     if (isLoading) return;
 
-    await executeAsync(() async {
-      _dashboardData = await _service.fetchAllDashboardData(userId: userId);
-      notifyListeners();
-    }, errorMessageBuilder: (e) {
-      debugPrint('Error loading dashboard: $e');
-      return e.toString();
-    });
+    await executeAsync(
+      () async {
+        _dashboardData = await _service.fetchAllDashboardData(userId: userId);
+        notifyListeners();
+      },
+      errorMessageBuilder: (e) {
+        debugPrint('Error loading dashboard: $e');
+        return e.toString();
+      },
+    );
   }
 
   /// Refresh dashboard data

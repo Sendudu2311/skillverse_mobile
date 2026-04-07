@@ -200,9 +200,9 @@ class BookingDisputeDto {
           ?.toDouble(),
       resolvedBy: json['resolvedBy'] as int?,
       resolvedAt: json['resolvedAt'] != null
-          ? DateTime.parse(json['resolvedAt'] as String)
+          ? DateTime.parse(json['resolvedAt'] as String).toLocal()
           : null,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
     );
   }
 }
@@ -262,9 +262,9 @@ class BookingDisputeEvidenceDto {
       reviewNotes: json['reviewNotes'] as String?,
       reviewedBy: json['reviewedBy'] as int?,
       reviewedAt: json['reviewedAt'] != null
-          ? DateTime.parse(json['reviewedAt'] as String)
+          ? DateTime.parse(json['reviewedAt'] as String).toLocal()
           : null,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
       responses: rawResponses
           .map(
             (e) =>
@@ -304,7 +304,7 @@ class BookingDisputeResponseDto {
       respondedByName: json['respondedByName'] as String? ?? '',
       content: json['content'] as String? ?? '',
       isAdminResponse: json['isAdminResponse'] as bool? ?? false,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
     );
   }
 }

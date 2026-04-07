@@ -82,6 +82,12 @@ class RoadmapNode {
   final List<String> children;
   final String? estimatedCompletionRate;
 
+  // Tree node fields (V3 - Roadmap lifecycle)
+  final bool? isCore; // true = main path, false = side quest
+  final String? parentId; // parent node ID in tree
+  final List<String>? suggestedCourseIds; // validated course IDs from DB
+  final String? nodeStatus; // LOCKED, AVAILABLE, IN_PROGRESS, COMPLETED
+
   RoadmapNode({
     required this.id,
     required this.title,
@@ -97,6 +103,10 @@ class RoadmapNode {
     this.prerequisites,
     required this.children,
     this.estimatedCompletionRate,
+    this.isCore,
+    this.parentId,
+    this.suggestedCourseIds,
+    this.nodeStatus,
   });
 
   factory RoadmapNode.fromJson(Map<String, dynamic> json) =>
@@ -108,6 +118,9 @@ class RoadmapNode {
 
   /// Check if this is a main quest
   bool get isMainQuest => type == NodeType.main;
+
+  /// Check if this node is on the core/main path
+  bool get isCoreNode => isCore ?? true;
 }
 
 /// Roadmap metadata
@@ -139,6 +152,8 @@ class RoadmapMetadata {
   final String? difficultyConcern;
   final bool? incomeGoal;
   final RoadmapMode? roadmapMode;
+  final SkillModeMeta? skillMode;
+  final CareerModeMeta? careerMode;
 
   RoadmapMetadata({
     required this.title,
@@ -167,11 +182,79 @@ class RoadmapMetadata {
     this.difficultyConcern,
     this.incomeGoal,
     this.roadmapMode,
+    this.skillMode,
+    this.careerMode,
   });
 
   factory RoadmapMetadata.fromJson(Map<String, dynamic> json) =>
       _$RoadmapMetadataFromJson(json);
   Map<String, dynamic> toJson() => _$RoadmapMetadataToJson(this);
+}
+
+/// Skill-based mode metadata (nested in RoadmapMetadata)
+@JsonSerializable()
+class SkillModeMeta {
+  final String? skillName;
+  final String? skillCategory;
+  final String? desiredDepth;
+  final String? learnerType;
+  final String? currentSkillLevel;
+  final String? learningGoal;
+  final String? dailyLearningTime;
+  final String? assessmentPreference;
+  final String? difficultyTolerance;
+  final List<String>? toolPreference;
+
+  SkillModeMeta({
+    this.skillName,
+    this.skillCategory,
+    this.desiredDepth,
+    this.learnerType,
+    this.currentSkillLevel,
+    this.learningGoal,
+    this.dailyLearningTime,
+    this.assessmentPreference,
+    this.difficultyTolerance,
+    this.toolPreference,
+  });
+
+  factory SkillModeMeta.fromJson(Map<String, dynamic> json) =>
+      _$SkillModeMetaFromJson(json);
+  Map<String, dynamic> toJson() => _$SkillModeMetaToJson(this);
+}
+
+/// Career-based mode metadata (nested in RoadmapMetadata)
+@JsonSerializable()
+class CareerModeMeta {
+  final String? targetRole;
+  final String? careerTrack;
+  final String? targetSeniority;
+  final String? workMode;
+  final String? targetMarket;
+  final String? companyType;
+  final String? timelineToWork;
+  final bool? incomeExpectation;
+  final String? workExperience;
+  final bool? transferableSkills;
+  final String? confidenceLevel;
+
+  CareerModeMeta({
+    this.targetRole,
+    this.careerTrack,
+    this.targetSeniority,
+    this.workMode,
+    this.targetMarket,
+    this.companyType,
+    this.timelineToWork,
+    this.incomeExpectation,
+    this.workExperience,
+    this.transferableSkills,
+    this.confidenceLevel,
+  });
+
+  factory CareerModeMeta.fromJson(Map<String, dynamic> json) =>
+      _$CareerModeMetaFromJson(json);
+  Map<String, dynamic> toJson() => _$CareerModeMetaToJson(this);
 }
 
 /// Roadmap statistics
@@ -218,10 +301,100 @@ class QuestProgress {
   bool get isCompleted => status == ProgressStatus.completed;
 }
 
+/// Roadmap overview section (V2)
+@JsonSerializable()
+class RoadmapOverview {
+  final String? purpose;
+  final String? audience;
+  final String? postRoadmapState;
+
+  RoadmapOverview({this.purpose, this.audience, this.postRoadmapState});
+
+  factory RoadmapOverview.fromJson(Map<String, dynamic> json) =>
+      _$RoadmapOverviewFromJson(json);
+  Map<String, dynamic> toJson() => _$RoadmapOverviewToJson(this);
+}
+
+/// Roadmap structure phase (V2)
+@JsonSerializable()
+class StructurePhase {
+  final String? phaseId;
+  final String? title;
+  final String? timeframe;
+  final String? goal;
+  final List<String>? skillFocus;
+  final String? mindsetGoal;
+  final String? expectedOutput;
+
+  StructurePhase({
+    this.phaseId,
+    this.title,
+    this.timeframe,
+    this.goal,
+    this.skillFocus,
+    this.mindsetGoal,
+    this.expectedOutput,
+  });
+
+  factory StructurePhase.fromJson(Map<String, dynamic> json) =>
+      _$StructurePhaseFromJson(json);
+  Map<String, dynamic> toJson() => _$StructurePhaseToJson(this);
+}
+
+/// Project evidence for roadmap (V2)
+@JsonSerializable()
+class ProjectEvidence {
+  final String? phaseId;
+  final String? project;
+  final String? objective;
+  final List<String>? skillsProven;
+  final List<String>? kpi;
+
+  ProjectEvidence({
+    this.phaseId,
+    this.project,
+    this.objective,
+    this.skillsProven,
+    this.kpi,
+  });
+
+  factory ProjectEvidence.fromJson(Map<String, dynamic> json) =>
+      _$ProjectEvidenceFromJson(json);
+  Map<String, dynamic> toJson() => _$ProjectEvidenceToJson(this);
+}
+
+/// Next steps after roadmap completion (V2)
+@JsonSerializable()
+class RoadmapNextSteps {
+  final List<String>? jobs;
+  final List<String>? nextSkills;
+  final List<String>? mentorsMicroJobs;
+
+  RoadmapNextSteps({this.jobs, this.nextSkills, this.mentorsMicroJobs});
+
+  factory RoadmapNextSteps.fromJson(Map<String, dynamic> json) =>
+      _$RoadmapNextStepsFromJson(json);
+  Map<String, dynamic> toJson() => _$RoadmapNextStepsToJson(this);
+}
+
+/// Skill dependency edge (V2)
+@JsonSerializable()
+class SkillDependency {
+  final String from;
+  final String to;
+
+  SkillDependency({required this.from, required this.to});
+
+  factory SkillDependency.fromJson(Map<String, dynamic> json) =>
+      _$SkillDependencyFromJson(json);
+  Map<String, dynamic> toJson() => _$SkillDependencyToJson(this);
+}
+
 /// Full roadmap response with nested structure (V2)
 @JsonSerializable()
 class RoadmapResponse {
   final int sessionId;
+  final String? roadmapStatus; // ACTIVE, PAUSED, DELETED
   final RoadmapMetadata metadata;
   final List<RoadmapNode> roadmap;
   final RoadmapStatistics statistics;
@@ -230,8 +403,17 @@ class RoadmapResponse {
   final String createdAt;
   final Map<String, QuestProgress>? progress;
 
+  // V2 enhanced fields
+  final RoadmapOverview? overview;
+  final List<StructurePhase>? structure;
+  final List<String>? thinkingProgression;
+  final List<ProjectEvidence>? projectsEvidence;
+  final RoadmapNextSteps? nextSteps;
+  final List<SkillDependency>? skillDependencies;
+
   RoadmapResponse({
     required this.sessionId,
+    this.roadmapStatus,
     required this.metadata,
     required this.roadmap,
     required this.statistics,
@@ -239,6 +421,12 @@ class RoadmapResponse {
     this.warnings,
     required this.createdAt,
     this.progress,
+    this.overview,
+    this.structure,
+    this.thinkingProgression,
+    this.projectsEvidence,
+    this.nextSteps,
+    this.skillDependencies,
   });
 
   factory RoadmapResponse.fromJson(Map<String, dynamic> json) =>
@@ -276,6 +464,7 @@ class RoadmapResponse {
 
   RoadmapResponse copyWith({
     int? sessionId,
+    String? roadmapStatus,
     RoadmapMetadata? metadata,
     List<RoadmapNode>? roadmap,
     RoadmapStatistics? statistics,
@@ -283,9 +472,16 @@ class RoadmapResponse {
     List<String>? warnings,
     String? createdAt,
     Map<String, QuestProgress>? progress,
+    RoadmapOverview? overview,
+    List<StructurePhase>? structure,
+    List<String>? thinkingProgression,
+    List<ProjectEvidence>? projectsEvidence,
+    RoadmapNextSteps? nextSteps,
+    List<SkillDependency>? skillDependencies,
   }) {
     return RoadmapResponse(
       sessionId: sessionId ?? this.sessionId,
+      roadmapStatus: roadmapStatus ?? this.roadmapStatus,
       metadata: metadata ?? this.metadata,
       roadmap: roadmap ?? this.roadmap,
       statistics: statistics ?? this.statistics,
@@ -293,6 +489,12 @@ class RoadmapResponse {
       warnings: warnings ?? this.warnings,
       createdAt: createdAt ?? this.createdAt,
       progress: progress ?? this.progress,
+      overview: overview ?? this.overview,
+      structure: structure ?? this.structure,
+      thinkingProgression: thinkingProgression ?? this.thinkingProgression,
+      projectsEvidence: projectsEvidence ?? this.projectsEvidence,
+      nextSteps: nextSteps ?? this.nextSteps,
+      skillDependencies: skillDependencies ?? this.skillDependencies,
     );
   }
 }
@@ -312,6 +514,7 @@ class RoadmapSessionSummary {
   final double progressPercentage;
   final String? difficultyLevel;
   final int? schemaVersion;
+  final String? status; // ACTIVE, PAUSED, DELETED
   final String createdAt;
 
   RoadmapSessionSummary({
@@ -327,12 +530,47 @@ class RoadmapSessionSummary {
     required this.progressPercentage,
     this.difficultyLevel,
     this.schemaVersion,
+    this.status,
     required this.createdAt,
   });
 
   factory RoadmapSessionSummary.fromJson(Map<String, dynamic> json) =>
       _$RoadmapSessionSummaryFromJson(json);
   Map<String, dynamic> toJson() => _$RoadmapSessionSummaryToJson(this);
+
+  RoadmapSessionSummary copyWith({
+    int? sessionId,
+    String? title,
+    String? originalGoal,
+    String? validatedGoal,
+    String? duration,
+    String? experienceLevel,
+    String? learningStyle,
+    int? totalQuests,
+    int? completedQuests,
+    double? progressPercentage,
+    String? difficultyLevel,
+    int? schemaVersion,
+    String? status,
+    String? createdAt,
+  }) {
+    return RoadmapSessionSummary(
+      sessionId: sessionId ?? this.sessionId,
+      title: title ?? this.title,
+      originalGoal: originalGoal ?? this.originalGoal,
+      validatedGoal: validatedGoal ?? this.validatedGoal,
+      duration: duration ?? this.duration,
+      experienceLevel: experienceLevel ?? this.experienceLevel,
+      learningStyle: learningStyle ?? this.learningStyle,
+      totalQuests: totalQuests ?? this.totalQuests,
+      completedQuests: completedQuests ?? this.completedQuests,
+      progressPercentage: progressPercentage ?? this.progressPercentage,
+      difficultyLevel: difficultyLevel ?? this.difficultyLevel,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 
   /// Get experience level display text in Vietnamese
   String get experienceLevelDisplay {

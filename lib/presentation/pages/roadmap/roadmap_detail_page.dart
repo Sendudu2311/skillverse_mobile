@@ -5,6 +5,7 @@ import '../../themes/app_theme.dart';
 import '../../../data/models/roadmap_models.dart';
 import 'package:go_router/go_router.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/status_badge.dart';
 import '../../widgets/painters/grid_painter.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/common_loading.dart';
@@ -159,6 +160,10 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
               // Metadata section
               _buildMetadataSection(context, roadmap, isDark),
 
+              // V2 Overview section
+              if (roadmap.overview != null)
+                _buildOverviewSection(context, roadmap.overview!, isDark),
+
               // Validation notes
               if (roadmap.metadata.validationNotes != null)
                 _buildValidationNotes(
@@ -255,7 +260,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Text(
-                roadmap.metadata.title,
+                _cleanAiText(roadmap.metadata.title),
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -271,6 +276,8 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
               const SizedBox(height: 8),
               Row(
                 children: [
+                  StatusBadge(status: roadmap.roadmapStatus ?? 'ACTIVE'),
+                  const SizedBox(width: 12),
                   const Icon(
                     Icons.signal_cellular_alt,
                     size: 16,
@@ -441,12 +448,125 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
     );
   }
 
+  /// Strip markdown bold/italic markers from AI-generated text
+  String _cleanAiText(String text) {
+    return text
+        .replaceAll(RegExp(r'\*{2,}'), '') // ** or ***
+        .replaceAll(RegExp(r'_{2,}'), '') // __ or ___
+        .replaceAll(RegExp(r'(?<=\s)\*(?=\S)|(?<=\S)\*(?=\s)'), '') // lone *
+        .trim();
+  }
+
+  /// Check if metadata value contains structured key=value pairs
+  bool _hasStructuredSpec(String? value) {
+    if (value == null || value.trim().isEmpty) return false;
+    return value.contains('=') || value.contains('\n') || value.contains(';');
+  }
+
+  /// Format camelCase/snake_case key to readable Vietnamese-friendly label
+  String _formatSpecKey(String key) {
+    const knownLabels = <String, String>{
+      'assessmentscore': 'Assessment score',
+      'level': 'Cấp độ',
+      'scoreband': 'Score band',
+      'recommendation': 'Khuyến nghị',
+      'recommendationmode': 'Khuyến nghị',
+      'strengths': 'Thế mạnh',
+      'gaps': 'Khoảng trống',
+      'background': 'Nền tảng',
+    };
+    final normalized = key
+        .replaceAll(RegExp(r'[^a-z0-9]', caseSensitive: false), '')
+        .toLowerCase();
+    if (knownLabels.containsKey(normalized)) return knownLabels[normalized]!;
+    return key
+        .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (m) => '${m[1]} ${m[2]}')
+        .replaceAll(RegExp(r'[_-]+'), ' ')
+        .trim()
+        .split(' ')
+        .map(
+          (w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '',
+        )
+        .join(' ');
+  }
+
+  /// Parse and render structured key=value metadata with chips
+  Widget _buildStructuredSpecValue(
+    BuildContext context,
+    String value,
+    bool isDark,
+  ) {
+    final tokens = value
+        .split(RegExp(r'[\n;]+|,\s*'))
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+
+    final entries = <MapEntry<String, String>>[];
+    for (final token in tokens) {
+      final eqIdx = token.indexOf('=');
+      if (eqIdx >= 0) {
+        final k = token.substring(0, eqIdx).trim();
+        final v = token.substring(eqIdx + 1).trim();
+        if (k.isNotEmpty && v.isNotEmpty) {
+          entries.add(MapEntry(k, v));
+          continue;
+        }
+      }
+      // Append to last entry or add as standalone
+      if (entries.isNotEmpty) {
+        final last = entries.removeLast();
+        entries.add(MapEntry(last.key, '${last.value}, $token'));
+      } else {
+        entries.add(MapEntry('', token));
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: entries.map((e) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (e.key.isNotEmpty) ...[
+                Text(
+                  _formatSpecKey(e.key),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Expanded(
+                child: Text(
+                  e.value,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildMetadataSection(
     BuildContext context,
     RoadmapResponse roadmap,
     bool isDark,
   ) {
     final metadata = roadmap.metadata;
+    final isSkillBased =
+        metadata.roadmapType == 'SKILL_BASED' ||
+        metadata.roadmapType == 'skill';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -454,12 +574,12 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
         padding: const EdgeInsets.all(20),
         borderRadius: 16,
         backgroundColor: isDark
-            ? const Color(0xFF1E293B).withOpacity(0.6)
-            : Colors.white.withOpacity(0.7),
+            ? const Color(0xFF1E293B).withValues(alpha: 0.6)
+            : Colors.white.withValues(alpha: 0.7),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Goal
+            // Goal + Mode badge row
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -470,7 +590,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
                         (isDark
                                 ? AppTheme.primaryBlueDark
                                 : AppTheme.primaryBlue)
-                            .withOpacity(0.1),
+                            .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -498,7 +618,9 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        metadata.validatedGoal ?? metadata.originalGoal,
+                        _cleanAiText(
+                          metadata.validatedGoal ?? metadata.originalGoal,
+                        ),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: isDark
                               ? AppTheme.darkTextPrimary
@@ -515,44 +637,75 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
             Divider(
               height: 1,
               color: isDark
-                  ? Colors.white.withOpacity(0.1)
-                  : Colors.black.withOpacity(0.05),
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : Colors.black.withValues(alpha: 0.05),
             ),
             const SizedBox(height: 24),
 
-            // Grid of metadata items
+            // Mode-specific metadata grid
             Wrap(
               spacing: 24,
               runSpacing: 24,
-              children: [
-                if (metadata.target != null)
-                  _buildMetadataItem(
-                    context,
-                    'Vị trí mục tiêu',
-                    metadata.target!,
-                    isDark,
-                  ),
-                if (metadata.background != null)
-                  _buildMetadataItem(
-                    context,
-                    'Background',
-                    metadata.background!,
-                    isDark,
-                  ),
-                _buildMetadataItem(
-                  context,
-                  'Thời gian cam kết',
-                  metadata.duration,
-                  isDark,
-                ),
-                if (metadata.targetEnvironment != null)
-                  _buildMetadataItem(
-                    context,
-                    'Môi trường',
-                    metadata.targetEnvironment!,
-                    isDark,
-                  ),
-              ],
+              children: isSkillBased
+                  ? [
+                      _buildMetadataItem(
+                        context,
+                        'Kỹ năng trọng tâm',
+                        metadata.target ??
+                            metadata.skillMode?.skillName ??
+                            'N/A',
+                        isDark,
+                      ),
+                      _buildMetadataItem(
+                        context,
+                        'Cấp độ hiện tại',
+                        metadata.currentLevel ?? 'Zero',
+                        isDark,
+                      ),
+                      _buildMetadataItem(
+                        context,
+                        'Thời gian/ngày',
+                        metadata.dailyTime ?? '1h',
+                        isDark,
+                      ),
+                      _buildMetadataItem(
+                        context,
+                        'Phong cách học',
+                        metadata.learningStyle,
+                        isDark,
+                      ),
+                    ]
+                  : [
+                      _buildMetadataItem(
+                        context,
+                        'Vị trí mục tiêu',
+                        metadata.target ??
+                            metadata.careerMode?.targetRole ??
+                            'N/A',
+                        isDark,
+                      ),
+                      _buildMetadataItem(
+                        context,
+                        'Background',
+                        metadata.currentLevel ?? metadata.background ?? 'N/A',
+                        isDark,
+                      ),
+                      _buildMetadataItem(
+                        context,
+                        'Thời gian cam kết',
+                        metadata.careerMode?.timelineToWork ??
+                            metadata.duration,
+                        isDark,
+                      ),
+                      _buildMetadataItem(
+                        context,
+                        'Môi trường',
+                        metadata.targetEnvironment ??
+                            metadata.careerMode?.companyType ??
+                            'Startup',
+                        isDark,
+                      ),
+                    ],
             ),
           ],
         ),
@@ -566,8 +719,13 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
     String value,
     bool isDark,
   ) {
+    final isStructured = _hasStructuredSpec(value);
+
     return SizedBox(
-      width: MediaQuery.of(context).size.width * 0.4 - 32,
+      width: isStructured
+          ? MediaQuery.of(context).size.width -
+                80 // full width for structured
+          : MediaQuery.of(context).size.width * 0.4 - 32,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -582,15 +740,109 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: isDark
-                  ? AppTheme.darkTextPrimary
-                  : AppTheme.lightTextPrimary,
+          if (isStructured)
+            _buildStructuredSpecValue(context, value, isDark)
+          else
+            Text(
+              _cleanAiText(value),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary,
+              ),
             ),
-          ),
         ],
+      ),
+    );
+  }
+
+  /// V2 Overview section — shows purpose, audience, expected outcomes
+  Widget _buildOverviewSection(
+    BuildContext context,
+    RoadmapOverview overview,
+    bool isDark,
+  ) {
+    final items = <MapEntry<String, String>>[
+      if (overview.purpose != null && overview.purpose!.isNotEmpty)
+        MapEntry('Mục đích', overview.purpose!),
+      if (overview.audience != null && overview.audience!.isNotEmpty)
+        MapEntry('Đối tượng', overview.audience!),
+      if (overview.postRoadmapState != null &&
+          overview.postRoadmapState!.isNotEmpty)
+        MapEntry('Kết quả mong đợi', overview.postRoadmapState!),
+    ];
+
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: GlassCard(
+        padding: const EdgeInsets.all(20),
+        borderRadius: 16,
+        backgroundColor: isDark
+            ? const Color(0xFF1E293B).withValues(alpha: 0.6)
+            : Colors.white.withValues(alpha: 0.7),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentCyan.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.explore_outlined,
+                    size: 20,
+                    color: AppTheme.accentCyan,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'TỔNG QUAN LỘ TRÌNH',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.accentCyan,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...items.map(
+              (e) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      e.key.toUpperCase(),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                        fontSize: 10,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _cleanAiText(e.value),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -991,6 +1243,13 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
                           ],
                         ),
                       ),
+                      if (node.nodeStatus != null) ...[
+                        const SizedBox(width: 8),
+                        StatusBadge(
+                          status: node.nodeStatus!,
+                          icon: _getNodeStatusIcon(node.nodeStatus!),
+                        ),
+                      ],
                       const Spacer(),
                       Checkbox(
                         value: isCompleted,
@@ -1010,7 +1269,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
 
                   // Title
                   Text(
-                    node.title,
+                    _cleanAiText(node.title),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: isDark
@@ -1025,7 +1284,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
 
                   // Description
                   Text(
-                    node.description,
+                    _cleanAiText(node.description),
                     maxLines: isExpanded ? null : 2,
                     overflow: isExpanded ? null : TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1275,6 +1534,16 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
         ErrorHandler.showWarningSnackBar(context, 'Đã bỏ đánh dấu hoàn thành');
       }
     }
+  }
+
+  IconData _getNodeStatusIcon(String status) {
+    return switch (status.toUpperCase()) {
+      'LOCKED' => Icons.lock_outline,
+      'AVAILABLE' => Icons.lock_open,
+      'IN_PROGRESS' => Icons.play_circle_outline,
+      'COMPLETED' => Icons.check_circle_outline,
+      _ => Icons.help_outline,
+    };
   }
 
   // ===========================================================================

@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/selectable_chip_row.dart';
 import '../../../data/models/roadmap_models.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,9 +17,8 @@ class RoadmapGeneratePage extends StatefulWidget {
   State<RoadmapGeneratePage> createState() => _RoadmapGeneratePageState();
 }
 
-class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _RoadmapGeneratePageState extends State<RoadmapGeneratePage> {
+  int _selectedModeIndex = 0;
   final _formKey = GlobalKey<FormState>();
 
   // Form fields
@@ -59,19 +59,7 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() {});
-      }
-    });
-  }
-
-  @override
   void dispose() {
-    _tabController.dispose();
     _goalController.dispose();
     super.dispose();
   }
@@ -249,34 +237,17 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
   }
 
   Widget _buildModeTabs(BuildContext context, bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.grey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        indicator: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
-        ),
-        labelColor: Colors.white,
-        unselectedLabelColor: isDark
-            ? AppTheme.darkTextSecondary
-            : AppTheme.lightTextSecondary,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-        tabs: const [
-          Tab(text: '🎯 Skill-Based'),
-          Tab(text: '💼 Career-Based'),
-        ],
-      ),
+    return SelectableChipRow(
+      labels: const ['Skill-Based', 'Career-Based'],
+      icons: const [Icons.gps_fixed, Icons.work_outline],
+      selectedIndex: _selectedModeIndex,
+      onSelected: (i) => setState(() => _selectedModeIndex = i),
+      padding: EdgeInsets.zero,
     );
   }
 
   Widget _buildGoalInput(BuildContext context, bool isDark) {
-    final isSkillBased = _tabController.index == 0;
+    final isSkillBased = _selectedModeIndex == 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -717,7 +688,10 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
     // Check authentication
     final authProvider = context.read<AuthProvider>();
     if (!authProvider.isAuthenticated) {
-      ErrorHandler.showErrorSnackBar(context, 'Vui lòng đăng nhập để tạo lộ trình');
+      ErrorHandler.showErrorSnackBar(
+        context,
+        'Vui lòng đăng nhập để tạo lộ trình',
+      );
       context.push('/login');
       return;
     }
@@ -734,15 +708,13 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage>
       duration: _selectedDuration,
       experience: _selectedExperience,
       style: _selectedStyle,
-      roadmapMode: _tabController.index == 0 ? 'SKILL_BASED' : 'CAREER_BASED',
+      roadmapMode: _selectedModeIndex == 0 ? 'SKILL_BASED' : 'CAREER_BASED',
       dailyTime: _dailyTime,
       background: _background,
       targetEnvironment: _targetEnvironment,
       // Map goal to specific fields based on mode
-      skillName: _tabController.index == 0 ? _goalController.text.trim() : null,
-      targetRole: _tabController.index == 1
-          ? _goalController.text.trim()
-          : null,
+      skillName: _selectedModeIndex == 0 ? _goalController.text.trim() : null,
+      targetRole: _selectedModeIndex == 1 ? _goalController.text.trim() : null,
     );
 
     // Pre-validate

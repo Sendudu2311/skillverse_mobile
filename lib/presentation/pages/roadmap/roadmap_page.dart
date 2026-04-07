@@ -8,6 +8,7 @@ import '../../widgets/error_state_widget.dart';
 import '../../widgets/app_search_bar.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/animated_list_item.dart';
+import '../../../core/utils/error_handler.dart';
 import 'package:go_router/go_router.dart';
 
 class RoadmapPage extends StatefulWidget {
@@ -19,6 +20,7 @@ class RoadmapPage extends StatefulWidget {
 
 class _RoadmapPageState extends State<RoadmapPage> {
   final TextEditingController _searchController = TextEditingController();
+  int _listScope = 0; // 0 = learning, 1 = deleted
 
   @override
   void initState() {
@@ -30,6 +32,7 @@ class _RoadmapPageState extends State<RoadmapPage> {
       provider.clearFilters();
       _searchController.clear();
       provider.loadUserRoadmaps();
+      provider.loadStatusCounts();
     });
   }
 
@@ -91,6 +94,9 @@ class _RoadmapPageState extends State<RoadmapPage> {
             ),
           ),
 
+          // Scope tabs: Learning | Deleted
+          _buildScopeTabs(context, isDark),
+
           // Search & Filters
           _buildSearchAndFilters(context, isDark),
 
@@ -98,6 +104,12 @@ class _RoadmapPageState extends State<RoadmapPage> {
           Expanded(
             child: Consumer<RoadmapProvider>(
               builder: (context, provider, child) {
+                // DELETED scope
+                if (_listScope == 1) {
+                  return _buildDeletedScopeContent(context, provider, isDark);
+                }
+
+                // LEARNING scope (default)
                 if (provider.isLoading) {
                   return _buildLoadingState();
                 }
@@ -121,10 +133,212 @@ class _RoadmapPageState extends State<RoadmapPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/roadmap/generate'),
-        icon: const Icon(Icons.add),
-        label: const Text('Tạo lộ trình mới'),
+      floatingActionButton: _listScope == 0
+          ? FloatingActionButton.extended(
+              onPressed: () => context.push('/roadmap/generate'),
+              icon: const Icon(Icons.add),
+              label: const Text('Tạo lộ trình mới'),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildScopeTabs(BuildContext context, bool isDark) {
+    return Consumer<RoadmapProvider>(
+      builder: (context, provider, child) {
+        final learningCount =
+            (provider.statusCounts['active'] ?? 0) +
+            (provider.statusCounts['paused'] ?? 0);
+        final deletedCount = provider.statusCounts['deleted'] ?? 0;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppTheme.galaxyDark.withValues(alpha: 0.5)
+                : Colors.white,
+            border: Border(
+              bottom: BorderSide(
+                color: isDark
+                    ? AppTheme.darkBorderColor.withValues(alpha: 0.5)
+                    : AppTheme.lightBorderColor,
+              ),
+            ),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : Colors.grey[200],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? AppTheme.darkBorderColor : Colors.transparent,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildScopeItem(
+                    0,
+                    'Đang học',
+                    learningCount,
+                    Icons.school,
+                    isDark,
+                    provider,
+                  ),
+                ),
+                Expanded(
+                  child: _buildScopeItem(
+                    1,
+                    'Thùng rác',
+                    deletedCount,
+                    Icons.delete_sweep,
+                    isDark,
+                    provider,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildScopeItem(
+    int index,
+    String label,
+    int count,
+    IconData icon,
+    bool isDark,
+    RoadmapProvider provider,
+  ) {
+    final isSelected = _listScope == index;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _listScope = index);
+        if (index == 1) {
+          provider.loadDeletedRoadmaps(force: true);
+        }
+        provider.loadStatusCounts();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark
+                    ? AppTheme.primaryBlue.withValues(alpha: 0.2)
+                    : AppTheme.primaryBlue)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: isSelected && isDark
+              ? Border.all(
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.5),
+                  width: 1.5,
+                )
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected
+                  ? (isDark ? AppTheme.primaryBlue : Colors.white)
+                  : (isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? (isDark ? AppTheme.darkTextPrimary : Colors.white)
+                    : (isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary),
+              ),
+            ),
+            if (count > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? (isDark
+                            ? AppTheme.primaryBlue.withValues(alpha: 0.3)
+                            : Colors.white.withValues(alpha: 0.3))
+                      : (isDark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.grey[300]),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? (isDark ? AppTheme.primaryBlue : Colors.white)
+                        : (isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeletedScopeContent(
+    BuildContext context,
+    RoadmapProvider provider,
+    bool isDark,
+  ) {
+    if (provider.isLoadingDeleted) {
+      return _buildLoadingState();
+    }
+
+    final deletedRoadmaps = provider.filteredDeletedRoadmaps;
+
+    if (deletedRoadmaps.isEmpty) {
+      return EmptyStateWidget(
+        icon: Icons.delete_sweep_outlined,
+        title: 'Thùng rác trống',
+        subtitle: 'Khi bạn xóa lộ trình, chúng sẽ xuất hiện tại đây',
+        ctaLabel: 'Quay lại danh sách',
+        onCtaPressed: () => setState(() => _listScope = 0),
+        iconGradient: AppTheme.blueGradient,
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => provider.loadDeletedRoadmaps(force: true),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(20),
+        itemCount: deletedRoadmaps.length,
+        itemBuilder: (context, index) {
+          final roadmap = deletedRoadmaps[index];
+          return AnimatedListItem(
+            index: index,
+            child: AiRoadmapCard(
+              roadmap: roadmap,
+              isDeletedScope: true,
+              onLifecycleAction: (action) =>
+                  _handleDeletedScopeAction(context, action, roadmap.sessionId),
+            ),
+          );
+        },
       ),
     );
   }
@@ -376,11 +590,46 @@ class _RoadmapPageState extends State<RoadmapPage> {
             child: AiRoadmapCard(
               roadmap: roadmap,
               onTap: () => _navigateToDetail(context, roadmap.sessionId),
+              onLifecycleAction: (action) =>
+                  _handleLifecycleAction(context, action, roadmap.sessionId),
             ),
           );
         },
       ),
     );
+  }
+
+  Future<void> _handleLifecycleAction(
+    BuildContext context,
+    String action,
+    int sessionId,
+  ) async {
+    final provider = context.read<RoadmapProvider>();
+    bool success = false;
+    String message = '';
+
+    switch (action) {
+      case 'activate':
+        success = await provider.activateRoadmap(sessionId);
+        message = success ? 'Đã kích hoạt lộ trình' : 'Lỗi kích hoạt lộ trình';
+        break;
+      case 'pause':
+        success = await provider.pauseRoadmap(sessionId);
+        message = success ? 'Đã tạm dừng lộ trình' : 'Lỗi tạm dừng lộ trình';
+        break;
+      case 'delete':
+        success = await provider.softDeleteRoadmap(sessionId);
+        message = success ? 'Đã xoá lộ trình' : 'Lỗi xoá lộ trình';
+        break;
+    }
+
+    if (mounted) {
+      if (success) {
+        ErrorHandler.showSuccessSnackBar(context, message);
+      } else {
+        ErrorHandler.showErrorSnackBar(context, message);
+      }
+    }
   }
 
   void _navigateToGenerate(BuildContext context) {
@@ -389,5 +638,95 @@ class _RoadmapPageState extends State<RoadmapPage> {
 
   void _navigateToDetail(BuildContext context, int sessionId) {
     context.push('/roadmap/$sessionId');
+  }
+
+  Future<void> _handleDeletedScopeAction(
+    BuildContext context,
+    String action,
+    int sessionId,
+  ) async {
+    final provider = context.read<RoadmapProvider>();
+
+    switch (action) {
+      case 'restore':
+        final success = await provider.restoreRoadmap(sessionId);
+        if (mounted) {
+          if (success) {
+            ErrorHandler.showSuccessSnackBar(context, 'Đã khôi phục lộ trình');
+          } else {
+            ErrorHandler.showErrorSnackBar(context, 'Lỗi khôi phục lộ trình');
+          }
+        }
+        break;
+      case 'permanent_delete':
+        _showPermanentDeleteDialog(context, sessionId);
+        break;
+    }
+  }
+
+  void _showPermanentDeleteDialog(BuildContext context, int sessionId) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: isDark ? AppTheme.galaxyMid : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(
+          Icons.warning_amber_rounded,
+          color: Colors.red,
+          size: 40,
+        ),
+        title: Text(
+          'Xóa vĩnh viễn?',
+          style: TextStyle(
+            color: isDark
+                ? AppTheme.darkTextPrimary
+                : AppTheme.lightTextPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Hành động này không thể hoàn tác. Toàn bộ dữ liệu liên quan sẽ bị xóa khỏi hệ thống.',
+          style: TextStyle(
+            color: isDark
+                ? AppTheme.darkTextSecondary
+                : AppTheme.lightTextSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(
+              'Hủy',
+              style: TextStyle(
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+              ),
+            ),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              final provider = context.read<RoadmapProvider>();
+              final success = await provider.permanentDeleteRoadmap(sessionId);
+              if (mounted) {
+                if (success) {
+                  ErrorHandler.showSuccessSnackBar(
+                    context,
+                    'Đã xóa vĩnh viễn lộ trình',
+                  );
+                } else {
+                  ErrorHandler.showErrorSnackBar(context, 'Lỗi xóa vĩnh viễn');
+                }
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Xóa vĩnh viễn'),
+          ),
+        ],
+      ),
+    );
   }
 }

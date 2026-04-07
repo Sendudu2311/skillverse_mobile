@@ -100,6 +100,10 @@ class GenerateScheduleRequest {
   final String latestEndLocalTime;
   final bool avoidLateNight;
   final bool allowLateNight;
+  final String? freeTimeDescription;
+  final String? intensityLevel;
+  final bool? confirmLateNight;
+  final List<String>? childBranchTitles;
 
   GenerateScheduleRequest({
     required this.subjectName,
@@ -129,6 +133,10 @@ class GenerateScheduleRequest {
     this.latestEndLocalTime = '22:00',
     this.avoidLateNight = true,
     this.allowLateNight = false,
+    this.freeTimeDescription,
+    this.intensityLevel,
+    this.confirmLateNight,
+    this.childBranchTitles,
   });
 
   factory GenerateScheduleRequest.fromJson(Map<String, dynamic> json) =>

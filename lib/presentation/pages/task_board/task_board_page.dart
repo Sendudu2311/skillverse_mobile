@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/task_board_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/glass_card.dart';
 import 'widgets/ai_study_planner_dialog.dart';
 import 'widgets/timeline_view.dart';
 import 'widgets/kanban_view.dart';
@@ -68,6 +69,13 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
                 ),
               ],
             ),
+          ),
+
+          // Overdue Alert Banner + Stats Row
+          Consumer<TaskBoardProvider>(
+            builder: (context, provider, _) {
+              return _buildHeroStats(context, provider, isDark);
+            },
           ),
 
           // Tab Buttons
@@ -262,6 +270,176 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
     showDialog(
       context: context,
       builder: (context) => const AIStudyPlannerDialog(),
+    );
+  }
+
+  /// Hero stats section — overdue alert + 3 stat chips
+  Widget _buildHeroStats(
+    BuildContext context,
+    TaskBoardProvider provider,
+    bool isDark,
+  ) {
+    final allTasks = provider.allTasks;
+    final overdueCount = allTasks.where((t) => t.isOverdue).length;
+    final inProgressCount = allTasks
+        .where((t) => t.columnId == 'inprogress')
+        .length;
+    final doneCount = allTasks.where((t) => t.columnId == 'done').length;
+
+    // Don't show hero section if there are no tasks at all
+    if (allTasks.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Column(
+        children: [
+          // Overdue Alert Banner
+          if (overdueCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GlassCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                borderRadius: 10,
+                borderColor: AppTheme.errorColor.withValues(alpha: 0.4),
+                backgroundColor: AppTheme.errorColor.withValues(alpha: 0.1),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 18,
+                      color: AppTheme.errorColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '$overdueCount nhiệm vụ quá hạn cần xử lý!',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'monospace',
+                          color: AppTheme.errorColor,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => provider.setSelectedTab(2), // Kanban
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorColor.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: AppTheme.errorColor.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Text(
+                          'Xử lý ngay',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                            color: AppTheme.errorColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Stats Row
+          Row(
+            children: [
+              Expanded(
+                child: _buildMiniStatChip(
+                  context,
+                  icon: Icons.warning_outlined,
+                  label: 'Quá hạn',
+                  count: overdueCount,
+                  color: AppTheme.errorColor,
+                  isDark: isDark,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMiniStatChip(
+                  context,
+                  icon: Icons.autorenew,
+                  label: 'Đang làm',
+                  count: inProgressCount,
+                  color: AppTheme.warningColor,
+                  isDark: isDark,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMiniStatChip(
+                  context,
+                  icon: Icons.check_circle_outline,
+                  label: 'Hoàn thành',
+                  count: doneCount,
+                  color: AppTheme.successColor,
+                  isDark: isDark,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mini stat chip for the hero stats row
+  Widget _buildMiniStatChip(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required int count,
+    required Color color,
+    required bool isDark,
+  }) {
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      borderRadius: 8,
+      borderColor: color.withValues(alpha: 0.3),
+      backgroundColor: color.withValues(alpha: 0.08),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 9,
+                fontFamily: 'monospace',
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

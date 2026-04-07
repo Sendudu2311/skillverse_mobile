@@ -26,6 +26,13 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool _isGenerating = false;
   String? _generationError;
 
+  // Roadmap lifecycle counts (HUD sync)
+  Map<String, int> _statusCounts = {};
+
+  // Loading state for recycle bin
+  bool _isLoadingDeleted = false;
+  bool _hasLoadedDeleted = false;
+
   // Legacy state (for backward compatibility)
   List<Roadmap> _legacyRoadmaps = [];
   List<Roadmap> _legacyUserRoadmaps = [];
@@ -46,6 +53,10 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
   String get filterExperience => _filterExperience;
   bool get isGenerating => _isGenerating;
   String? get generationError => _generationError;
+  Map<String, int> get statusCounts => _statusCounts;
+  List<RoadmapSessionSummary> get deletedRoadmaps => filteredDeletedRoadmaps;
+  bool get isLoadingDeleted => _isLoadingDeleted;
+  bool get hasLoadedDeleted => _hasLoadedDeleted;
 
   // Legacy getters
   @Deprecated('Use roadmaps instead')
@@ -53,11 +64,25 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
   @Deprecated('Use roadmaps instead')
   List<Roadmap> get userRoadmaps => _legacyUserRoadmaps;
 
-  /// Get filtered and sorted roadmaps
+  /// Get filtered and sorted roadmaps (excludes DELETED)
   List<RoadmapSessionSummary> get filteredRoadmaps {
-    var filtered = List<RoadmapSessionSummary>.from(_roadmaps);
+    var filtered = _roadmaps.where((r) {
+      final s = (r.status ?? 'ACTIVE').toUpperCase();
+      return s != 'DELETED' && s != 'SOFT_DELETED';
+    }).toList();
 
-    // Apply search filter
+    // Apply filters and sorting
+    return _applyFiltersAndSorting(filtered);
+  }
+
+  /// Get filtered and sorted deleted roadmaps
+  List<RoadmapSessionSummary> get filteredDeletedRoadmaps {
+    var filtered = _roadmaps.where((r) {
+      final s = (r.status ?? '').toUpperCase();
+      return s == 'DELETED' || s == 'SOFT_DELETED';
+    }).toList();
+
+    // Apply filters and sorting (pinned ACTIVE doesn't apply here)
     if (_searchQuery.isNotEmpty) {
       final query = StringHelper.removeDiacritics(_searchQuery);
       filtered = filtered
@@ -69,9 +94,31 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
           .toList();
     }
 
+    filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return filtered;
+  }
+
+  /// Shared filtering and sorting logic for non-deleted roadmaps
+  List<RoadmapSessionSummary> _applyFiltersAndSorting(
+    List<RoadmapSessionSummary> input,
+  ) {
+    var list = List<RoadmapSessionSummary>.from(input);
+
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      final query = StringHelper.removeDiacritics(_searchQuery);
+      list = list
+          .where(
+            (r) =>
+                StringHelper.removeDiacritics(r.title).contains(query) ||
+                StringHelper.removeDiacritics(r.originalGoal).contains(query),
+          )
+          .toList();
+    }
+
     // Apply experience filter
     if (_filterExperience != 'all') {
-      filtered = filtered.where((r) {
+      list = list.where((r) {
         final exp = r.experienceLevel.toLowerCase();
         final normalizedExp = (exp == 'mới bắt đầu')
             ? 'beginner'
@@ -84,8 +131,12 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
       }).toList();
     }
 
-    // Apply sorting
-    filtered.sort((a, b) {
+    // Apply sorting — ACTIVE items always pinned to top
+    list.sort((a, b) {
+      final aActive = (a.status ?? '').toUpperCase() == 'ACTIVE' ? 0 : 1;
+      final bActive = (b.status ?? '').toUpperCase() == 'ACTIVE' ? 0 : 1;
+      if (aActive != bActive) return aActive.compareTo(bActive);
+
       switch (_sortBy) {
         case SortOption.newest:
           return b.createdAt.compareTo(a.createdAt);
@@ -98,7 +149,7 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
       }
     });
 
-    return filtered;
+    return list;
   }
 
   // ============================================================================
@@ -131,11 +182,17 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
   // AI ROADMAP V2 METHODS
   // ============================================================================
 
-  /// Load all roadmap sessions for current user
-  Future<void> loadUserRoadmaps() async {
+  /// Load all roadmap sessions for current user (including deleted)
+  Future<void> loadUserRoadmaps({bool force = false}) async {
+    if (!force && _roadmaps.isNotEmpty) return;
+
     await executeAsync(
       () async {
-        _roadmaps = await _roadmapService.getUserRoadmaps();
+        // ALWAYS include deleted so we have a unified list for both tabs
+        final data = await _roadmapService.getUserRoadmaps(
+          includeDeleted: true,
+        );
+        _roadmaps = data;
         notifyListeners();
       },
       errorMessageBuilder: (error) {
@@ -145,6 +202,25 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
         return 'Lỗi tải danh sách lộ trình: ${error.toString()}';
       },
     );
+  }
+
+  /// Ensure all roadmaps (including deleted) are loaded
+  Future<void> loadDeletedRoadmaps({bool force = false}) async {
+    if (!force && _hasLoadedDeleted) return;
+
+    _isLoadingDeleted = true;
+    notifyListeners();
+
+    try {
+      // With the unified list strategy, this just ensures the main list is loaded with deleted items
+      await loadUserRoadmaps(force: true);
+      _hasLoadedDeleted = true;
+    } catch (e) {
+      debugPrint('🚨 Error loading deleted roadmaps: $e');
+    } finally {
+      _isLoadingDeleted = false;
+      notifyListeners();
+    }
   }
 
   /// Load a specific roadmap by ID
@@ -371,6 +447,119 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
       return _roadmaps.firstWhere((r) => r.sessionId == sessionId);
     } catch (e) {
       return null;
+    }
+  }
+
+  // ============================================================================
+  // ROADMAP LIFECYCLE MANAGEMENT
+  // ============================================================================
+
+  /// Load roadmap status counts
+  Future<void> loadStatusCounts() async {
+    try {
+      _statusCounts = await _roadmapService.getRoadmapStatusCounts();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading status counts: $e');
+    }
+  }
+
+  /// Activate a roadmap (auto-pauses others)
+  Future<bool> activateRoadmap(int sessionId) async {
+    try {
+      await _roadmapService.activateRoadmap(sessionId);
+      await loadUserRoadmaps(); // refresh to reflect status changes on all items
+      return true;
+    } catch (e) {
+      debugPrint('Error activating roadmap: $e');
+      return false;
+    }
+  }
+
+  /// Pause a roadmap
+  Future<bool> pauseRoadmap(int sessionId) async {
+    try {
+      await _roadmapService.pauseRoadmap(sessionId);
+      await loadUserRoadmaps();
+      return true;
+    } catch (e) {
+      debugPrint('Error pausing roadmap: $e');
+      return false;
+    }
+  }
+
+  /// Soft-delete a roadmap (hidden from list)
+  Future<bool> softDeleteRoadmap(int sessionId) async {
+    try {
+      debugPrint(
+        '🗑️ [RoadmapProvider] Starting soft-delete for session: $sessionId',
+      );
+
+      // Find item and update locally FIRST (Optimistic UI)
+      final index = _roadmaps.indexWhere((r) => r.sessionId == sessionId);
+      if (index != -1) {
+        _roadmaps[index] = _roadmaps[index].copyWith(status: 'DELETED');
+        debugPrint('   ✅ Local status updated to DELETED');
+        notifyListeners();
+      }
+
+      await _roadmapService.softDeleteRoadmap(sessionId);
+      debugPrint('   ✅ API Delete call success');
+
+      await loadStatusCounts();
+      return true;
+    } catch (e) {
+      debugPrint('❌ [RoadmapProvider] Error deleting roadmap $sessionId: $e');
+      // On error, reload from server to fix local state
+      await loadUserRoadmaps(force: true);
+      return false;
+    }
+  }
+
+  /// Permanently delete a roadmap
+  Future<bool> permanentDeleteRoadmap(int sessionId) async {
+    try {
+      await _roadmapService.permanentDeleteRoadmap(sessionId);
+      _roadmaps.removeWhere((r) => r.sessionId == sessionId);
+      await loadStatusCounts();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Error permanently deleting roadmap: $e');
+      return false;
+    }
+  }
+
+  /// Restore a soft-deleted roadmap (re-activate it)
+  Future<bool> restoreRoadmap(int sessionId) async {
+    try {
+      debugPrint(
+        '🔄 [RoadmapProvider] Starting restore for session: $sessionId',
+      );
+
+      // Update locally FIRST (Optimistic UI)
+      final index = _roadmaps.indexWhere((r) => r.sessionId == sessionId);
+      if (index != -1) {
+        // When restoring, we auto-pause others if the backend does so.
+        // For simplicity on mobile, we just update this one to ACTIVE.
+        // The subsequent loadUserRoadmaps() call will sync all other items' statuses.
+        _roadmaps[index] = _roadmaps[index].copyWith(status: 'ACTIVE');
+        debugPrint('   ✅ Local status updated to ACTIVE');
+        notifyListeners();
+      }
+
+      await _roadmapService.activateRoadmap(sessionId);
+      debugPrint('   ✅ API Activate success');
+
+      // Refresh to ensure all active/paused statuses are synced from server
+      await loadUserRoadmaps(force: true);
+      await loadStatusCounts();
+
+      return true;
+    } catch (e) {
+      debugPrint('❌ [RoadmapProvider] Error restoring roadmap $sessionId: $e');
+      await loadUserRoadmaps(force: true);
+      return false;
     }
   }
 

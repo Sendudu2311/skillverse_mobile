@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +16,8 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../../data/models/enrollment_models.dart';
 import '../../../data/models/dashboard_models.dart';
+import '../../../core/services/firebase_push_notification_service.dart';
+import '../../providers/task_board_provider.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -24,6 +28,8 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   bool _showAllActions = false;
+  StreamSubscription? _fcmForegroundSub;
+  StreamSubscription? _fcmTapSub;
 
   @override
   void initState() {
@@ -34,7 +40,95 @@ class _DashboardPageState extends State<DashboardPage> {
       context.read<SkinProvider>().loadAllSkins();
       context.read<NotificationProvider>().startPolling();
       _checkAndShowOnboarding();
+      _subscribeFcmStreams();
     });
+  }
+
+  void _subscribeFcmStreams() {
+    final fcm = FirebasePushNotificationService.instance;
+
+    // Foreground: increment badge + show snackbar
+    _fcmForegroundSub = fcm.onForegroundMessage.listen((payload) {
+      if (!mounted) return;
+      context.read<NotificationProvider>().fetchUnreadCount();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(payload.title ?? 'Thông báo mới'),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Xem',
+            onPressed: () => context.push('/notifications'),
+          ),
+        ),
+      );
+    });
+
+    // Tap from OS tray: navigate by type
+    _fcmTapSub = fcm.onNotificationTap.listen((payload) {
+      if (!mounted) return;
+      final type = payload.data['type'] as String?;
+      final relatedId = payload.data['relatedId'] as String?;
+      final route = _routeForPushType(type, relatedId);
+      if (route != null) context.push(route);
+    });
+  }
+
+  String? _routeForPushType(String? type, String? relatedId) {
+    switch (type) {
+      case 'LIKE':
+      case 'COMMENT':
+        return relatedId != null ? '/community/$relatedId' : '/community';
+      case 'BOOKING_CREATED':
+      case 'BOOKING_CONFIRMED':
+      case 'BOOKING_REJECTED':
+      case 'BOOKING_REMINDER':
+      case 'BOOKING_COMPLETED':
+      case 'BOOKING_CANCELLED':
+      case 'BOOKING_REFUND':
+      case 'BOOKING_STARTED':
+      case 'BOOKING_MENTOR_COMPLETED':
+        return '/my-bookings';
+      case 'PREMIUM_PURCHASE':
+      case 'PREMIUM_EXPIRATION':
+      case 'PREMIUM_CANCEL':
+        return '/premium';
+      case 'WALLET_DEPOSIT':
+      case 'COIN_PURCHASE':
+      case 'WITHDRAWAL_APPROVED':
+      case 'WITHDRAWAL_REJECTED':
+      case 'ESCROW_FUNDED':
+      case 'ESCROW_RELEASED':
+      case 'ESCROW_REFUNDED':
+        return '/wallet';
+      case 'SHORT_TERM_APPLICATION_SUBMITTED':
+      case 'SHORT_TERM_APPLICATION_ACCEPTED':
+      case 'SHORT_TERM_APPLICATION_REJECTED':
+      case 'SHORT_TERM_WORK_SUBMITTED':
+      case 'SHORT_TERM_WORK_APPROVED':
+      case 'FULLTIME_APPLICATION_REVIEWED':
+      case 'FULLTIME_APPLICATION_ACCEPTED':
+      case 'FULLTIME_APPLICATION_REJECTED':
+      case 'WORKER_CANCELLATION_REQUESTED':
+      case 'WORKER_AUTO_CANCELLED':
+        return '/my-applications';
+      case 'TASK_DEADLINE':
+      case 'TASK_OVERDUE':
+      case 'TASK_REVIEW':
+        return '/task-board';
+      case 'PRECHAT_MESSAGE':
+      case 'RECRUITMENT_MESSAGE':
+        return '/chat';
+      default:
+        return '/notifications';
+    }
+  }
+
+  @override
+  void dispose() {
+    _fcmForegroundSub?.cancel();
+    _fcmTapSub?.cancel();
+    context.read<NotificationProvider>().stopPolling();
+    super.dispose();
   }
 
   Future<void> _checkAndShowOnboarding() async {
@@ -224,148 +318,148 @@ class _DashboardPageState extends State<DashboardPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-            // Left: greeting + name + streak row
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getGreeting(),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontFamily: 'monospace',
-                      color: AppTheme.accentCyan,
-                      letterSpacing: 1.2,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Gradient name text
-                  ShaderMask(
-                    shaderCallback: (bounds) => LinearGradient(
-                      colors: [
-                        AppTheme.accentCyan,
-                        isDark ? Colors.white : AppTheme.lightTextPrimary,
-                        AppTheme.accentCyan,
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
-                    ).createShader(bounds),
-                    child: Text(
-                      userName,
-                      style: const TextStyle(
-                        fontSize: 27,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // Streak badge + weekly dots
-                  Row(
+                // Left: greeting + name + streak row
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Streak badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                      Text(
+                        _getGreeting(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontFamily: 'monospace',
+                          color: AppTheme.accentCyan,
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.bold,
                         ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.themeOrangeStart.withValues(
-                            alpha: 0.15,
+                      ),
+                      const SizedBox(height: 4),
+                      // Gradient name text
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [
+                            AppTheme.accentCyan,
+                            isDark ? Colors.white : AppTheme.lightTextPrimary,
+                            AppTheme.accentCyan,
+                          ],
+                          stops: const [0.0, 0.5, 1.0],
+                        ).createShader(bounds),
+                        child: Text(
+                          userName,
+                          style: const TextStyle(
+                            fontSize: 27,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: AppTheme.themeOrangeStart.withValues(
-                              alpha: 0.5,
-                            ),
-                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.local_fire_department,
-                              color: AppTheme.themeOrangeStart,
-                              size: 15,
+                      ),
+                      const SizedBox(height: 10),
+                      // Streak badge + weekly dots
+                      Row(
+                        children: [
+                          // Streak badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$streak ngày',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.themeOrangeStart,
-                                fontFamily: 'monospace',
+                            decoration: BoxDecoration(
+                              color: AppTheme.themeOrangeStart.withValues(
+                                alpha: 0.15,
                               ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppTheme.themeOrangeStart.withValues(
+                                  alpha: 0.5,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.local_fire_department,
+                                  color: AppTheme.themeOrangeStart,
+                                  size: 15,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$streak ngày',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.themeOrangeStart,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          // Weekly dots
+                          Row(
+                            children: List.generate(7, (i) {
+                              final isActive = weeklyActivity.length > i
+                                  ? weeklyActivity[i]
+                                  : false;
+                              return Tooltip(
+                                message: daysOfWeek[i],
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  margin: const EdgeInsets.only(right: 5),
+                                  decoration: BoxDecoration(
+                                    color: isActive
+                                        ? AppTheme.themeOrangeStart
+                                        : (isDark
+                                              ? AppTheme.darkBorderColor
+                                              : AppTheme.lightBorderColor),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      // Check-in button
+                      _buildCheckInButton(context, provider),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Right: Meowl avatar
+                Consumer<SkinProvider>(
+                  builder: (context, skinProvider, _) {
+                    final skin = skinProvider.selectedSkin;
+                    if (skin != null && skin.imageUrl != null) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.secondaryPurple.withValues(
+                                alpha: 0.4,
+                              ),
+                              blurRadius: 16,
+                              spreadRadius: 2,
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      // Weekly dots
-                      Row(
-                        children: List.generate(7, (i) {
-                          final isActive = weeklyActivity.length > i
-                              ? weeklyActivity[i]
-                              : false;
-                          return Tooltip(
-                            message: daysOfWeek[i],
-                            child: Container(
-                              width: 10,
-                              height: 10,
-                              margin: const EdgeInsets.only(right: 5),
-                              decoration: BoxDecoration(
-                                color: isActive
-                                    ? AppTheme.themeOrangeStart
-                                    : (isDark
-                                          ? AppTheme.darkBorderColor
-                                          : AppTheme.lightBorderColor),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  // Check-in button
-                  _buildCheckInButton(context, provider),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Right: Meowl avatar
-            Consumer<SkinProvider>(
-              builder: (context, skinProvider, _) {
-                final skin = skinProvider.selectedSkin;
-                if (skin != null && skin.imageUrl != null) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.secondaryPurple.withValues(
-                            alpha: 0.4,
-                          ),
-                          blurRadius: 16,
-                          spreadRadius: 2,
+                        child: Image.network(
+                          skin.imageUrl!,
+                          width: 92,
+                          height: 92,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
                         ),
-                      ],
-                    ),
-                    child: Image.network(
-                      skin.imageUrl!,
-                      width: 92,
-                      height: 92,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
-                    ),
-                  );
-                }
-                return _buildDefaultAvatar();
-              },
-            ),
+                      );
+                    }
+                    return _buildDefaultAvatar();
+                  },
+                ),
               ],
             ),
           ],
@@ -394,7 +488,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 child: IgnorePointer(
                   child: Container(
                     padding: const EdgeInsets.all(2),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
                     decoration: const BoxDecoration(
                       color: Colors.red,
                       shape: BoxShape.circle,
@@ -435,8 +532,7 @@ class _DashboardPageState extends State<DashboardPage> {
           disabledBackgroundColor: checkedIn
               ? AppTheme.themeGreenStart.withValues(alpha: 0.15)
               : null,
-          disabledForegroundColor:
-              checkedIn ? AppTheme.themeGreenStart : null,
+          disabledForegroundColor: checkedIn ? AppTheme.themeGreenStart : null,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -752,6 +848,7 @@ class _DashboardPageState extends State<DashboardPage> {
         'label': 'Task Board',
         'color': AppTheme.accentCyan,
         'route': '/task-board',
+        'badge': context.watch<TaskBoardProvider>().overdueCount,
       },
       {
         'icon': Icons.psychology_outlined,
@@ -827,6 +924,7 @@ class _DashboardPageState extends State<DashboardPage> {
               color: action['color'] as Color,
               onTap: () => context.push(action['route'] as String),
               isDark: isDark,
+              badge: action['badge'] as int?,
             );
           },
         ),
@@ -871,6 +969,7 @@ class _DashboardPageState extends State<DashboardPage> {
     required Color color,
     required VoidCallback onTap,
     required bool isDark,
+    int? badge,
   }) {
     return Semantics(
       label: 'quick_action_$label',
@@ -887,14 +986,50 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 20),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: color, size: 20),
+                  ),
+                  if (badge != null && badge > 0)
+                    Positioned(
+                      top: -4,
+                      right: -6,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark
+                                ? AppTheme.darkCardBackground
+                                : AppTheme.lightCardBackground,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Text(
+                          badge > 99 ? '99+' : '$badge',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 6),
               Text(
@@ -1140,9 +1275,7 @@ class _DashboardPageState extends State<DashboardPage> {
       decoration: BoxDecoration(
         color: AppTheme.accentGold.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppTheme.accentGold.withValues(alpha: 0.35),
-        ),
+        border: Border.all(color: AppTheme.accentGold.withValues(alpha: 0.35)),
       ),
       child: Row(
         children: [

@@ -24,10 +24,13 @@ class RoadmapService {
 
   /// Get all roadmap sessions for the current user
   /// API: GET /api/v1/ai/roadmap
-  Future<List<RoadmapSessionSummary>> getUserRoadmaps() async {
+  Future<List<RoadmapSessionSummary>> getUserRoadmaps({
+    bool includeDeleted = false,
+  }) async {
     try {
       final response = await _apiClient.dio.get<List<dynamic>>(
         '/v1/ai/roadmap',
+        queryParameters: {if (includeDeleted) 'includeDeleted': true},
       );
 
       if (response.data == null) {
@@ -205,8 +208,10 @@ class RoadmapService {
 
   /// Helper to convert DioException to standard AppException while preserving server message
   AppException _handleDioError(DioException e, String defaultMessage) {
-    debugPrint('🛑 RoadmapService Error: ${e.type} | Status: ${e.response?.statusCode}');
-    
+    debugPrint(
+      '🛑 RoadmapService Error: ${e.type} | Status: ${e.response?.statusCode}',
+    );
+
     // 1. Priority: Use error from ApiClient interceptor if it's an AppException
     if (e.error is AppException) {
       debugPrint('✅ Found AppException in DioException.error: ${e.error}');
@@ -229,19 +234,128 @@ class RoadmapService {
         }
 
         if (errorMap != null) {
-          final serverMessage = errorMap['message'] ?? errorMap['error'] ?? errorMap['details'];
+          final serverMessage =
+              errorMap['message'] ?? errorMap['error'] ?? errorMap['details'];
           if (serverMessage != null) {
             debugPrint('✅ Extracted Server Message (Direct): $serverMessage');
-            return ServerException(serverMessage.toString(), statusCode: e.response?.statusCode);
+            return ServerException(
+              serverMessage.toString(),
+              statusCode: e.response?.statusCode,
+            );
           }
         }
       } catch (err) {
         debugPrint('⚠️ Error parsing server error response: $err');
       }
     }
-    
+
     // 3. Last resort: Use default message
     return ServerException(defaultMessage, statusCode: e.response?.statusCode);
+  }
+
+  // ============================================================================
+  // ROADMAP LIFECYCLE MANAGEMENT (V3)
+  // ============================================================================
+
+  /// Activate a roadmap (auto-pauses other active roadmaps)
+  /// API: PUT /api/v1/ai/roadmap/{sessionId}/activate
+  Future<void> activateRoadmap(int sessionId) async {
+    try {
+      await _apiClient.dio.put('/v1/ai/roadmap/$sessionId/activate');
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Lỗi kích hoạt lộ trình');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+    }
+  }
+
+  /// Pause a roadmap
+  /// API: PUT /api/v1/ai/roadmap/{sessionId}/pause
+  Future<void> pauseRoadmap(int sessionId) async {
+    try {
+      await _apiClient.dio.put('/v1/ai/roadmap/$sessionId/pause');
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Lỗi tạm dừng lộ trình');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+    }
+  }
+
+  /// Soft-delete a roadmap (data preserved, hidden from default list)
+  /// API: DELETE /api/v1/ai/roadmap/{sessionId}
+  Future<void> softDeleteRoadmap(int sessionId) async {
+    try {
+      await _apiClient.dio.delete('/v1/ai/roadmap/$sessionId');
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Lỗi xoá lộ trình');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+    }
+  }
+
+  /// Permanently delete a roadmap (must be soft-deleted first)
+  /// API: DELETE /api/v1/ai/roadmap/{sessionId}/permanent
+  Future<void> permanentDeleteRoadmap(int sessionId) async {
+    try {
+      await _apiClient.dio.delete('/v1/ai/roadmap/$sessionId/permanent');
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Lỗi xoá vĩnh viễn lộ trình');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+    }
+  }
+
+  /// Get only soft-deleted roadmaps
+  /// API: GET /api/v1/ai/roadmap/deleted
+  Future<List<RoadmapSessionSummary>> getDeletedRoadmaps() async {
+    try {
+      final response = await _apiClient.dio.get<List<dynamic>>(
+        '/v1/ai/roadmap/deleted',
+      );
+
+      if (response.data == null) {
+        return [];
+      }
+
+      return response.data!
+          .map(
+            (json) =>
+                RoadmapSessionSummary.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Lỗi lấy lộ trình đã xoá');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+    }
+  }
+
+  /// Get roadmap counts by lifecycle status
+  /// API: GET /api/v1/ai/roadmap/status-counts
+  Future<Map<String, int>> getRoadmapStatusCounts() async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/v1/ai/roadmap/status-counts',
+      );
+
+      if (response.data == null) {
+        return {};
+      }
+
+      return response.data!.map(
+        (key, value) => MapEntry(key, (value as num).toInt()),
+      );
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Lỗi lấy thống kê lộ trình');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+    }
   }
 
   // ============================================================================
@@ -328,9 +442,7 @@ class RoadmapService {
           .toList();
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException(
-        'Lỗi lấy lộ trình người dùng: ${e.toString()}',
-      );
+      throw UnknownException('Lỗi lấy lộ trình người dùng: ${e.toString()}');
     }
   }
 

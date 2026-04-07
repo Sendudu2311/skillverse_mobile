@@ -1,4 +1,4 @@
-package com.example.skillverse_mobile
+package com.skillverse.app
 
 import io.flutter.embedding.android.FlutterActivity
 

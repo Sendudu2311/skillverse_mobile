@@ -67,6 +67,9 @@ class StatusBadge extends StatelessWidget {
       'STUDY_PLAN_IN_PROGRESS' => ('Đang học', Colors.indigo),
       'ACTIVE' => ('Đang hoạt động', Colors.green),
       'PAUSED' => ('Tạm dừng', Colors.amber),
+      'DELETED' => ('Đã xoá', Colors.grey),
+      'LOCKED' => ('Đã khoá', Colors.grey),
+      'AVAILABLE' => ('Sẵn sàng', Colors.teal),
 
       _ => (status, Colors.grey),
     };

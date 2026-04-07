@@ -35,6 +35,12 @@ RoadmapNode _$RoadmapNodeFromJson(Map<String, dynamic> json) => RoadmapNode(
       .map((e) => e as String)
       .toList(),
   estimatedCompletionRate: json['estimatedCompletionRate'] as String?,
+  isCore: json['isCore'] as bool?,
+  parentId: json['parentId'] as String?,
+  suggestedCourseIds: (json['suggestedCourseIds'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
+  nodeStatus: json['nodeStatus'] as String?,
 );
 
 Map<String, dynamic> _$RoadmapNodeToJson(RoadmapNode instance) =>
@@ -53,6 +59,10 @@ Map<String, dynamic> _$RoadmapNodeToJson(RoadmapNode instance) =>
       'prerequisites': instance.prerequisites,
       'children': instance.children,
       'estimatedCompletionRate': instance.estimatedCompletionRate,
+      'isCore': instance.isCore,
+      'parentId': instance.parentId,
+      'suggestedCourseIds': instance.suggestedCourseIds,
+      'nodeStatus': instance.nodeStatus,
     };
 
 const _$NodeTypeEnumMap = {NodeType.main: 'MAIN', NodeType.side: 'SIDE'};
@@ -101,6 +111,12 @@ RoadmapMetadata _$RoadmapMetadataFromJson(Map<String, dynamic> json) =>
         _$RoadmapModeEnumMap,
         json['roadmapMode'],
       ),
+      skillMode: json['skillMode'] == null
+          ? null
+          : SkillModeMeta.fromJson(json['skillMode'] as Map<String, dynamic>),
+      careerMode: json['careerMode'] == null
+          ? null
+          : CareerModeMeta.fromJson(json['careerMode'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$RoadmapMetadataToJson(RoadmapMetadata instance) =>
@@ -131,12 +147,74 @@ Map<String, dynamic> _$RoadmapMetadataToJson(RoadmapMetadata instance) =>
       'difficultyConcern': instance.difficultyConcern,
       'incomeGoal': instance.incomeGoal,
       'roadmapMode': _$RoadmapModeEnumMap[instance.roadmapMode],
+      'skillMode': instance.skillMode,
+      'careerMode': instance.careerMode,
     };
 
 const _$RoadmapModeEnumMap = {
   RoadmapMode.skillBased: 'SKILL_BASED',
   RoadmapMode.careerBased: 'CAREER_BASED',
 };
+
+SkillModeMeta _$SkillModeMetaFromJson(Map<String, dynamic> json) =>
+    SkillModeMeta(
+      skillName: json['skillName'] as String?,
+      skillCategory: json['skillCategory'] as String?,
+      desiredDepth: json['desiredDepth'] as String?,
+      learnerType: json['learnerType'] as String?,
+      currentSkillLevel: json['currentSkillLevel'] as String?,
+      learningGoal: json['learningGoal'] as String?,
+      dailyLearningTime: json['dailyLearningTime'] as String?,
+      assessmentPreference: json['assessmentPreference'] as String?,
+      difficultyTolerance: json['difficultyTolerance'] as String?,
+      toolPreference: (json['toolPreference'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+    );
+
+Map<String, dynamic> _$SkillModeMetaToJson(SkillModeMeta instance) =>
+    <String, dynamic>{
+      'skillName': instance.skillName,
+      'skillCategory': instance.skillCategory,
+      'desiredDepth': instance.desiredDepth,
+      'learnerType': instance.learnerType,
+      'currentSkillLevel': instance.currentSkillLevel,
+      'learningGoal': instance.learningGoal,
+      'dailyLearningTime': instance.dailyLearningTime,
+      'assessmentPreference': instance.assessmentPreference,
+      'difficultyTolerance': instance.difficultyTolerance,
+      'toolPreference': instance.toolPreference,
+    };
+
+CareerModeMeta _$CareerModeMetaFromJson(Map<String, dynamic> json) =>
+    CareerModeMeta(
+      targetRole: json['targetRole'] as String?,
+      careerTrack: json['careerTrack'] as String?,
+      targetSeniority: json['targetSeniority'] as String?,
+      workMode: json['workMode'] as String?,
+      targetMarket: json['targetMarket'] as String?,
+      companyType: json['companyType'] as String?,
+      timelineToWork: json['timelineToWork'] as String?,
+      incomeExpectation: json['incomeExpectation'] as bool?,
+      workExperience: json['workExperience'] as String?,
+      transferableSkills: json['transferableSkills'] as bool?,
+      confidenceLevel: json['confidenceLevel'] as String?,
+    );
+
+Map<String, dynamic> _$CareerModeMetaToJson(CareerModeMeta instance) =>
+    <String, dynamic>{
+      'targetRole': instance.targetRole,
+      'careerTrack': instance.careerTrack,
+      'targetSeniority': instance.targetSeniority,
+      'workMode': instance.workMode,
+      'targetMarket': instance.targetMarket,
+      'companyType': instance.companyType,
+      'timelineToWork': instance.timelineToWork,
+      'incomeExpectation': instance.incomeExpectation,
+      'workExperience': instance.workExperience,
+      'transferableSkills': instance.transferableSkills,
+      'confidenceLevel': instance.confidenceLevel,
+    };
 
 RoadmapStatistics _$RoadmapStatisticsFromJson(Map<String, dynamic> json) =>
     RoadmapStatistics(
@@ -182,34 +260,134 @@ const _$ProgressStatusEnumMap = {
   ProgressStatus.skipped: 'SKIPPED',
 };
 
-RoadmapResponse _$RoadmapResponseFromJson(Map<String, dynamic> json) =>
-    RoadmapResponse(
-      sessionId: (json['sessionId'] as num).toInt(),
-      metadata: RoadmapMetadata.fromJson(
-        json['metadata'] as Map<String, dynamic>,
-      ),
-      roadmap: (json['roadmap'] as List<dynamic>)
-          .map((e) => RoadmapNode.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      statistics: RoadmapStatistics.fromJson(
-        json['statistics'] as Map<String, dynamic>,
-      ),
-      learningTips: (json['learningTips'] as List<dynamic>?)
-          ?.map((e) => e as String)
-          .toList(),
-      warnings: (json['warnings'] as List<dynamic>?)
-          ?.map((e) => e as String)
-          .toList(),
-      createdAt: json['createdAt'] as String,
-      progress: (json['progress'] as Map<String, dynamic>?)?.map(
-        (k, e) =>
-            MapEntry(k, QuestProgress.fromJson(e as Map<String, dynamic>)),
-      ),
+RoadmapOverview _$RoadmapOverviewFromJson(Map<String, dynamic> json) =>
+    RoadmapOverview(
+      purpose: json['purpose'] as String?,
+      audience: json['audience'] as String?,
+      postRoadmapState: json['postRoadmapState'] as String?,
     );
+
+Map<String, dynamic> _$RoadmapOverviewToJson(RoadmapOverview instance) =>
+    <String, dynamic>{
+      'purpose': instance.purpose,
+      'audience': instance.audience,
+      'postRoadmapState': instance.postRoadmapState,
+    };
+
+StructurePhase _$StructurePhaseFromJson(Map<String, dynamic> json) =>
+    StructurePhase(
+      phaseId: json['phaseId'] as String?,
+      title: json['title'] as String?,
+      timeframe: json['timeframe'] as String?,
+      goal: json['goal'] as String?,
+      skillFocus: (json['skillFocus'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      mindsetGoal: json['mindsetGoal'] as String?,
+      expectedOutput: json['expectedOutput'] as String?,
+    );
+
+Map<String, dynamic> _$StructurePhaseToJson(StructurePhase instance) =>
+    <String, dynamic>{
+      'phaseId': instance.phaseId,
+      'title': instance.title,
+      'timeframe': instance.timeframe,
+      'goal': instance.goal,
+      'skillFocus': instance.skillFocus,
+      'mindsetGoal': instance.mindsetGoal,
+      'expectedOutput': instance.expectedOutput,
+    };
+
+ProjectEvidence _$ProjectEvidenceFromJson(Map<String, dynamic> json) =>
+    ProjectEvidence(
+      phaseId: json['phaseId'] as String?,
+      project: json['project'] as String?,
+      objective: json['objective'] as String?,
+      skillsProven: (json['skillsProven'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      kpi: (json['kpi'] as List<dynamic>?)?.map((e) => e as String).toList(),
+    );
+
+Map<String, dynamic> _$ProjectEvidenceToJson(ProjectEvidence instance) =>
+    <String, dynamic>{
+      'phaseId': instance.phaseId,
+      'project': instance.project,
+      'objective': instance.objective,
+      'skillsProven': instance.skillsProven,
+      'kpi': instance.kpi,
+    };
+
+RoadmapNextSteps _$RoadmapNextStepsFromJson(Map<String, dynamic> json) =>
+    RoadmapNextSteps(
+      jobs: (json['jobs'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      nextSkills: (json['nextSkills'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      mentorsMicroJobs: (json['mentorsMicroJobs'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+    );
+
+Map<String, dynamic> _$RoadmapNextStepsToJson(RoadmapNextSteps instance) =>
+    <String, dynamic>{
+      'jobs': instance.jobs,
+      'nextSkills': instance.nextSkills,
+      'mentorsMicroJobs': instance.mentorsMicroJobs,
+    };
+
+SkillDependency _$SkillDependencyFromJson(Map<String, dynamic> json) =>
+    SkillDependency(from: json['from'] as String, to: json['to'] as String);
+
+Map<String, dynamic> _$SkillDependencyToJson(SkillDependency instance) =>
+    <String, dynamic>{'from': instance.from, 'to': instance.to};
+
+RoadmapResponse _$RoadmapResponseFromJson(
+  Map<String, dynamic> json,
+) => RoadmapResponse(
+  sessionId: (json['sessionId'] as num).toInt(),
+  roadmapStatus: json['roadmapStatus'] as String?,
+  metadata: RoadmapMetadata.fromJson(json['metadata'] as Map<String, dynamic>),
+  roadmap: (json['roadmap'] as List<dynamic>)
+      .map((e) => RoadmapNode.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  statistics: RoadmapStatistics.fromJson(
+    json['statistics'] as Map<String, dynamic>,
+  ),
+  learningTips: (json['learningTips'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
+  warnings: (json['warnings'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
+  createdAt: json['createdAt'] as String,
+  progress: (json['progress'] as Map<String, dynamic>?)?.map(
+    (k, e) => MapEntry(k, QuestProgress.fromJson(e as Map<String, dynamic>)),
+  ),
+  overview: json['overview'] == null
+      ? null
+      : RoadmapOverview.fromJson(json['overview'] as Map<String, dynamic>),
+  structure: (json['structure'] as List<dynamic>?)
+      ?.map((e) => StructurePhase.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  thinkingProgression: (json['thinkingProgression'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
+  projectsEvidence: (json['projectsEvidence'] as List<dynamic>?)
+      ?.map((e) => ProjectEvidence.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  nextSteps: json['nextSteps'] == null
+      ? null
+      : RoadmapNextSteps.fromJson(json['nextSteps'] as Map<String, dynamic>),
+  skillDependencies: (json['skillDependencies'] as List<dynamic>?)
+      ?.map((e) => SkillDependency.fromJson(e as Map<String, dynamic>))
+      .toList(),
+);
 
 Map<String, dynamic> _$RoadmapResponseToJson(RoadmapResponse instance) =>
     <String, dynamic>{
       'sessionId': instance.sessionId,
+      'roadmapStatus': instance.roadmapStatus,
       'metadata': instance.metadata,
       'roadmap': instance.roadmap,
       'statistics': instance.statistics,
@@ -217,6 +395,12 @@ Map<String, dynamic> _$RoadmapResponseToJson(RoadmapResponse instance) =>
       'warnings': instance.warnings,
       'createdAt': instance.createdAt,
       'progress': instance.progress,
+      'overview': instance.overview,
+      'structure': instance.structure,
+      'thinkingProgression': instance.thinkingProgression,
+      'projectsEvidence': instance.projectsEvidence,
+      'nextSteps': instance.nextSteps,
+      'skillDependencies': instance.skillDependencies,
     };
 
 RoadmapSessionSummary _$RoadmapSessionSummaryFromJson(
@@ -234,6 +418,7 @@ RoadmapSessionSummary _$RoadmapSessionSummaryFromJson(
   progressPercentage: (json['progressPercentage'] as num).toDouble(),
   difficultyLevel: json['difficultyLevel'] as String?,
   schemaVersion: (json['schemaVersion'] as num?)?.toInt(),
+  status: json['status'] as String?,
   createdAt: json['createdAt'] as String,
 );
 
@@ -252,6 +437,7 @@ Map<String, dynamic> _$RoadmapSessionSummaryToJson(
   'progressPercentage': instance.progressPercentage,
   'difficultyLevel': instance.difficultyLevel,
   'schemaVersion': instance.schemaVersion,
+  'status': instance.status,
   'createdAt': instance.createdAt,
 };
 

@@ -11,10 +11,7 @@ import 'common_loading.dart';
 class OnboardingPrompt extends StatefulWidget {
   final VoidCallback onDismiss;
 
-  const OnboardingPrompt({
-    super.key,
-    required this.onDismiss,
-  });
+  const OnboardingPrompt({super.key, required this.onDismiss});
 
   /// Static helper to show as a modal bottom sheet
   static void show(BuildContext context, {required VoidCallback onDismiss}) {
@@ -40,7 +37,8 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
   @override
   void initState() {
     super.initState();
-    _loadJourneys();
+    // Wrap in microtask to avoid 'setState() during build' error
+    Future.microtask(() => _loadJourneys());
   }
 
   Future<void> _loadJourneys() async {
@@ -94,7 +92,7 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
                 _buildJourneyList(isDark)
               else
                 _buildNewUserGuide(isDark),
-              
+
               const SizedBox(height: 32),
 
               // Actions
@@ -122,7 +120,9 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'monospace',
-                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
                 ),
               ),
               const SizedBox(height: 4),
@@ -133,7 +133,9 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
                 style: TextStyle(
                   fontSize: 13,
                   fontFamily: 'monospace',
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
                 ),
               ),
             ],
@@ -169,7 +171,9 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'monospace',
-                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -178,7 +182,9 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
                         style: TextStyle(
                           fontSize: 12,
                           fontFamily: 'monospace',
-                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -190,8 +196,12 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
                         child: LinearProgressIndicator(
                           value: (journey.progressPercentage) / 100,
                           minHeight: 6,
-                          backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.2),
-                          valueColor: const AlwaysStoppedAnimation(AppTheme.accentCyan),
+                          backgroundColor: AppTheme.primaryBlue.withValues(
+                            alpha: 0.2,
+                          ),
+                          valueColor: const AlwaysStoppedAnimation(
+                            AppTheme.accentCyan,
+                          ),
                         ),
                       ),
                     ],
@@ -205,7 +215,10 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
                     context.push('/journey/${journey.id}');
                   },
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     backgroundColor: AppTheme.primaryBlueDark,
                   ),
                   child: const Text('Tiếp tục'),
@@ -272,7 +285,9 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'monospace',
-                        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -281,7 +296,9 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
                       style: TextStyle(
                         fontSize: 12,
                         fontFamily: 'monospace',
-                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
                         height: 1.4,
                       ),
                     ),
@@ -335,7 +352,9 @@ class _OnboardingPromptState extends State<OnboardingPrompt> {
           child: Text(
             'Khám phá sau',
             style: TextStyle(
-              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
             ),
           ),
         ),

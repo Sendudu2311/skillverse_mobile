@@ -5,6 +5,7 @@ import '../../data/services/auth_service.dart';
 import '../../core/network/api_client.dart';
 import '../../core/exceptions/api_exception.dart';
 import '../../core/utils/storage_helper.dart';
+import '../../core/services/firebase_push_notification_service.dart';
 
 /// Auth Provider
 ///
@@ -37,6 +38,8 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
         if (token != null) {
           _apiClient.setAuthToken(token);
         }
+        // Register FCM token after auto-login từ stored session
+        _registerFcmToken();
       }
       notifyListeners();
     }, errorMessageBuilder: (e) => 'Lỗi khởi tạo: ${e.toString()}');
@@ -49,14 +52,16 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
       final response = await _authService.login(request);
       _user = response.user;
       _apiClient.setAuthToken(response.accessToken);
-      
+
       // Set onboarding prompt flag for subsequent dashboard load
       await StorageHelper.instance.writeBool(
         StorageKey.showOnboardingPrompt,
         true,
       );
-      
+
       notifyListeners();
+      // Register FCM token after successful login
+      _registerFcmToken();
       return true;
     }, errorMessageBuilder: (e) => _getErrorMessage(e));
     return result ?? false;
@@ -78,7 +83,7 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
       );
       final response = await _authService.register(request);
       _apiClient.setAuthToken(response.accessToken);
-      
+
       // Set onboarding prompt flag for subsequent dashboard load
       await StorageHelper.instance.writeBool(
         StorageKey.showOnboardingPrompt,
@@ -105,6 +110,8 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
       );
 
       notifyListeners();
+      // Register FCM token after Google sign-in
+      _registerFcmToken();
       return true;
     }, errorMessageBuilder: (e) => _getErrorMessage(e));
     return result ?? false;
@@ -132,6 +139,8 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
   Future<void> logout() async {
     setLoading(true);
     try {
+      // Unregister FCM token BEFORE logout (needs auth token)
+      await FirebasePushNotificationService.instance.unregisterTokenOnLogout();
       await _authService.logout();
     } catch (e) {
       // Ignore logout errors - always clear local state
@@ -189,5 +198,13 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
 
   /// Xóa lỗi hiện tại
   void clearError() => super.clearError();
-}
 
+  /// Register FCM token with backend (fire-and-forget, non-blocking).
+  void _registerFcmToken() {
+    FirebasePushNotificationService.instance
+        .registerTokenAfterLogin()
+        .catchError((e) {
+          debugPrint('🔔 FCM token registration skipped: $e');
+        });
+  }
+}

@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 import '../../data/models/roadmap_models.dart';
 import '../themes/app_theme.dart';
+import '../widgets/status_badge.dart';
 import '../../core/utils/date_time_helper.dart';
 
 /// Card widget for displaying AI Roadmap session in list view
 class AiRoadmapCard extends StatelessWidget {
   final RoadmapSessionSummary roadmap;
   final VoidCallback? onTap;
+  final void Function(String action)? onLifecycleAction;
+  final bool isDeletedScope;
 
-  const AiRoadmapCard({super.key, required this.roadmap, this.onTap});
+  const AiRoadmapCard({
+    super.key,
+    required this.roadmap,
+    this.onTap,
+    this.onLifecycleAction,
+    this.isDeletedScope = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -47,29 +56,41 @@ class AiRoadmapCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header: Title + Experience badge
+                // Header: Title + Status badge + Experience badge
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(
-                        roadmap.title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.lightTextPrimary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            roadmap.title,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? AppTheme.darkTextPrimary
+                                  : AppTheme.lightTextPrimary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              StatusBadge(status: roadmap.status ?? 'ACTIVE'),
+                              const SizedBox(width: 8),
+                              _buildExperienceBadge(
+                                context,
+                                roadmap.experienceLevel,
+                                isDark,
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    _buildExperienceBadge(
-                      context,
-                      roadmap.experienceLevel,
-                      isDark,
-                    ),
+                    if (onLifecycleAction != null) _buildLifecycleMenu(isDark),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -256,6 +277,81 @@ class AiRoadmapCard extends StatelessWidget {
     if (progress >= 50) return AppTheme.themeOrangeStart;
     if (progress > 0) return AppTheme.primaryBlue;
     return Colors.grey;
+  }
+
+  Widget _buildLifecycleMenu(bool isDark) {
+    final currentStatus = (roadmap.status ?? 'ACTIVE').toUpperCase();
+
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.more_vert,
+        color: isDark
+            ? AppTheme.darkTextSecondary
+            : AppTheme.lightTextSecondary,
+        size: 20,
+      ),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
+      onSelected: (action) => onLifecycleAction?.call(action),
+      itemBuilder: (_) => isDeletedScope
+          ? [
+              const PopupMenuItem(
+                value: 'restore',
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(Icons.restore, color: Colors.green),
+                  title: Text('Khôi phục'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'permanent_delete',
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(Icons.delete_forever, color: Colors.red),
+                  title: Text('Xóa vĩnh viễn'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ]
+          : [
+              if (currentStatus != 'ACTIVE')
+                const PopupMenuItem(
+                  value: 'activate',
+                  child: ListTile(
+                    dense: true,
+                    leading: Icon(
+                      Icons.play_circle_outline,
+                      color: Colors.green,
+                    ),
+                    title: Text('Kích hoạt'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              if (currentStatus == 'ACTIVE')
+                const PopupMenuItem(
+                  value: 'pause',
+                  child: ListTile(
+                    dense: true,
+                    leading: Icon(
+                      Icons.pause_circle_outline,
+                      color: Colors.amber,
+                    ),
+                    title: Text('Tạm dừng'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(Icons.delete_outline, color: Colors.red),
+                  title: Text('Xoá'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+    );
   }
 }
 

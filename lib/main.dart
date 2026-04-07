@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/chat_provider.dart';
 import 'presentation/providers/course_provider.dart';
@@ -28,6 +29,7 @@ import 'presentation/app.dart';
 import 'core/utils/storage_helper.dart';
 import 'core/utils/date_time_helper.dart';
 import 'core/network/api_client.dart';
+import 'core/services/firebase_push_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +43,9 @@ void main() async {
 
   // Initialize helpers
   await _initializeHelpers();
+
+  // Initialize Firebase
+  await _initializeFirebase();
 
   runApp(
     MultiProvider(
@@ -98,5 +103,21 @@ Future<void> _initializeHelpers() async {
   } catch (e) {
     debugPrint('❌ Error initializing helpers: $e');
     // Continue anyway - helpers will handle errors gracefully
+  }
+}
+
+/// Initialize Firebase and push notification service.
+/// NOTE: FCM token is NOT registered with backend here — that happens
+/// after successful login via FirebasePushNotificationService.registerTokenAfterLogin().
+Future<void> _initializeFirebase() async {
+  try {
+    await Firebase.initializeApp();
+    debugPrint('✅ Firebase initialized');
+
+    await FirebasePushNotificationService.instance.initialize();
+    debugPrint('✅ Push notification service initialized');
+  } catch (e) {
+    debugPrint('⚠️ Firebase init failed (push notifications disabled): $e');
+    // Non-critical: app works without Firebase
   }
 }

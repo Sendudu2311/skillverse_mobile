@@ -218,7 +218,7 @@ class DateTimeHelper {
   static DateTime? tryParseIso8601(String? isoString) {
     if (isoString == null || isoString.isEmpty) return null;
     try {
-      return DateTime.parse(isoString);
+      return DateTime.parse(isoString).toLocal();
     } catch (e) {
       return null;
     }

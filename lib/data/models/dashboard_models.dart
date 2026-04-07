@@ -180,6 +180,7 @@ class RoadmapSession {
   final int progressPercentage;
   final String difficultyLevel;
   final int schemaVersion;
+  final String? status; // ACTIVE, PAUSED, DELETED
   final String createdAt;
 
   RoadmapSession({
@@ -195,6 +196,7 @@ class RoadmapSession {
     required this.progressPercentage,
     required this.difficultyLevel,
     required this.schemaVersion,
+    this.status,
     required this.createdAt,
   });
 
