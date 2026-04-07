@@ -23,8 +23,12 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<TaskBoardProvider>();
-      provider.loadBoard();
-      provider.loadNotes();
+      if (provider.columns.isEmpty) {
+        provider.loadBoard();
+      }
+      if (provider.notes.isEmpty) {
+        provider.loadNotes();
+      }
     });
   }
 
@@ -279,15 +283,12 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
     TaskBoardProvider provider,
     bool isDark,
   ) {
-    final allTasks = provider.allTasks;
-    final overdueCount = allTasks.where((t) => t.isOverdue).length;
-    final inProgressCount = allTasks
-        .where((t) => t.columnId == 'inprogress')
-        .length;
-    final doneCount = allTasks.where((t) => t.columnId == 'done').length;
+    final overdueCount = provider.overdueCount;
+    final inProgressCount = provider.inProgressCount;
+    final doneCount = provider.doneCount;
 
     // Don't show hero section if there are no tasks at all
-    if (allTasks.isEmpty) return const SizedBox.shrink();
+    if (provider.allTasks.isEmpty) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),

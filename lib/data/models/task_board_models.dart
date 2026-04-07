@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'task_board_models.g.dart';
@@ -132,7 +133,7 @@ class Task {
         (userProgress == null || userProgress! < 100);
   }
 
-  /// Get priority color
+  /// Get priority color (Hex String for API/Web compatibility)
   String get priorityColor {
     switch (priority) {
       case TaskPriority.high:
@@ -142,6 +143,28 @@ class Task {
       case TaskPriority.low:
         return '#10B981'; // Green
     }
+  }
+
+  /// Get priority UI color (Flutter Color)
+  Color get uiPriorityColor {
+    switch (priority) {
+      case TaskPriority.high:
+        return Colors.red;
+      case TaskPriority.medium:
+        return Colors.orange;
+      case TaskPriority.low:
+        return Colors.green;
+    }
+  }
+
+  /// Get status color (Reusable everywhere: Kanban, Timeline, Dashboard)
+  Color get statusColor {
+    final s = status?.toUpperCase() ?? '';
+    if (s.contains('DONE') || s.contains('HOÀN THÀNH')) return Colors.green;
+    if (s.contains('PROGRESS') || s.contains('ĐANG LÀM')) return Colors.orange;
+    if (s.contains('OVERDUE') || s.contains('QUÁ HẠN') || isOverdue)
+      return Colors.red;
+    return Colors.blue; // Default for TODO
   }
 }
 

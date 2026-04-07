@@ -102,9 +102,31 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
         .toList();
   }
 
-  // Get overdue count
+  // Get statistics
   int get overdueCount {
     return allTasks.where((task) => task.isOverdue).length;
+  }
+
+  int get inProgressCount {
+    return _columns
+        .where(
+          (c) =>
+              c.name.toUpperCase().contains('PROGRESS') ||
+              c.name.toUpperCase().contains('ĐANG LÀM'),
+        )
+        .expand((c) => c.tasks)
+        .length;
+  }
+
+  int get doneCount {
+    return _columns
+        .where(
+          (c) =>
+              c.name.toUpperCase().contains('DONE') ||
+              c.name.toUpperCase().contains('HOÀN THÀNH'),
+        )
+        .expand((c) => c.tasks)
+        .length;
   }
 
   // ==================== TASKS ====================
@@ -120,10 +142,12 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
         final columnId = request.columnId ?? 'todo';
         final columnIndex = _columns.indexWhere((c) => c.id == columnId);
         if (columnIndex != -1) {
-          final column = _columns[columnIndex];
-          _columns[columnIndex] = column.copyWith(
+          final newColumns = List<TaskColumn>.from(_columns);
+          final column = newColumns[columnIndex];
+          newColumns[columnIndex] = column.copyWith(
             tasks: [...column.tasks, task],
           );
+          _columns = newColumns;
         }
 
         notifyListeners();
@@ -143,14 +167,23 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
         final updatedTask = response.toTask();
 
         // Update in columns
-        for (int i = 0; i < _columns.length; i++) {
-          final taskIndex = _columns[i].tasks.indexWhere((t) => t.id == taskId);
+        final newColumns = List<TaskColumn>.from(_columns);
+        bool updated = false;
+        for (int i = 0; i < newColumns.length; i++) {
+          final taskIndex = newColumns[i].tasks.indexWhere(
+            (t) => t.id == taskId,
+          );
           if (taskIndex != -1) {
-            final updatedTasks = List<Task>.from(_columns[i].tasks);
+            final updatedTasks = List<Task>.from(newColumns[i].tasks);
             updatedTasks[taskIndex] = updatedTask;
-            _columns[i] = _columns[i].copyWith(tasks: updatedTasks);
+            newColumns[i] = newColumns[i].copyWith(tasks: updatedTasks);
+            updated = true;
             break;
           }
+        }
+
+        if (updated) {
+          _columns = newColumns;
         }
 
         notifyListeners();
@@ -169,14 +202,21 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
         await _taskBoardService.deleteTask(taskId);
 
         // Remove from columns
-        for (int i = 0; i < _columns.length; i++) {
-          final updatedTasks = _columns[i].tasks
+        final newColumns = List<TaskColumn>.from(_columns);
+        bool removed = false;
+        for (int i = 0; i < newColumns.length; i++) {
+          final updatedTasks = newColumns[i].tasks
               .where((t) => t.id != taskId)
               .toList();
-          if (updatedTasks.length != _columns[i].tasks.length) {
-            _columns[i] = _columns[i].copyWith(tasks: updatedTasks);
+          if (updatedTasks.length != newColumns[i].tasks.length) {
+            newColumns[i] = newColumns[i].copyWith(tasks: updatedTasks);
+            removed = true;
             break;
           }
+        }
+
+        if (removed) {
+          _columns = newColumns;
         }
 
         notifyListeners();
@@ -208,7 +248,8 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
     // 2. Perform local update immediately (Optimistic)
     final targetIndex = _columns.indexWhere((c) => c.id == targetColumnId);
     if (targetIndex != -1) {
-      final targetColumn = _columns[targetIndex];
+      final newColumns = List<TaskColumn>.from(_columns);
+      final targetColumn = newColumns[targetIndex];
 
       // Update both columnId and display status tag
       final movedTask = taskToMove.copyWith(
@@ -217,18 +258,19 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
       );
 
       // Remove from source
-      final updatedSourceTasks = _columns[sourceColumnIndex].tasks
+      final updatedSourceTasks = newColumns[sourceColumnIndex].tasks
           .where((t) => t.id != taskId)
           .toList();
-      _columns[sourceColumnIndex] = _columns[sourceColumnIndex].copyWith(
+      newColumns[sourceColumnIndex] = newColumns[sourceColumnIndex].copyWith(
         tasks: updatedSourceTasks,
       );
 
       // Add to target
-      _columns[targetIndex] = targetColumn.copyWith(
+      newColumns[targetIndex] = targetColumn.copyWith(
         tasks: [...targetColumn.tasks, movedTask],
       );
 
+      _columns = newColumns;
       notifyListeners();
     }
 
@@ -249,9 +291,11 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
     final columnId = task.columnId ?? 'todo';
     final columnIndex = _columns.indexWhere((c) => c.id == columnId);
     if (columnIndex != -1) {
-      _columns[columnIndex] = _columns[columnIndex].copyWith(
-        tasks: [..._columns[columnIndex].tasks, task],
+      final newColumns = List<TaskColumn>.from(_columns);
+      newColumns[columnIndex] = newColumns[columnIndex].copyWith(
+        tasks: [...newColumns[columnIndex].tasks, task],
       );
+      _columns = newColumns;
       notifyListeners();
     }
   }

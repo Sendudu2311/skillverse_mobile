@@ -10,16 +10,18 @@ class KanbanView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TaskBoardProvider>(
-      builder: (context, provider, _) {
+    return Selector<TaskBoardProvider, List<TaskColumn>>(
+      selector: (context, provider) => provider.columns,
+      builder: (context, columns, _) {
         return ListView.builder(
           padding: const EdgeInsets.all(12),
-          itemCount: provider.columns.length,
+          itemCount: columns.length,
           itemBuilder: (context, index) {
-            final column = provider.columns[index];
+            final column = columns[index];
             return KanbanColumn(
               column: column,
-              onAddTask: () => TaskDetailSheet.show(context, columnId: column.id),
+              onAddTask: () =>
+                  TaskDetailSheet.show(context, columnId: column.id),
             );
           },
         );
@@ -108,7 +110,9 @@ class KanbanColumn extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
           ),
         ),
       ),
@@ -226,17 +230,6 @@ class DraggableTaskCard extends StatelessWidget {
 
   const DraggableTaskCard({super.key, required this.task});
 
-  Color get _priorityColor {
-    switch (task.priority) {
-      case TaskPriority.high:
-        return Colors.red;
-      case TaskPriority.medium:
-        return Colors.orange;
-      case TaskPriority.low:
-        return Colors.green;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -254,16 +247,10 @@ class DraggableTaskCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           child: SizedBox(
             width: MediaQuery.of(context).size.width - 48,
-            child: Opacity(
-              opacity: 0.85,
-              child: _buildCard(isDark),
-            ),
+            child: Opacity(opacity: 0.85, child: _buildCard(isDark)),
           ),
         ),
-        childWhenDragging: Opacity(
-          opacity: 0.25,
-          child: _buildCard(isDark),
-        ),
+        childWhenDragging: Opacity(opacity: 0.25, child: _buildCard(isDark)),
         child: _buildCard(isDark),
       ),
     );
@@ -278,7 +265,7 @@ class DraggableTaskCard extends StatelessWidget {
             ? AppTheme.darkCardBackground
             : AppTheme.lightCardBackground,
         borderRadius: BorderRadius.circular(8),
-        border: Border(left: BorderSide(color: _priorityColor, width: 3)),
+        border: Border(left: BorderSide(color: task.uiPriorityColor, width: 3)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -370,8 +357,8 @@ class DraggableTaskCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: task.userProgress! / 100,
                       minHeight: 4,
-                      backgroundColor: _priorityColor.withValues(alpha: 0.15),
-                      valueColor: AlwaysStoppedAnimation(_priorityColor),
+                      backgroundColor: task.statusColor.withValues(alpha: 0.15),
+                      valueColor: AlwaysStoppedAnimation(task.statusColor),
                     ),
                   ),
                 ),
@@ -401,7 +388,7 @@ class DraggableTaskCard extends StatelessWidget {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: _priorityColor.withValues(alpha: 0.15),
+                    color: task.statusColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -409,7 +396,8 @@ class DraggableTaskCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10,
                       fontFamily: 'monospace',
-                      color: _priorityColor,
+                      color: task.statusColor,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -419,14 +407,14 @@ class DraggableTaskCard extends StatelessWidget {
                   task.satisfactionLevel == 'Satisfied'
                       ? Icons.sentiment_satisfied
                       : task.satisfactionLevel == 'Unsatisfied'
-                          ? Icons.sentiment_dissatisfied
-                          : Icons.sentiment_neutral,
+                      ? Icons.sentiment_dissatisfied
+                      : Icons.sentiment_neutral,
                   size: 16,
                   color: task.satisfactionLevel == 'Satisfied'
                       ? Colors.green
                       : task.satisfactionLevel == 'Unsatisfied'
-                          ? Colors.red
-                          : Colors.orange,
+                      ? Colors.red
+                      : Colors.orange,
                 ),
                 const SizedBox(width: 8),
               ],

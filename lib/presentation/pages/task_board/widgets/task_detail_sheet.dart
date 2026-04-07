@@ -15,7 +15,11 @@ class TaskDetailSheet extends StatefulWidget {
   const TaskDetailSheet({super.key, this.task, required this.columnId});
 
   /// Show the sheet
-  static Future<void> show(BuildContext context, {Task? task, required String columnId}) {
+  static Future<void> show(
+    BuildContext context, {
+    Task? task,
+    required String columnId,
+  }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -98,7 +102,8 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
   Widget _buildHandle() {
     return Container(
       margin: const EdgeInsets.only(top: 8),
-      width: 40, height: 4,
+      width: 40,
+      height: 4,
       decoration: BoxDecoration(
         color: Colors.grey.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(2),
@@ -110,15 +115,20 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(
-          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-        )),
+        border: Border(
+          bottom: BorderSide(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
+          ),
+        ),
       ),
       child: Row(
         children: [
           Icon(
             isEditMode ? Icons.edit_note : Icons.add_task,
-            color: AppTheme.primaryBlueDark, size: 24,
+            color: AppTheme.primaryBlueDark,
+            size: 24,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -129,15 +139,23 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
               child: Text(
                 isEditMode ? 'CHI TIẾT NHIỆM VỤ' : 'NHIỆM VỤ MỚI',
                 style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace', color: Colors.white, letterSpacing: 2,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  color: Colors.white,
+                  letterSpacing: 2,
                 ),
               ),
             ),
           ),
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: Icon(Icons.close, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+            child: Icon(
+              Icons.close,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
           ),
         ],
       ),
@@ -157,18 +175,41 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
               controller: _titleController,
               decoration: InputDecoration(
                 hintText: 'Tên Nhiệm Vụ',
-                prefixIcon: Icon(Icons.task_alt, color: AppTheme.primaryBlueDark),
+                prefixIcon: Icon(
+                  Icons.task_alt,
+                  color: AppTheme.primaryBlueDark,
+                ),
               ),
-              validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập tên nhiệm vụ' : null,
+              validator: (v) => (v == null || v.isEmpty)
+                  ? 'Vui lòng nhập tên nhiệm vụ'
+                  : null,
             ),
             const SizedBox(height: 16),
 
             // Start / Deadline
-            Row(children: [
-              Expanded(child: _buildDateField('BẮT ĐẦU', Icons.calendar_today, _startDate, (d) => setState(() => _startDate = d))),
-              const SizedBox(width: 12),
-              Expanded(child: _buildDateField('HẠN CHÓT', Icons.flag, _deadline, (d) => setState(() => _deadline = d))),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDateField(
+                    'BẮT ĐẦU',
+                    Icons.calendar_today,
+                    _startDate,
+                    (d) => setState(() => _startDate = d),
+                    lastDate: _deadline,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDateField(
+                    'HẠN CHÓT',
+                    Icons.flag,
+                    _deadline,
+                    (d) => setState(() => _deadline = d),
+                    firstDate: _startDate,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
 
             // Priority
@@ -179,16 +220,24 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
 
             // Progress (edit mode only)
             if (isEditMode) ...[
-              _buildSectionLabel('TIẾN ĐỘ: ${_progress.toInt()}%', Icons.trending_up),
+              _buildSectionLabel(
+                'TIẾN ĐỘ: ${_progress.toInt()}%',
+                Icons.trending_up,
+              ),
               const SizedBox(height: 8),
               SliderTheme(
                 data: SliderThemeData(
                   activeTrackColor: AppTheme.primaryBlueDark,
                   thumbColor: AppTheme.accentCyan,
-                  inactiveTrackColor: AppTheme.primaryBlueDark.withValues(alpha: 0.2),
+                  inactiveTrackColor: AppTheme.primaryBlueDark.withValues(
+                    alpha: 0.2,
+                  ),
                 ),
                 child: Slider(
-                  value: _progress, min: 0, max: 100, divisions: 20,
+                  value: _progress,
+                  min: 0,
+                  max: 100,
+                  divisions: 20,
                   label: '${_progress.toInt()}%',
                   onChanged: (v) => setState(() => _progress = v),
                 ),
@@ -206,8 +255,11 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
             _buildSectionLabel('MÔ TẢ & TÀI NGUYÊN', Icons.edit),
             const SizedBox(height: 8),
             TextFormField(
-              controller: _descriptionController, maxLines: 4,
-              decoration: const InputDecoration(hintText: 'Mô tả chi tiết, liên kết học liệu...'),
+              controller: _descriptionController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                hintText: 'Mô tả chi tiết, liên kết học liệu...',
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -215,8 +267,11 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
             _buildSectionLabel('GHI CHÚ CÁ NHÂN', Icons.sticky_note_2),
             const SizedBox(height: 8),
             TextFormField(
-              controller: _notesController, maxLines: 2,
-              decoration: const InputDecoration(hintText: 'Suy ngẫm, trở ngại hoặc ghi chú nhanh...'),
+              controller: _notesController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'Suy ngẫm, trở ngại hoặc ghi chú nhanh...',
+              ),
             ),
           ],
         ),
@@ -225,17 +280,32 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
   }
 
   Widget _buildSectionLabel(String label, IconData icon) {
-    return Row(children: [
-      Icon(icon, size: 14, color: AppTheme.primaryBlueDark),
-      const SizedBox(width: 6),
-      Text(label, style: TextStyle(
-        fontSize: 11, fontWeight: FontWeight.w600, fontFamily: 'monospace',
-        color: AppTheme.primaryBlueDark, letterSpacing: 1,
-      )),
-    ]);
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppTheme.primaryBlueDark),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'monospace',
+            color: AppTheme.primaryBlueDark,
+            letterSpacing: 1,
+          ),
+        ),
+      ],
+    );
   }
 
-  Widget _buildDateField(String label, IconData icon, DateTime? date, ValueChanged<DateTime> onPicked) {
+  Widget _buildDateField(
+    String label,
+    IconData icon,
+    DateTime? date,
+    ValueChanged<DateTime> onPicked, {
+    DateTime? firstDate,
+    DateTime? lastDate,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,33 +315,58 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
         GestureDetector(
           onTap: () async {
             final picked = await showDatePicker(
-              context: context, initialDate: date ?? DateTime.now(),
-              firstDate: DateTime.now().subtract(const Duration(days: 365)),
-              lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+              context: context,
+              initialDate: date ?? (firstDate ?? DateTime.now()),
+              firstDate:
+                  firstDate ??
+                  DateTime.now().subtract(const Duration(days: 365)),
+              lastDate:
+                  lastDate ?? DateTime.now().add(const Duration(days: 365 * 2)),
             );
             if (picked != null) onPicked(picked);
           },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             decoration: BoxDecoration(
-              color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
+              color: isDark
+                  ? AppTheme.darkCardBackground
+                  : AppTheme.lightCardBackground,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
-            ),
-            child: Row(children: [
-              Expanded(child: Text(
-                date != null ? '${date.day}/${date.month}/${date.year}' : 'dd/mm/yyyy',
-                style: TextStyle(
-                  fontSize: 13, fontFamily: 'monospace',
-                  color: date != null
-                      ? (isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary)
-                      : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                ),
-              )),
-              Icon(Icons.calendar_today, size: 16,
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              border: Border.all(
+                color: isDark
+                    ? AppTheme.darkBorderColor
+                    : AppTheme.lightBorderColor,
               ),
-            ]),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    date != null
+                        ? '${date.day}/${date.month}/${date.year}'
+                        : 'dd/mm/yyyy',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontFamily: 'monospace',
+                      color: date != null
+                          ? (isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.lightTextPrimary)
+                          : (isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary),
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -291,18 +386,31 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
               margin: const EdgeInsets.symmetric(horizontal: 4),
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: isSelected ? color.withValues(alpha: 0.2) : Colors.transparent,
+                color: isSelected
+                    ? color.withValues(alpha: 0.2)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: isSelected ? color : (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+                  color: isSelected
+                      ? color
+                      : (isDark
+                            ? AppTheme.darkBorderColor
+                            : AppTheme.lightBorderColor),
                   width: isSelected ? 2 : 1,
                 ),
               ),
               child: Text(
-                label, textAlign: TextAlign.center,
+                label,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 12, fontFamily: 'monospace', fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? color : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected
+                      ? color
+                      : (isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary),
                 ),
               ),
             ),
@@ -329,21 +437,43 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
               margin: const EdgeInsets.symmetric(horizontal: 4),
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: isSelected ? AppTheme.primaryBlueDark.withValues(alpha: 0.2) : Colors.transparent,
+                color: isSelected
+                    ? AppTheme.primaryBlueDark.withValues(alpha: 0.2)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: isSelected ? AppTheme.primaryBlueDark : (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+                  color: isSelected
+                      ? AppTheme.primaryBlueDark
+                      : (isDark
+                            ? AppTheme.darkBorderColor
+                            : AppTheme.lightBorderColor),
                   width: isSelected ? 2 : 1,
                 ),
               ),
               child: Column(
                 children: [
-                  Icon(item.$2, size: 22, color: isSelected ? AppTheme.primaryBlueDark : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
+                  Icon(
+                    item.$2,
+                    size: 22,
+                    color: isSelected
+                        ? AppTheme.primaryBlueDark
+                        : (isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary),
+                  ),
                   const SizedBox(height: 4),
-                  Text(item.$3, style: TextStyle(
-                    fontSize: 9, fontFamily: 'monospace',
-                    color: isSelected ? AppTheme.primaryBlueDark : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                  )),
+                  Text(
+                    item.$3,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontFamily: 'monospace',
+                      color: isSelected
+                          ? AppTheme.primaryBlueDark
+                          : (isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -357,9 +487,13 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(
-          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-        )),
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -369,11 +503,18 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
               onPressed: _isDeleting ? null : _deleteTask,
               icon: _isDeleting
                   ? CommonLoading.small()
-                  : const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                  : const Icon(
+                      Icons.delete_outline,
+                      size: 18,
+                      color: Colors.red,
+                    ),
               label: const Text('Xóa', style: TextStyle(color: Colors.red)),
             ),
           const Spacer(),
-          OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
           const SizedBox(width: 12),
           ElevatedButton.icon(
             onPressed: _isSaving ? null : _saveTask,
@@ -391,6 +532,18 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
 
   Future<void> _saveTask() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Validate date logic
+    if (_startDate != null && _deadline != null) {
+      if (_deadline!.isBefore(_startDate!)) {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Hạn chót không được trước ngày bắt đầu! ❌',
+        );
+        return;
+      }
+    }
+
     setState(() => _isSaving = true);
 
     try {
@@ -399,25 +552,33 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
       if (isEditMode) {
         final request = UpdateTaskRequest(
           title: _titleController.text,
-          description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
+          description: _descriptionController.text.isNotEmpty
+              ? _descriptionController.text
+              : null,
           startDate: _startDate?.toIso8601String(),
           endDate: _deadline?.toIso8601String(),
           deadline: _deadline?.toIso8601String(),
           priority: _priority.name.toUpperCase(),
           userProgress: _progress.toInt(),
           satisfactionLevel: _satisfaction,
-          userNotes: _notesController.text.isNotEmpty ? _notesController.text : null,
+          userNotes: _notesController.text.isNotEmpty
+              ? _notesController.text
+              : null,
         );
         await provider.updateTask(widget.task!.id, request);
       } else {
         final request = CreateTaskRequest(
           title: _titleController.text,
-          description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
+          description: _descriptionController.text.isNotEmpty
+              ? _descriptionController.text
+              : null,
           startDate: _startDate?.toIso8601String(),
           endDate: _deadline?.toIso8601String(),
           deadline: _deadline?.toIso8601String(),
           priority: _priority.name.toUpperCase(),
-          userNotes: _notesController.text.isNotEmpty ? _notesController.text : null,
+          userNotes: _notesController.text.isNotEmpty
+              ? _notesController.text
+              : null,
           columnId: widget.columnId,
         );
         await provider.createTask(request);
@@ -444,7 +605,10 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
         title: const Text('Xóa nhiệm vụ'),
         content: const Text('Bạn có chắc chắn muốn xóa nhiệm vụ này không?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Xóa', style: TextStyle(color: Colors.red)),
@@ -475,17 +639,23 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
 
   Color _colorForPriority(TaskPriority p) {
     switch (p) {
-      case TaskPriority.high: return Colors.red;
-      case TaskPriority.medium: return Colors.orange;
-      case TaskPriority.low: return Colors.green;
+      case TaskPriority.high:
+        return Colors.red;
+      case TaskPriority.medium:
+        return Colors.orange;
+      case TaskPriority.low:
+        return Colors.green;
     }
   }
 
   String _labelForPriority(TaskPriority p) {
     switch (p) {
-      case TaskPriority.high: return 'CAO';
-      case TaskPriority.medium: return 'TB';
-      case TaskPriority.low: return 'THẤP';
+      case TaskPriority.high:
+        return 'CAO';
+      case TaskPriority.medium:
+        return 'TB';
+      case TaskPriority.low:
+        return 'THẤP';
     }
   }
 }
