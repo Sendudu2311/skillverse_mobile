@@ -13,9 +13,8 @@ import '../../data/services/task_board_service.dart';
 class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
   final TaskBoardService _taskBoardService;
 
-  TaskBoardProvider({
-    TaskBoardService? taskBoardService,
-  }) : _taskBoardService = taskBoardService ?? TaskBoardService();
+  TaskBoardProvider({TaskBoardService? taskBoardService})
+    : _taskBoardService = taskBoardService ?? TaskBoardService();
 
   // State
   List<TaskColumn> _columns = [];
@@ -112,113 +111,136 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
 
   /// Create a new task
   Future<void> createTask(CreateTaskRequest request) async {
-    await executeAsync(() async {
-      final response = await _taskBoardService.createTask(request);
-      final task = response.toTask();
+    await executeAsync(
+      () async {
+        final response = await _taskBoardService.createTask(request);
+        final task = response.toTask();
 
-      // Add to appropriate column
-      final columnId = request.columnId ?? 'todo';
-      final columnIndex = _columns.indexWhere((c) => c.id == columnId);
-      if (columnIndex != -1) {
-        final column = _columns[columnIndex];
-        _columns[columnIndex] = column.copyWith(tasks: [...column.tasks, task]);
-      }
-
-      notifyListeners();
-    }, errorMessageBuilder: (e) {
-      debugPrint('❌ TaskBoardProvider Error: $e');
-      return 'Không thể tạo nhiệm vụ: $e';
-    });
-  }
-
-  /// Update a task
-  Future<void> updateTask(String taskId, UpdateTaskRequest request) async {
-    await executeAsync(() async {
-      final response = await _taskBoardService.updateTask(taskId, request);
-      final updatedTask = response.toTask();
-
-      // Update in columns
-      for (int i = 0; i < _columns.length; i++) {
-        final taskIndex = _columns[i].tasks.indexWhere((t) => t.id == taskId);
-        if (taskIndex != -1) {
-          final updatedTasks = List<Task>.from(_columns[i].tasks);
-          updatedTasks[taskIndex] = updatedTask;
-          _columns[i] = _columns[i].copyWith(tasks: updatedTasks);
-          break;
-        }
-      }
-
-      notifyListeners();
-    }, errorMessageBuilder: (e) {
-      debugPrint('❌ TaskBoardProvider Error: $e');
-      return 'Không thể cập nhật nhiệm vụ: $e';
-    });
-  }
-
-  /// Delete a task
-  Future<void> deleteTask(String taskId) async {
-    await executeAsync(() async {
-      await _taskBoardService.deleteTask(taskId);
-
-      // Remove from columns
-      for (int i = 0; i < _columns.length; i++) {
-        final updatedTasks = _columns[i].tasks
-            .where((t) => t.id != taskId)
-            .toList();
-        if (updatedTasks.length != _columns[i].tasks.length) {
-          _columns[i] = _columns[i].copyWith(tasks: updatedTasks);
-          break;
-        }
-      }
-
-      notifyListeners();
-    }, errorMessageBuilder: (e) {
-      debugPrint('❌ TaskBoardProvider Error: $e');
-      return 'Không thể xóa nhiệm vụ: $e';
-    });
-  }
-
-  /// Move task to another column
-  Future<void> moveTask(String taskId, String targetColumnId) async {
-    try {
-      await _taskBoardService.moveTask(taskId, targetColumnId);
-
-      // Move locally
-      Task? taskToMove;
-      int sourceColumnIndex = -1;
-
-      for (int i = 0; i < _columns.length; i++) {
-        final taskIndex = _columns[i].tasks.indexWhere((t) => t.id == taskId);
-        if (taskIndex != -1) {
-          taskToMove = _columns[i].tasks[taskIndex];
-          sourceColumnIndex = i;
-          break;
-        }
-      }
-
-      if (taskToMove != null && sourceColumnIndex != -1) {
-        // Remove from source
-        final sourceTasks = _columns[sourceColumnIndex].tasks
-            .where((t) => t.id != taskId)
-            .toList();
-        _columns[sourceColumnIndex] = _columns[sourceColumnIndex].copyWith(
-          tasks: sourceTasks,
-        );
-
-        // Add to target
-        final targetIndex = _columns.indexWhere((c) => c.id == targetColumnId);
-        if (targetIndex != -1) {
-          final movedTask = taskToMove.copyWith(columnId: targetColumnId);
-          _columns[targetIndex] = _columns[targetIndex].copyWith(
-            tasks: [..._columns[targetIndex].tasks, movedTask],
+        // Add to appropriate column
+        final columnId = request.columnId ?? 'todo';
+        final columnIndex = _columns.indexWhere((c) => c.id == columnId);
+        if (columnIndex != -1) {
+          final column = _columns[columnIndex];
+          _columns[columnIndex] = column.copyWith(
+            tasks: [...column.tasks, task],
           );
         }
 
         notifyListeners();
+      },
+      errorMessageBuilder: (e) {
+        debugPrint('❌ TaskBoardProvider Error: $e');
+        return 'Không thể tạo nhiệm vụ: $e';
+      },
+    );
+  }
+
+  /// Update a task
+  Future<void> updateTask(String taskId, UpdateTaskRequest request) async {
+    await executeAsync(
+      () async {
+        final response = await _taskBoardService.updateTask(taskId, request);
+        final updatedTask = response.toTask();
+
+        // Update in columns
+        for (int i = 0; i < _columns.length; i++) {
+          final taskIndex = _columns[i].tasks.indexWhere((t) => t.id == taskId);
+          if (taskIndex != -1) {
+            final updatedTasks = List<Task>.from(_columns[i].tasks);
+            updatedTasks[taskIndex] = updatedTask;
+            _columns[i] = _columns[i].copyWith(tasks: updatedTasks);
+            break;
+          }
+        }
+
+        notifyListeners();
+      },
+      errorMessageBuilder: (e) {
+        debugPrint('❌ TaskBoardProvider Error: $e');
+        return 'Không thể cập nhật nhiệm vụ: $e';
+      },
+    );
+  }
+
+  /// Delete a task
+  Future<void> deleteTask(String taskId) async {
+    await executeAsync(
+      () async {
+        await _taskBoardService.deleteTask(taskId);
+
+        // Remove from columns
+        for (int i = 0; i < _columns.length; i++) {
+          final updatedTasks = _columns[i].tasks
+              .where((t) => t.id != taskId)
+              .toList();
+          if (updatedTasks.length != _columns[i].tasks.length) {
+            _columns[i] = _columns[i].copyWith(tasks: updatedTasks);
+            break;
+          }
+        }
+
+        notifyListeners();
+      },
+      errorMessageBuilder: (e) {
+        debugPrint('❌ TaskBoardProvider Error: $e');
+        return 'Không thể xóa nhiệm vụ: $e';
+      },
+    );
+  }
+
+  /// Move task to another column (Optimistic UI)
+  Future<void> moveTask(String taskId, String targetColumnId) async {
+    // 1. Prepare for local update
+    Task? taskToMove;
+    int sourceColumnIndex = -1;
+
+    for (int i = 0; i < _columns.length; i++) {
+      final taskIndex = _columns[i].tasks.indexWhere((t) => t.id == taskId);
+      if (taskIndex != -1) {
+        taskToMove = _columns[i].tasks[taskIndex];
+        sourceColumnIndex = i;
+        break;
       }
+    }
+
+    if (taskToMove == null || sourceColumnIndex == -1) return;
+
+    // 2. Perform local update immediately (Optimistic)
+    final targetIndex = _columns.indexWhere((c) => c.id == targetColumnId);
+    if (targetIndex != -1) {
+      final targetColumn = _columns[targetIndex];
+
+      // Update both columnId and display status tag
+      final movedTask = taskToMove.copyWith(
+        columnId: targetColumnId,
+        status: targetColumn.name, // Immediate tag update
+      );
+
+      // Remove from source
+      final updatedSourceTasks = _columns[sourceColumnIndex].tasks
+          .where((t) => t.id != taskId)
+          .toList();
+      _columns[sourceColumnIndex] = _columns[sourceColumnIndex].copyWith(
+        tasks: updatedSourceTasks,
+      );
+
+      // Add to target
+      _columns[targetIndex] = targetColumn.copyWith(
+        tasks: [...targetColumn.tasks, movedTask],
+      );
+
+      notifyListeners();
+    }
+
+    // 3. Call API in the background
+    try {
+      await _taskBoardService.moveTask(taskId, targetColumnId);
+      debugPrint('✅ Task $taskId moved to $targetColumnId successfully');
     } catch (e) {
+      debugPrint('❌ TaskBoardProvider Move Error: $e');
       setError('Không thể di chuyển nhiệm vụ: $e');
-      debugPrint('❌ TaskBoardProvider Error: $e');
+      // Rollback: Reload from server on failure
+      await loadBoard();
     }
   }
 
@@ -277,18 +299,21 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
     int overdueDays = 30,
     String? columnId,
   }) async {
-    final result = await executeAsync(() async {
-      final response = await _taskBoardService.clearOverdueTasks(
-        overdueDays: overdueDays,
-        columnId: columnId,
-      );
-      // Reload board after clearing
-      await loadBoard();
-      return response;
-    }, errorMessageBuilder: (e) {
-      debugPrint('❌ TaskBoardProvider Error: $e');
-      return 'Không thể xóa task quá hạn: $e';
-    });
+    final result = await executeAsync(
+      () async {
+        final response = await _taskBoardService.clearOverdueTasks(
+          overdueDays: overdueDays,
+          columnId: columnId,
+        );
+        // Reload board after clearing
+        await loadBoard();
+        return response;
+      },
+      errorMessageBuilder: (e) {
+        debugPrint('❌ TaskBoardProvider Error: $e');
+        return 'Không thể xóa task quá hạn: $e';
+      },
+    );
     return result ?? {};
   }
 
