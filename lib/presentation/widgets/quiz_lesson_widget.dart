@@ -101,7 +101,10 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
   Future<void> _submitQuiz() async {
     final authProvider = context.read<AuthProvider>();
     if (authProvider.user == null) {
-      ErrorHandler.showWarningSnackBar(context, 'Vui lòng đăng nhập để nộp bài');
+      ErrorHandler.showWarningSnackBar(
+        context,
+        'Vui lòng đăng nhập để nộp bài',
+      );
       return;
     }
 
@@ -109,7 +112,10 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
 
     // Check if all questions are answered
     if (_selectedOptions.length < _quiz!.questions!.length) {
-      ErrorHandler.showWarningSnackBar(context, 'Vui lòng trả lời tất cả các câu hỏi');
+      ErrorHandler.showWarningSnackBar(
+        context,
+        'Vui lòng trả lời tất cả các câu hỏi',
+      );
       return;
     }
 
@@ -479,11 +485,32 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
             ),
           const SizedBox(height: 24),
 
+          // Reassurance Meta Info
+          if (_result == null &&
+              _attemptStatus != null &&
+              _attemptStatus!.canRetry &&
+              (_quiz!.questions?.isNotEmpty ?? false))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  _buildMetaChip(Icons.timer_outlined, 'Thời gian: 10 phút'),
+                  _buildMetaChip(
+                    Icons.refresh,
+                    'Còn lại: ${(_attemptStatus!.maxAttempts - _attemptStatus!.attemptsUsed).clamp(0, 999)} lần',
+                  ),
+                  _buildMetaChip(Icons.save_outlined, 'Tự động lưu tiến độ'),
+                ],
+              ),
+            ),
+
           // Questions
-          ...?_quiz!.questions?.map((question) {
+          ...?_quiz!.questions?.asMap().entries.map((entry) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 24),
-              child: _buildQuestionCard(question),
+              child: _buildQuestionCard(entry.value),
             );
           }),
 
@@ -622,7 +649,12 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
             ],
           ),
           const SizedBox(height: 16),
-          ...?question.options?.map((option) {
+          ...?question.options?.asMap().entries.map((entry) {
+            final optionIndex = entry.key;
+            final option = entry.value;
+            final optionLabel = optionIndex < 26
+                ? String.fromCharCode(65 + optionIndex)
+                : '${optionIndex + 1}';
             final isSelected =
                 _selectedOptions[question.id]?.contains(option.id) ?? false;
 
@@ -664,7 +696,7 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
                         question.questionType,
                       )
                     : null,
-                title: Text(option.optionText),
+                title: Text('$optionLabel. ${option.optionText}'),
                 activeColor: Theme.of(context).colorScheme.primary,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 8,
@@ -687,6 +719,33 @@ class _QuizLessonWidgetState extends State<QuizLessonWidget> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetaChip(IconData icon, String label) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppTheme.accentCyan),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? Colors.white70 : Colors.black54,
+            ),
+          ),
         ],
       ),
     );

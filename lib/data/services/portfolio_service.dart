@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'package:dio/dio.dart';
 import '../models/portfolio_models.dart';
 import '../../core/network/api_client.dart';
+import '../../core/exceptions/api_exception.dart';
 
 class PortfolioService {
   static final PortfolioService _instance = PortfolioService._internal();
@@ -8,35 +11,134 @@ class PortfolioService {
 
   final ApiClient _apiClient = ApiClient();
 
+  // ==================== Helpers ====================
+
+  /// Unwrap backend's {success, data, message} envelope.
+  /// Throws ApiException if success == false or data is missing.
+  T _unwrap<T>(dynamic responseData, T Function(dynamic data) parse) {
+    if (responseData is Map<String, dynamic>) {
+      final success = responseData['success'] as bool? ?? true;
+      if (!success) {
+        throw ApiException(
+          responseData['message'] as String? ?? 'Có lỗi xảy ra',
+        );
+      }
+      final inner = responseData['data'];
+      if (inner == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      return parse(inner);
+    }
+    // Some endpoints may return the object directly (no wrapper)
+    return parse(responseData);
+  }
+
+  List<T> _unwrapList<T>(
+    dynamic responseData,
+    T Function(Map<String, dynamic>) parse,
+  ) {
+    if (responseData is Map<String, dynamic>) {
+      final success = responseData['success'] as bool? ?? true;
+      if (!success) {
+        throw ApiException(
+          responseData['message'] as String? ?? 'Có lỗi xảy ra',
+        );
+      }
+      final inner = responseData['data'];
+      if (inner == null) return [];
+      if (inner is List) {
+        return inner.map((e) => parse(e as Map<String, dynamic>)).toList();
+      }
+    }
+    if (responseData is List) {
+      return responseData.map((e) => parse(e as Map<String, dynamic>)).toList();
+    }
+    return [];
+  }
+
   // ==================== Extended Profile ====================
 
-  /// Create extended profile
-  /// POST /api/portfolio/profile
-  Future<ExtendedProfileDto> createExtendedProfile({
-    required CreateExtendedProfileRequest request,
-  }) async {
+  /// Check if user has extended profile
+  /// GET /api/portfolio/profile/check
+  Future<CheckExtendedProfileResponse> checkExtendedProfile() async {
     try {
-      final response = await _apiClient.dio.post(
-        '/portfolio/profile',
-        data: request.toJson(),
-      );
-      return ExtendedProfileDto.fromJson(response.data);
+      final response = await _apiClient.dio.get('/portfolio/profile/check');
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return CheckExtendedProfileResponse(
+          hasExtendedProfile: data['hasExtendedProfile'] as bool? ?? false,
+        );
+      }
+      return CheckExtendedProfileResponse(hasExtendedProfile: false);
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Update extended profile
+  /// Get my combined profile (basic + extended)
+  /// GET /api/portfolio/profile
+  /// Returns {success, data: UserProfileDTO}
+  Future<ExtendedProfileDto> getMyProfile() async {
+    try {
+      final response = await _apiClient.dio.get('/portfolio/profile');
+      return _unwrap(
+        response.data,
+        (d) => ExtendedProfileDto.fromJson(d as Map<String, dynamic>),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Create extended profile (multipart: profile JSON part)
+  /// POST /api/portfolio/profile
+  Future<ExtendedProfileDto> createExtendedProfile({
+    required CreateExtendedProfileRequest request,
+  }) async {
+    try {
+      final profileJson = jsonEncode(request.toJson());
+      final formData = FormData.fromMap({
+        'profile': MultipartFile.fromString(
+          profileJson,
+          filename: 'profile.json',
+          contentType: DioMediaType('application', 'json'),
+        ),
+      });
+      final response = await _apiClient.dio.post(
+        '/portfolio/profile',
+        data: formData,
+      );
+      return _unwrap(
+        response.data,
+        (d) => ExtendedProfileDto.fromJson(d as Map<String, dynamic>),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Update extended profile (multipart)
   /// PUT /api/portfolio/profile
   Future<ExtendedProfileDto> updateExtendedProfile({
     required CreateExtendedProfileRequest request,
   }) async {
     try {
+      final profileJson = jsonEncode(request.toJson());
+      final formData = FormData.fromMap({
+        'profile': MultipartFile.fromString(
+          profileJson,
+          filename: 'profile.json',
+          contentType: DioMediaType('application', 'json'),
+        ),
+      });
       final response = await _apiClient.dio.put(
         '/portfolio/profile',
-        data: request.toJson(),
+        data: formData,
       );
-      return ExtendedProfileDto.fromJson(response.data);
+      return _unwrap(
+        response.data,
+        (d) => ExtendedProfileDto.fromJson(d as Map<String, dynamic>),
+      );
     } catch (e) {
       rethrow;
     }
@@ -52,47 +154,31 @@ class PortfolioService {
     }
   }
 
-  /// Get my portfolio
-  /// GET /api/portfolio/profile
-  Future<CompletePortfolioDto> getMyProfile() async {
-    try {
-      final response = await _apiClient.dio.get('/portfolio/profile');
-      return CompletePortfolioDto.fromJson(response.data);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// Check if extended profile exists
-  /// GET /api/portfolio/profile/check
-  Future<CheckExtendedProfileResponse> checkExtendedProfile() async {
-    try {
-      final response = await _apiClient.dio.get('/portfolio/profile/check');
-      return CheckExtendedProfileResponse.fromJson(response.data);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// Get profile by slug
+  /// Get profile by slug (public)
   /// GET /api/portfolio/profile/slug/{slug}
-  Future<CompletePortfolioDto> getProfileBySlug(String slug) async {
+  Future<ExtendedProfileDto> getProfileBySlug(String slug) async {
     try {
       final response = await _apiClient.dio.get(
         '/portfolio/profile/slug/$slug',
       );
-      return CompletePortfolioDto.fromJson(response.data);
+      return _unwrap(
+        response.data,
+        (d) => ExtendedProfileDto.fromJson(d as Map<String, dynamic>),
+      );
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Get public profile by user ID
+  /// Get public profile by userId
   /// GET /api/portfolio/profile/{userId}
-  Future<CompletePortfolioDto> getPublicProfile(int userId) async {
+  Future<ExtendedProfileDto> getPublicProfile(int userId) async {
     try {
       final response = await _apiClient.dio.get('/portfolio/profile/$userId');
-      return CompletePortfolioDto.fromJson(response.data);
+      return _unwrap(
+        response.data,
+        (d) => ExtendedProfileDto.fromJson(d as Map<String, dynamic>),
+      );
     } catch (e) {
       rethrow;
     }
@@ -100,55 +186,69 @@ class PortfolioService {
 
   // ==================== Projects ====================
 
-  /// Create project
-  /// POST /api/portfolio/projects
-  Future<ProjectDto> createProject({
-    required CreateProjectRequest request,
-  }) async {
+  /// GET /api/portfolio/projects
+  Future<List<ProjectDto>> getUserProjects() async {
     try {
-      final response = await _apiClient.dio.post(
-        '/portfolio/projects',
-        data: request.toJson(),
-      );
-      return ProjectDto.fromJson(response.data);
+      final response = await _apiClient.dio.get('/portfolio/projects');
+      return _unwrapList(response.data, ProjectDto.fromJson);
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Update project
-  /// PUT /api/portfolio/projects/{projectId}
+  /// POST /api/portfolio/projects (multipart)
+  Future<ProjectDto> createProject({
+    required CreateProjectRequest request,
+  }) async {
+    try {
+      final projectJson = jsonEncode(request.toJson());
+      final formData = FormData.fromMap({
+        'project': MultipartFile.fromString(
+          projectJson,
+          filename: 'project.json',
+          contentType: DioMediaType('application', 'json'),
+        ),
+      });
+      final response = await _apiClient.dio.post(
+        '/portfolio/projects',
+        data: formData,
+      );
+      return _unwrap(
+        response.data,
+        (d) => ProjectDto.fromJson(d as Map<String, dynamic>),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// PUT /api/portfolio/projects/{projectId} (multipart)
   Future<ProjectDto> updateProject({
     required int projectId,
     required UpdateProjectRequest request,
   }) async {
     try {
+      final projectJson = jsonEncode(request.toJson());
+      final formData = FormData.fromMap({
+        'project': MultipartFile.fromString(
+          projectJson,
+          filename: 'project.json',
+          contentType: DioMediaType('application', 'json'),
+        ),
+      });
       final response = await _apiClient.dio.put(
         '/portfolio/projects/$projectId',
-        data: request.toJson(),
+        data: formData,
       );
-      return ProjectDto.fromJson(response.data);
+      return _unwrap(
+        response.data,
+        (d) => ProjectDto.fromJson(d as Map<String, dynamic>),
+      );
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Get user projects
-  /// GET /api/portfolio/projects
-  Future<List<ProjectDto>> getUserProjects() async {
-    try {
-      final response = await _apiClient.dio.get('/portfolio/projects');
-
-      final List<dynamic> data = response.data as List<dynamic>;
-      return data
-          .map((json) => ProjectDto.fromJson(json as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// Delete project
   /// DELETE /api/portfolio/projects/{projectId}
   Future<void> deleteProject(int projectId) async {
     try {
@@ -160,38 +260,42 @@ class PortfolioService {
 
   // ==================== Certificates ====================
 
-  /// Create certificate
-  /// POST /api/portfolio/certificates
-  Future<CertificateDto> createCertificate({
-    required CreateCertificateRequest request,
-  }) async {
-    try {
-      final response = await _apiClient.dio.post(
-        '/portfolio/certificates',
-        data: request.toJson(),
-      );
-      return CertificateDto.fromJson(response.data);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// Get user certificates
   /// GET /api/portfolio/certificates
   Future<List<CertificateDto>> getUserCertificates() async {
     try {
       final response = await _apiClient.dio.get('/portfolio/certificates');
-
-      final List<dynamic> data = response.data as List<dynamic>;
-      return data
-          .map((json) => CertificateDto.fromJson(json as Map<String, dynamic>))
-          .toList();
+      return _unwrapList(response.data, CertificateDto.fromJson);
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Delete certificate
+  /// POST /api/portfolio/certificates (multipart)
+  Future<CertificateDto> createCertificate({
+    required CreateCertificateRequest request,
+  }) async {
+    try {
+      final certJson = jsonEncode(request.toJson());
+      final formData = FormData.fromMap({
+        'certificate': MultipartFile.fromString(
+          certJson,
+          filename: 'certificate.json',
+          contentType: DioMediaType('application', 'json'),
+        ),
+      });
+      final response = await _apiClient.dio.post(
+        '/portfolio/certificates',
+        data: formData,
+      );
+      return _unwrap(
+        response.data,
+        (d) => CertificateDto.fromJson(d as Map<String, dynamic>),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// DELETE /api/portfolio/certificates/{certificateId}
   Future<void> deleteCertificate(int certificateId) async {
     try {
@@ -203,16 +307,11 @@ class PortfolioService {
 
   // ==================== Reviews ====================
 
-  /// Get user reviews
   /// GET /api/portfolio/reviews
   Future<List<ReviewDto>> getUserReviews() async {
     try {
       final response = await _apiClient.dio.get('/portfolio/reviews');
-
-      final List<dynamic> data = response.data as List<dynamic>;
-      return data
-          .map((json) => ReviewDto.fromJson(json as Map<String, dynamic>))
-          .toList();
+      return _unwrapList(response.data, ReviewDto.fromJson);
     } catch (e) {
       rethrow;
     }
@@ -220,7 +319,6 @@ class PortfolioService {
 
   // ==================== CV ====================
 
-  /// Generate CV
   /// POST /api/portfolio/cv/generate
   Future<CVDto> generateCV({GenerateCVRequest? request}) async {
     try {
@@ -228,13 +326,15 @@ class PortfolioService {
         '/portfolio/cv/generate',
         data: request?.toJson() ?? {},
       );
-      return CVDto.fromJson(response.data);
+      return _unwrap(
+        response.data,
+        (d) => CVDto.fromJson(d as Map<String, dynamic>),
+      );
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Update CV
   /// PUT /api/portfolio/cv/{cvId}
   Future<CVDto> updateCV({
     required int cvId,
@@ -245,57 +345,116 @@ class PortfolioService {
         '/portfolio/cv/$cvId',
         data: request.toJson(),
       );
-      return CVDto.fromJson(response.data);
+      return _unwrap(
+        response.data,
+        (d) => CVDto.fromJson(d as Map<String, dynamic>),
+      );
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Get active CV
-  /// GET /api/portfolio/cv/active
+  /// GET /api/portfolio/cv/active — returns null if 404 or no active CV
   Future<CVDto?> getActiveCV() async {
     try {
       final response = await _apiClient.dio.get('/portfolio/cv/active');
-      return CVDto.fromJson(response.data);
-    } catch (e) {
-      // Return null if no active CV (404)
+      return _unwrap(
+        response.data,
+        (d) => CVDto.fromJson(d as Map<String, dynamic>),
+      );
+    } catch (_) {
+      // 404 "No active CV" is a normal state — not an error
       return null;
     }
   }
 
-  /// Get all CVs
   /// GET /api/portfolio/cv/all
   Future<List<CVDto>> getAllCVs() async {
     try {
       final response = await _apiClient.dio.get('/portfolio/cv/all');
-
-      final List<dynamic> data = response.data as List<dynamic>;
-      return data
-          .map((json) => CVDto.fromJson(json as Map<String, dynamic>))
-          .toList();
+      return _unwrapList(response.data, CVDto.fromJson);
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Set active CV
   /// PUT /api/portfolio/cv/{cvId}/set-active
   Future<CVDto> setActiveCV(int cvId) async {
     try {
       final response = await _apiClient.dio.put(
         '/portfolio/cv/$cvId/set-active',
       );
-      return CVDto.fromJson(response.data);
+      return _unwrap(
+        response.data,
+        (d) => CVDto.fromJson(d as Map<String, dynamic>),
+      );
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Delete CV
   /// DELETE /api/portfolio/cv/{cvId}
   Future<void> deleteCV(int cvId) async {
     try {
       await _apiClient.dio.delete('/portfolio/cv/$cvId');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ==================== System Certificates (Auto-Import) ====================
+
+  /// GET /api/portfolio/system-certificates
+  Future<List<SystemCertificateDto>> getSystemCertificates() async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/portfolio/system-certificates',
+      );
+      return _unwrapList(response.data, SystemCertificateDto.fromJson);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// POST /api/portfolio/certificates/import/system?source={source}
+  /// source: "COURSE" | "BADGE" | "ALL"
+  Future<List<SystemCertificateDto>> importSystemCertificates({
+    String source = 'ALL',
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/portfolio/certificates/import/system',
+        queryParameters: {'source': source},
+      );
+      return _unwrapList(response.data, SystemCertificateDto.fromJson);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ==================== Completed Missions (Short-Term Jobs) ====================
+
+  /// GET /api/portfolio/completed-missions
+  Future<List<CompletedMissionDto>> getCompletedMissions() async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/portfolio/completed-missions',
+      );
+      return _unwrapList(response.data, CompletedMissionDto.fromJson);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// GET /api/portfolio/public/{userId}/completed-missions
+  Future<List<CompletedMissionDto>> getPublicCompletedMissions(
+    int userId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/portfolio/public/$userId/completed-missions',
+      );
+      return _unwrapList(response.data, CompletedMissionDto.fromJson);
     } catch (e) {
       rethrow;
     }

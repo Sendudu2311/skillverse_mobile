@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../data/models/learning_report_model.dart';
 import '../../data/services/learning_report_service.dart';
+import '../../data/services/streak_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
 
 class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
   final LearningReportService _service = LearningReportService();
+  final StreakService _streakService = StreakService();
 
   // ==================== State ====================
 
   StudentLearningReportResponse? _latestReport;
   List<StudentLearningReportResponse> _reportHistory = [];
+  CanGenerateResponse? _canGenerate;
+  StreakInfo? _streakInfo;
   bool _isGenerating = false;
   bool _isLoadingHistory = false;
   String _generatingStatus = '';
@@ -18,6 +22,8 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
 
   StudentLearningReportResponse? get latestReport => _latestReport;
   List<StudentLearningReportResponse> get reportHistory => _reportHistory;
+  CanGenerateResponse? get canGenerate => _canGenerate;
+  StreakInfo? get streakInfo => _streakInfo;
   bool get isGenerating => _isGenerating;
   bool get isLoadingHistory => _isLoadingHistory;
   bool get hasReport => _latestReport != null;
@@ -25,12 +31,29 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
 
   // ==================== Actions ====================
 
-  /// Load latest report
+  /// Load latest report + check can-generate + streak in parallel
   Future<void> loadLatestReport() async {
     await executeAsync(() async {
-      _latestReport = await _service.getLatestReport();
+      final results = await Future.wait([
+        _service.getLatestReport(),
+        _service.canGenerateReport(),
+        _streakService.getStreakInfo(),
+      ]);
+      _latestReport = results[0] as StudentLearningReportResponse?;
+      _canGenerate = results[1] as CanGenerateResponse;
+      _streakInfo = results[2] as StreakInfo?;
       notifyListeners();
     }, errorMessageBuilder: (e) => 'Lỗi tải báo cáo: ${e.toString()}');
+  }
+
+  /// Check if user can generate a new report
+  Future<void> checkCanGenerate() async {
+    try {
+      _canGenerate = await _service.canGenerateReport();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error checking can-generate: $e');
+    }
   }
 
   /// Load report history
@@ -49,9 +72,6 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
   }
 
   /// Generate a new quick report with fire-and-recover pattern.
-  ///
-  /// If the AI generation times out (backend still processing),
-  /// automatically polls `getLatestReport()` to recover the result.
   Future<void> generateQuickReport() async {
     _isGenerating = true;
     _generatingStatus = 'AI đang phân tích dữ liệu...';
@@ -60,19 +80,25 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
 
     try {
       _latestReport = await _service.generateQuickReport();
-      await loadReportHistory();
+      await Future.wait([
+        loadReportHistory(),
+        checkCanGenerate(),
+        _syncStreak(),
+      ]);
     } catch (e) {
       final isTimeout = _isTimeoutError(e);
 
       if (isTimeout) {
-        // Fire-and-Recover: backend may still be processing
         debugPrint('⏱️ Generate timed out, starting recovery poll...');
         final recovered = await _pollForNewReport(beforeGenerate);
         if (recovered) {
-          await loadReportHistory();
-          return; // Success via recovery!
+          await Future.wait([
+            loadReportHistory(),
+            checkCanGenerate(),
+            _syncStreak(),
+          ]);
+          return;
         }
-        // Recovery failed — show actionable message
         setError(
           'AI vẫn đang xử lý báo cáo. Nhấn nút "Kiểm tra lại" sau vài phút.',
         );
@@ -83,6 +109,14 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
       _isGenerating = false;
       _generatingStatus = '';
       notifyListeners();
+    }
+  }
+
+  Future<void> _syncStreak() async {
+    try {
+      _streakInfo = await _streakService.getStreakInfo();
+    } catch (e) {
+      debugPrint('Error syncing streak: $e');
     }
   }
 
@@ -125,7 +159,7 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
       if (latest != null) {
         _latestReport = latest;
         clearError();
-        await loadReportHistory();
+        await Future.wait([loadReportHistory(), _syncStreak()]);
       } else {
         setError('Chưa có báo cáo mới. Thử lại sau vài phút.');
       }
@@ -150,6 +184,8 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
   void reset() {
     _latestReport = null;
     _reportHistory = [];
+    _canGenerate = null;
+    _streakInfo = null;
     _isGenerating = false;
     _isLoadingHistory = false;
     _generatingStatus = '';

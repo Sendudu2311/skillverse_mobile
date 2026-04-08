@@ -373,18 +373,14 @@ class CreateBookingRequest {
   final DateTime startTime;
   final int durationMinutes;
   final double priceVnd;
-  final String paymentMethod; // 'PAYOS' or 'WALLET'
-  final String? successUrl;
-  final String? cancelUrl;
+  final String paymentMethod; // Only 'WALLET' is supported by backend
 
   CreateBookingRequest({
     required this.mentorId,
     required this.startTime,
     required this.durationMinutes,
     required this.priceVnd,
-    required this.paymentMethod,
-    this.successUrl,
-    this.cancelUrl,
+    this.paymentMethod = 'WALLET',
   });
 
   factory CreateBookingRequest.fromJson(Map<String, dynamic> json) =>

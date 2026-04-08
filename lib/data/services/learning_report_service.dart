@@ -93,8 +93,57 @@ class LearningReportService {
     }
   }
 
+  /// Check if user can generate a new report (rate limit check)
+  /// GET /student/learning-report/can-generate
+  Future<CanGenerateResponse> canGenerateReport() async {
+    try {
+      final response = await _apiClient.get('$_basePath/can-generate');
+      return CanGenerateResponse.fromJson(response.data);
+    } catch (e) {
+      // Fallback: assume can generate if API fails
+      return CanGenerateResponse(canGenerate: true);
+    }
+  }
+
+  /// Format remaining cooldown time for display (mirrors prototype logic)
+  static String getTimeUntilNextReport(int remainingMinutes) {
+    if (remainingMinutes <= 0) return 'Sẵn sàng';
+    if (remainingMinutes < 60) return '$remainingMinutes phút';
+    final hours = remainingMinutes ~/ 60;
+    final mins = remainingMinutes % 60;
+    if (mins == 0) return '$hours giờ';
+    return '$hours giờ $mins phút';
+  }
+
   /// Centralized error handling
   Exception _handleError(dynamic error) {
     return Exception(ErrorHandler.getErrorMessage(error));
+  }
+}
+
+/// Response from /can-generate endpoint
+class CanGenerateResponse {
+  final bool canGenerate;
+  final int? cooldownHours;
+  final int? remainingCooldownMinutes;
+  final String? nextAvailableAt;
+  final String? message;
+
+  CanGenerateResponse({
+    required this.canGenerate,
+    this.cooldownHours,
+    this.remainingCooldownMinutes,
+    this.nextAvailableAt,
+    this.message,
+  });
+
+  factory CanGenerateResponse.fromJson(Map<String, dynamic> json) {
+    return CanGenerateResponse(
+      canGenerate: json['canGenerate'] as bool? ?? true,
+      cooldownHours: json['cooldownHours'] as int?,
+      remainingCooldownMinutes: json['remainingCooldownMinutes'] as int?,
+      nextAvailableAt: json['nextAvailableAt'] as String?,
+      message: json['message'] as String?,
+    );
   }
 }

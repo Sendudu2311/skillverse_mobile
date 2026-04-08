@@ -24,11 +24,51 @@ class CheckInResult {
       alreadyCheckedIn: json['alreadyCheckedIn'] as bool? ?? false,
       coinsAwarded: json['coinsAwarded'] as int? ?? 0,
       currentStreak: json['currentStreak'] as int? ?? 0,
-      weeklyActivity: (json['weeklyActivity'] as List<dynamic>?)
+      weeklyActivity:
+          (json['weeklyActivity'] as List<dynamic>?)
               ?.map((e) => e as bool)
               .toList() ??
           List.filled(7, false),
       message: json['message'] as String? ?? '',
+    );
+  }
+}
+
+class StreakInfo {
+  final int currentStreak;
+  final int longestStreak;
+  final int totalCheckIns;
+  final int monthlyCheckIns;
+  final List<bool> weeklyActivity;
+  final int powerLevel;
+  final bool checkedInToday;
+  final String? lastCheckInDate;
+
+  StreakInfo({
+    required this.currentStreak,
+    required this.longestStreak,
+    required this.totalCheckIns,
+    required this.monthlyCheckIns,
+    required this.weeklyActivity,
+    required this.powerLevel,
+    required this.checkedInToday,
+    this.lastCheckInDate,
+  });
+
+  factory StreakInfo.fromJson(Map<String, dynamic> json) {
+    return StreakInfo(
+      currentStreak: json['currentStreak'] as int? ?? 0,
+      longestStreak: json['longestStreak'] as int? ?? 0,
+      totalCheckIns: json['totalCheckIns'] as int? ?? 0,
+      monthlyCheckIns: json['monthlyCheckIns'] as int? ?? 0,
+      weeklyActivity:
+          (json['weeklyActivity'] as List<dynamic>?)
+              ?.map((e) => e as bool)
+              .toList() ??
+          List.filled(7, false),
+      powerLevel: json['powerLevel'] as int? ?? 0,
+      checkedInToday: json['checkedInToday'] as bool? ?? false,
+      lastCheckInDate: json['lastCheckInDate'] as String?,
     );
   }
 }
@@ -60,6 +100,20 @@ class StreakService {
     } catch (e) {
       debugPrint('StreakService.checkIn error: $e');
       rethrow;
+    }
+  }
+
+  /// GET /streak/info — lấy thông tin streak
+  Future<StreakInfo?> getStreakInfo() async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/streak/info',
+      );
+      if (response.data == null) return null;
+      return StreakInfo.fromJson(response.data!);
+    } catch (e) {
+      debugPrint('StreakService.getStreakInfo error: $e');
+      return null;
     }
   }
 }

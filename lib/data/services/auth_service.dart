@@ -60,7 +60,7 @@ class AuthService {
   Future<AuthResponse> register(RegisterRequest request) async {
     try {
       final response = await _apiClient.dio.post<Map<String, dynamic>>(
-        '/auth/register',
+        '/users/register',
         data: request.toJson(),
       );
 

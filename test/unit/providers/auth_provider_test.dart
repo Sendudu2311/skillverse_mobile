@@ -110,6 +110,7 @@ void main() {
       final result = await provider.register(
         email: '',
         password: '',
+        confirmPassword: '',
         fullName: '',
       );
 
@@ -122,6 +123,7 @@ void main() {
       final result = await provider.register(
         email: 'not-an-email',
         password: 'ValidPass1',
+        confirmPassword: 'ValidPass1',
         fullName: 'Test User',
       );
 
@@ -138,6 +140,7 @@ void main() {
       await provider.register(
         email: 'new@user.com',
         password: 'TestPass1',
+        confirmPassword: 'TestPass1',
         fullName: 'New User',
       );
 

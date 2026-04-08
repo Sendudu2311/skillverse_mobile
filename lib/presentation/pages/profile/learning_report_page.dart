@@ -3,6 +3,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
 import '../../providers/learning_report_provider.dart';
+import '../../../data/services/learning_report_service.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/skillverse_app_bar.dart';
@@ -68,8 +69,13 @@ class _LearningReportPageState extends State<LearningReportPage>
       ),
       floatingActionButton: Consumer<LearningReportProvider>(
         builder: (context, provider, _) {
+          final canGen = provider.canGenerate?.canGenerate ?? true;
+          final cooldownMins =
+              provider.canGenerate?.remainingCooldownMinutes ?? 0;
+          final isDisabled = provider.isGenerating || !canGen;
+
           return FloatingActionButton.extended(
-            onPressed: provider.isGenerating
+            onPressed: isDisabled
                 ? null
                 : () async {
                     final messenger = ScaffoldMessenger.of(context);
@@ -87,13 +93,15 @@ class _LearningReportPageState extends State<LearningReportPage>
                   },
             icon: provider.isGenerating
                 ? CommonLoading.button()
-                : const Icon(Icons.auto_awesome),
+                : Icon(!canGen ? Icons.timer : Icons.auto_awesome),
             label: Text(
               provider.isGenerating
                   ? (provider.generatingStatus.isNotEmpty
                         ? provider.generatingStatus
                         : 'Đang tạo...')
-                  : 'Tạo báo cáo',
+                  : (!canGen
+                        ? 'Đợi ${LearningReportService.getTimeUntilNextReport(cooldownMins)}'
+                        : 'Tạo báo cáo'),
               style: const TextStyle(fontSize: 12),
             ),
             backgroundColor: AppTheme.primaryBlueDark,
@@ -135,10 +143,14 @@ class _LearningReportPageState extends State<LearningReportPage>
       );
     }
 
-    return _buildReportView(report, isDark);
+    return _buildReportView(report, provider, isDark);
   }
 
-  Widget _buildReportView(StudentLearningReportResponse report, bool isDark) {
+  Widget _buildReportView(
+    StudentLearningReportResponse report,
+    LearningReportProvider provider,
+    bool isDark,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
       child: Column(
@@ -146,8 +158,18 @@ class _LearningReportPageState extends State<LearningReportPage>
         children: [
           // ── Metrics overview ─────────────────────────
           if (report.metrics != null)
-            _buildMetricsCard(report.metrics!, isDark),
+            _buildMetricsCard(report.metrics!, provider, isDark),
           const SizedBox(height: 16),
+
+          // ── Overall Progress & Insights ───────────
+          if (report.overallProgress != null ||
+              report.learningTrend != null ||
+              report.recommendedFocus != null)
+            _buildInsightsCard(report, isDark),
+          if (report.overallProgress != null ||
+              report.learningTrend != null ||
+              report.recommendedFocus != null)
+            const SizedBox(height: 16),
 
           // ── Report header ───────────────────────────
           GlassCard(
@@ -219,7 +241,13 @@ class _LearningReportPageState extends State<LearningReportPage>
 
   // ==================== Metrics Card ====================
 
-  Widget _buildMetricsCard(StudentMetrics metrics, bool isDark) {
+  Widget _buildMetricsCard(
+    StudentMetrics metrics,
+    LearningReportProvider provider,
+    bool isDark,
+  ) {
+    final streakValue = provider.streakInfo?.currentStreak ?? metrics.streak;
+
     return GlassCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -241,7 +269,7 @@ class _LearningReportPageState extends State<LearningReportPage>
               children: [
                 _buildMetricTile(
                   Icons.local_fire_department,
-                  '${metrics.streak}',
+                  '$streakValue',
                   'Streak',
                   Colors.orange,
                   isDark,
@@ -309,6 +337,132 @@ class _LearningReportPageState extends State<LearningReportPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ==================== Insights Card ====================
+
+  Widget _buildInsightsCard(StudentLearningReportResponse report, bool isDark) {
+    final trendMap = <String, (IconData, Color, String)>{
+      'improving': (Icons.trending_up, AppTheme.successColor, 'Đang tiến bộ'),
+      'stable': (Icons.trending_flat, AppTheme.accentGold, 'Ổn định'),
+      'declining': (Icons.trending_down, Colors.redAccent, 'Cần cải thiện'),
+    };
+    final trendKey = (report.learningTrend ?? '').toLowerCase();
+    final trend = trendMap[trendKey];
+
+    return GlassCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Overall progress bar
+            if (report.overallProgress != null) ...[
+              Row(
+                children: [
+                  Icon(Icons.speed, size: 18, color: AppTheme.accentCyan),
+                  const SizedBox(width: 8),
+                  Text(
+                    'TIẾN ĐỘ TỔNG THỂ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.accentCyan,
+                      fontFamily: 'monospace',
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${report.overallProgress}%',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: (report.overallProgress ?? 0) / 100.0,
+                  minHeight: 8,
+                  backgroundColor: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.08),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppTheme.accentCyan,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+
+            // Learning trend badge
+            if (trend != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: trend.$2.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(trend.$1, size: 16, color: trend.$2),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Xu hướng: ${trend.$3}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: trend.$2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+
+            // Recommended focus
+            if (report.recommendedFocus != null &&
+                report.recommendedFocus!.isNotEmpty) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline,
+                    size: 16,
+                    color: AppTheme.accentGold,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      report.recommendedFocus!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

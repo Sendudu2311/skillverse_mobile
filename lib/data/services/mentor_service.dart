@@ -114,24 +114,8 @@ class MentorService {
   }
 
   // ==================== Booking ====================
-
-  /// Create booking intent (for PayOS payment)
-  Future<Map<String, dynamic>> createBookingIntent(
-    CreateBookingRequest request,
-  ) async {
-    try {
-      final json = request.toJson();
-      // Backend expects ZonedDateTime — ensure UTC 'Z' suffix
-      json['startTime'] = request.startTime.toUtc().toIso8601String();
-      final response = await _apiClient.post(
-        '/mentor-bookings/intent',
-        data: json,
-      );
-      return response.data;
-    } catch (e) {
-      throw _handleError(e);
-    }
-  }
+  // NOTE: PayOS-based booking (/intent) was removed from the backend.
+  // Only wallet-based payment (/wallet) is currently supported.
 
   /// Create booking with wallet payment
   Future<MentorBooking> createBookingWithWallet(

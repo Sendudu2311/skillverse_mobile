@@ -38,6 +38,7 @@ void main() {
       final json = {
         'email': 'new@user.com',
         'password': 'Pass1234',
+        'confirmPassword': 'Pass1234',
         'fullName': 'Nguyen Van A',
         'phoneNumber': '0901234567',
       };
@@ -53,6 +54,7 @@ void main() {
       final json = {
         'email': 'new@user.com',
         'password': 'Pass1234',
+        'confirmPassword': 'Pass1234',
         'fullName': 'Nguyen Van A',
       };
       final request = RegisterRequest.fromJson(json);
@@ -62,22 +64,24 @@ void main() {
 
     test('toJson() includes all fields', () {
       final request = RegisterRequest(
-        email: 'a@b.com',
-        password: 'p',
+        email: 'test@example.com',
+        password: 'password',
+        confirmPassword: 'password',
         fullName: 'Test User',
-        phoneNumber: '0912345678',
+        phoneNumber: '0123456789',
       );
       final json = request.toJson();
 
-      expect(json['email'], 'a@b.com');
+      expect(json['email'], 'test@example.com');
       expect(json['fullName'], 'Test User');
-      expect(json['phoneNumber'], '0912345678');
+      expect(json['phoneNumber'], '0123456789');
     });
 
     test('toJson() with null phoneNumber', () {
       final request = RegisterRequest(
         email: 'a@b.com',
         password: 'p',
+        confirmPassword: 'p',
         fullName: 'Test',
       );
       final json = request.toJson();

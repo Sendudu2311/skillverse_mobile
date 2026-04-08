@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/section_header.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/portfolio_models.dart';
 import '../../../core/utils/validation_helper.dart';
@@ -39,7 +40,8 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
   final _websiteController = TextEditingController();
   final _githubController = TextEditingController();
   final _linkedinController = TextEditingController();
-  final _twitterController = TextEditingController();
+  final _behanceController = TextEditingController();
+  final _dribbbleController = TextEditingController();
   final _expertiseController = TextEditingController();
 
   List<String> _expertiseAreas = [];
@@ -68,7 +70,8 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
       _websiteController.text = profile.website ?? '';
       _githubController.text = profile.githubUrl ?? '';
       _linkedinController.text = profile.linkedinUrl ?? '';
-      _twitterController.text = profile.twitterUrl ?? '';
+      _behanceController.text = profile.behanceUrl ?? '';
+      _dribbbleController.text = profile.dribbbleUrl ?? '';
       _expertiseAreas = profile.expertiseAreas ?? [];
       _isPublic = profile.isPublic ?? true;
     }
@@ -84,7 +87,8 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
     _websiteController.dispose();
     _githubController.dispose();
     _linkedinController.dispose();
-    _twitterController.dispose();
+    _behanceController.dispose();
+    _dribbbleController.dispose();
     _expertiseController.dispose();
     super.dispose();
   }
@@ -119,7 +123,7 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
     });
 
     try {
-      final request = CreateExtendedProfileRequest(
+      final request = CreateExtendedProfileRequest.fromOldFields(
         slug: _slugController.text.trim().isEmpty
             ? null
             : _slugController.text.trim(),
@@ -141,9 +145,12 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
         linkedinUrl: _linkedinController.text.trim().isEmpty
             ? null
             : _linkedinController.text.trim(),
-        twitterUrl: _twitterController.text.trim().isEmpty
+        behanceUrl: _behanceController.text.trim().isEmpty
             ? null
-            : _twitterController.text.trim(),
+            : _behanceController.text.trim(),
+        dribbbleUrl: _dribbbleController.text.trim().isEmpty
+            ? null
+            : _dribbbleController.text.trim(),
         expertiseAreas: _expertiseAreas.isEmpty ? null : _expertiseAreas,
         isPublic: _isPublic,
       );
@@ -187,6 +194,10 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
     isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      appBar: SkillVerseAppBar(
+        title: '',
+        onBack: () => Navigator.pop(context),
+      ),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Stack(
@@ -205,61 +216,50 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             ),
 
             // Content
-            SafeArea(
-              child: Column(
-                children: [
-                  // Custom AppBar
-                  _buildCustomAppBar(),
-
-                  // Form Content
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header
-                            SectionHeader.gradient(
-                              icon: Icons.person,
-                              title: widget.isCreate
-                                  ? 'Tạo Extended Profile'
-                                  : 'Chỉnh sửa Profile',
-                              gradientColors: const [
-                                AppTheme.themePurpleStart,
-                                AppTheme.themePurpleEnd,
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Basic Info Section
-                            _buildBasicInfoSection(),
-                            const SizedBox(height: 24),
-
-                            // Social Links Section
-                            _buildSocialLinksSection(),
-                            const SizedBox(height: 24),
-
-                            // Expertise Section
-                            _buildExpertiseSection(),
-                            const SizedBox(height: 24),
-
-                            // Privacy Section
-                            _buildPrivacySection(),
-                            const SizedBox(height: 32),
-
-                            // Save Button
-                            _buildSaveButton(),
-                            const SizedBox(height: 80),
-                          ],
-                        ),
-                      ),
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    SectionHeader.gradient(
+                      icon: Icons.person,
+                      title: widget.isCreate
+                          ? 'Tạo Extended Profile'
+                          : 'Chỉnh sửa Profile',
+                      gradientColors: const [
+                        AppTheme.themePurpleStart,
+                        AppTheme.themePurpleEnd,
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+
+                    // Basic Info Section
+                    _buildBasicInfoSection(),
+                    const SizedBox(height: 24),
+
+                    // Social Links Section
+                    _buildSocialLinksSection(),
+                    const SizedBox(height: 24),
+
+                    // Expertise Section
+                    _buildExpertiseSection(),
+                    const SizedBox(height: 24),
+
+                    // Privacy Section
+                    _buildPrivacySection(),
+                    const SizedBox(height: 32),
+
+                    // Save Button
+                    _buildSaveButton(),
+                    const SizedBox(height: 80),
+                  ],
+                ),
               ),
             ),
+
 
             // Loading Overlay
             if (_isLoading)
@@ -269,32 +269,6 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
               ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildCustomAppBar() {
-    return GlassCard(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(
-              Icons.arrow_back,
-              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Text(
-            widget.isCreate ? 'Tạo Profile' : 'Chỉnh sửa',
-            style: TextStyle(
-              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -415,25 +389,27 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
           ),
           const SizedBox(height: 16),
 
-          // Twitter
+          // Behance
           _buildTextField(
-            controller: _twitterController,
-            label: 'Twitter/X',
-            hint: '@username hoặc https://twitter.com/username',
-            prefixIcon: Icons.chat,
+            controller: _behanceController,
+            label: 'Behance',
+            hint: 'https://behance.net/username',
+            prefixIcon: Icons.palette,
             keyboardType: TextInputType.url,
-            validator: (value) {
-              // Allow both URL and @username format
-              if (value == null || value.trim().isEmpty) return null;
-              final trimmed = value.trim();
-              if (trimmed.startsWith('@') || !trimmed.startsWith('http')) {
-                return ValidationHelper.twitterUsername(
-                  trimmed,
-                  isRequired: false,
-                );
-              }
-              return ValidationHelper.url(trimmed, isRequired: false);
-            },
+            validator: (value) =>
+                ValidationHelper.url(value, isRequired: false),
+          ),
+          const SizedBox(height: 16),
+
+          // Dribbble
+          _buildTextField(
+            controller: _dribbbleController,
+            label: 'Dribbble',
+            hint: 'https://dribbble.com/username',
+            prefixIcon: Icons.sports_basketball,
+            keyboardType: TextInputType.url,
+            validator: (value) =>
+                ValidationHelper.url(value, isRequired: false),
           ),
         ],
       ),

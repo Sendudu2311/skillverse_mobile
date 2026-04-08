@@ -31,6 +31,7 @@ void main() {
       final request = RegisterRequest(
         email: 'newuser@skillverse.vn',
         password: 'MyPassword1',
+        confirmPassword: 'MyPassword1',
         fullName: 'Nguyen Van A',
         phoneNumber: '0901234567',
       );

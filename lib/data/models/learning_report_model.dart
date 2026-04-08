@@ -103,6 +103,7 @@ class RoadmapProgress {
   final int? totalQuests;
   final int? completedQuests;
   final int? progressPercent;
+  final double? totalEstimatedHours;
   final String? createdAt;
   final String? lastActivityAt;
 
@@ -113,6 +114,7 @@ class RoadmapProgress {
     this.totalQuests,
     this.completedQuests,
     this.progressPercent,
+    this.totalEstimatedHours,
     this.createdAt,
     this.lastActivityAt,
   });
@@ -141,6 +143,7 @@ class StudentMetrics {
   final int? totalTasksCompleted;
   final int? totalEnrolledCourses;
   final int? completedCourses;
+  final int? totalTasksPending;
   final List<SkillInfo>? topSkills;
   final List<RoadmapProgress>? roadmapDetails;
 
@@ -161,6 +164,7 @@ class StudentMetrics {
     this.totalTasksCompleted,
     this.totalEnrolledCourses,
     this.completedCourses,
+    this.totalTasksPending,
     this.topSkills,
     this.roadmapDetails,
   });
@@ -192,6 +196,16 @@ class StudentLearningReportResponse {
   final StudentMetrics? metrics;
   final String? reportType;
 
+  // --- Computed fields from Backend ---
+  /// Tiến độ tổng thể (0-100)
+  final int? overallProgress;
+
+  /// Xu hướng học tập: improving / stable / declining
+  final String? learningTrend;
+
+  /// Đề xuất tập trung
+  final String? recommendedFocus;
+
   StudentLearningReportResponse({
     this.id,
     this.generatedAt,
@@ -201,6 +215,9 @@ class StudentLearningReportResponse {
     this.sections,
     this.metrics,
     this.reportType,
+    this.overallProgress,
+    this.learningTrend,
+    this.recommendedFocus,
   });
 
   factory StudentLearningReportResponse.fromJson(Map<String, dynamic> json) =>

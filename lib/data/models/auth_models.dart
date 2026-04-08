@@ -19,12 +19,14 @@ class LoginRequest {
 class RegisterRequest {
   final String email;
   final String password;
+  final String confirmPassword;
   final String fullName;
   final String? phoneNumber;
 
   RegisterRequest({
     required this.email,
     required this.password,
+    required this.confirmPassword,
     required this.fullName,
     this.phoneNumber,
   });

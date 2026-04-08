@@ -84,28 +84,8 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
     }, errorMessageBuilder: (e) => 'Lỗi đặt lịch: ${e.toString()}');
   }
 
-  Future<String?> createBookingIntent({
-    required int mentorId,
-    required DateTime startTime,
-    required int durationMinutes,
-    required double priceVnd,
-    String? successUrl,
-    String? cancelUrl,
-  }) async {
-    return await executeAsync(() async {
-      final request = CreateBookingRequest(
-        mentorId: mentorId,
-        startTime: startTime,
-        durationMinutes: durationMinutes,
-        priceVnd: priceVnd,
-        paymentMethod: 'PAYOS',
-        successUrl: successUrl,
-        cancelUrl: cancelUrl,
-      );
-      final response = await _mentorService.createBookingIntent(request);
-      return response['checkoutUrl'] as String? ?? '';
-    }, errorMessageBuilder: (e) => 'Lỗi tạo thanh toán: ${e.toString()}');
-  }
+  // NOTE: createBookingIntent (PayOS) was removed — backend only supports
+  // wallet-based booking via POST /mentor-bookings/wallet.
 
   Future<void> cancelBooking(int bookingId) async {
     await executeAsync(() async {

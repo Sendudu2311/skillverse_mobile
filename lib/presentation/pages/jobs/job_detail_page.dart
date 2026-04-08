@@ -292,6 +292,60 @@ class _JobDetailPageState extends State<JobDetailPage> {
   // ==================== SHORT-TERM DETAIL ====================
 
   Widget _buildShortTermDetail(ShortTermJobResponse job) {
+    // Determine bottom button state based on job status
+    final hasApplied = context.watch<JobProvider>().hasAppliedToShortTermJob(
+      widget.jobId,
+    );
+    final jobStatus = job.status ?? ShortTermJobStatus.published;
+
+    // Button logic
+    final bool isApplyable =
+        jobStatus == ShortTermJobStatus.published &&
+        job.canApply == true &&
+        !hasApplied;
+
+    String bottomLabel;
+    Color bottomColor;
+    bool bottomEnabled;
+
+    switch (jobStatus) {
+      case ShortTermJobStatus.draft:
+      case ShortTermJobStatus.pendingApproval:
+        bottomLabel = 'Chưa mở ứng tuyển';
+        bottomColor = Colors.grey;
+        bottomEnabled = false;
+      case ShortTermJobStatus.published:
+        bottomLabel = hasApplied ? 'Đã Ứng Tuyển' : 'Ứng Tuyển Ngay';
+        bottomColor = hasApplied
+            ? Colors.grey.shade400
+            : AppTheme.themeBlueStart;
+        bottomEnabled = isApplyable;
+      case ShortTermJobStatus.inProgress:
+      case ShortTermJobStatus.submitted:
+      case ShortTermJobStatus.underReview:
+      case ShortTermJobStatus.approved:
+        bottomLabel = 'Đang Thực Hiện';
+        bottomColor = AppTheme.themeOrangeStart;
+        bottomEnabled = false;
+      case ShortTermJobStatus.completed:
+        bottomLabel = 'Đã Hoàn Thành';
+        bottomColor = AppTheme.themeGreenStart;
+        bottomEnabled = false;
+      case ShortTermJobStatus.paid:
+        bottomLabel = 'Đã Thanh Toán';
+        bottomColor = AppTheme.themeGreenStart;
+        bottomEnabled = false;
+      case ShortTermJobStatus.cancelled:
+      case ShortTermJobStatus.rejected:
+        bottomLabel = 'Đã Hủy';
+        bottomColor = Colors.red;
+        bottomEnabled = false;
+      default:
+        bottomLabel = 'Ứng Tuyển Ngay';
+        bottomColor = AppTheme.themeBlueStart;
+        bottomEnabled = isApplyable;
+    }
+
     return Stack(
       children: [
         SingleChildScrollView(
@@ -299,7 +353,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title + Recruiter
+              // Title + Recruiter + Status Badge
               GlassCard(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -319,6 +373,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
                           _buildUrgencyChip(job.urgency!),
                       ],
                     ),
+                    const SizedBox(height: 10),
+                    // ====== STATUS BADGE ======
+                    _buildStatusChip(jobStatus),
                     if (job.recruiterInfo?.companyName != null) ...[
                       const SizedBox(height: 8),
                       Row(
@@ -360,6 +417,11 @@ class _JobDetailPageState extends State<JobDetailPage> {
                   ],
                 ),
               ),
+
+              const SizedBox(height: 16),
+
+              // ====== PROGRESS TIMELINE ======
+              _buildProgressTimeline(job),
 
               const SizedBox(height: 16),
 
@@ -515,7 +577,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
           ),
         ),
 
-        // Bottom apply button
+        // ====== DYNAMIC BOTTOM BUTTON ======
         Positioned(
           left: 0,
           right: 0,
@@ -537,27 +599,20 @@ class _JobDetailPageState extends State<JobDetailPage> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed:
-                      (job.canApply == false ||
-                          context.watch<JobProvider>().hasAppliedToShortTermJob(
-                            widget.jobId,
-                          ))
-                      ? null
-                      : () => _showApplySheet(context, job),
+                  onPressed: bottomEnabled
+                      ? () => _showApplySheet(context, job)
+                      : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.themeBlueStart,
+                    backgroundColor: bottomColor,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey.shade400,
+                    disabledBackgroundColor: bottomColor.withValues(alpha: 0.5),
+                    disabledForegroundColor: Colors.white70,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: Text(
-                    context.watch<JobProvider>().hasAppliedToShortTermJob(
-                          widget.jobId,
-                        )
-                        ? 'Đã Ứng Tuyển'
-                        : 'Ứng Tuyển Ngay',
+                    bottomLabel,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -594,6 +649,226 @@ class _JobDetailPageState extends State<JobDetailPage> {
         jobId: job.id!,
         jobTitle: job.title ?? '',
         isShortTerm: false,
+      ),
+    );
+  }
+
+  // ==================== STATUS & TIMELINE ====================
+
+  Widget _buildStatusChip(ShortTermJobStatus status) {
+    final (label, color, icon) = switch (status) {
+      ShortTermJobStatus.draft => (
+        'Bản nháp',
+        Colors.grey,
+        Icons.edit_outlined,
+      ),
+      ShortTermJobStatus.pendingApproval => (
+        'Chờ duyệt',
+        Colors.orange,
+        Icons.hourglass_empty,
+      ),
+      ShortTermJobStatus.published => (
+        'Đang tuyển',
+        AppTheme.themeBlueStart,
+        Icons.campaign_outlined,
+      ),
+      ShortTermJobStatus.applied => (
+        'Đã nhận đơn',
+        Colors.indigo,
+        Icons.inbox_outlined,
+      ),
+      ShortTermJobStatus.inProgress => (
+        'Đang thực hiện',
+        AppTheme.themeOrangeStart,
+        Icons.construction_outlined,
+      ),
+      ShortTermJobStatus.submitted => (
+        'Đã nộp bài',
+        Colors.teal,
+        Icons.upload_file_outlined,
+      ),
+      ShortTermJobStatus.underReview => (
+        'Đang review',
+        Colors.deepPurple,
+        Icons.rate_review_outlined,
+      ),
+      ShortTermJobStatus.approved => (
+        'Đã duyệt',
+        AppTheme.themeGreenStart,
+        Icons.check_circle_outline,
+      ),
+      ShortTermJobStatus.completed => (
+        'Hoàn thành',
+        AppTheme.themeGreenStart,
+        Icons.done_all,
+      ),
+      ShortTermJobStatus.paid => (
+        'Đã thanh toán',
+        AppTheme.themeGreenStart,
+        Icons.payments_outlined,
+      ),
+      ShortTermJobStatus.rejected => (
+        'Từ chối',
+        Colors.red,
+        Icons.cancel_outlined,
+      ),
+      ShortTermJobStatus.cancelled => (
+        'Đã hủy',
+        Colors.red,
+        Icons.block_outlined,
+      ),
+      ShortTermJobStatus.disputed => (
+        'Tranh chấp',
+        Colors.deepOrange,
+        Icons.gavel_outlined,
+      ),
+      ShortTermJobStatus.escalated => (
+        'Leo thang',
+        Colors.red.shade700,
+        Icons.warning_amber_outlined,
+      ),
+      ShortTermJobStatus.closed => (
+        'Đã đóng',
+        Colors.grey.shade600,
+        Icons.lock_outline,
+      ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressTimeline(ShortTermJobResponse job) {
+    final steps = <_TimelineStep>[
+      _TimelineStep(
+        label: 'Đăng tuyển',
+        time: job.publishedAt,
+        icon: Icons.campaign_outlined,
+        isCompleted: job.publishedAt != null,
+      ),
+      _TimelineStep(
+        label: 'Đang thực hiện',
+        time: null,
+        icon: Icons.construction_outlined,
+        isCompleted: [
+          ShortTermJobStatus.inProgress,
+          ShortTermJobStatus.submitted,
+          ShortTermJobStatus.underReview,
+          ShortTermJobStatus.approved,
+          ShortTermJobStatus.completed,
+          ShortTermJobStatus.paid,
+        ].contains(job.status),
+      ),
+      _TimelineStep(
+        label: 'Hoàn thành',
+        time: job.completedAt,
+        icon: Icons.done_all,
+        isCompleted: job.completedAt != null,
+      ),
+      _TimelineStep(
+        label: 'Thanh toán',
+        time: job.paidAt,
+        icon: Icons.payments_outlined,
+        isCompleted: job.paidAt != null,
+      ),
+    ];
+
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tiến Độ',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: List.generate(steps.length * 2 - 1, (index) {
+              if (index.isOdd) {
+                // connector line
+                final prevCompleted = steps[index ~/ 2].isCompleted;
+                final nextCompleted = steps[index ~/ 2 + 1].isCompleted;
+                return Expanded(
+                  child: Container(
+                    height: 3,
+                    color: prevCompleted && nextCompleted
+                        ? AppTheme.themeGreenStart
+                        : Colors.grey.shade300,
+                  ),
+                );
+              } else {
+                // step circle
+                final step = steps[index ~/ 2];
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: step.isCompleted
+                            ? AppTheme.themeGreenStart
+                            : Colors.grey.shade300,
+                      ),
+                      child: Icon(
+                        step.isCompleted ? Icons.check : step.icon,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      step.label,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: step.isCompleted
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        color: step.isCompleted
+                            ? Theme.of(context).textTheme.bodyMedium?.color
+                            : Theme.of(context).hintColor,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (step.time != null)
+                      Text(
+                        DateTimeHelper.formatDate(DateTime.parse(step.time!)),
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Theme.of(context).hintColor,
+                        ),
+                      ),
+                  ],
+                );
+              }
+            }),
+          ),
+        ],
       ),
     );
   }
@@ -663,4 +938,19 @@ class _JobDetailPageState extends State<JobDetailPage> {
       ),
     );
   }
+}
+
+/// Simple data holder for timeline steps
+class _TimelineStep {
+  final String label;
+  final String? time;
+  final IconData icon;
+  final bool isCompleted;
+
+  const _TimelineStep({
+    required this.label,
+    this.time,
+    required this.icon,
+    required this.isCompleted,
+  });
 }

@@ -36,26 +36,38 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!_formKey.currentState!.validate()) return;
 
     if (!_agreeToTerms) {
-      ErrorHandler.showWarningSnackBar(context, 'Vui lòng đồng ý với điều khoản sử dụng');
+      ErrorHandler.showWarningSnackBar(
+        context,
+        'Vui lòng đồng ý với điều khoản sử dụng',
+      );
       return;
     }
 
     final authProvider = context.read<AuthProvider>();
-    
-    final response = await authProvider.register(
+
+    final success = await authProvider.register(
       email: _emailController.text.trim(),
       password: _passwordController.text,
+      confirmPassword: _confirmPasswordController.text,
       fullName: _fullNameController.text.trim(),
     );
 
-    if (mounted) {
+    if (!mounted) return;
+
+    if (success) {
       // Show success message
-      ErrorHandler.showSuccessSnackBar(context, 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
+      ErrorHandler.showSuccessSnackBar(
+        context,
+        'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.',
+      );
 
       // Navigate to verify email page
       context.go('/verify-email?email=${_emailController.text.trim()}');
-    } else if (mounted) {
-      ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Đăng ký thất bại');
+    } else {
+      ErrorHandler.showErrorSnackBar(
+        context,
+        authProvider.errorMessage ?? 'Đăng ký thất bại',
+      );
     }
   }
 
@@ -80,26 +92,27 @@ class _RegisterPageState extends State<RegisterPage> {
                     children: [
                       Text(
                         'Tạo tài khoản mới',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       Text(
                         'Bắt đầu hành trình học tập cùng SkillVerse',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.7),
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Full Name Field
                 TextFormField(
                   controller: _fullNameController,
@@ -118,9 +131,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Email Field
                 TextFormField(
                   controller: _emailController,
@@ -140,9 +153,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Password Field
                 TextFormField(
                   controller: _passwordController,
@@ -153,7 +166,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        _obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() {
@@ -178,9 +193,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Confirm Password Field
                 TextFormField(
                   controller: _confirmPasswordController,
@@ -191,7 +206,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                        _obscureConfirmPassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() {
@@ -210,9 +227,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Terms and Conditions
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,23 +270,25 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Register Button
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
                     return ElevatedButton(
-                      onPressed: authProvider.isLoading ? null : _handleRegister,
+                      onPressed: authProvider.isLoading
+                          ? null
+                          : _handleRegister,
                       child: authProvider.isLoading
                           ? CommonLoading.small()
                           : const Text('Đăng ký'),
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Login Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

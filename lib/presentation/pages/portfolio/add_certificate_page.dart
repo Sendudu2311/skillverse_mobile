@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/section_header.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/portfolio_models.dart';
 import '../../../core/utils/validation_helper.dart';
@@ -112,7 +113,7 @@ class _AddCertificatePageState extends State<AddCertificatePage>
     });
 
     try {
-      final request = CreateCertificateRequest(
+      final request = CreateCertificateRequest.fromOldFields(
         title: _titleController.text.trim(),
         issuer: _issuerController.text.trim(),
         issueDate: _issueDate != null ? _dateFormat.format(_issueDate!) : null,
@@ -165,6 +166,10 @@ class _AddCertificatePageState extends State<AddCertificatePage>
     isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      appBar: SkillVerseAppBar(
+        title: '',
+        onBack: () => Navigator.pop(context),
+      ),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Stack(
@@ -183,57 +188,45 @@ class _AddCertificatePageState extends State<AddCertificatePage>
             ),
 
             // Content
-            SafeArea(
-              child: Column(
-                children: [
-                  // Custom AppBar
-                  _buildCustomAppBar(),
-
-                  // Form Content
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header
-                            SectionHeader.gradient(
-                              icon: Icons.workspace_premium,
-                              title: 'Thêm chứng chỉ',
-                              gradientColors: const [
-                                AppTheme.themeOrangeStart,
-                                AppTheme.themeOrangeEnd,
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Basic Info Section
-                            _buildBasicInfoSection(),
-                            const SizedBox(height: 24),
-
-                            // Credential Info Section
-                            _buildCredentialSection(),
-                            const SizedBox(height: 24),
-
-                            // Timeline Section
-                            _buildTimelineSection(),
-                            const SizedBox(height: 24),
-
-                            // Additional Info Section
-                            _buildAdditionalInfoSection(),
-                            const SizedBox(height: 32),
-
-                            // Save Button
-                            _buildSaveButton(),
-                            const SizedBox(height: 80),
-                          ],
-                        ),
-                      ),
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    SectionHeader.gradient(
+                      icon: Icons.workspace_premium,
+                      title: 'Thêm chứng chỉ',
+                      gradientColors: const [
+                        AppTheme.themeOrangeStart,
+                        AppTheme.themeOrangeEnd,
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+
+                    // Basic Info Section
+                    _buildBasicInfoSection(),
+                    const SizedBox(height: 24),
+
+                    // Credential Info Section
+                    _buildCredentialSection(),
+                    const SizedBox(height: 24),
+
+                    // Timeline Section
+                    _buildTimelineSection(),
+                    const SizedBox(height: 24),
+
+                    // Additional Info Section
+                    _buildAdditionalInfoSection(),
+                    const SizedBox(height: 32),
+
+                    // Save Button
+                    _buildSaveButton(),
+                    const SizedBox(height: 80),
+                  ],
+                ),
               ),
             ),
 
@@ -245,32 +238,6 @@ class _AddCertificatePageState extends State<AddCertificatePage>
               ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildCustomAppBar() {
-    return GlassCard(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(
-              Icons.arrow_back,
-              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Text(
-            'Thêm chứng chỉ',
-            style: TextStyle(
-              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
       ),
     );
   }

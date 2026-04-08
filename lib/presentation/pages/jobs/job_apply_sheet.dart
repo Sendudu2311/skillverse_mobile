@@ -28,6 +28,7 @@ class _JobApplySheetState extends State<JobApplySheet>
   final _coverLetterController = TextEditingController();
   final _priceController = TextEditingController();
   final _durationController = TextEditingController();
+  final _portfolioController = TextEditingController();
   bool _isSubmitting = false;
   bool _isSuccess = false;
 
@@ -58,6 +59,7 @@ class _JobApplySheetState extends State<JobApplySheet>
     _coverLetterController.dispose();
     _priceController.dispose();
     _durationController.dispose();
+    _portfolioController.dispose();
     _successAnimController.dispose();
     super.dispose();
   }
@@ -304,6 +306,23 @@ class _JobApplySheetState extends State<JobApplySheet>
                   ),
                 ),
               ),
+
+              const SizedBox(height: 16),
+
+              TextFormField(
+                controller: _portfolioController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Link sản phẩm phụ (không bắt buộc)',
+                  hintText:
+                      'VD: link Github, Behance, Drive (cách nhau bởi dấu phẩy)',
+                  prefixIcon: const Icon(Icons.link),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignLabelWithHint: true,
+                ),
+              ),
             ],
 
             const SizedBox(height: 24),
@@ -359,6 +378,13 @@ class _JobApplySheetState extends State<JobApplySheet>
             : null,
         proposedDuration: _durationController.text.isNotEmpty
             ? _durationController.text
+            : null,
+        portfolio: _portfolioController.text.trim().isNotEmpty
+            ? _portfolioController.text
+                  .split(',')
+                  .map((e) => e.trim())
+                  .where((e) => e.isNotEmpty)
+                  .toList()
             : null,
       );
     } else {

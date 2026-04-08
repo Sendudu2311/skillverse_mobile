@@ -71,6 +71,7 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
   Future<bool> register({
     required String email,
     required String password,
+    required String confirmPassword,
     required String fullName,
     String? phoneNumber,
   }) async {
@@ -78,6 +79,7 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
       final request = RegisterRequest(
         email: email,
         password: password,
+        confirmPassword: confirmPassword,
         fullName: fullName,
         phoneNumber: phoneNumber,
       );
