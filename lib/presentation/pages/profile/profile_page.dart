@@ -11,6 +11,7 @@ import '../../../data/models/premium_models.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/number_formatter.dart';
 
 import '../../widgets/glass_card.dart';
@@ -40,7 +41,6 @@ class _ProfilePageState extends State<ProfilePage> {
     // Capture references before any async gap
     final authProvider = context.read<AuthProvider>();
     final userProvider = context.read<UserProvider>();
-    final messenger = ScaffoldMessenger.of(context);
 
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
@@ -65,21 +65,11 @@ class _ProfilePageState extends State<ProfilePage> {
       // Reload profile to get the new avatar URL
       if (mounted) {
         await userProvider.loadUserProfile();
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Cập nhật ảnh đại diện thành công!'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Cập nhật ảnh đại diện thành công!');
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Upload thất bại: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {
@@ -336,7 +326,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     NumberFormatter.formatCompact(cashBalance),
                   ),
                 ),
-                Container(width: 1, height: 36, color: Colors.white24),
+                Container(width: 1, height: 36, color: Colors.white.withValues(alpha: 0.24)),
                 Expanded(
                   child: _buildStatItem2(
                     Icons.monetization_on_outlined,
@@ -344,7 +334,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     NumberFormatter.formatCompact(coinBalance),
                   ),
                 ),
-                Container(width: 1, height: 36, color: Colors.white24),
+                Container(width: 1, height: 36, color: Colors.white.withValues(alpha: 0.24)),
                 Expanded(
                   child: _buildStatItem2(
                     Icons.verified_outlined,
@@ -968,7 +958,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return ElevatedButton(
       onPressed: () => _showLogoutDialog(context, authProvider),
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.red,
+        backgroundColor: AppTheme.errorColor,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

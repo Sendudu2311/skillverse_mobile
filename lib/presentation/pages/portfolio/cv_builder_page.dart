@@ -3,6 +3,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
+import '../../../core/utils/error_handler.dart';
 import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../../data/models/portfolio_models.dart';
@@ -55,7 +56,6 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
   }
 
   Future<void> _generateCV() async {
-    final messenger = ScaffoldMessenger.of(context);
     final portfolioProvider = context.read<PortfolioProvider>();
     setState(() => _isGenerating = true);
 
@@ -82,48 +82,25 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
     setState(() => _isGenerating = false);
 
     if (success) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Tạo CV thành công!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      ErrorHandler.showSuccessSnackBar(context, 'Tạo CV thành công!');
     } else {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(portfolioProvider.errorMessage ?? 'Có lỗi xảy ra'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, portfolioProvider.errorMessage ?? 'Có lỗi xảy ra');
     }
   }
 
   Future<void> _setActiveCV(int cvId) async {
-    final messenger = ScaffoldMessenger.of(context);
     final portfolioProvider = context.read<PortfolioProvider>();
     final success = await portfolioProvider.setActiveCV(cvId);
 
     if (mounted && success) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Đã thiết lập CV hoạt động'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      ErrorHandler.showSuccessSnackBar(context, 'Đã thiết lập CV hoạt động');
     }
   }
 
   void _openCVPreview(CVDto cv) {
     // Navigate to native CV preview page (like Web's CVTemplateRenderer)
     if (cv.cvJson == null || cv.cvJson!.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('CV chưa có dữ liệu. Hãy tạo lại CV.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
+      ErrorHandler.showWarningSnackBar(context, 'CV chưa có dữ liệu. Hãy tạo lại CV.');
       return;
     }
     Navigator.push(
@@ -164,17 +141,11 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
     );
 
     if (confirm == true && mounted) {
-      final messenger = ScaffoldMessenger.of(context);
       final portfolioProvider = context.read<PortfolioProvider>();
       final success = await portfolioProvider.deleteCV(cvId);
 
       if (mounted && success) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Đã xóa CV'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Đã xóa CV');
       }
     }
   }

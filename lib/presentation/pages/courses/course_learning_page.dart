@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../themes/app_theme.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../data/models/module_with_content_models.dart';
 import '../../../data/models/lesson_models.dart';
@@ -14,7 +15,6 @@ import '../../widgets/quiz_lesson_widget.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/empty_state_widget.dart';
-import '../../themes/app_theme.dart';
 
 // ──────────────────────────────────────────────
 // Unified Curriculum Item (lesson / quiz / assignment)
@@ -349,7 +349,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: AppTheme.lightBackgroundSecondary,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -452,7 +452,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                                     decoration: isCompleted
                                         ? TextDecoration.lineThrough
                                         : null,
-                                    color: isCompleted ? Colors.grey : null,
+                                    color: isCompleted ? AppTheme.lightTextSecondary : null,
                                   ),
                                 ),
                                 subtitle: Text(
@@ -463,7 +463,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                                     fontSize: 12,
                                     color: isCompleted
                                         ? AppTheme.successColor
-                                        : Colors.grey[600],
+                                        : AppTheme.lightTextSecondary,
                                   ),
                                 ),
                                 trailing: isActive
@@ -820,7 +820,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                 textAlign: TextAlign.center,
                 style: Theme.of(
                   context,
-                ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.lightTextSecondary),
               ),
               const SizedBox(height: 20),
               OutlinedButton.icon(

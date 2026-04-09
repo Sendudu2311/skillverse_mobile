@@ -7,6 +7,9 @@ import '../../../data/models/portfolio_models.dart';
 import '../../widgets/glass_card.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/error_state_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../../core/utils/error_handler.dart';
 import 'edit_extended_profile_page.dart';
 import 'edit_project_page.dart';
 import 'add_certificate_page.dart';
@@ -35,15 +38,20 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
     final portfolioProvider = context.read<PortfolioProvider>();
     await portfolioProvider.checkExtendedProfile();
     if (portfolioProvider.hasExtendedProfile) {
-      await Future.wait([
-        portfolioProvider.loadMyPortfolio(),
-        portfolioProvider.loadProjects(),
-        portfolioProvider.loadCertificates(),
-        portfolioProvider.loadReviews(),
-        portfolioProvider.loadActiveCV(),
-        portfolioProvider.loadCompletedMissions(),
-        portfolioProvider.loadSystemCertificates(),
-      ]);
+      try {
+        await Future.wait([
+          portfolioProvider.loadMyPortfolio(),
+          portfolioProvider.loadProjects(),
+          portfolioProvider.loadCertificates(),
+          portfolioProvider.loadReviews(),
+          portfolioProvider.loadActiveCV(),
+          portfolioProvider.loadCompletedMissions(),
+          portfolioProvider.loadSystemCertificates(),
+        ]);
+      } catch (e) {
+        if (!mounted) return;
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 
@@ -128,13 +136,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
   void _sharePortfolioLink(String slug) {
     final link = 'https://skillverse.vn/portfolio/$slug';
     Clipboard.setData(ClipboardData(text: link));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Đã sao chép: $link'),
-        backgroundColor: AppTheme.themeGreenStart,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    ErrorHandler.showSuccessSnackBar(context, 'Đã sao chép: $link');
   }
 
   @override
@@ -169,7 +171,10 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                 }
 
                 if (portfolioProvider.errorMessage != null) {
-                  return _buildErrorView(portfolioProvider.errorMessage!);
+                  return ErrorStateWidget(
+                    message: portfolioProvider.errorMessage!,
+                    onRetry: _loadPortfolio,
+                  );
                 }
 
                 if (!portfolioProvider.hasExtendedProfile) {
@@ -629,7 +634,11 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
         ),
         const SizedBox(height: 12),
         if (projects.isEmpty)
-          _buildEmptyState('Chưa có dự án nào', Icons.work_outline)
+          EmptyStateWidget(
+            icon: Icons.work_outline,
+            title: 'Không có dự án',
+            subtitle: 'Chưa có dự án nào trong portfolio của bạn',
+          )
         else
           ListView.separated(
             shrinkWrap: true,
@@ -765,7 +774,11 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
         ),
         const SizedBox(height: 12),
         if (missions.isEmpty)
-          _buildEmptyState('Chưa có nhiệm vụ nào', Icons.assignment_outlined)
+          EmptyStateWidget(
+            icon: Icons.assignment_outlined,
+            title: 'Không có nhiệm vụ',
+            subtitle: 'Chưa có nhiệm vụ nào được giao',
+          )
         else
           ListView.separated(
             shrinkWrap: true,
@@ -944,21 +957,9 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
     final count = await portfolioProvider.importSystemCertificates();
     if (!mounted) return;
     if (count >= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Đã đồng bộ $count chứng chỉ từ hệ thống!'),
-          backgroundColor: AppTheme.themeGreenStart,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      ErrorHandler.showSuccessSnackBar(context, 'Đã đồng bộ $count chứng chỉ từ hệ thống!');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Không thể đồng bộ chứng chỉ. Vui lòng thử lại.'),
-          backgroundColor: Colors.redAccent,
-          duration: Duration(seconds: 3),
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, 'Không thể đồng bộ chứng chỉ. Vui lòng thử lại.');
     }
   }
 
@@ -1023,9 +1024,10 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
         ),
         const SizedBox(height: 12),
         if (certificates.isEmpty)
-          _buildEmptyState(
-            'Chưa có chứng chỉ nào',
-            Icons.card_membership_outlined,
+          EmptyStateWidget(
+            icon: Icons.card_membership_outlined,
+            title: 'Không có chứng chỉ',
+            subtitle: 'Chưa có chứng chỉ nào trong portfolio của bạn',
           )
         else
           ListView.separated(
@@ -1291,34 +1293,6 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
     );
   }
 
-  Widget _buildEmptyState(String message, IconData icon) {
-    return GlassCard(
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 64,
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: 16,
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildNoProfileView(BuildContext context) {
     return Center(
       child: Padding(
@@ -1405,56 +1379,6 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorView(String error) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: AppTheme.errorColor.withValues(alpha: 0.7),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Có lỗi xảy ra',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _loadPortfolio,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.themePurpleStart,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-              ),
-              child: const Text('Thử lại'),
             ),
           ],
         ),

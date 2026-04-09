@@ -9,6 +9,7 @@ import '../../widgets/status_badge.dart';
 import '../../widgets/painters/grid_painter.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/error_state_widget.dart';
 import 'roadmap_node_card.dart';
 
 class RoadmapDetailPage extends StatefulWidget {
@@ -45,12 +46,18 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
           }
 
           if (provider.errorMessage != null) {
-            return _buildErrorState(context, provider.errorMessage!, isDark);
+            return ErrorStateWidget(
+              message: provider.errorMessage!,
+              onRetry: () => context.go('/roadmap'),
+            );
           }
 
           final roadmap = provider.currentRoadmap;
           if (roadmap == null) {
-            return _buildErrorState(context, 'Không tìm thấy lộ trình', isDark);
+            return ErrorStateWidget(
+              message: 'Không tìm thấy lộ trình',
+              onRetry: () => context.go('/roadmap'),
+            );
           }
 
           return _buildContent(context, roadmap, provider, isDark);
@@ -72,53 +79,6 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
               color: isDark
                   ? AppTheme.darkTextSecondary
                   : AppTheme.lightTextSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorState(BuildContext context, String error, bool isDark) {
-    return SafeArea(
-      child: Column(
-        children: [
-          _buildBackButton(context, isDark),
-          Expanded(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: AppTheme.errorColor.withValues(alpha: 0.6),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Không thể tải lộ trình',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      error,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () => context.go('/roadmap'),
-                      child: const Text('Quay lại danh sách'),
-                    ),
-                  ],
-                ),
-              ),
             ),
           ),
         ],
@@ -190,19 +150,6 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildBackButton(BuildContext context, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: IconButton(
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back),
-        ),
-      ),
     );
   }
 

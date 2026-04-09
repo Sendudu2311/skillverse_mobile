@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../data/models/premium_models.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../../data/models/payment_models.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../providers/premium_provider.dart';
@@ -165,7 +166,7 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
       case PlanType.premiumBasic:
         return AppTheme.accentGold;
       case PlanType.premiumPlus:
-        return const Color(0xFF7C3AED);
+        return AppTheme.secondaryPurple;
       case PlanType.recruiterPro:
         return AppTheme.themeOrangeStart;
       default:
@@ -532,16 +533,10 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
   Future<void> _handlePayOS(PremiumPlanDto plan) async {
     if (!mounted) return;
     final authProvider = context.read<AuthProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     if (authProvider.user == null) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng đăng nhập'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, 'Vui lòng đăng nhập');
       return;
     }
 
@@ -571,12 +566,7 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
 
     if (paymentResponse == null) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán');
       }
       return;
     }
@@ -601,19 +591,9 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
     if (!mounted) return;
     final isSuccess = result != null && result['success'] == true;
     if (isSuccess) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('🎉 Đăng ký Premium thành công!'),
-          backgroundColor: AppTheme.successColor,
-        ),
-      );
+      ErrorHandler.showSuccessSnackBar(context, '🎉 Đăng ký Premium thành công!');
     } else {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('⏳ Đang xử lý thanh toán...'),
-          backgroundColor: AppTheme.accentGold,
-        ),
-      );
+      ErrorHandler.showWarningSnackBar(context, '⏳ Đang xử lý thanh toán...');
     }
   }
 
@@ -623,7 +603,6 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
     // Capture references before async gaps
     final walletProvider = context.read<WalletProvider>();
     final premiumProvider = context.read<PremiumProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     await walletProvider.refresh();
 
@@ -722,35 +701,20 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
 
       if (subscription != null) {
         walletProvider.refresh();
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('🎉 Đã kích hoạt ${plan.displayName}!'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, '🎉 Đã kích hoạt ${plan.displayName}!');
         // Reload plans to update current subscription
         premiumProvider.loadAll();
       } else {
         final errorMsg = premiumProvider.errorMessage ?? 'Thanh toán thất bại';
         // Clear provider error so page doesn't show error view
         premiumProvider.resetState();
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, errorMsg);
       }
     } catch (e) {
       if (mounted) navigator.pop();
       if (!mounted) return;
       premiumProvider.resetState();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, e.toString().replaceAll('Exception: ', ''));
     }
   }
 
@@ -820,7 +784,7 @@ class _PlanCard extends StatelessWidget {
       case PlanType.premiumBasic:
         return AppTheme.accentGold;
       case PlanType.premiumPlus:
-        return const Color(0xFF7C3AED);
+        return AppTheme.secondaryPurple;
       case PlanType.recruiterPro:
         return AppTheme.themeOrangeStart;
       default:

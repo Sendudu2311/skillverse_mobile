@@ -10,6 +10,7 @@ import '../../themes/app_theme.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/glass_card.dart';
 import '../../../core/utils/date_time_helper.dart';
+import '../../../core/utils/error_handler.dart';
 
 class MyBookingsPage extends StatefulWidget {
   const MyBookingsPage({super.key});
@@ -362,23 +363,10 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               Navigator.of(dialogContext).pop();
               await provider.cancelBooking(booking.id);
               if (!mounted) return;
-              // Re-lookup ScaffoldMessenger from State's own context
-              // (guaranteed stable when mounted == true)
-              final messenger = ScaffoldMessenger.of(this.context);
               if (provider.hasError) {
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(provider.errorMessage ?? 'Có lỗi xảy ra'),
-                    backgroundColor: AppTheme.errorColor,
-                  ),
-                );
+                ErrorHandler.showErrorSnackBar(this.context, provider.errorMessage ?? 'Có lỗi xảy ra');
               } else {
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Đã hủy lịch hẹn'),
-                    backgroundColor: AppTheme.successColor,
-                  ),
-                );
+                ErrorHandler.showSuccessSnackBar(this.context, 'Đã hủy lịch hẹn');
               }
             },
             style: ElevatedButton.styleFrom(
@@ -413,21 +401,10 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               Navigator.of(dialogContext).pop();
               await provider.confirmComplete(booking.id);
               if (!mounted) return;
-              final messenger = ScaffoldMessenger.of(this.context);
               if (provider.hasError) {
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(provider.errorMessage ?? 'Có lỗi xảy ra'),
-                    backgroundColor: AppTheme.errorColor,
-                  ),
-                );
+                ErrorHandler.showErrorSnackBar(this.context, provider.errorMessage ?? 'Có lỗi xảy ra');
               } else {
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Đã xác nhận hoàn thành! Cảm ơn bạn.'),
-                    backgroundColor: AppTheme.successColor,
-                  ),
-                );
+                ErrorHandler.showSuccessSnackBar(this.context, 'Đã xác nhận hoàn thành! Cảm ơn bạn.');
               }
             },
             style: ElevatedButton.styleFrom(

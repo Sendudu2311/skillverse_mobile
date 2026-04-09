@@ -123,11 +123,11 @@ class _SkinShopPageState extends State<SkinShopPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.emoji_events, color: Colors.amber, size: 24),
+            Icon(Icons.emoji_events, color: AppTheme.accentGold, size: 24),
             const SizedBox(width: 8),
             ShaderMask(
               shaderCallback: (bounds) => const LinearGradient(
-                colors: [Colors.amber, Colors.orange],
+                colors: [AppTheme.accentGold, AppTheme.accentOrange],
               ).createShader(bounds),
               child: const Text(
                 'HALL OF FAME',
@@ -141,7 +141,7 @@ class _SkinShopPageState extends State<SkinShopPage> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.star_outline, color: Colors.amber, size: 20),
+            const Icon(Icons.star_outline, color: AppTheme.accentGold, size: 20),
           ],
         ),
         const SizedBox(height: 20),
@@ -190,8 +190,8 @@ class _SkinShopPageState extends State<SkinShopPage> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: rank == 1
-                    ? Colors.amber
-                    : (rank == 2 ? Colors.grey : Colors.brown),
+                    ? AppTheme.accentGold
+                    : (rank == 2 ? AppTheme.accentSilver : Colors.brown),
                 width: 2,
               ),
             ),

@@ -126,9 +126,9 @@ class _CoursesPageState extends State<CoursesPage> {
                   },
                   gradients: const [
                     [AppTheme.themeBlueStart, AppTheme.themeBlueEnd],
-                    [Color(0xFF4CAF50), Color(0xFF66BB6A)],
-                    [Color(0xFF2196F3), Color(0xFF42A5F5)],
-                    [Color(0xFFFF6B35), Color(0xFFFF8A65)],
+                    [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
+                    [AppTheme.themeBlueStart, Color(0xFF42A5F5)],
+                    [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
                   ],
                 ),
               ),

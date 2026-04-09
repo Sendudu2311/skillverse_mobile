@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/mentor_models.dart';
 import '../../providers/mentor_provider.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../providers/mentor_booking_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/common_loading.dart';
@@ -434,7 +435,6 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
     final provider = context.read<MentorBookingProvider>();
     final navigator = Navigator.of(context);
     final router = GoRouter.of(context);
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     try {
       final booking = await provider.createBookingWithWallet(
@@ -448,32 +448,16 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
 
       if (booking != null) {
         navigator.pop();
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Text('Đặt lịch thành công! Chờ mentor xác nhận.'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Đặt lịch thành công! Chờ mentor xác nhận.');
         router.push('/my-bookings');
       } else {
-        // Pop the sheet first so user sees the SnackBar
         navigator.pop();
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(provider.errorMessage ?? 'Đặt lịch thất bại'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, provider.errorMessage ?? 'Đặt lịch thất bại');
       }
     } catch (e) {
       if (mounted) {
         navigator.pop();
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, 'Lỗi: ${e.toString()}');
       }
     }
   }

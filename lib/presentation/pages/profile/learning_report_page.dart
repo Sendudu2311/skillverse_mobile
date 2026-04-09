@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/learning_report_provider.dart';
 import '../../../data/models/learning_report_model.dart';
 import '../../themes/app_theme.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
@@ -89,17 +90,11 @@ class _LearningReportPageState extends State<LearningReportPage>
                   onPressed: isDisabled
                 ? null
                 : () async {
-                    final messenger = ScaffoldMessenger.of(context);
                     _tabController.animateTo(0); // Switch tab immediately
                     await provider.generateReport();
                     if (!mounted) return;
                     if (provider.errorMessage == null) {
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Báo cáo đã được tạo thành công!'),
-                          backgroundColor: AppTheme.successColor,
-                        ),
-                      );
+                      ErrorHandler.showSuccessSnackBar(context, 'Báo cáo đã được tạo thành công!');
                     }
                   },
             icon: provider.isGenerating
@@ -387,16 +382,10 @@ class _LearningReportPageState extends State<LearningReportPage>
                 child: ElevatedButton.icon(
                   onPressed: canGen
                       ? () async {
-                          final messenger = ScaffoldMessenger.of(context);
                           await provider.generateReport();
                           if (!mounted) return;
                           if (provider.errorMessage == null) {
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('Báo cáo đã được tạo thành công!'),
-                                backgroundColor: AppTheme.successColor,
-                              ),
-                            );
+                            ErrorHandler.showSuccessSnackBar(context, 'Báo cáo đã được tạo thành công!');
                           }
                         }
                       : null,
@@ -780,7 +769,7 @@ class _LearningReportPageState extends State<LearningReportPage>
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: Colors.orange,
+                        color: AppTheme.warningColor,
                       ),
                     ),
                     TextSpan(
@@ -936,25 +925,12 @@ class _LearningReportPageState extends State<LearningReportPage>
               onPressed: provider.isDownloadingPDF
                   ? null
                   : () async {
-                      final messenger = ScaffoldMessenger.of(context);
                       await provider.downloadPDF();
                       if (!mounted) return;
                       if (provider.lastSavedPdfPath != null) {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'PDF đã lưu vào Downloads!',
-                            ),
-                            backgroundColor: AppTheme.successColor,
-                          ),
-                        );
+                        ErrorHandler.showSuccessSnackBar(context, 'PDF đã lưu vào Downloads!');
                       } else {
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Lỗi khi lưu PDF'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
+                        ErrorHandler.showErrorSnackBar(context, 'Lỗi khi lưu PDF');
                       }
                     },
               icon: provider.isDownloadingPDF
@@ -1092,13 +1068,7 @@ class _LearningReportPageState extends State<LearningReportPage>
               }
             },
             onDownload: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Xem báo cáo và tải PDF từ tab Báo cáo'),
-                  backgroundColor: AppTheme.accentCyan,
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              ErrorHandler.showSuccessSnackBar(context, 'Xem báo cáo và tải PDF từ tab Báo cáo');
             },
           );
         },

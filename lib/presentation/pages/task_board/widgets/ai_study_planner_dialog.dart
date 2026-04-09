@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/task_board_provider.dart';
 import '../../../themes/app_theme.dart';
 import '../../../widgets/common_loading.dart';
+import '../../../../core/utils/error_handler.dart';
 import '../../../../data/models/study_planner_models.dart';
 import '../../../../data/services/study_planner_service.dart';
 
@@ -136,7 +137,7 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFA500).withValues(alpha: 0.2),
+                    color: AppTheme.accentOrange.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
@@ -630,7 +631,6 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final taskProvider = context.read<TaskBoardProvider>();
 
@@ -657,22 +657,12 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
 
       if (mounted) {
         navigator.pop();
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Đã tạo ${sessions.length} phiên học! 🎉'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Đã tạo ${sessions.length} phiên học! 🎉');
         taskProvider.setSelectedTab(1);
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, 'Lỗi: ${e.toString()}');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

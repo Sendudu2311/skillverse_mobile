@@ -6,6 +6,7 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/error_state_widget.dart';
 import '../../../core/utils/number_formatter.dart';
 import 'deposit_sheet.dart';
 import 'buy_coin_sheet.dart';
@@ -45,7 +46,10 @@ class _WalletPageState extends State<WalletPage> {
           }
 
           if (provider.errorMessage != null) {
-            return _buildError(context, provider, isDark);
+            return ErrorStateWidget(
+              message: provider.errorMessage!,
+              onRetry: () => provider.refresh(),
+            );
           }
 
           return RefreshIndicator(
@@ -119,43 +123,6 @@ class _WalletPageState extends State<WalletPage> {
           const SizedBox(height: 28),
           const CardSkeleton(imageHeight: 160),
         ],
-      ),
-    );
-  }
-
-  // ==================== ERROR ====================
-
-  Widget _buildError(
-    BuildContext context,
-    WalletProvider provider,
-    bool isDark,
-  ) {
-    return Center(
-      child: GlassCard(
-        padding: const EdgeInsets.all(32),
-        margin: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 48,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              provider.errorMessage!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => provider.refresh(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Thử lại'),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -461,7 +428,7 @@ class _WalletPageState extends State<WalletPage> {
             context,
             icon: Icons.remove,
             label: 'Rút tiền',
-            color: Colors.redAccent,
+            color: AppTheme.errorColor,
             onTap: () => _openWithdrawSheet(context, provider),
           ),
         ),
@@ -568,7 +535,7 @@ class _WalletPageState extends State<WalletPage> {
               icon: Icons.trending_down,
               label: 'TỔNG RÚT',
               value: _formatVnd(provider.statsTotalWithdrawn),
-              color: Colors.redAccent,
+              color: AppTheme.errorColor,
               isDark: isDark,
             ),
             _buildStatCard(
