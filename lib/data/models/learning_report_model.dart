@@ -144,6 +144,9 @@ class StudentMetrics {
   final int? totalEnrolledCourses;
   final int? completedCourses;
   final int? totalTasksPending;
+  final int? longestStreak;
+  final int? averageSessionDuration;
+  final int? totalStudySessions;
   final List<SkillInfo>? topSkills;
   final List<RoadmapProgress>? roadmapDetails;
 
@@ -165,6 +168,9 @@ class StudentMetrics {
     this.totalEnrolledCourses,
     this.completedCourses,
     this.totalTasksPending,
+    this.longestStreak,
+    this.averageSessionDuration,
+    this.totalStudySessions,
     this.topSkills,
     this.roadmapDetails,
   });

@@ -7,8 +7,8 @@ class LearningReportService {
   final ApiClient _apiClient = ApiClient();
   static const _basePath = '/student/learning-report';
 
-  /// Extended timeout for AI generation requests (2 minutes)
-  static const _aiTimeout = Duration(seconds: 120);
+  /// Extended timeout for AI generation requests (5 minutes)
+  static const _aiTimeout = Duration(seconds: 300);
 
   /// Generate a new learning report (rate limit: 1 per 6 hours)
   Future<StudentLearningReportResponse> generateReport({
@@ -24,9 +24,53 @@ class LearningReportService {
           includeChatHistory: includeChatHistory,
           includeDetailedSkills: includeDetailedSkills,
         ).toJson(),
-        options: Options(receiveTimeout: _aiTimeout),
+        options: Options(
+          receiveTimeout: _aiTimeout,
+          sendTimeout: _aiTimeout,
+        ),
       );
       return StudentLearningReportResponse.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Generate a report with full options
+  Future<StudentLearningReportResponse> generateReportFull({
+    String reportType = 'COMPREHENSIVE',
+    bool includeChatHistory = true,
+    bool includeDetailedSkills = true,
+    bool includeRoadmapDetails = true,
+    String? personalNotes,
+  }) async {
+    try {
+      final response = await _apiClient.post(
+        '$_basePath/generate',
+        data: {
+          'reportType': reportType,
+          'includeChatHistory': includeChatHistory,
+          'includeDetailedSkills': includeDetailedSkills,
+          'includeRoadmapDetails': includeRoadmapDetails,
+          if (personalNotes != null && personalNotes.isNotEmpty)
+            'personalNotes': personalNotes,
+        },
+        options: Options(
+          receiveTimeout: _aiTimeout,
+          sendTimeout: _aiTimeout,
+        ),
+      );
+      return StudentLearningReportResponse.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Get report types available
+  Future<List<String>> getReportTypes() async {
+    try {
+      final response = await _apiClient.get('$_basePath/report-types');
+      final List<dynamic> data = response.data;
+      return data.map((e) => e.toString()).toList();
     } catch (e) {
       throw _handleError(e);
     }
@@ -37,7 +81,10 @@ class LearningReportService {
     try {
       final response = await _apiClient.post(
         '$_basePath/generate/quick',
-        options: Options(receiveTimeout: _aiTimeout),
+        options: Options(
+          receiveTimeout: _aiTimeout,
+          sendTimeout: _aiTimeout,
+        ),
       );
       return StudentLearningReportResponse.fromJson(response.data);
     } catch (e) {
