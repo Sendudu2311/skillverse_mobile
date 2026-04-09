@@ -134,11 +134,67 @@ class UIMessage {
   final String role; // 'user' or 'assistant'
   final String content;
   final DateTime timestamp;
+  final List<ChatReminder>? reminders;
 
   UIMessage({
     required this.id,
     required this.role,
     required this.content,
     required this.timestamp,
+    this.reminders,
   });
+}
+
+// ── Meowl Onboarding Context ─────────────────────────────────────────────────
+
+@JsonSerializable()
+class MeowlQuickAction {
+  final String id;
+  final String label;
+  final String description;
+  final String actionType; // "NAVIGATE" | "PROMPT"
+  final String actionValue;
+
+  const MeowlQuickAction({
+    required this.id,
+    required this.label,
+    required this.description,
+    required this.actionType,
+    required this.actionValue,
+  });
+
+  factory MeowlQuickAction.fromJson(Map<String, dynamic> json) =>
+      _$MeowlQuickActionFromJson(json);
+  Map<String, dynamic> toJson() => _$MeowlQuickActionToJson(this);
+}
+
+@JsonSerializable()
+class MeowlOnboardingContextResponse {
+  final bool success;
+  final String language;
+  final String activeRole;
+  final bool roleSwitchEnabled;
+  final bool onboardingSeen;
+  final String welcomeMessage;
+  final String nextBestAction;
+  final List<String>? whatYouCanDo;
+  final List<MeowlQuickAction>? quickActions;
+  final List<String>? suggestedPrompts;
+
+  const MeowlOnboardingContextResponse({
+    required this.success,
+    required this.language,
+    required this.activeRole,
+    required this.roleSwitchEnabled,
+    required this.onboardingSeen,
+    required this.welcomeMessage,
+    required this.nextBestAction,
+    this.whatYouCanDo,
+    this.quickActions,
+    this.suggestedPrompts,
+  });
+
+  factory MeowlOnboardingContextResponse.fromJson(Map<String, dynamic> json) =>
+      _$MeowlOnboardingContextResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$MeowlOnboardingContextResponseToJson(this);
 }

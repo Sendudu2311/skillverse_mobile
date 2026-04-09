@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../presentation/providers/chat_provider.dart';
 import '../../../data/models/chat_models.dart';
 import '../../../core/utils/meowl_guard.dart';
+import '../../../presentation/themes/app_theme.dart';
 import '../../widgets/common_loading.dart';
 
 class ChatPage extends StatefulWidget {
@@ -20,9 +22,13 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
-    // Initialize chat provider with a welcome message
+    // Lazy init: only add welcome message if chat is empty.
+    // Messages are preserved in memory across tab switches.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChatProvider>().initialize();
+      final chatProvider = context.read<ChatProvider>();
+      if (chatProvider.messages.isEmpty) {
+        chatProvider.initialize();
+      }
     });
   }
 
@@ -165,32 +171,55 @@ class _ChatPageState extends State<ChatPage> {
 
   /// Builds the horizontal row of quick action chips.
   Widget _buildQuickPromptsRow() {
+    final chatProvider = context.read<ChatProvider>();
+
+    // Use dynamic quick actions from onboarding context (G2), fallback to defaults
+    final quickActions = chatProvider.quickActions.isNotEmpty
+        ? chatProvider.quickActions
+        : [
+            MeowlQuickAction(
+              id: 'default-1',
+              label: 'Khóa học Flutter',
+              description: '',
+              actionType: 'PROMPT',
+              actionValue: 'Tôi muốn học Flutter, bạn có thể tư vấn không?',
+            ),
+            MeowlQuickAction(
+              id: 'default-2',
+              label: 'Lộ trình Python',
+              description: '',
+              actionType: 'PROMPT',
+              actionValue: 'Lộ trình học Python từ cơ bản đến nâng cao',
+            ),
+            MeowlQuickAction(
+              id: 'default-3',
+              label: 'Tư vấn nghề nghiệp',
+              description: '',
+              actionType: 'PROMPT',
+              actionValue: 'Tôi nên chọn ngành gì trong lập trình?',
+            ),
+          ];
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
-          children: [
-            _QuickChip(
-              label: 'Khóa học Flutter',
-              onTap: () => _sendQuickMessage(
-                'Tôi muốn học Flutter, bạn có thể tư vấn không?',
+          children: quickActions.map((action) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _QuickChip(
+                label: action.label,
+                onTap: () {
+                  if (action.actionType == 'NAVIGATE') {
+                    context.push(action.actionValue);
+                  } else {
+                    _sendQuickMessage(action.actionValue);
+                  }
+                },
               ),
-            ),
-            const SizedBox(width: 8),
-            _QuickChip(
-              label: 'Lộ trình Python',
-              onTap: () => _sendQuickMessage(
-                'Lộ trình học Python từ cơ bản đến nâng cao',
-              ),
-            ),
-            const SizedBox(width: 8),
-            _QuickChip(
-              label: 'Tư vấn nghề nghiệp',
-              onTap: () =>
-                  _sendQuickMessage('Tôi nên chọn ngành gì trong lập trình?'),
-            ),
-          ],
+            );
+          }).toList(),
         ),
       ),
     );
@@ -237,49 +266,137 @@ class _ChatPageState extends State<ChatPage> {
   /// Builds a single message bubble for either the user or the assistant.
   Widget _buildMessageBubble(UIMessage message) {
     bool isUser = message.role == 'user';
+    final hasReminders =
+        !isUser && message.reminders != null && message.reminders!.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        mainAxisAlignment: isUser
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment:
+            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          // Assistant Avatar
-          if (!isUser) ...[
-            const CircleAvatar(
-              radius: 16,
-              child: Text('🐱', style: TextStyle(fontSize: 16)),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isUser
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                message.content,
-                style: TextStyle(
-                  color: isUser
-                      ? Theme.of(context).colorScheme.onPrimary
-                      : Theme.of(context).colorScheme.onSurface,
+          Row(
+            mainAxisAlignment:
+                isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Assistant Avatar
+              if (!isUser) ...[
+                const CircleAvatar(
+                  radius: 16,
+                  child: Text('🐱', style: TextStyle(fontSize: 16)),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isUser
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    message.content,
+                    style: TextStyle(
+                      color: isUser
+                          ? Theme.of(context).colorScheme.onPrimary
+                          : Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              // User Avatar
+              if (isUser) ...[
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  child: const Icon(Icons.person, size: 16),
+                ),
+              ],
+            ],
           ),
-          // User Avatar
-          if (isUser) ...[
-            const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Theme.of(context).colorScheme.secondary,
-              child: const Icon(Icons.person, size: 16),
+
+          // G4: Reminder cards (shown below assistant messages)
+          if (hasReminders) ...[
+            const SizedBox(height: 8),
+            ...message.reminders!.map(
+              (reminder) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _ReminderCard(reminder: reminder),
+              ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// G4: Reminder card displayed below AI response
+class _ReminderCard extends StatelessWidget {
+  final ChatReminder reminder;
+  const _ReminderCard({required this.reminder});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: Colors.amber.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(reminder.emoji, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  reminder.title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                if (reminder.description.isNotEmpty)
+                  Text(
+                    reminder.description,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () => context.push(reminder.actionUrl),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Hành động',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );

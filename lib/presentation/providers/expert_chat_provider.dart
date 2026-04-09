@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/expert_chat_models.dart';
+import '../../data/models/premium_models.dart';
 import '../../data/services/expert_chat_service.dart';
+import '../../data/services/premium_service.dart';
 
 /// Expert Chat Provider — State management for AI Expert consultation feature
 ///
@@ -31,6 +33,12 @@ class ExpertChatProvider extends ChangeNotifier with MultiLoadingProviderMixin {
   // Sessions state
   List<ExpertChatSession> _sessions = [];
 
+  // G5: Deep Research mode
+  String? _aiAgentMode; // null = normal, "deep-research-pro-preview-12-2025" = deep
+
+  // G6: Subscription for gate check
+  UserSubscriptionDto? _subscription;
+
   // Getters
   List<ExpertFieldResponse> get expertFields => _expertFields;
   bool get loadingFields => isLoadingFor('fields');
@@ -49,6 +57,8 @@ class ExpertChatProvider extends ChangeNotifier with MultiLoadingProviderMixin {
 
   List<ExpertChatSession> get sessions => _sessions;
   bool get loadingSessions => isLoadingFor('sessions');
+  String? get aiAgentMode => _aiAgentMode;
+  UserSubscriptionDto? get subscription => _subscription;
 
   /// Load expert fields from API
   Future<void> loadExpertFields() async {
@@ -159,6 +169,7 @@ Tôi có thể tư vấn chuyên sâu về:
         domain: _expertContext!.domain,
         industry: _expertContext!.industry,
         jobRole: _expertContext!.jobRole,
+        aiAgentMode: _aiAgentMode, // G5: Deep Research mode
       );
 
       final response = await _service.sendMessage(request);
@@ -280,6 +291,23 @@ Tôi có thể tư vấn chuyên sâu về:
   /// Set expert context directly (for loading existing sessions)
   void setExpertContext(ExpertContext context) {
     _expertContext = context;
+    notifyListeners();
+  }
+
+  /// G5: Toggle AI agent mode (Normal / Deep Research)
+  void setAiAgentMode(String? mode) {
+    _aiAgentMode = mode;
+    notifyListeners();
+  }
+
+  /// G6: Load user subscription for gate check
+  Future<void> loadSubscription() async {
+    try {
+      _subscription = await PremiumService().getCurrentSubscription();
+    } catch (e) {
+      _subscription = null;
+      debugPrint('Error loading subscription: $e');
+    }
     notifyListeners();
   }
 }

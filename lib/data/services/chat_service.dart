@@ -118,6 +118,22 @@ class ChatService {
     }
   }
 
+  /// Get Meowl onboarding context (welcome message, quick actions, suggested prompts)
+  Future<MeowlOnboardingContextResponse?> getOnboardingContext(int userId, String language) async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/v1/meowl/onboarding/$userId',
+        queryParameters: {'language': language},
+      );
+
+      if (response.data == null) return null;
+      return MeowlOnboardingContextResponse.fromJson(response.data!);
+    } catch (e) {
+      debugPrint('Error getting onboarding context: $e');
+      return null; // Graceful degradation - fall back to default welcome
+    }
+  }
+
   /// Rename a chat session
   Future<ChatSession> renameSession(int sessionId, String newTitle) async {
     try {

@@ -103,3 +103,57 @@ Map<String, dynamic> _$ChatSessionToJson(ChatSession instance) =>
       'lastMessageAt': instance.lastMessageAt,
       'messageCount': instance.messageCount,
     };
+
+MeowlQuickAction _$MeowlQuickActionFromJson(Map<String, dynamic> json) =>
+    MeowlQuickAction(
+      id: json['id'] as String,
+      label: json['label'] as String,
+      description: json['description'] as String,
+      actionType: json['actionType'] as String,
+      actionValue: json['actionValue'] as String,
+    );
+
+Map<String, dynamic> _$MeowlQuickActionToJson(MeowlQuickAction instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'label': instance.label,
+      'description': instance.description,
+      'actionType': instance.actionType,
+      'actionValue': instance.actionValue,
+    };
+
+MeowlOnboardingContextResponse _$MeowlOnboardingContextResponseFromJson(
+  Map<String, dynamic> json,
+) => MeowlOnboardingContextResponse(
+  success: json['success'] as bool,
+  language: json['language'] as String,
+  activeRole: json['activeRole'] as String,
+  roleSwitchEnabled: json['roleSwitchEnabled'] as bool,
+  onboardingSeen: json['onboardingSeen'] as bool,
+  welcomeMessage: json['welcomeMessage'] as String,
+  nextBestAction: json['nextBestAction'] as String,
+  whatYouCanDo: (json['whatYouCanDo'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
+  quickActions: (json['quickActions'] as List<dynamic>?)
+      ?.map((e) => MeowlQuickAction.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  suggestedPrompts: (json['suggestedPrompts'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
+);
+
+Map<String, dynamic> _$MeowlOnboardingContextResponseToJson(
+  MeowlOnboardingContextResponse instance,
+) => <String, dynamic>{
+  'success': instance.success,
+  'language': instance.language,
+  'activeRole': instance.activeRole,
+  'roleSwitchEnabled': instance.roleSwitchEnabled,
+  'onboardingSeen': instance.onboardingSeen,
+  'welcomeMessage': instance.welcomeMessage,
+  'nextBestAction': instance.nextBestAction,
+  'whatYouCanDo': instance.whatYouCanDo,
+  'quickActions': instance.quickActions,
+  'suggestedPrompts': instance.suggestedPrompts,
+};

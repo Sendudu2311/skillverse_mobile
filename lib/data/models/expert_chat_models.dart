@@ -91,6 +91,8 @@ class ExpertChatRequest {
   final String? domain;
   final String? industry;
   final String? jobRole;
+  @JsonKey(name: 'aiAgentMode')
+  final String? aiAgentMode; // G5: null = normal, "deep-research-pro-preview-12-2025" = deep
 
   const ExpertChatRequest({
     required this.message,
@@ -99,6 +101,7 @@ class ExpertChatRequest {
     this.domain,
     this.industry,
     this.jobRole,
+    this.aiAgentMode,
   });
 
   factory ExpertChatRequest.fromJson(Map<String, dynamic> json) =>
