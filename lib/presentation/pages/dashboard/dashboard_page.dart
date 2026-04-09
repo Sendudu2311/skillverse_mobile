@@ -13,6 +13,7 @@ import '../../../core/utils/storage_helper.dart';
 import '../../widgets/onboarding_prompt.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/error_state_widget.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../../data/models/enrollment_models.dart';
 import '../../../data/models/dashboard_models.dart';
 import '../../../core/services/firebase_push_notification_service.dart';
@@ -59,16 +60,7 @@ class _DashboardPageState extends State<DashboardPage> {
     _fcmForegroundSub = fcm.onForegroundMessage.listen((payload) {
       if (!mounted) return;
       context.read<NotificationProvider>().fetchUnreadCount();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(payload.title ?? 'Thông báo mới'),
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'Xem',
-            onPressed: () => context.push('/notifications'),
-          ),
-        ),
-      );
+      ErrorHandler.showSuccessSnackBar(context, payload.title ?? 'Thông báo mới');
     });
 
     // Tap from OS tray: navigate by type
@@ -284,27 +276,19 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _handleCheckIn(BuildContext context) async {
     final provider = context.read<DashboardProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final result = await provider.checkIn();
     if (!mounted) return;
+    
     if (result == null) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Điểm danh thất bại, thử lại sau')),
-      );
+      ErrorHandler.showErrorSnackBar(context, 'Điểm danh thất bại, thử lại sau');
       return;
     }
     if (result.alreadyCheckedIn) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Bạn đã điểm danh hôm nay rồi!')),
-      );
+      ErrorHandler.showWarningSnackBar(context, 'Bạn đã điểm danh hôm nay rồi!');
     } else {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Điểm danh thành công! +${result.coinsAwarded} SC 🔥 Streak: ${result.currentStreak} ngày',
-          ),
-          backgroundColor: AppTheme.themeOrangeStart,
-        ),
+      ErrorHandler.showSuccessSnackBar(
+        context, 
+        'Điểm danh thành công! +${result.coinsAwarded} SC 🔥 Streak: ${result.currentStreak} ngày'
       );
     }
   }
@@ -521,7 +505,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       minHeight: 16,
                     ),
                     decoration: const BoxDecoration(
-                      color: Colors.red,
+                      color: AppTheme.errorColor,
                       shape: BoxShape.circle,
                     ),
                     child: Text(

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeProvider extends ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.light;
+  ThemeMode _themeMode = ThemeMode.system;
   static const String _themeModeKey = 'theme_mode';
 
   ThemeMode get themeMode => _themeMode;
@@ -21,6 +21,7 @@ class ThemeProvider extends ChangeNotifier {
         _themeMode = savedThemeMode == 'dark' ? ThemeMode.dark : ThemeMode.light;
         notifyListeners();
       }
+      // If null: ThemeMode.system (default) applies — no flash
     } catch (e) {
       debugPrint('Error loading theme mode: $e');
     }

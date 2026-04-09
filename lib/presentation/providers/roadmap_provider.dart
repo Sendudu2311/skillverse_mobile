@@ -27,10 +27,6 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool _isLoadingDeleted = false;
   bool _hasLoadedDeleted = false;
 
-  // Legacy state (for backward compatibility)
-  List<Roadmap> _legacyRoadmaps = [];
-  final List<Roadmap> _legacyUserRoadmaps = [];
-
   // ============================================================================
   // GETTERS
   // ============================================================================
@@ -44,12 +40,6 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
   List<RoadmapSessionSummary> get deletedRoadmaps => filteredDeletedRoadmaps;
   bool get isLoadingDeleted => _isLoadingDeleted;
   bool get hasLoadedDeleted => _hasLoadedDeleted;
-
-  // Legacy getters
-  @Deprecated('Use roadmaps instead')
-  List<Roadmap> get legacyRoadmaps => _legacyRoadmaps;
-  @Deprecated('Use roadmaps instead')
-  List<Roadmap> get userRoadmaps => _legacyUserRoadmaps;
 
   /// Get filtered and sorted roadmaps (excludes DELETED)
   List<RoadmapSessionSummary> get filteredRoadmaps {
@@ -314,26 +304,4 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
     }
   }
 
-  // ============================================================================
-  // LEGACY METHODS (for backward compatibility)
-  // ============================================================================
-
-  @Deprecated('Use loadUserRoadmaps() instead')
-  Future<void> loadRoadmaps() async {
-    await executeAsync(
-      () async {
-        // ignore: deprecated_member_use_from_same_package
-        _legacyRoadmaps = await _roadmapService.getRoadmaps();
-        notifyListeners();
-      },
-      errorMessageBuilder: (error) {
-        if (error.toString().contains('timeout')) {
-          return 'Không có kết nối Internet';
-        } else if (error.toString().contains('404')) {
-          return 'Không tìm thấy roadmap';
-        }
-        return 'Lỗi tải roadmap: ${error.toString()}';
-      },
-    );
-  }
 }

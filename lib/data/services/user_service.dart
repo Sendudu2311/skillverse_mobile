@@ -75,20 +75,7 @@ class UserService {
   Future<UserProfileResponse> getMyProfile() async {
     try {
       final response = await _apiClient.dio.get('/user/profile');
-      final data = response.data;
-
-      // Patch missing fields to prevent parsing errors
-      if (data['id'] == null && data['userId'] != null) {
-        data['id'] = data['userId'];
-      }
-      if (data['isActive'] == null) {
-        data['isActive'] = true; // Default to true if missing
-      }
-      if (data['emailVerified'] == null) {
-        data['emailVerified'] = false; // Default to false if missing
-      }
-
-      return UserProfileResponse.fromJson(data);
+      return UserProfileResponse.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
     }

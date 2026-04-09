@@ -203,6 +203,26 @@ class RoadmapSession {
   factory RoadmapSession.fromJson(Map<String, dynamic> json) =>
       _$RoadmapSessionFromJson(json);
 
+  /// Convert from RoadmapSessionSummary (roadmap_models.dart)
+  factory RoadmapSession.fromSummary(Map<String, dynamic> json) {
+    return RoadmapSession(
+      sessionId: json['sessionId'] as int,
+      title: json['title'] as String,
+      originalGoal: json['originalGoal'] as String,
+      validatedGoal: json['validatedGoal'] as String? ?? '',
+      duration: json['duration'] as String,
+      experienceLevel: json['experienceLevel'] as String,
+      learningStyle: json['learningStyle'] as String,
+      totalQuests: json['totalQuests'] as int,
+      completedQuests: json['completedQuests'] as int,
+      progressPercentage: (json['progressPercentage'] as num).toInt(),
+      difficultyLevel: json['difficultyLevel'] as String? ?? '',
+      schemaVersion: json['schemaVersion'] as int? ?? 0,
+      status: json['status'] as String?,
+      createdAt: json['createdAt'] as String,
+    );
+  }
+
   Map<String, dynamic> toJson() => _$RoadmapSessionToJson(this);
 }
 

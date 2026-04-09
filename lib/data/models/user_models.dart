@@ -135,8 +135,15 @@ class UserProfileResponse {
     required this.updatedAt,
   });
 
-  factory UserProfileResponse.fromJson(Map<String, dynamic> json) =>
-      _$UserProfileResponseFromJson(json);
+  factory UserProfileResponse.fromJson(Map<String, dynamic> json) {
+    // Patch backend inconsistencies
+    if (json['id'] == null && json['userId'] != null) {
+      json['id'] = json['userId'];
+    }
+    json['isActive'] ??= true;
+    json['emailVerified'] ??= false;
+    return _$UserProfileResponseFromJson(json);
+  }
   Map<String, dynamic> toJson() => _$UserProfileResponseToJson(this);
 }
 

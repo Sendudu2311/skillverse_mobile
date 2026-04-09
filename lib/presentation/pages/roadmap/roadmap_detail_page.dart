@@ -222,10 +222,10 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
               colors: isDark
                   ? [
                       AppTheme.indigoDark,
-                      const Color(0xFF312E81),
-                      const Color(0xFF0F172A),
+                      AppTheme.primaryBlueDark.withValues(alpha: 0.5),
+                      AppTheme.galaxyDark,
                     ]
-                  : [const Color(0xFFE0E7FF), const Color(0xFFF3F4F6)],
+                  : [AppTheme.lightBackgroundSecondary, AppTheme.lightBackgroundPrimary],
             ),
           ),
         ),
@@ -381,8 +381,8 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
       padding: const EdgeInsets.all(12),
       borderRadius: 16,
       backgroundColor: isDark
-          ? const Color(0xFF1E293B).withOpacity(0.6)
-          : Colors.white.withOpacity(0.7),
+          ? AppTheme.darkCardBackground
+          : AppTheme.lightCardBackground,
       borderColor: isDark
           ? Colors.white.withOpacity(0.1)
           : Colors.black.withOpacity(0.05),
@@ -575,8 +575,8 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
         padding: const EdgeInsets.all(20),
         borderRadius: 16,
         backgroundColor: isDark
-            ? const Color(0xFF1E293B).withValues(alpha: 0.6)
-            : Colors.white.withValues(alpha: 0.7),
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -781,8 +781,8 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
         padding: const EdgeInsets.all(20),
         borderRadius: 16,
         backgroundColor: isDark
-            ? const Color(0xFF1E293B).withValues(alpha: 0.6)
-            : Colors.white.withValues(alpha: 0.7),
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

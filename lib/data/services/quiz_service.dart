@@ -56,14 +56,7 @@ class QuizService {
       );
 
       final data = response.data as Map<String, dynamic>;
-
-      return QuizSubmitResponseDto(
-        score: data['score'] as int,
-        passed: data['passed'] as bool,
-        attempt: QuizAttemptDto.fromJson(
-          data['attempt'] as Map<String, dynamic>,
-        ),
-      );
+      return QuizSubmitResponseDto.fromJson(data);
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Nộp bài thất bại: ${e.toString()}');

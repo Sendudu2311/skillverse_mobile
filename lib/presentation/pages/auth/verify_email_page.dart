@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../../core/utils/validation_helper.dart';
 
 class VerifyEmailPage extends StatefulWidget {
   final String email;
@@ -163,15 +164,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                     hintText: '000000',
                     prefixIcon: Icon(Icons.security),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập mã xác thực';
-                    }
-                    if (value.length != 6) {
-                      return 'Mã xác thực phải có 6 chữ số';
-                    }
-                    return null;
-                  },
+                  validator: (value) => ValidationHelper.lengthRange(value, 6, 6, fieldName: 'Mã xác thực'),
                 ),
                 
                 const SizedBox(height: 32),

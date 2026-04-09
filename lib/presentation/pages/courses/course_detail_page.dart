@@ -17,8 +17,10 @@ import '../../themes/app_theme.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/common_loading.dart';
-import '../../../core/mixins/loading_mixin.dart';
 import '../../../data/services/enrollment_service.dart';
+import '../../widgets/error_state_widget.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../../core/utils/date_time_helper.dart';
 
 class CourseDetailPage extends StatefulWidget {
   final String courseId;
@@ -29,7 +31,9 @@ class CourseDetailPage extends StatefulWidget {
 }
 
 class _CourseDetailPageState extends State<CourseDetailPage>
-    with SingleTickerProviderStateMixin, LoadingStateMixin {
+    with SingleTickerProviderStateMixin {
+  bool _isLoadingCourse = false;
+  String? _errorMessage;
   bool isWishlisted = false;
   String activeTab = 'overview';
   int? expandedModule;
@@ -58,6 +62,22 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     _loadCourseData();
   }
 
+  Future<void> _executeAsync(
+    Future<void> Function() operation, {
+    required void Function(bool) setLoading,
+  }) async {
+    setLoading(true);
+    try {
+      await operation();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = ErrorHandler.getErrorMessage(e));
+      }
+    } finally {
+      if (mounted) setLoading(false);
+    }
+  }
+
   @override
   void dispose() {
     _animationController.dispose();
@@ -74,44 +94,26 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     final enrollmentProvider = context.read<EnrollmentProvider>();
     final authProvider = context.read<AuthProvider>();
 
-    // Load course details using LoadingStateMixin
-    await executeAsync(
-      () async {
-        final courseService = CourseService();
-        final course = await courseService.getCourseDetail(courseId);
-        if (mounted) {
-          setState(() {
-            _course = course;
-          });
-          _animationController.forward();
-        }
-      },
-      errorMessageBuilder: (e) {
-        if (e.toString().contains('404')) {
-          return 'Không tìm thấy khóa học';
-        } else if (e.toString().contains('timeout')) {
-          return 'Không có kết nối Internet';
-        }
-        return 'Lỗi tải khóa học: ${e.toString()}';
-      },
-    );
+    // Load course details
+    await _executeAsync(() async {
+      final courseService = CourseService();
+      final course = await courseService.getCourseDetail(courseId);
+      if (mounted) {
+        setState(() => _course = course);
+        _animationController.forward();
+      }
+    }, setLoading: (val) => setState(() {
+      _isLoadingCourse = val;
+      if (val) _errorMessage = null;
+    }));
 
-    // Load modules with full content (lessons, quizzes, assignments)
-    setState(() => _isLoadingModules = true);
-    try {
-      final fullModules = await _moduleService.listModulesWithContent(
-        courseId: courseId,
-      );
-      if (!mounted) return;
-      setState(() {
-        _fullModules = fullModules;
-        _isLoadingModules = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoadingModules = false);
-      debugPrint('Error loading modules: $e');
-    }
+    if (_course == null) return;
+
+    // Load modules with full content
+    await _executeAsync(() async {
+      final fullModules = await _moduleService.listModulesWithContent(courseId: courseId);
+      if (mounted) setState(() => _fullModules = fullModules);
+    }, setLoading: (val) => setState(() => _isLoadingModules = val));
 
     // Check enrollment status and load progress
     if (authProvider.user != null) {
@@ -127,23 +129,13 @@ class _CourseDetailPageState extends State<CourseDetailPage>
             courseId: courseId,
             userId: authProvider.user!.id,
           );
-          if (!mounted) return;
-          setState(() {
-            _enrollmentProgress = enrollment.progressPercent;
-          });
+          if (mounted) {
+            setState(() => _enrollmentProgress = enrollment.progressPercent);
+          }
         } catch (e) {
           debugPrint('Error loading enrollment progress: $e');
         }
       }
-    }
-  }
-
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (_) {
-      return dateStr;
     }
   }
 
@@ -265,7 +257,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     );
   }
 
-  void _onPurchaseSuccess() {
+  void _onPurchaseSuccess() async {
     if (!mounted) return;
     final enrollmentProvider = context.read<EnrollmentProvider>();
     final courseId = int.parse(widget.courseId);
@@ -273,11 +265,12 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     // Refresh enrollment status (backend auto-enrolled)
     final authProvider = context.read<AuthProvider>();
     if (authProvider.user != null) {
-      enrollmentProvider.checkEnrollmentStatus(
+      await enrollmentProvider.checkEnrollmentStatus(
         courseId: courseId,
         userId: authProvider.user!.id,
       );
     }
+    if (!mounted) return;
 
     // Show success dialog
     showDialog(
@@ -395,7 +388,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (isLoading) {
+    if (_isLoadingCourse && _course == null) {
       return Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.transparent,
@@ -424,7 +417,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       );
     }
 
-    if (hasError) {
+    if (_errorMessage != null && _course == null) {
       return Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.transparent,
@@ -439,32 +432,12 @@ class _CourseDetailPageState extends State<CourseDetailPage>
         ),
         extendBodyBehindAppBar: true,
         body: Center(
-          child: GlassCard(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 48,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  errorMessage ?? 'Đã xảy ra lỗi',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    clearError();
-                    _loadCourseData();
-                  },
-                  child: const Text('Thử lại'),
-                ),
-              ],
-            ),
+          child: ErrorStateWidget(
+            message: _errorMessage ?? 'Đã xảy ra lỗi',
+            onRetry: () {
+              setState(() => _errorMessage = null);
+              _loadCourseData();
+            },
           ),
         ),
       );
@@ -472,7 +445,14 @@ class _CourseDetailPageState extends State<CourseDetailPage>
 
     if (_course == null) {
       return Scaffold(
-        body: const Center(child: Text('Không tìm thấy khóa học')),
+        appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+        body: const Center(
+          child: EmptyStateWidget(
+            icon: Icons.search_off,
+            title: 'Trống',
+            subtitle: 'Không tìm thấy khóa học',
+          ),
+        ),
       );
     }
 
@@ -908,7 +888,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                   context,
                                   icon: Icons.update_outlined,
                                   label: 'Cập nhật',
-                                  value: _formatDate(_course!.updatedAt!),
+                                  value: DateTime.tryParse(_course!.updatedAt!) != null 
+                                      ? DateTimeHelper.formatDate(DateTime.parse(_course!.updatedAt!)) 
+                                      : _course!.updatedAt!,
                                   isDark: isDark,
                                   color: gradientColors[0],
                                 ),

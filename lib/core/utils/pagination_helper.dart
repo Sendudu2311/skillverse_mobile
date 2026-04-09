@@ -114,6 +114,7 @@ class PaginationHelper<T> {
   int _totalItems = 0;
   PaginationState _state = PaginationState.initial;
   String? _error;
+  bool _disposed = false;
 
   PaginationHelper({
     required this.fetchPage,
@@ -370,7 +371,9 @@ class PaginationHelper<T> {
   /// ```
   bool shouldLoadMore(ScrollController controller,
       {double threshold = 200.0}) {
+    if (_disposed) return false;
     if (!autoLoadMore || !hasMore || isLoading) return false;
+    if (!controller.hasClients) return false;
 
     final position = controller.position;
     final maxScroll = position.maxScrollExtent;
@@ -381,6 +384,7 @@ class PaginationHelper<T> {
 
   /// Dispose resources
   void dispose() {
+    _disposed = true;
     _items.clear();
   }
 }

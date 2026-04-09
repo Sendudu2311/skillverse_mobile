@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../../core/utils/validation_helper.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -122,10 +123,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     prefixIcon: Icon(Icons.person_outline),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập họ và tên';
-                    }
-                    if (value.trim().split(' ').length < 2) {
+                    final reqError = ValidationHelper.required(value, fieldName: 'Họ và tên');
+                    if (reqError != null) return reqError;
+                    if (value!.trim().split(' ').length < 2) {
                       return 'Vui lòng nhập họ và tên đầy đủ';
                     }
                     return null;
@@ -143,15 +143,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     hintText: 'Nhập địa chỉ email của bạn',
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập email';
-                    }
-                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                      return 'Email không hợp lệ';
-                    }
-                    return null;
-                  },
+                  validator: (value) => ValidationHelper.email(value),
                 ),
 
                 const SizedBox(height: 16),
@@ -177,21 +169,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       },
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập mật khẩu';
-                    }
-                    if (value.length < 8) {
-                      return 'Mật khẩu phải có ít nhất 8 ký tự';
-                    }
-                    if (!value.contains(RegExp(r'[A-Z]'))) {
-                      return 'Mật khẩu phải có ít nhất 1 chữ hoa';
-                    }
-                    if (!value.contains(RegExp(r'[0-9]'))) {
-                      return 'Mật khẩu phải có ít nhất 1 số';
-                    }
-                    return null;
-                  },
+                  validator: (value) => ValidationHelper.password(value),
                 ),
 
                 const SizedBox(height: 16),
@@ -217,15 +195,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       },
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng xác nhận mật khẩu';
-                    }
-                    if (value != _passwordController.text) {
-                      return 'Mật khẩu không khớp';
-                    }
-                    return null;
-                  },
+                  validator: (value) => ValidationHelper.confirmPassword(value, _passwordController.text),
                 ),
 
                 const SizedBox(height: 24),

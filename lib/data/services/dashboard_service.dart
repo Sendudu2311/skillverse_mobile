@@ -3,6 +3,8 @@ import '../../../core/network/api_client.dart';
 import '../models/dashboard_models.dart';
 import '../models/enrollment_models.dart';
 import 'enrollment_service.dart';
+import 'wallet_service.dart';
+import 'roadmap_service.dart';
 
 /// Service for fetching Dashboard data from multiple endpoints
 class DashboardService {
@@ -12,18 +14,10 @@ class DashboardService {
 
   final ApiClient _apiClient = ApiClient();
 
-  /// Fetch wallet information
+  /// Fetch wallet information (delegates to WalletService)
   Future<WalletResponse> fetchWallet() async {
     try {
-      final response = await _apiClient.dio.get<Map<String, dynamic>>(
-        '/wallet/my-wallet',
-      );
-
-      if (response.data == null) {
-        throw ApiException('No wallet data received');
-      }
-
-      return WalletResponse.fromJson(response.data!);
+      return await WalletService().getMyWallet();
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch wallet: ${e.toString()}');
@@ -72,20 +66,11 @@ class DashboardService {
     }
   }
 
-  /// Fetch AI roadmaps
+  /// Fetch AI roadmaps (delegates to RoadmapService)
   Future<List<RoadmapSession>> fetchRoadmaps() async {
     try {
-      final response = await _apiClient.dio.get<List<dynamic>>(
-        '/v1/ai/roadmap',
-      );
-
-      if (response.data == null) {
-        return [];
-      }
-
-      return response.data!
-          .map((json) => RoadmapSession.fromJson(json as Map<String, dynamic>))
-          .toList();
+      final summaries = await RoadmapService().getUserRoadmaps();
+      return summaries.map((s) => RoadmapSession.fromSummary(s.toJson())).toList();
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to fetch roadmaps: ${e.toString()}');

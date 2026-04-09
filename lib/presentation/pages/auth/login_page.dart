@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/common_loading.dart';
+import '../../../core/utils/validation_helper.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -123,15 +124,7 @@ class _LoginPageState extends State<LoginPage> {
                     hintText: 'Nhập địa chỉ email của bạn',
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Email không hợp lệ';
-                    }
-                    return null;
-                  },
+                  validator: (value) => ValidationHelper.email(value),
                 ),
 
                 const SizedBox(height: 16),
@@ -157,15 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                       },
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập mật khẩu';
-                    }
-                    if (value.length < 6) {
-                      return 'Mật khẩu phải có ít nhất 6 ký tự';
-                    }
-                    return null;
-                  },
+                  validator: (value) => ValidationHelper.password(value),
                 ),
 
                 const SizedBox(height: 16),

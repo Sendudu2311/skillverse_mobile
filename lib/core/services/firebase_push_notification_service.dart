@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/services/fcm_api_service.dart';
 import 'push_notification_service.dart';
@@ -38,9 +39,19 @@ class FirebasePushNotificationService implements PushNotificationService {
   final StreamController<PushPayload> _tapController =
       StreamController<PushPayload>.broadcast();
 
+  // P5.1/P5.3: Store stream subscriptions so they can be cancelled on dispose.
+  StreamSubscription<RemoteMessage>? _onMessageSubscription;
+  StreamSubscription<RemoteMessage>? _onMessageOpenedAppSubscription;
+  StreamSubscription<String>? _onTokenRefreshSubscription;
+
+  /// P5.3: Callback registered by the app to handle foreground notification taps.
+  /// Payload format: `{"route": "/courses/42"}` or plain route string.
+  void Function(String route)? onNotificationTapNavigate;
+
   String? _currentToken;
   bool _initialized = false;
   bool _tokenRegisteredWithBackend = false;
+  static const String _tokenRegisteredKey = 'fcm_token_registered';
 
   static const _androidChannel = AndroidNotificationChannel(
     'skillverse_notifications',
@@ -55,6 +66,14 @@ class FirebasePushNotificationService implements PushNotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
+    // Restore persisted token registration state
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _tokenRegisteredWithBackend = prefs.getBool(_tokenRegisteredKey) ?? false;
+    } catch (e) {
+      debugPrint('🔔 [FCM] Failed to load token registration state: $e');
+    }
+
     // Register background handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -67,8 +86,8 @@ class FirebasePushNotificationService implements PushNotificationService {
     // Get FCM token (but do NOT register with backend yet — user may not be logged in)
     await _fetchToken();
 
-    // Listen for token refresh
-    _messaging.onTokenRefresh.listen((newToken) {
+    // Listen for token refresh (P5.2: stored so it can be cancelled)
+    _onTokenRefreshSubscription = _messaging.onTokenRefresh.listen((newToken) {
       debugPrint('🔔 [FCM] Token refreshed');
       _currentToken = newToken;
       // Re-register only if we previously registered successfully
@@ -77,15 +96,15 @@ class FirebasePushNotificationService implements PushNotificationService {
       }
     });
 
-    // Foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    // Foreground messages (stored so it can be cancelled on dispose)
+    _onMessageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('🔔 [FCM Foreground] ${message.notification?.title}');
       _foregroundController.add(_remoteMessageToPayload(message));
       _showLocalNotification(message);
     });
 
     // Background/terminated notification tap
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    _onMessageOpenedAppSubscription = FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('🔔 [FCM Tap] ${message.notification?.title}');
       _tapController.add(_remoteMessageToPayload(message));
     });
@@ -109,6 +128,7 @@ class FirebasePushNotificationService implements PushNotificationService {
     if (_currentToken != null) {
       await _registerTokenWithBackend(_currentToken!);
       _tokenRegisteredWithBackend = true;
+      _persistTokenRegistrationState(true);
       debugPrint('🔔 [FCM] Token registered with backend after login');
     }
   }
@@ -121,6 +141,16 @@ class FirebasePushNotificationService implements PushNotificationService {
       debugPrint('🔔 [FCM] Token unregistered on logout');
     }
     _tokenRegisteredWithBackend = false;
+    _persistTokenRegistrationState(false);
+  }
+
+  Future<void> _persistTokenRegistrationState(bool registered) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_tokenRegisteredKey, registered);
+    } catch (e) {
+      debugPrint('🔔 [FCM] Failed to persist token registration state: $e');
+    }
   }
 
   @override
@@ -158,12 +188,38 @@ class FirebasePushNotificationService implements PushNotificationService {
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
-    const initSettings = InitializationSettings(android: androidSettings);
+
+    // P5.3: Add iOS DarwinInitializationSettings so foreground notification taps
+    // trigger onDidReceiveNotificationResponse on iOS.
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
 
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (response) {
         debugPrint('🔔 [Local] Notification tapped: ${response.payload}');
+        // P5.3: Navigate if callback is registered and payload contains route
+        if (onNotificationTapNavigate != null && response.payload != null) {
+          final payload = response.payload!;
+          // Support both plain route string and JSON {"route": "/path"}
+          if (payload.startsWith('{')) {
+            // Simple JSON parse for {"route": "/path"}
+            final routeMatch = RegExp(r'"route"\s*:\s*"([^"]+)"').firstMatch(payload);
+            if (routeMatch != null) {
+              onNotificationTapNavigate!(routeMatch.group(1)!);
+            }
+          } else {
+            onNotificationTapNavigate!(payload);
+          }
+        }
       },
     );
 
@@ -222,5 +278,14 @@ class FirebasePushNotificationService implements PushNotificationService {
       body: message.notification?.body,
       data: message.data,
     );
+  }
+
+  // P5.1: Dispose stream controllers and cancel subscriptions to prevent memory leaks.
+  void dispose() {
+    _foregroundController.close();
+    _tapController.close();
+    _onMessageSubscription?.cancel();
+    _onMessageOpenedAppSubscription?.cancel();
+    _onTokenRefreshSubscription?.cancel();
   }
 }

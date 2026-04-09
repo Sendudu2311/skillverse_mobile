@@ -383,33 +383,3 @@ extension StorageExtensions on StorageHelper {
   bool get autoPlayVideos => readBool(StorageKey.autoPlayVideos) ?? true;
   set autoPlayVideos(bool value) => writeBool(StorageKey.autoPlayVideos, value);
 }
-
-/// Auth-specific storage extension
-extension AuthStorage on StorageHelper {
-  /// Get access token from secure storage
-  Future<String?> get accessToken => readSecure(StorageKey.accessToken);
-
-  /// Save access token to secure storage
-  Future<void> saveAccessToken(String token) => writeSecure(StorageKey.accessToken, token);
-
-  /// Get refresh token from secure storage
-  Future<String?> get refreshToken => readSecure(StorageKey.refreshToken);
-
-  /// Save refresh token to secure storage
-  Future<void> saveRefreshToken(String token) => writeSecure(StorageKey.refreshToken, token);
-
-  /// Get user data from secure storage
-  Future<Map<String, dynamic>?> get userData => readSecureJson(StorageKey.userData);
-
-  /// Save user data to secure storage
-  Future<void> saveUserData(Map<String, dynamic> data) => writeSecureJson(StorageKey.userData, data);
-
-  /// Clear all auth data
-  Future<void> clearAuthData() async {
-    await Future.wait([
-      deleteSecure(StorageKey.accessToken),
-      deleteSecure(StorageKey.refreshToken),
-      deleteSecure(StorageKey.userData),
-    ]);
-  }
-}

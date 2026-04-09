@@ -69,7 +69,7 @@ class ApiClient {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           // Add auth token if available
-          final token = await _getAuthToken();
+          final token = _getAuthToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -161,19 +161,14 @@ class ApiClient {
   Future<Response<dynamic>> _retryRequest(RequestOptions requestOptions) async {
     debugPrint('🔄 Retrying request: ${requestOptions.path}');
 
-    final options = Options(
-      method: requestOptions.method,
-      headers: {
-        ...requestOptions.headers,
-        'Authorization': 'Bearer $_authToken',
-      },
-    );
-
     return _dio.request(
       requestOptions.path,
       data: requestOptions.data,
       queryParameters: requestOptions.queryParameters,
-      options: options,
+      options: Options(
+        method: requestOptions.method,
+        headers: {'Authorization': 'Bearer $_authToken'},
+      ),
     );
   }
 
@@ -193,7 +188,7 @@ class ApiClient {
     debugPrint('🔓 Token cleared');
   }
 
-  Future<String?> _getAuthToken() async {
+  String? _getAuthToken() {
     debugPrint(
       '🔍 Getting token: ${_authToken != null ? "Found" : "Not found"}',
     );

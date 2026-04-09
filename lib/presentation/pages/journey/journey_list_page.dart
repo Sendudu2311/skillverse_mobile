@@ -263,42 +263,42 @@ class _JourneyCard extends StatelessWidget {
   (String, Color, IconData) _getStatusInfo() {
     switch (journey.status) {
       case JourneyStatus.notStarted:
-        return ('Chưa bắt đầu', Colors.grey, Icons.hourglass_empty);
+        return ('Chưa bắt đầu', AppTheme.darkTextSecondary, Icons.hourglass_empty);
       case JourneyStatus.assessmentPending:
-        return ('Đang tạo test', Colors.orange, Icons.pending);
+        return ('Đang tạo test', AppTheme.warningColor, Icons.pending);
       case JourneyStatus.testInProgress:
-        return ('Đang làm bài', Colors.blue, Icons.edit_note);
+        return ('Đang làm bài', AppTheme.primaryBlue, Icons.edit_note);
       case JourneyStatus.evaluationPending:
-        return ('Đang đánh giá', Colors.purple, Icons.psychology);
+        return ('Đang đánh giá', AppTheme.secondaryPurple, Icons.psychology);
       case JourneyStatus.roadmapGenerated:
-        return ('Có lộ trình', Colors.teal, Icons.map);
+        return ('Có lộ trình', AppTheme.accentCyan, Icons.map);
       case JourneyStatus.studyPlanInProgress:
-        return ('Đang học', Colors.indigo, Icons.menu_book);
+        return ('Đang học', AppTheme.indigoDark, Icons.menu_book);
       case JourneyStatus.active:
-        return ('Đang hoạt động', Colors.green, Icons.play_circle);
+        return ('Đang hoạt động', AppTheme.successColor, Icons.play_circle);
       case JourneyStatus.completed:
         return ('Hoàn thành', AppTheme.successColor, Icons.check_circle);
       case JourneyStatus.paused:
-        return ('Tạm dừng', Colors.amber, Icons.pause_circle);
+        return ('Tạm dừng', AppTheme.warningColor, Icons.pause_circle);
       case JourneyStatus.cancelled:
-        return ('Đã hủy', Colors.red, Icons.cancel);
+        return ('Đã hủy', AppTheme.errorColor, Icons.cancel);
     }
   }
 
   Color _getDomainColor() {
     switch (journey.domain.toUpperCase()) {
       case 'IT':
-        return Colors.blue;
+        return AppTheme.primaryBlue;
       case 'DESIGN':
-        return Colors.purple;
+        return AppTheme.secondaryPurple;
       case 'BUSINESS':
-        return Colors.orange;
+        return AppTheme.warningColor;
       case 'ENGINEERING':
-        return Colors.teal;
+        return AppTheme.accentCyan;
       case 'HEALTHCARE':
-        return Colors.red;
+        return AppTheme.errorColor;
       case 'EDUCATION':
-        return Colors.green;
+        return AppTheme.successColor;
       default:
         return AppTheme.primaryBlueDark;
     }
@@ -306,7 +306,7 @@ class _JourneyCard extends StatelessWidget {
 
   Color _getProgressColor() {
     if (journey.progressPercentage >= 80) return AppTheme.successColor;
-    if (journey.progressPercentage >= 40) return Colors.orange;
+    if (journey.progressPercentage >= 40) return AppTheme.warningColor;
     return AppTheme.primaryBlueDark;
   }
 

@@ -6,14 +6,6 @@ class Environment {
     return dotenv.env['BACKEND_URL'] ?? 'http://221.132.33.141:8080/api';
   }
 
-  static String get apiUrl {
-    return dotenv.env['API_URL'] ?? dotenv.env['BACKEND_URL'] ?? 'http://221.132.33.141:8080/api';
-  }
-
-  static String get meowlApiKey {
-    return dotenv.env['MEOWL_API_KEY'] ?? '';
-  }
-
   static int get apiTimeout {
     return int.tryParse(dotenv.env['API_TIMEOUT'] ?? '30000') ?? 30000;
   }

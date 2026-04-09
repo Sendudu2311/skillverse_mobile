@@ -13,6 +13,8 @@ import '../../widgets/reading_lesson_content.dart';
 import '../../widgets/quiz_lesson_widget.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../themes/app_theme.dart';
 
 // ──────────────────────────────────────────────
 // Unified Curriculum Item (lesson / quiz / assignment)
@@ -91,40 +93,49 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     _loadModulesWithContent();
   }
 
+  Future<void> _executeAsync(
+    Future<void> Function() operation, {
+    void Function(bool)? setLoading,
+    void Function(String)? onError,
+  }) async {
+    setLoading?.call(true);
+    try {
+      await operation();
+    } catch (e) {
+      if (mounted) {
+        if (onError != null) {
+          onError(ErrorHandler.getErrorMessage(e));
+        } else {
+          ErrorHandler.showErrorSnackBar(context, ErrorHandler.getErrorMessage(e));
+        }
+      }
+    } finally {
+      if (mounted) setLoading?.call(false);
+    }
+  }
+
   // ── Data Loading ──────────────────────────────
 
   Future<void> _loadModulesWithContent() async {
-    setState(() => _isLoadingModules = true);
-
-    try {
+    await _executeAsync(() async {
       final courseId = int.parse(widget.courseId);
-      final modules = await _moduleService.listModulesWithContent(
-        courseId: courseId,
-      );
-
-      // Sort modules by orderIndex
+      final modules = await _moduleService.listModulesWithContent(courseId: courseId);
+      
       modules.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
 
-      if (!mounted) return;
-      setState(() {
-        _modules = modules;
-        _curriculumItems = _buildCurriculumItems(modules);
-        _isLoadingModules = false;
-      });
+      if (mounted) {
+        setState(() {
+          _modules = modules;
+          _curriculumItems = _buildCurriculumItems(modules);
+        });
+      }
 
-      // Load completion status from backend
       await _loadCompletedLessonIds();
 
-      // Select first item
       if (_curriculumItems.isNotEmpty) {
         await _selectCurriculumItem(0);
       }
-    } catch (e) {
-      setState(() => _isLoadingModules = false);
-      if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, 'Lỗi tải nội dung: $e');
-      }
-    }
+    }, setLoading: (val) => setState(() => _isLoadingModules = val));
   }
 
   /// Build a flat list of curriculum items from modules
@@ -213,7 +224,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
 
   /// Load completed lesson IDs from backend
   Future<void> _loadCompletedLessonIds() async {
-    try {
+    await _executeAsync(() async {
       final authProvider = context.read<AuthProvider>();
       if (authProvider.user == null) return;
 
@@ -223,20 +234,13 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         userId: authProvider.user!.id,
       );
 
-      // Also load quiz completion status
       final quizItems = _curriculumItems.where((i) => i.itemType == 'quiz');
       final passedQuizIds = <int>{};
       for (final quizItem in quizItems) {
         try {
-          final status = await _quizService.getQuizAttemptStatus(
-            quizId: quizItem.itemId,
-          );
-          if (status.hasPassed) {
-            passedQuizIds.add(quizItem.itemId);
-          }
-        } catch (_) {
-          // Quiz attempt status may not exist yet
-        }
+          final status = await _quizService.getQuizAttemptStatus(quizId: quizItem.itemId);
+          if (status.hasPassed) passedQuizIds.add(quizItem.itemId);
+        } catch (_) {}
       }
 
       if (mounted) {
@@ -245,9 +249,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
           _completedQuizIds.addAll(passedQuizIds);
         });
       }
-    } catch (e) {
-      debugPrint('Error loading completion status: $e');
-    }
+    }, onError: (msg) => debugPrint('Error loading completion status: $msg'));
   }
 
   // ── Item Selection ────────────────────────────
@@ -260,27 +262,16 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     setState(() {
       _activeCurriculumIndex = index;
       _currentLessonDetail = null;
-      _isLoadingLesson = item.itemType == 'lesson';
       if (item.itemType == 'lesson') _videoPlayerKey = GlobalKey();
     });
 
     if (item.itemType == 'lesson') {
-      try {
-        final lessonDetail = await _lessonService.getLesson(
-          lessonId: item.itemId,
-        );
-        if (!mounted) return;
-        setState(() {
-          _currentLessonDetail = lessonDetail;
-          _isLoadingLesson = false;
-        });
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _isLoadingLesson = false);
-        if (mounted) {
-          ErrorHandler.showErrorSnackBar(context, 'Lỗi tải bài học: $e');
-        }
-      }
+      await _executeAsync(() async {
+        final lessonDetail = await _lessonService.getLesson(lessonId: item.itemId);
+        if (mounted) setState(() => _currentLessonDetail = lessonDetail);
+      }, setLoading: (val) => setState(() => _isLoadingLesson = val));
+    } else {
+      setState(() => _isLoadingLesson = false);
     }
   }
 
@@ -309,16 +300,12 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     if (_activeCurriculumIndex < 0) return;
 
     final item = _curriculumItems[_activeCurriculumIndex];
-
-    // Only lessons can be marked complete via this button
     if (item.itemType != 'lesson') return;
 
     final authProvider = context.read<AuthProvider>();
     if (authProvider.user == null) return;
 
-    setState(() => _isMarkingComplete = true);
-
-    try {
+    await _executeAsync(() async {
       await _lessonService.markLessonCompleted(
         moduleId: item.moduleId,
         lessonId: item.itemId,
@@ -327,23 +314,10 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
 
       if (mounted) {
         ErrorHandler.showSuccessSnackBar(context, '✅ Đã hoàn thành bài học!');
+        setState(() => _completedLessonIds.add(item.itemId));
+        _goToNextItem();
       }
-
-      // Track completion locally
-      setState(() {
-        _completedLessonIds.add(item.itemId);
-      });
-
-      // Auto-advance to next item
-      _goToNextItem();
-    } catch (e) {
-      debugPrint('Error marking lesson complete: $e');
-      if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, 'Lỗi đánh dấu hoàn thành: $e');
-      }
-    } finally {
-      setState(() => _isMarkingComplete = false);
-    }
+    }, setLoading: (val) => setState(() => _isMarkingComplete = val));
   }
 
   // Called by QuizLessonWidget when quiz is completed
@@ -464,7 +438,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                                       ? Icons.check_circle
                                       : _getItemIcon(item),
                                   color: isCompleted
-                                      ? Colors.green
+                                      ? AppTheme.successColor
                                       : isActive
                                       ? Theme.of(context).colorScheme.primary
                                       : null,
@@ -488,7 +462,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: isCompleted
-                                        ? Colors.green
+                                        ? AppTheme.successColor
                                         : Colors.grey[600],
                                   ),
                                 ),
@@ -538,7 +512,14 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     if (_modules.isEmpty) {
       return Scaffold(
         appBar: const SkillVerseAppBar(title: 'Khóa học'),
-        body: const Center(child: Text('Khóa học chưa có nội dung')),
+        body: const Center(
+          child: EmptyStateWidget(
+            icon: Icons.auto_stories,
+            title: 'Trống',
+            subtitle: 'Khóa học chưa có nội dung',
+            iconGradient: AppTheme.blueGradient,
+          ),
+        ),
       );
     }
 
@@ -823,7 +804,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
               Icon(
                 Icons.laptop_mac_outlined,
                 size: 64,
-                color: Colors.orange[400],
+                color: AppTheme.warningColor,
               ),
               const SizedBox(height: 16),
               Text(

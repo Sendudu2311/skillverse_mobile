@@ -28,12 +28,12 @@ class DashboardQuickActionsWidget extends StatelessWidget {
     {'icon': Icons.school_outlined, 'label': 'Khóa học', 'color': AppTheme.themeBlueStart, 'route': '/courses'},
     {'icon': Icons.chat_bubble_outline, 'label': 'AI Chat', 'color': AppTheme.themeGreenStart, 'route': '/chat'},
     {'icon': Icons.dashboard_customize_outlined, 'label': 'Task Board', 'color': AppTheme.accentCyan, 'route': '/task-board', 'hasBadge': true},
-    {'icon': Icons.psychology_outlined, 'label': 'Expert Chat', 'color': Color(0xFFE040FB), 'route': '/expert-chat'},
+    {'icon': Icons.psychology_outlined, 'label': 'Expert Chat', 'color': AppTheme.secondaryPurple, 'route': '/expert-chat'},
     {'icon': Icons.people_outline, 'label': 'Cộng đồng', 'color': AppTheme.themeOrangeStart, 'route': '/community'},
     {'icon': Icons.person_outline, 'label': 'Mentor 1:1', 'color': AppTheme.primaryBlueDark, 'route': '/mentors'},
     {'icon': Icons.work_outline, 'label': 'Portfolio', 'color': AppTheme.accentPink, 'route': '/portfolio'},
     {'icon': Icons.storefront_outlined, 'label': 'Skin Shop', 'color': AppTheme.accentGold, 'route': '/skins'},
-    {'icon': Icons.work_history_outlined, 'label': 'Việc làm', 'color': Color(0xFF26A69A), 'route': '/jobs'},
+    {'icon': Icons.work_history_outlined, 'label': 'Việc làm', 'color': AppTheme.successColor, 'route': '/jobs'},
   ];
 
   @override

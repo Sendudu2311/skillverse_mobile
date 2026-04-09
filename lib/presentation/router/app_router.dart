@@ -60,6 +60,12 @@ class AppRouter {
       debugLogDiagnostics: true,
       initialLocation: '/splash',
       refreshListenable: authProvider, // Auto-redirect on auth changes
+
+      // P5.6: Deep link configuration — GoRouter 12+ handles deep links implicitly
+      // via its route matching system. Incoming Android/iOS intents with URIs
+      // (e.g. from FCM notifications) are automatically matched against defined routes.
+      // The `redirect` callback below handles auth guard for all routes including deep links.
+
       redirect: (context, state) {
         final authProvider = context.read<AuthProvider>();
         final isAuthenticated = authProvider.isAuthenticated;

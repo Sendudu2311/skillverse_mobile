@@ -161,21 +161,6 @@ class ErrorHandler {
     );
   }
 
-  /// Validate slug format (lowercase, numbers, hyphens only)
-  static String? validateSlug(String? value, {bool required = false}) {
-    if (value == null || value.trim().isEmpty) {
-      return required ? 'Slug không được để trống' : null;
-    }
-
-    final slugRegex = RegExp(r'^[a-z0-9-]+$');
-
-    if (!slugRegex.hasMatch(value.trim())) {
-      return 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang';
-    }
-
-    return null;
-  }
-
   /// Handle async operation with error handling
   static Future<T?> handleAsync<T>({
     required Future<T> Function() operation,

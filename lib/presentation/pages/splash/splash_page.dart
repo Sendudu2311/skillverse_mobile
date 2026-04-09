@@ -8,7 +8,7 @@ class SplashPage extends StatelessWidget {
   Widget build(BuildContext context) {
     // Splash page is just UI - navigation is handled by GoRouter redirect
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -45,7 +45,7 @@ class SplashPage extends StatelessWidget {
             Text(
               'Nền tảng học tập thông minh',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
 

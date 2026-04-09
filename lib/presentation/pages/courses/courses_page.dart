@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/enrollment_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/course_card_v3.dart';
 import '../../widgets/app_search_bar.dart';
 import '../../widgets/common_loading.dart';
@@ -10,8 +11,7 @@ import '../../widgets/animated_list_item.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/selectable_chip_row.dart';
-import '../../widgets/shimmer_loading.dart';
-import '../../widgets/glass_card.dart';
+import '../../widgets/skeleton_loaders.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/course_models.dart';
 import '../../../core/utils/pagination_helper.dart';
@@ -40,13 +40,23 @@ class _CoursesPageState extends State<CoursesPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<CourseProvider>();
-      provider.reset();
-      provider.loadCourses();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final courseProvider = context.read<CourseProvider>();
+      final enrollmentProvider = context.read<EnrollmentProvider>();
+      courseProvider.reset();
+      courseProvider.loadCourses();
+
+      // Load enrollment data so cards show "Đã sở hữu" instead of price
+      final authProvider = context.read<AuthProvider>();
+      if (authProvider.user != null) {
+        await enrollmentProvider.fetchUserEnrollments(
+          userId: authProvider.user!.id,
+        );
+      }
+
       _scrollController.addPaginationListener(
-        pagination: provider.pagination,
-        onLoadMore: () => provider.loadNextPage(),
+        pagination: courseProvider.pagination,
+        onLoadMore: () => courseProvider.loadNextPage(),
       );
     });
   }
@@ -59,7 +69,14 @@ class _CoursesPageState extends State<CoursesPage> {
   }
 
   Future<void> _onRefresh() async {
-    await context.read<CourseProvider>().refresh();
+    final courseProvider = context.read<CourseProvider>();
+    final enrollmentProvider = context.read<EnrollmentProvider>();
+    final authProvider = context.read<AuthProvider>();
+
+    await courseProvider.refresh();
+    if (authProvider.user != null) {
+      await enrollmentProvider.fetchUserEnrollments(userId: authProvider.user!.id);
+    }
   }
 
   @override
@@ -245,7 +262,7 @@ class _CoursesPageState extends State<CoursesPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
-              (_, __) => const _CourseCardSkeleton(),
+              (_, __) => const CardSkeleton(imageHeight: 120),
               childCount: 5,
             ),
           ),
@@ -328,100 +345,5 @@ class _CoursesPageState extends State<CoursesPage> {
           ),
         ),
     ];
-  }
-}
-
-/// Skeleton matching CourseCardV3 layout
-class _CourseCardSkeleton extends StatelessWidget {
-  const _CourseCardSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final shimmerColor = isDark
-        ? Colors.white.withValues(alpha: 0.08)
-        : Colors.grey.withValues(alpha: 0.15);
-
-    return ShimmerLoading(
-      child: GlassCard(
-        margin: const EdgeInsets.only(bottom: 14),
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Thumbnail placeholder
-            Container(
-              width: 120,
-              height: 90,
-              decoration: BoxDecoration(
-                color: shimmerColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            const SizedBox(width: 14),
-            // Text lines placeholder
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title line 1
-                  Container(
-                    height: 14,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: shimmerColor,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  // Title line 2
-                  Container(
-                    height: 14,
-                    width: 120,
-                    decoration: BoxDecoration(
-                      color: shimmerColor,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // Author line
-                  Container(
-                    height: 10,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: shimmerColor,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Stats row
-                  Row(
-                    children: [
-                      Container(
-                        height: 10,
-                        width: 60,
-                        decoration: BoxDecoration(
-                          color: shimmerColor,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        height: 22,
-                        width: 65,
-                        decoration: BoxDecoration(
-                          color: shimmerColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

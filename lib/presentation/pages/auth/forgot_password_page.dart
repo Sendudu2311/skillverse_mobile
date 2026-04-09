@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../../core/utils/validation_helper.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -30,26 +31,25 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       _isLoading = true;
     });
 
-    try {
-      // TODO: Implement forgot password API call
-      await Future.delayed(const Duration(seconds: 2)); // Simulate API call
-      
+    await ErrorHandler.handleAsync(
+      context: context,
+      operation: () async {
+        // TODO: Implement forgot password API call
+        await Future.delayed(const Duration(seconds: 2)); // Simulate API call
+        
+        if (mounted) {
+          setState(() {
+            _emailSent = true;
+          });
+        }
+      },
+      successMessage: 'Hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn',
+    );
+
+    if (mounted) {
       setState(() {
-        _emailSent = true;
         _isLoading = false;
       });
-
-      if (mounted) {
-        ErrorHandler.showSuccessSnackBar(context, 'Hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn');
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, 'Có lỗi xảy ra: ${e.toString()}');
-      }
     }
   }
 
@@ -126,15 +126,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       hintText: 'Nhập địa chỉ email của bạn',
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Vui lòng nhập email';
-                      }
-                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                        return 'Email không hợp lệ';
-                      }
-                      return null;
-                    },
+                    validator: (value) => ValidationHelper.email(value),
                   ),
                   
                   const SizedBox(height: 32),

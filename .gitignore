@@ -67,6 +67,7 @@ key.properties
 *.g.dart
 *.freezed.dart
 *.gr.dart
+*.backup
 
 # iOS Pods
 ios/Pods/
@@ -112,3 +113,9 @@ test/unit/
 test/pages/
 test/widget_test.dart
 test/run_flutter_tests.sh
+
+# Tool configs & backups
+.claude/
+.superpowers/
+docs/superpowers/
+_backup_learning_report/

@@ -15,10 +15,10 @@ class DateTimeHelper {
 
   // === FORMATTERS (Created once, reused for performance) ===
 
-  /// Standard date format: 15/12/2025
+  /// Standard date format: dd/MM/yyyy
   static final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
-  /// Date with weekday: Thứ 6, 15/12/2025
+  /// Date with weekday: EEEE, dd/MM/yyyy
   static final DateFormat _dateWithWeekday = DateFormat(
     'EEEE, dd/MM/yyyy',
     'vi_VN',
@@ -30,16 +30,16 @@ class DateTimeHelper {
   /// Time only: 14:30
   static final DateFormat _timeFormat = DateFormat('HH:mm');
 
-  /// Full datetime: 15/12/2025 14:30
+  /// Full datetime: dd/MM/yyyy HH:mm
   static final DateFormat _dateTimeFormat = DateFormat('dd/MM/yyyy HH:mm');
 
-  /// Month and year: Tháng 12 2025
+  /// Month and year: MMMM yyyy
   static final DateFormat _monthYear = DateFormat('MMMM yyyy', 'vi_VN');
 
   /// Time with seconds: 14:30:45
   static final DateFormat _timeWithSeconds = DateFormat('HH:mm:ss');
 
-  /// ISO 8601 format for API: 2025-12-15T14:30:00Z
+  /// ISO 8601 format for API: yyyy-MM-ddTHH:mm:ssZ
   static final DateFormat _iso8601Format = DateFormat(
     "yyyy-MM-dd'T'HH:mm:ss'Z'",
   );
@@ -57,12 +57,12 @@ class DateTimeHelper {
 
   // === FORMATTING METHODS ===
 
-  /// Format date: 15/12/2025
+  /// Format date: dd/MM/yyyy
   static String formatDate(DateTime date) {
     return _dateFormat.format(date);
   }
 
-  /// Format date with weekday: Thứ 6, 15/12/2025
+  /// Format date with weekday: EEEE, dd/MM/yyyy
   static String formatDateWithWeekday(DateTime date) {
     return _dateWithWeekday.format(date);
   }
@@ -77,12 +77,12 @@ class DateTimeHelper {
     return _timeFormat.format(date);
   }
 
-  /// Format datetime: 15/12/2025 14:30
+  /// Format datetime: dd/MM/yyyy HH:mm
   static String formatDateTime(DateTime date) {
     return _dateTimeFormat.format(date);
   }
 
-  /// Format month and year: Tháng 12 2025
+  /// Format month and year: MMMM yyyy
   static String formatMonthYear(DateTime date) {
     return _monthYear.format(date);
   }
@@ -92,7 +92,7 @@ class DateTimeHelper {
     return _timeWithSeconds.format(date);
   }
 
-  /// Format to ISO 8601 for API: 2025-12-15T14:30:00Z
+  /// Format to ISO 8601 for API: yyyy-MM-ddTHH:mm:ssZ
   static String formatIso8601(DateTime date) {
     return _iso8601Format.format(date.toUtc());
   }
@@ -139,7 +139,7 @@ class DateTimeHelper {
 
   // === DATE RANGES ===
 
-  /// Format date range: 15/12/2025 - 20/12/2025
+  /// Format date range: dd/MM/yyyy - dd/MM/yyyy
   static String formatDateRange(DateTime start, DateTime end) {
     // Same month and year
     if (start.year == end.year && start.month == end.month) {
