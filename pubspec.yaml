@@ -77,6 +77,10 @@ dependencies:
 
   # File System
   path_provider: ^2.1.1
+
+  # PDF Generation
+  pdf: ^3.10.0
+  printing: ^5.12.0
   permission_handler: ^11.0.1
 
   # Share
@@ -94,6 +98,7 @@ dependencies:
   flutter_markdown: ^0.7.7+1
   pod_player: ^0.2.2
   markdown: ^7.3.1
+  shimmer: ^3.0.0
 
   youtube_explode_dart: any
 dev_dependencies:
@@ -130,7 +135,7 @@ flutter:
     - assets/meowl_bg_clear.png
     - assets/skillverse.png
     - assets/
-    - assets/images/premium/
+    - assets/fonts/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
