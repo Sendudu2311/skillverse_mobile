@@ -143,6 +143,7 @@ void main() {
       final json = {
         'email': 'a@b.com',
         'password': 'pass',
+        'confirmPassword': 'pass',
         'fullName': "Nguyễn Văn A's \"Name\" <script>alert('xss')</script>",
       };
       final request = RegisterRequest.fromJson(json);

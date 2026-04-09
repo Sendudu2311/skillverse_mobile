@@ -11,7 +11,11 @@ import '../pages/courses/courses_page.dart';
 import '../pages/courses/course_detail_page.dart';
 import '../pages/courses/my_courses_page.dart';
 import '../pages/courses/course_learning_page.dart';
+import '../pages/courses/quiz_attempt_page.dart';
+import '../pages/courses/assignment_page.dart';
 import '../pages/chat/chat_page.dart';
+import '../pages/chat/messaging_page.dart';
+import '../../data/models/messaging_models.dart';
 import '../pages/profile/profile_page.dart';
 import '../pages/profile/profile_settings_page.dart';
 import '../pages/portfolio/portfolio_page.dart';
@@ -26,6 +30,7 @@ import '../pages/roadmap/roadmap_detail_page.dart';
 import '../pages/mentor/mentor_list_page.dart';
 import '../pages/mentor/mentor_detail_page.dart';
 import '../pages/mentor/my_bookings_page.dart';
+import '../pages/mentor/mentor_booking_detail_page.dart';
 import '../pages/mentor/booking_review_page.dart';
 import '../pages/profile/learning_report_page.dart';
 import '../pages/skin/skin_shop_page.dart';
@@ -189,6 +194,27 @@ class AppRouter {
           },
         ),
         GoRoute(
+          path: '/quiz/:quizId',
+          name: 'quiz-attempt',
+          builder: (context, state) {
+            final quizId = int.parse(state.pathParameters['quizId']!);
+            final moduleId = int.tryParse(
+              state.uri.queryParameters['moduleId'] ?? '',
+            );
+            return QuizAttemptPage(quizId: quizId, moduleId: moduleId);
+          },
+        ),
+        GoRoute(
+          path: '/assignment/:assignmentId',
+          name: 'assignment',
+          builder: (context, state) {
+            final assignmentId = int.parse(
+              state.pathParameters['assignmentId']!,
+            );
+            return AssignmentPage(assignmentId: assignmentId);
+          },
+        ),
+        GoRoute(
           path: '/my-courses',
           name: 'my-courses',
           builder: (context, state) => const MyCoursesPage(),
@@ -202,6 +228,27 @@ class AppRouter {
             currentPath: state.matchedLocation,
             child: const ChatPage(),
           ),
+        ),
+
+        // Messaging (User-to-User) Routes
+        GoRoute(
+          path: '/messaging',
+          name: 'messaging',
+          builder: (context, state) => const MessagingPage(),
+          routes: [
+            GoRoute(
+              path: 'chat/:userId',
+              name: 'messaging-chat',
+              builder: (context, state) {
+                final userId = int.parse(state.pathParameters['userId']!);
+                final conversation = state.extra as MessagingConversation?;
+                return MessagingChatPage(
+                  counterpartId: userId,
+                  conversation: conversation,
+                );
+              },
+            ),
+          ],
         ),
 
         // Jobs Route
@@ -318,6 +365,14 @@ class AppRouter {
           path: '/my-bookings',
           name: 'my-bookings',
           builder: (context, state) => const MyBookingsPage(),
+        ),
+        GoRoute(
+          path: '/mentor-booking-detail/:bookingId',
+          name: 'mentor-booking-detail',
+          builder: (context, state) {
+            final bookingId = int.parse(state.pathParameters['bookingId']!);
+            return MentorBookingDetailPage(bookingId: bookingId);
+          },
         ),
         GoRoute(
           path: '/booking-review/:bookingId',

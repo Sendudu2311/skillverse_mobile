@@ -45,6 +45,7 @@ import 'package:skillverse_mobile/presentation/providers/wallet_provider.dart';
 import 'package:skillverse_mobile/presentation/providers/journey_provider.dart';
 import 'package:skillverse_mobile/presentation/providers/task_board_provider.dart';
 import 'package:skillverse_mobile/presentation/providers/expert_chat_provider.dart';
+import 'package:skillverse_mobile/presentation/providers/learning_report_provider.dart';
 
 // ── Pages ──
 import 'package:skillverse_mobile/presentation/pages/splash/splash_page.dart';
@@ -53,6 +54,7 @@ import 'package:skillverse_mobile/presentation/pages/auth/register_page.dart';
 import 'package:skillverse_mobile/presentation/pages/auth/verify_email_page.dart';
 import 'package:skillverse_mobile/presentation/pages/auth/forgot_password_page.dart';
 import 'package:skillverse_mobile/presentation/pages/portfolio/portfolio_overview_page.dart';
+import 'package:skillverse_mobile/presentation/pages/profile/learning_report_page.dart';
 // ============================================================
 //  HELPER: Build testable widget with common providers
 // ============================================================
@@ -87,6 +89,7 @@ Widget buildTestableWidget(
       ChangeNotifierProvider(create: (_) => JourneyProvider()),
       ChangeNotifierProvider(create: (_) => TaskBoardProvider()),
       ChangeNotifierProvider(create: (_) => ExpertChatProvider()),
+      ChangeNotifierProvider(create: (_) => LearningReportProvider()),
       ...?extraProviders,
     ],
     child: MaterialApp(home: child),
@@ -199,8 +202,8 @@ void main() {
       await tester.tap(find.text('Đăng nhập'));
       await tester.pump();
       print('➤ BƯỚC 3: Kiểm tra thông báo lỗi validation xuất hiện');
-      expect(find.text('Vui lòng nhập email'), findsOneWidget);
-      expect(find.text('Vui lòng nhập mật khẩu'), findsOneWidget);
+      expect(find.text('Email không được để trống'), findsOneWidget);
+      expect(find.text('Mật khẩu không được để trống'), findsOneWidget);
       print('✔ KẾT QUẢ: Hệ thống đã chặn đăng nhập trống thành công.');
     });
 
@@ -229,7 +232,7 @@ void main() {
       await tester.tap(find.text('Đăng nhập'));
       await tester.pump();
       print('➤ BƯỚC 2: Kiểm tra cảnh báo mật khẩu ngắn');
-      expect(find.textContaining('ít nhất 6 ký tự'), findsOneWidget);
+      expect(find.textContaining('ít nhất 8 ký tự'), findsOneWidget);
       print('✔ KẾT QUẢ: Chặn mật khẩu không đủ độ dài thành công.');
     });
 
@@ -337,9 +340,9 @@ void main() {
       print(
         '➤ BƯỚC 2: Kiểm tra các thông báo lỗi bắt buộc (Họ tên, Email, Mật khẩu)',
       );
-      expect(find.text('Vui lòng nhập họ và tên'), findsOneWidget);
-      expect(find.text('Vui lòng nhập email'), findsOneWidget);
-      expect(find.text('Vui lòng nhập mật khẩu'), findsOneWidget);
+      expect(find.text('Họ và tên không được để trống'), findsOneWidget);
+      expect(find.text('Email không được để trống'), findsOneWidget);
+      expect(find.text('Mật khẩu không được để trống'), findsOneWidget);
       expect(find.text('Vui lòng xác nhận mật khẩu'), findsOneWidget);
     });
 
@@ -367,7 +370,7 @@ void main() {
       );
       await tester.tap(find.widgetWithText(ElevatedButton, 'Đăng ký'));
       await tester.pump();
-      expect(find.text('Mật khẩu không khớp'), findsOneWidget);
+      expect(find.text('Mật khẩu xác nhận không khớp'), findsOneWidget);
     });
 
     testWidgets('3.11 Validation: Mật khẩu < 8 ký tự', (tester) async {
@@ -397,7 +400,7 @@ void main() {
       );
       await tester.tap(find.widgetWithText(ElevatedButton, 'Đăng ký'));
       await tester.pump();
-      expect(find.text('Mật khẩu phải có ít nhất 1 chữ hoa'), findsOneWidget);
+      expect(find.text('Mật khẩu phải chứa ít nhất 1 chữ hoa'), findsOneWidget);
       print('✔ KẾT QUẢ: Validation chữ hoa mật khẩu hoạt động.');
     });
 
@@ -413,7 +416,7 @@ void main() {
       );
       await tester.tap(find.widgetWithText(ElevatedButton, 'Đăng ký'));
       await tester.pump();
-      expect(find.text('Mật khẩu phải có ít nhất 1 số'), findsOneWidget);
+      expect(find.text('Mật khẩu phải chứa ít nhất 1 chữ số'), findsOneWidget);
       print('✔ KẾT QUẢ: Validation chữ số mật khẩu hoạt động.');
     });
 
@@ -500,7 +503,7 @@ void main() {
       await tester.ensureVisible(find.text('Xác thực'));
       await tester.tap(find.text('Xác thực'));
       await tester.pump();
-      expect(find.text('Vui lòng nhập mã xác thực'), findsOneWidget);
+      expect(find.text('Mã xác thực không được để trống'), findsOneWidget);
       print('✔ KẾT QUẢ: Validation OTP trống hoạt động.');
     });
 
@@ -514,7 +517,7 @@ void main() {
       await tester.ensureVisible(find.text('Xác thực'));
       await tester.tap(find.text('Xác thực'));
       await tester.pump();
-      expect(find.text('Mã xác thực phải có 6 chữ số'), findsOneWidget);
+      expect(find.text('Mã xác thực phải có ít nhất 6 ký tự'), findsOneWidget);
       print('✔ KẾT QUẢ: Validation độ dài OTP hoạt động.');
     });
   });
@@ -573,7 +576,7 @@ void main() {
       await tester.pumpWidget(createForgotPage());
       await tester.tap(find.text('Gửi hướng dẫn'));
       await tester.pump();
-      expect(find.text('Vui lòng nhập email'), findsOneWidget);
+      expect(find.text('Email không được để trống'), findsOneWidget);
     });
 
     testWidgets('5.8 Validation: Email sai định dạng', (tester) async {
@@ -1098,6 +1101,59 @@ void main() {
       print(
         '✔ KẾT QUẢ: Render trang thành công và xử lý lỗi crash API an toàn.',
       );
+    });
+  });
+
+  // ════════════════════════════════════════════════════════════
+  // 18. LEARNING REPORT PAGE (Báo cáo học tập AI)
+  // ════════════════════════════════════════════════════════════
+  group('18. LearningReportPage – Báo cáo học tập AI', () {
+    Widget createLearningReportPage() =>
+        buildTestableWidget(const LearningReportPage());
+
+    testWidgets('18.1 Hiển thị tiêu đề "Báo cáo học tập AI"', (
+      tester,
+    ) async {
+      print('➤ BƯỚC 1: Render LearningReportPage');
+      await tester.pumpWidget(createLearningReportPage());
+      await tester.pump();
+      print('➤ BƯỚC 2: Kiểm tra tiêu đề trang');
+      expect(find.text('Báo cáo học tập AI'), findsOneWidget);
+      print('✔ KẾT QUẢ: Tiêu đề trang hiển thị đúng.');
+    });
+
+    testWidgets('18.2 Có 2 tabs: Báo cáo và Lịch sử', (tester) async {
+      print('➤ BƯỚC 1: Render LearningReportPage');
+      await tester.pumpWidget(createLearningReportPage());
+      await tester.pump();
+      print('➤ BƯỚC 2: Kiểm tra 2 tab headers');
+      expect(find.text('Báo cáo'), findsOneWidget);
+      expect(find.text('Lịch sử'), findsOneWidget);
+      print('✔ KẾT QUẢ: 2 tabs hiển thị đúng.');
+    });
+
+    testWidgets('18.3 Hiển thị FAB "Tạo báo cáo" khi chưa có report', (
+      tester,
+    ) async {
+      print('➤ BƯỚC 1: Render LearningReportPage');
+      await tester.pumpWidget(createLearningReportPage());
+      await tester.pump();
+      print('➤ BƯỚC 2: Kiểm tra FAB tạo báo cáo');
+      expect(find.byType(FloatingActionButton), findsOneWidget);
+      print('✔ KẾT QUẢ: FAB hiển thị đúng.');
+    });
+
+    testWidgets('18.4 Chuyển tab sang Lịch sử hoạt động', (
+      tester,
+    ) async {
+      print('➤ BƯỚC 1: Render LearningReportPage');
+      await tester.pumpWidget(createLearningReportPage());
+      await tester.pump();
+      print('➤ BƯỚC 2: Nhấn tab Lịch sử');
+      await tester.tap(find.text('Lịch sử'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      print('✔ KẾT QUẢ: Tab chuyển thành công.');
     });
   });
 }

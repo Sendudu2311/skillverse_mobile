@@ -33,7 +33,7 @@ class ErrorStateWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              title ?? 'Đã xảy ra lỗi',
+              title ?? 'Có lỗi xảy ra',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),

@@ -23,6 +23,7 @@ import 'presentation/providers/skin_provider.dart';
 
 import 'presentation/providers/task_board_provider.dart';
 import 'presentation/providers/expert_chat_provider.dart';
+import 'presentation/providers/messaging_provider.dart';
 import 'presentation/providers/job_provider.dart';
 import 'presentation/providers/journey_provider.dart';
 import 'presentation/providers/wallet_provider.dart';
@@ -79,6 +80,12 @@ void main() async {
 
         ChangeNotifierProvider(create: (_) => TaskBoardProvider()),
         ChangeNotifierProvider(create: (_) => ExpertChatProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, MessagingProvider>(
+          create: (context) =>
+              MessagingProvider(Provider.of<AuthProvider>(context, listen: false)),
+          update: (context, authProvider, previous) =>
+              previous ?? MessagingProvider(authProvider),
+        ),
         ChangeNotifierProvider(create: (_) => JobProvider()),
         ChangeNotifierProvider(create: (_) => JourneyProvider()),
         ChangeNotifierProvider(create: (_) => WalletProvider()),
