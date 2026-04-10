@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../presentation/providers/chat_provider.dart';
 import '../../../data/models/chat_models.dart';
 import '../../../core/utils/meowl_guard.dart';
-import '../../../presentation/themes/app_theme.dart';
 import '../../widgets/common_loading.dart';
 
 class ChatPage extends StatefulWidget {
@@ -16,6 +15,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   // Data for expandable prompt categories
 
@@ -35,6 +35,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -88,6 +89,19 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Consumer<ChatProvider>(
       builder: (context, chatProvider, child) {
+        // Auto-scroll when loading changes
+        if (chatProvider.isLoading) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                _scrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
+          });
+        }
+
         return Column(
           children: [
             // ## Chat Header ##
@@ -96,9 +110,15 @@ class _ChatPageState extends State<ChatPage> {
             // ## Messages List ##
             Expanded(
               child: ListView.builder(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(16),
-                itemCount: chatProvider.messages.length,
+                itemCount: chatProvider.messages.length +
+                    (chatProvider.isLoading ? 1 : 0),
                 itemBuilder: (context, index) {
+                  // Show thinking indicator as the last item while loading
+                  if (index >= chatProvider.messages.length) {
+                    return _buildThinkingBubble();
+                  }
                   final message = chatProvider.messages[index];
                   return _buildMessageBubble(message);
                 },
@@ -331,6 +351,89 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ],
       ),
+    );
+  }
+
+  /// Builds a thinking bubble indicator shown while waiting for AI response.
+  Widget _buildThinkingBubble() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const CircleAvatar(
+            radius: 16,
+            child: Text('🐱', style: TextStyle(fontSize: 16)),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const _ThinkingDots(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Animated thinking dots indicator
+class _ThinkingDots extends StatefulWidget {
+  const _ThinkingDots();
+
+  @override
+  State<_ThinkingDots> createState() => _ThinkingDotsState();
+}
+
+class _ThinkingDotsState extends State<_ThinkingDots>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (index) {
+            final delay = index * 0.2;
+            final value = (_controller.value + delay) % 1.0;
+            final opacity = (1 - (value * 2 - 1).abs()).clamp(0.3, 1.0);
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: opacity),
+                shape: BoxShape.circle,
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

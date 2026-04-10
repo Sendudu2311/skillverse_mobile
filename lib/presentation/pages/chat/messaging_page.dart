@@ -23,7 +23,9 @@ class _MessagingPageState extends State<MessagingPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MessagingProvider>().loadConversations();
+      final provider = context.read<MessagingProvider>();
+      provider.connectWebSocket();
+      provider.loadConversations();
     });
   }
 
@@ -36,6 +38,16 @@ class _MessagingPageState extends State<MessagingPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            onPressed: () => context.push('/community-groups'),
+            icon: Icon(
+              Icons.groups,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            tooltip: 'Chat nhóm cộng đồng',
+          ),
+        ],
       ),
       body: Consumer<MessagingProvider>(
         builder: (context, provider, _) {
@@ -324,10 +336,10 @@ class _MessagingChatPageState extends State<MessagingChatPage> {
           FloatingActionButton.small(
             onPressed: provider.isSending ? null : _sendMessage,
             child: provider.isSending
-                ? const SizedBox(
+                ? SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CommonLoading.small(),
                   )
                 : const Icon(Icons.send),
           ),

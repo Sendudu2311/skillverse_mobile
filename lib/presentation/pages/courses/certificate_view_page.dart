@@ -1,8 +1,14 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../../data/services/certificate_service.dart';
 import '../../widgets/common_loading.dart';
 
@@ -47,37 +53,102 @@ class _CertificateViewPageState extends State<CertificateViewPage> {
     }
   }
 
-  Future<void> _captureAndShare() async {
+  Future<Uint8List?> _captureImage() async {
     try {
       final boundary = _repaintKey.currentContext?.findRenderObject()
           as RenderRepaintBoundary?;
-      if (boundary == null) return;
+      if (boundary == null) return null;
 
       final image = await boundary.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(
         format: ui.ImageByteFormat.png,
       );
-      if (byteData == null) return;
+      if (byteData == null) return null;
 
-      final bytes = byteData.buffer.asUint8List();
+      return byteData.buffer.asUint8List();
+    } catch (e) {
+      return null;
+    }
+  }
 
-      // Copy to clipboard as a fallback notification
+  Future<void> _downloadCertificate() async {
+    try {
+      final bytes = await _captureImage();
+      if (bytes == null) {
+        if (mounted) ErrorHandler.showErrorSnackBar(context, 'Không thể chụp ảnh chứng chỉ.');
+        return;
+      }
+
+      Directory? dir;
+      if (Platform.isAndroid) {
+        dir = Directory('/storage/emulated/0/Download');
+        if (!await dir.exists()) {
+          dir = await getExternalStorageDirectory();
+        }
+      } else {
+        dir = await getDownloadsDirectory();
+      }
+      dir ??= await getApplicationDocumentsDirectory();
+      
+      final filename = 'skillverse_certificate_${_cert?.serial ?? widget.certificateId}.png';
+      final file = File('${dir.path}/$filename');
+      await file.writeAsBytes(bytes);
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Ảnh chứng chỉ đã được chụp (${bytes.length ~/ 1024} KB). '
-              'Bạn có thể chụp màn hình để lưu.',
-            ),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Đã lưu chứng chỉ vào Downloads!');
       }
     } catch (e) {
+      if (mounted) ErrorHandler.showErrorSnackBar(context, 'Lỗi khi lưu ảnh: $e');
+    }
+  }
+
+  Future<void> _shareCertificate() async {
+    try {
+      final bytes = await _captureImage();
+      if (bytes == null) {
+        if (mounted) ErrorHandler.showErrorSnackBar(context, 'Không thể chụp ảnh chứng chỉ.');
+        return;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/skillverse_certificate_${_cert?.serial ?? widget.certificateId}.png');
+      await file.writeAsBytes(bytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Chứng chỉ khóa học từ Skillverse!',
+      );
+    } catch (e) {
+      if (mounted) ErrorHandler.showErrorSnackBar(context, 'Lỗi khi chia sẻ ảnh: $e');
+    }
+  }
+
+  /// Build the public verification URL matching the web prototype.
+  String _buildVerificationUrl(String serial) {
+    // Use the web app's base URL from env, fallback to skillverse.vn
+    final baseUrl = dotenv.env['WEB_APP_URL']?.replaceAll(RegExp(r'/$'), '')
+        ?? 'https://skillverse.vn';
+    return '$baseUrl/certificate/verify/${Uri.encodeComponent(serial)}';
+  }
+
+  Future<void> _copyPublicLink() async {
+    if (_cert == null) return;
+    final url = _buildVerificationUrl(_cert!.serial);
+    await Clipboard.setData(ClipboardData(text: url));
+    if (mounted) {
+      ErrorHandler.showSuccessSnackBar(context, 'Đã sao chép link công khai!');
+    }
+  }
+
+  Future<void> _openPublicPage() async {
+    if (_cert == null) return;
+    final url = _buildVerificationUrl(_cert!.serial);
+    final uri = Uri.parse(url);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể chụp ảnh chứng chỉ.')),
-        );
+        ErrorHandler.showErrorSnackBar(context, 'Không thể mở trình duyệt.');
       }
     }
   }
@@ -103,21 +174,64 @@ class _CertificateViewPageState extends State<CertificateViewPage> {
         actions: [
           if (_cert != null) ...[
             IconButton(
-              icon: const Icon(Icons.screenshot_outlined),
-              tooltip: 'Chụp ảnh chứng chỉ',
-              onPressed: _captureAndShare,
+              icon: const Icon(Icons.download),
+              tooltip: 'Tải chứng chỉ',
+              onPressed: _downloadCertificate,
             ),
             IconButton(
-              icon: const Icon(Icons.copy),
-              tooltip: 'Sao chép mã chứng chỉ',
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: _cert!.serial));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Đã sao chép: ${_cert!.serial}'),
-                  ),
-                );
+              icon: const Icon(Icons.share),
+              tooltip: 'Chia sẻ chứng chỉ',
+              onPressed: _shareCertificate,
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              tooltip: 'Thêm tùy chọn',
+              onSelected: (value) {
+                switch (value) {
+                  case 'copy_serial':
+                    Clipboard.setData(ClipboardData(text: _cert!.serial));
+                    ErrorHandler.showSuccessSnackBar(
+                      context,
+                      'Đã sao chép: ${_cert!.serial}',
+                    );
+                    break;
+                  case 'copy_link':
+                    _copyPublicLink();
+                    break;
+                  case 'open_public':
+                    _openPublicPage();
+                    break;
+                }
               },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'copy_serial',
+                  child: ListTile(
+                    leading: Icon(Icons.copy, size: 20),
+                    title: Text('Sao chép mã chứng chỉ'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'copy_link',
+                  child: ListTile(
+                    leading: Icon(Icons.link, size: 20),
+                    title: Text('Sao chép link công khai'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'open_public',
+                  child: ListTile(
+                    leading: Icon(Icons.open_in_browser, size: 20),
+                    title: Text('Mở trang xác thực công khai'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
             ),
           ],
         ],
@@ -188,8 +302,7 @@ class _CertificateCard extends StatelessWidget {
           ),
         ],
       ),
-      child: AspectRatio(
-        aspectRatio: 11 / 8,
+      child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -282,7 +395,7 @@ class _CertificateCard extends StatelessWidget {
                       ),
                     ),
 
-                    const Spacer(),
+                    const SizedBox(height: 24),
 
                     // ─── FOOTER ───
                     _buildFooter(),

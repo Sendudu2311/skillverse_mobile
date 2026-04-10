@@ -28,6 +28,7 @@ class ExpertChatProvider extends ChangeNotifier with MultiLoadingProviderMixin {
   ExpertContext? _expertContext;
   List<UIMessage> _messages = [];
   int? _sessionId;
+  final Set<int> _sendingSessions = {}; // Tracks all sessions waiting for AI
   String? _currentSessionTitle; // Title of current session
 
   // Sessions state
@@ -53,7 +54,10 @@ class ExpertChatProvider extends ChangeNotifier with MultiLoadingProviderMixin {
   int? get sessionId => _sessionId;
   String? get currentSessionTitle => _currentSessionTitle;
   bool get isLoading => isLoadingFor('session');
-  bool get isSending => isLoadingFor('sending');
+
+  /// Check if a specific session is currently waiting for AI response
+  bool isSessionSending(int? id) => _sendingSessions.contains(id ?? -1);
+  bool get isSending => isSessionSending(_sessionId);
 
   List<ExpertChatSession> get sessions => _sessions;
   bool get loadingSessions => isLoadingFor('sessions');
@@ -146,10 +150,15 @@ Tôi có thể tư vấn chuyên sâu về:
 
   /// Send message to expert
   Future<void> sendMessage(String message) async {
-    if (message.trim().isEmpty || _expertContext == null || isSending) return;
+    final sentSessionId = _sessionId ?? -1;
+    if (message.trim().isEmpty || _expertContext == null || _sendingSessions.contains(sentSessionId)) return;
+
+    // Capture current session context before async gap
+    final sentContext = _expertContext;
 
     try {
-      setLoadingFor('sending', true);
+      _sendingSessions.add(sentSessionId);
+      notifyListeners();
 
       // Add user message
       final userMessage = UIMessage(
@@ -159,31 +168,64 @@ Tôi có thể tư vấn chuyên sâu về:
         timestamp: DateTime.now(),
       );
       _messages = [..._messages, userMessage];
+
+      // Optimistic: add placeholder session so Drawer shows it immediately
+      if (sentSessionId == -1 && sentContext != null) {
+        final optimistic = ExpertChatSession(
+          sessionId: -1, // placeholder ID
+          title: 'Expert ${sentContext.jobRole}',
+          messageCount: 1,
+          lastMessageAt: DateTime.now().toIso8601String(),
+        );
+        _sessions = [optimistic, ..._sessions];
+      }
       notifyListeners();
 
       // Send to API
       final request = ExpertChatRequest(
         message: message,
-        sessionId: _sessionId,
+        sessionId: sentSessionId,
         chatMode: ChatMode.expertMode,
-        domain: _expertContext!.domain,
-        industry: _expertContext!.industry,
-        jobRole: _expertContext!.jobRole,
+        domain: sentContext!.domain,
+        industry: sentContext.industry,
+        jobRole: sentContext.jobRole,
         aiAgentMode: _aiAgentMode, // G5: Deep Research mode
       );
 
       final response = await _service.sendMessage(request);
 
+      // Guard: if user switched to a different session while waiting,
+      // skip UI update. The backend already saved the response, so it
+      // will appear when the user reloads the original session.
+      // Note: sentSessionId==-1 + _sessionId==-1 means user clicked the
+      // optimistic placeholder — same "new" session, so do NOT skip.
+      final isSameNewSession =
+          sentSessionId == -1 && (_sessionId == null || _sessionId == -1);
+      final isSameExistingSession =
+          sentSessionId != -1 && _sessionId == sentSessionId;
+      if (!isSameNewSession && !isSameExistingSession) {
+        debugPrint(
+          '⚠️ Session changed while waiting for response '
+          '(sent: $sentSessionId, current: $_sessionId). Skipping UI update.',
+        );
+        _sendingSessions.remove(sentSessionId);
+        notifyListeners();
+        return;
+      }
+
       // Update session ID if new
-      if (_sessionId == null) {
+      if (_sessionId == null || _sessionId == -1) {
+        _sendingSessions.remove(-1); // Transition from placeholder to real ID
         _sessionId = response.sessionId;
         // Rename session to expert role
         try {
           await _service.renameSession(
             response.sessionId,
-            'Expert ${_expertContext!.jobRole}',
+            'Expert ${sentContext.jobRole}',
           );
         } catch (_) {}
+        // Sync session list so new chat shows up in history drawer
+        loadSessions();
       }
 
       // Add assistant message
@@ -192,13 +234,22 @@ Tôi có thể tư vấn chuyên sâu về:
         role: 'assistant',
         content: response.aiResponse,
         timestamp: DateTime.parse(response.timestamp),
-        expertContext: _expertContext,
+        expertContext: sentContext,
       );
       _messages = [..._messages, assistantMessage];
-
-      setLoadingFor('sending', false);
+      _sendingSessions.remove(sentSessionId);
+      _sendingSessions.remove(response.sessionId); // Just in case it was added
+      notifyListeners();
     } catch (e) {
-      setLoadingFor('sending', false);
+      _sendingSessions.remove(sentSessionId);
+      notifyListeners();
+
+      // Guard: don't pollute a different session with error messages
+      final errSameNew =
+          sentSessionId == -1 && (_sessionId == null || _sessionId == -1);
+      final errSameExisting =
+          sentSessionId != -1 && _sessionId == sentSessionId;
+      if (!errSameNew && !errSameExisting) return;
 
       // Add error message
       final errorMessage = UIMessage(
@@ -226,16 +277,44 @@ Tôi có thể tư vấn chuyên sâu về:
 
   /// Load session history
   Future<void> loadSession(ExpertChatSession session) async {
+    // Synthesize expertContext from session title if missing
+    // Backend hydrates the real domain/industry from its DB via sessionId,
+    // so we only need a plausible jobRole to pass the local validator.
+    if (_expertContext == null) {
+      final inferredRole = session.title.startsWith('Expert ')
+          ? session.title.substring(7)
+          : session.title;
+      _expertContext = ExpertContext(
+        domain: 'Lịch sử',
+        industry: 'Lịch sử',
+        jobRole: inferredRole,
+      );
+    }
+
+    // Skip API call for optimistic sessions (still waiting for AI)
+    if (session.sessionId == -1) {
+      _sessionId = -1;
+      _currentSessionTitle = session.title;
+      _messages = [
+        UIMessage(
+          id: '-1',
+          role: 'assistant',
+          content: 'Tin nhắn của bạn đang được chuyên gia xử lý...',
+          timestamp: DateTime.now(),
+        )
+      ];
+      notifyListeners();
+      return;
+    }
+
     await performAsyncFor('session', () async {
       final history = await _service.getHistory(session.sessionId);
 
-      _sessionId = session.sessionId;
-      _currentSessionTitle = session.title; // Set session title
-      _messages = [];
-
+      // Build new messages locally first to avoid blank flash
+      final newMessages = <UIMessage>[];
       for (int i = 0; i < history.length; i++) {
         final msg = history[i];
-        _messages.add(
+        newMessages.add(
           UIMessage(
             id: '${session.sessionId}-$i-user',
             role: 'user',
@@ -243,7 +322,7 @@ Tôi có thể tư vấn chuyên sâu về:
             timestamp: DateTime.parse(msg.createdAt),
           ),
         );
-        _messages.add(
+        newMessages.add(
           UIMessage(
             id: '${session.sessionId}-$i-assistant',
             role: 'assistant',
@@ -253,10 +332,25 @@ Tôi có thể tư vấn chuyên sâu về:
           ),
         );
       }
+
+      // Atomic swap — UI jumps from old to new without blank state
+      _sessionId = session.sessionId;
+      _currentSessionTitle = session.title;
+      _messages = newMessages;
     }).catchError((e) {
       debugPrint('Error loading session: $e');
     });
     notifyListeners();
+  }
+
+  /// Auto-load the most recent session (used when entering chat without context)
+  Future<void> openLatestSession() async {
+    if (_sessions.isEmpty) {
+      await loadSessions();
+    }
+    if (_sessions.isNotEmpty) {
+      await loadSession(_sessions.first);
+    }
   }
 
   /// Delete session
@@ -285,6 +379,7 @@ Tôi có thể tư vấn chuyên sâu về:
     _messages = [];
     _sessionId = null;
     _currentSessionTitle = null;
+    // Do NOT clear _sendingSessions, so background sends continue
     notifyListeners();
   }
 

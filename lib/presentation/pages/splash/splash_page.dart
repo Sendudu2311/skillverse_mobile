@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../widgets/common_loading.dart';
 
 class SplashPage extends StatelessWidget {
   const SplashPage({super.key});
@@ -55,11 +56,9 @@ class SplashPage extends StatelessWidget {
             SizedBox(
               width: 32,
               height: 32,
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Theme.of(context).colorScheme.primary,
-                ),
-                strokeWidth: 2,
+              child: CommonLoading(
+                size: 32,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ],

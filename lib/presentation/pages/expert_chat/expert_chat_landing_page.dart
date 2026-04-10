@@ -95,6 +95,20 @@ class _ExpertChatLandingPageState extends State<ExpertChatLandingPage> {
               color: AppTheme.accentCyan,
               isPremium: true,
             ),
+            const SizedBox(height: 12),
+            // Quick-access to chat history without re-selecting context
+            TextButton.icon(
+              onPressed: () => context.push('/expert-chat/chat'),
+              icon: Icon(Icons.history, size: 16, color: AppTheme.accentCyan),
+              label: Text(
+                'Xem lịch sử tư vấn',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.accentCyan,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ],
         ),
       ),

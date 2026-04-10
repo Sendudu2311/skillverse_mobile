@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../widgets/common_loading.dart';
 import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -175,11 +176,13 @@ class _DashboardPageState extends State<DashboardPage> {
             padding: EdgeInsets.all(16),
             child: Column(
               children: [
-                CardSkeleton(imageHeight: 120),
+                HeroCardSkeleton(),
                 SizedBox(height: 16),
-                ListItemSkeleton(),
-                ListItemSkeleton(),
-                ListItemSkeleton(),
+                CardSkeleton(imageHeight: null, hasFooter: false),
+                SizedBox(height: 16),
+                QuickActionsSkeleton(),
+                SizedBox(height: 16),
+                StatsGridSkeleton(),
               ],
             ),
           );
@@ -569,10 +572,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ? SizedBox(
                 width: 12,
                 height: 12,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
+                child: CommonLoading.small(color: Colors.white),
               )
             : Icon(
                 checkedIn ? Icons.check_circle_outline : Icons.today_outlined,

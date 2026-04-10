@@ -478,7 +478,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
     final provider = context.read<CommentProvider>();
     final postProvider = context.read<PostProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     _commentController.clear();
 
     try {
@@ -496,19 +495,13 @@ class _PostDetailPageState extends State<PostDetailPage> {
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }
 
   void _showDeleteDialog() {
     final postProvider = context.read<PostProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
 
     showDialog(
@@ -528,21 +521,11 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 await postProvider.deletePost(widget.postId);
                 if (mounted) {
                   router.pop();
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Đã xóa bài viết'),
-                      backgroundColor: AppTheme.successColor,
-                    ),
-                  );
+                  ErrorHandler.showSuccessSnackBar(context, 'Đã xóa bài viết');
                 }
               } catch (e) {
                 if (mounted) {
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text('Lỗi: ${e.toString()}'),
-                      backgroundColor: AppTheme.errorColor,
-                    ),
-                  );
+                  ErrorHandler.showErrorSnackBar(context, e);
                 }
               }
             },

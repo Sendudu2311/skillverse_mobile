@@ -987,15 +987,12 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
               children: [
                 // Sync button
                 isSyncing
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8),
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppTheme.themeGreenStart,
-                          ),
+                          child: CommonLoading.small(color: AppTheme.themeGreenStart),
                         ),
                       )
                     : IconButton(

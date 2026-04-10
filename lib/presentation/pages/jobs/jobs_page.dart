@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/job_provider.dart';
 import '../../../data/models/job_models.dart';
+import '../../widgets/common_loading.dart';
 import '../../widgets/app_search_bar.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/skeleton_loaders.dart';
@@ -406,9 +407,9 @@ class _JobsPageState extends State<JobsPage>
               if (index == jobs.length) {
                 // Load more sentinel
                 if (provider.isLoadingMoreLongTermJobs) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: CommonLoading.center(),
                   );
                 }
                 if (!provider.hasMoreLongTermJobs) {
@@ -616,9 +617,9 @@ class _JobsPageState extends State<JobsPage>
             itemBuilder: (context, index) {
               if (index == jobs.length) {
                 if (provider.isLoadingMoreShortTermJobs) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: CommonLoading.center(),
                   );
                 }
                 if (!provider.hasMoreShortTermJobs) {

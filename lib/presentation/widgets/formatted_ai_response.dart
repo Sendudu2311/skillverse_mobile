@@ -100,54 +100,9 @@ class FormattedAIResponse extends StatelessWidget {
   }
 
   Widget _buildThinkingSection(String content) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryBlueDark.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: AppTheme.primaryBlueDark.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.psychology, size: 16, color: AppTheme.primaryBlueDark),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'THINKING',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                    color: AppTheme.primaryBlueDark,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  content,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    return _ThinkingExpandableBlock(content: content, isDark: isDark);
   }
+
 
   Widget _buildSuggestionsSection(String content) {
     final suggestions = content
@@ -320,4 +275,109 @@ class ContentSection {
   final String content;
 
   ContentSection(this.type, this.content);
+}
+
+/// Collapsible thinking block — defaults to collapsed
+class _ThinkingExpandableBlock extends StatefulWidget {
+  final String content;
+  final bool isDark;
+
+  const _ThinkingExpandableBlock({
+    required this.content,
+    required this.isDark,
+  });
+
+  @override
+  State<_ThinkingExpandableBlock> createState() =>
+      _ThinkingExpandableBlockState();
+}
+
+class _ThinkingExpandableBlockState extends State<_ThinkingExpandableBlock> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryBlueDark.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: AppTheme.primaryBlueDark.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Header — always visible, tappable
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.psychology,
+                    size: 16,
+                    color: AppTheme.primaryBlueDark,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Quá trình suy nghĩ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryBlueDark,
+                    ),
+                  ),
+                  const Spacer(),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 18,
+                      color: AppTheme.primaryBlueDark.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Content — animated expand/collapse
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity, height: 0),
+            secondChild: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlueDark.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  widget.content,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                    color: widget.isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ),
+            crossFadeState: _expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
+            sizeCurve: Curves.easeInOut,
+          ),
+        ],
+      ),
+    );
+  }
 }

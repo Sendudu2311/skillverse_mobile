@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/expert_chat_provider.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/formatted_ai_response.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/premium_card.dart';
 import '../../../data/models/premium_models.dart';
@@ -33,6 +35,12 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
       final provider = context.read<ExpertChatProvider>();
       provider.loadSessions();
       provider.loadSubscription(); // G6: Load subscription for gate check
+
+      // If user entered without selecting an expert (e.g. from history button),
+      // auto-load the most recent session so they can continue chatting.
+      if (provider.expertContext == null) {
+        provider.openLatestSession();
+      }
     });
   }
 
@@ -198,19 +206,11 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
             onPressed: () {
               if (!isPlus) {
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text(
-                      'Chế độ Nghiên cứu sâu chỉ dành cho tài khoản Premium Plus. Hệ thống sẽ tự động chuyển về chế độ Tiêu chuẩn.',
-                    ),
-                    backgroundColor: Colors.orange,
-                    duration: const Duration(seconds: 4),
-                    action: SnackBarAction(
-                      label: 'Nâng cấp',
-                      onPressed: () => context.go('/premium'),
-                    ),
-                  ),
+                ErrorHandler.showWarningSnackBar(
+                  context,
+                  'Chế độ Nghiên cứu sâu chỉ dành cho tài khoản Premium Plus. Hệ thống sẽ tự động chuyển về chế độ Tiêu chuẩn.',
                 );
+                context.go('/premium');
                 return;
               }
               provider.setAiAgentMode('deep-research-pro-preview-12-2025');
@@ -246,8 +246,10 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
     ExpertChatProvider provider,
     bool isDark,
   ) {
-    final expertContext = provider.expertContext!;
+    final expertContext = provider.expertContext;
     final isDeepResearch = provider.aiAgentMode != null;
+    final displayTitle = (provider.currentSessionTitle ?? expertContext?.jobRole ?? 'Expert Chat')
+        .toUpperCase();
 
     return SliverAppBar(
       pinned: true,
@@ -294,8 +296,7 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                (provider.currentSessionTitle ?? expertContext.jobRole)
-                                    .toUpperCase(),
+                                displayTitle,
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -309,7 +310,7 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          expertContext.domain,
+                          expertContext?.domain ?? '',
                           style: const TextStyle(fontSize: 10, color: Colors.white70),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -377,9 +378,16 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
         }
 
         if (expertContext == null) {
+          // Still loading / auto-resolving the latest session
           return Scaffold(
-            appBar: const SkillVerseAppBar(title: 'Expert Chat'),
-            body: const Center(child: Text('Vui lòng chọn chuyên gia trước')),
+            // Removed key: _scaffoldKey to prevent DuplicateGlobalKey exception
+            drawer: _buildSessionDrawer(context, provider, isDark),
+            body: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: ChatBubbleSkeleton(pairCount: 3),
+              ),
+            ),
           );
         }
 
@@ -392,29 +400,38 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
               // G5: SliverAppBar with Deep Research toggle
               _buildSliverAppBar(context, provider, isDark),
 
-              // Messages
-              SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final message = provider.messages[index];
-                    return _MessageBubble(
-                      message: message,
-                      expertContext: expertContext,
-                      onSuggestionTap: (suggestion) {
-                        _messageController.text = suggestion;
-                        _sendMessage();
-                      },
-                    );
-                  }, childCount: provider.messages.length),
+              // Messages (or skeleton while loading session)
+              if (provider.isLoadingFor('session'))
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: ChatBubbleSkeleton(pairCount: 3),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final message = provider.messages[index];
+                      return _MessageBubble(
+                        message: message,
+                        expertContext: expertContext,
+                        onSuggestionTap: (suggestion) {
+                          _messageController.text = suggestion;
+                          _sendMessage();
+                        },
+                      );
+                    }, childCount: provider.messages.length),
+                  ),
                 ),
-              ),
 
               // Loading indicator
-              if (provider.isSending)
+              if (provider.isSessionSending(provider.sessionId))
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
                     child: Row(
                       children: [
                         Container(
@@ -546,7 +563,7 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  context.go('/expert-chat/domain');
+                  context.push('/expert-chat/domain');
                 },
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text('Trò chuyện mới', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),

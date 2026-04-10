@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -68,8 +69,7 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: 3,
-                  itemBuilder: (_, __) =>
-                      const CardSkeleton(imageHeight: null, hasFooter: false),
+                  itemBuilder: (_, __) => const CourseCardSkeleton(),
                 );
               }
 
@@ -330,10 +330,9 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Chưa có chứng chỉ cho khóa học này.'),
-        ),
+      ErrorHandler.showWarningSnackBar(
+        context,
+        'Chưa có chứng chỉ cho khóa học này.',
       );
     }
   }

@@ -15,6 +15,8 @@ import '../pages/courses/quiz_attempt_page.dart';
 import '../pages/courses/assignment_page.dart';
 import '../pages/chat/chat_page.dart';
 import '../pages/chat/messaging_page.dart';
+import '../pages/chat/community_groups_page.dart';
+import '../pages/chat/group_chat_window.dart';
 import '../../data/models/messaging_models.dart';
 import '../pages/profile/profile_page.dart';
 import '../pages/profile/profile_settings_page.dart';
@@ -249,6 +251,21 @@ class AppRouter {
               },
             ),
           ],
+        ),
+
+        // Group Chat Routes
+        GoRoute(
+          path: '/community-groups',
+          name: 'community-groups',
+          builder: (context, state) => const CommunityGroupsPage(),
+        ),
+        GoRoute(
+          path: '/group-chat/:groupId',
+          name: 'group-chat',
+          builder: (context, state) {
+            final groupId = int.parse(state.pathParameters['groupId']!);
+            return GroupChatWindow(groupId: groupId);
+          },
         ),
 
         // Jobs Route

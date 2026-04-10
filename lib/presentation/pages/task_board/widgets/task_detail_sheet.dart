@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/utils/error_handler.dart';
 import '../../../providers/task_board_provider.dart';
 import '../../../themes/app_theme.dart';
 import '../../../widgets/common_loading.dart';
@@ -535,11 +536,9 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
     // Validate date logic
     if (_startDate != null && _deadline != null) {
       if (_deadline!.isBefore(_startDate!)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Hạn chót không được trước ngày bắt đầu! ❌'),
-            backgroundColor: AppTheme.errorColor,
-          ),
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Hạn chót không được trước ngày bắt đầu!',
         );
         return;
       }
@@ -547,7 +546,6 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
 
     setState(() => _isSaving = true);
     final provider = context.read<TaskBoardProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
@@ -588,25 +586,14 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
 
       if (mounted) {
         navigator.pop();
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              isEditMode
-                  ? 'Đã cập nhật nhiệm vụ! ✅'
-                  : 'Đã tạo nhiệm vụ mới! 🎉',
-            ),
-            backgroundColor: AppTheme.successColor,
-          ),
+        ErrorHandler.showSuccessSnackBar(
+          context,
+          isEditMode ? 'Đã cập nhật nhiệm vụ!' : 'Đã tạo nhiệm vụ mới!',
         );
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -614,7 +601,6 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
   }
 
   Future<void> _deleteTask() async {
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     final confirmed = await showDialog<bool>(
@@ -644,21 +630,11 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
       await provider.deleteTask(widget.task!.id);
       if (mounted) {
         navigator.pop();
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Đã xóa nhiệm vụ! 🗑️'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, 'Đã xóa nhiệm vụ!');
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) setState(() => _isDeleting = false);

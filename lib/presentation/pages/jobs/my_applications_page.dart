@@ -267,9 +267,9 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
         itemBuilder: (context, index) {
           if (index == apps.length) {
             if (provider.isLoadingMoreShortTermApps) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: CommonLoading.center(),
               );
             }
             if (!provider.hasMoreShortTermApps) {

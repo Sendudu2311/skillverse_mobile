@@ -205,23 +205,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
       _startHeartbeat();
 
       if (isResumed && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.restore, color: Colors.white, size: 18),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Tiếp tục phiên làm bài. Thời gian còn lại được giữ nguyên.',
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppTheme.accentCyan,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-          ),
+        ErrorHandler.showWarningSnackBar(
+          context,
+          'Tiếp tục phiên làm bài. Thời gian còn lại được giữ nguyên.',
         );
       }
 

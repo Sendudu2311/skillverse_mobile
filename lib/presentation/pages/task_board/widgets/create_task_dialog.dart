@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/utils/error_handler.dart';
 import '../../../providers/task_board_provider.dart';
 import '../../../themes/app_theme.dart';
 import '../../../widgets/common_loading.dart';
@@ -356,7 +357,6 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
 
     setState(() => _isLoading = true);
     final provider = context.read<TaskBoardProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
@@ -383,12 +383,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {

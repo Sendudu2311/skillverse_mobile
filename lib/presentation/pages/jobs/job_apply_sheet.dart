@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../providers/job_provider.dart';
 import '../../themes/app_theme.dart';
 
@@ -363,7 +364,6 @@ class _JobApplySheetState extends State<JobApplySheet>
     setState(() => _isSubmitting = true);
 
     final provider = context.read<JobProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     bool success;
 
@@ -405,11 +405,9 @@ class _JobApplySheetState extends State<JobApplySheet>
       _successAnimController.forward();
     } else {
       navigator.pop();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage ?? 'Ứng tuyển thất bại'),
-          backgroundColor: AppTheme.errorColor,
-        ),
+      ErrorHandler.showErrorSnackBar(
+        context,
+        provider.errorMessage ?? 'Ứng tuyển thất bại',
       );
     }
   }

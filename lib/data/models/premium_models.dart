@@ -17,6 +17,23 @@ enum PlanType {
   recruiterPro,
 }
 
+extension PlanTypeWeight on PlanType {
+  int get weight {
+    switch (this) {
+      case PlanType.freeTier:
+        return 0;
+      case PlanType.studentPack:
+        return 1;
+      case PlanType.premiumBasic:
+        return 2;
+      case PlanType.premiumPlus:
+        return 3;
+      case PlanType.recruiterPro:
+        return 100;
+    }
+  }
+}
+
 /// Target role for premium plans
 enum TargetRole {
   @JsonValue('LEARNER')
