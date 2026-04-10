@@ -103,6 +103,9 @@ dependencies:
   shimmer: ^3.0.0
 
   youtube_explode_dart: any
+
+  # STOMP WebSocket Client (Group Chat real-time)
+  stomp_dart_client: ^3.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
