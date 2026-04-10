@@ -2,45 +2,54 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../data/models/notification_models.dart';
 import '../../data/services/notification_service.dart';
+import '../../core/utils/pagination_helper.dart';
 
 enum NotificationFilter { all, unread, read }
 
 class NotificationProvider extends ChangeNotifier {
   final NotificationService _service;
-
-  NotificationProvider({NotificationService? service})
-      : _service = service ?? NotificationService();
-
-  // ── State ────────────────────────────────────────────────────────────────
-
-  List<AppNotification> _notifications = [];
-  int _unreadCount = 0;
-  int _currentPage = 0;
-  int _totalPages = 0;
-  bool _isLoading = false;
-  bool _isLoadingMore = false;
-  bool _hasError = false;
-  String? _errorMessage;
+  late final PaginationHelper<AppNotification> _pagination;
   NotificationFilter _filter = NotificationFilter.all;
   Timer? _pollingTimer;
 
-  // ── Getters ──────────────────────────────────────────────────────────────
+  NotificationProvider({NotificationService? service})
+      : _service = service ?? NotificationService() {
+    _pagination = PaginationHelper<AppNotification>(
+      fetchPage: (page) async {
+        // PaginationHelper uses 1-based pages; API uses 0-based
+        final result = await _service.getNotifications(
+          page: page - 1,
+          size: 10,
+          isRead: _filterToIsRead(_filter),
+        );
+        return PaginatedResponse(
+          data: result.content,
+          currentPage: page - 1,
+          totalPages: result.totalPages,
+          totalItems: result.totalElements.toInt(),
+          hasMore: !result.last,
+        );
+      },
+      onStateChanged: () => notifyListeners(),
+    );
+  }
 
-  List<AppNotification> get notifications => _notifications;
-  int get unreadCount => _unreadCount;
-  bool get isLoading => _isLoading;
-  bool get isLoadingMore => _isLoadingMore;
-  bool get hasError => _hasError;
-  String? get errorMessage => _errorMessage;
+  // ── State delegation from PaginationHelper ────────────────────────────────
+
+  List<AppNotification> get notifications => _pagination.items;
+  bool get isLoading => _pagination.isInitialLoading;
+  bool get isLoadingMore => _pagination.isLoadingMore;
+  bool get hasError => _pagination.hasError;
+  String? get errorMessage => _pagination.error;
   NotificationFilter get filter => _filter;
-  bool get hasMore => _currentPage + 1 < _totalPages;
+  bool get hasMore => _pagination.hasMore;
 
   // ── Polling ──────────────────────────────────────────────────────────────
 
   /// Start polling unread count every 60 seconds.
   /// Call this once when the user is authenticated (e.g., from MainLayout.initState).
   void startPolling() {
-    fetchUnreadCount(); // immediate first fetch
+    fetchUnreadCount();
     _pollingTimer?.cancel();
     _pollingTimer = Timer.periodic(
       const Duration(seconds: 60),
@@ -54,7 +63,8 @@ class NotificationProvider extends ChangeNotifier {
     _pollingTimer = null;
   }
 
-  // ── Data ─────────────────────────────────────────────────────────────────
+  int _unreadCount = 0;
+  int get unreadCount => _unreadCount;
 
   /// Refresh unread count silently (no loading state, no error shown).
   Future<void> fetchUnreadCount() async {
@@ -69,63 +79,32 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
+  // ── Data ─────────────────────────────────────────────────────────────────
+
   /// Load first page of notifications, optionally switching filter.
   Future<void> loadNotifications({NotificationFilter? filter}) async {
-    if (filter != null) _filter = filter;
-    _currentPage = 0;
-    _notifications = [];
-    _hasError = false;
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final page = await _service.getNotifications(
-        page: 0,
-        size: 10,
-        isRead: _filterToIsRead(_filter),
-      );
-      _notifications = page.content;
-      _totalPages = page.totalPages;
-    } catch (e) {
-      _hasError = true;
-      _errorMessage = 'Không tải được thông báo';
-      debugPrint('❌ loadNotifications error: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+    if (filter != null) {
+      _filter = filter;
+      // Reset pagination so next fetchPage uses new filter
+      _pagination.reset();
     }
+    await _pagination.loadFirstPage();
   }
 
   /// Load the next page and append to [notifications].
   Future<void> loadNextPage() async {
-    if (_isLoadingMore || !hasMore) return;
-    _isLoadingMore = true;
-    notifyListeners();
-
-    try {
-      final nextPage = _currentPage + 1;
-      final page = await _service.getNotifications(
-        page: nextPage,
-        size: 10,
-        isRead: _filterToIsRead(_filter),
-      );
-      _notifications = [..._notifications, ...page.content];
-      _currentPage = nextPage;
-      _totalPages = page.totalPages;
-    } catch (_) {
-      // Silent fail for load-more
-    } finally {
-      _isLoadingMore = false;
-      notifyListeners();
-    }
+    await _pagination.loadNextPage();
   }
 
   Future<void> markAsRead(int id) async {
     try {
       await _service.markAsRead(id);
-      final idx = _notifications.indexWhere((n) => n.id == id);
-      if (idx != -1 && !_notifications[idx].isRead) {
-        _notifications[idx] = _notifications[idx].copyWith(isRead: true);
+      final idx = _pagination.findIndex((n) => n.id == id);
+      if (idx != -1 && !notifications[idx].isRead) {
+        _pagination.updateItem(
+          idx,
+          notifications[idx].copyWith(isRead: true),
+        );
         if (_unreadCount > 0) _unreadCount--;
         notifyListeners();
       }
@@ -137,9 +116,13 @@ class NotificationProvider extends ChangeNotifier {
   Future<void> markAllAsRead() async {
     try {
       await _service.markAllAsRead();
-      _notifications = _notifications
-          .map((n) => n.copyWith(isRead: true))
-          .toList();
+      // Update all items in place
+      for (var i = 0; i < _pagination.items.length; i++) {
+        final n = _pagination.items[i];
+        if (!n.isRead) {
+          _pagination.updateItem(i, n.copyWith(isRead: true));
+        }
+      }
       _unreadCount = 0;
       notifyListeners();
     } catch (e) {
@@ -163,6 +146,7 @@ class NotificationProvider extends ChangeNotifier {
   @override
   void dispose() {
     stopPolling();
+    _pagination.dispose();
     super.dispose();
   }
 }

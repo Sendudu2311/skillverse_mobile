@@ -4,6 +4,7 @@ import '../../widgets/common_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/mentor_models.dart';
 import '../../providers/mentor_booking_provider.dart';
+import '../../providers/messaging_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
@@ -40,7 +41,7 @@ class _MentorChatDialogState extends State<MentorChatDialog> {
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
+        0.0,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
@@ -54,9 +55,16 @@ class _MentorChatDialogState extends State<MentorChatDialog> {
     setState(() => _isSending = true);
     _messageController.clear();
 
+    // Also update MessagingProvider conversations list in background
+    final messagingProvider = context.read<MessagingProvider>();
+
     final success = await context.read<MentorBookingProvider>().sendPreChatMessage(
       widget.mentor.id,
       content,
+      onSent: (message) {
+        // Refresh conversations so new message appears at top
+        messagingProvider.refreshConversations();
+      },
     );
 
     setState(() => _isSending = false);

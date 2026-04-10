@@ -44,9 +44,16 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userId = context.read<AuthProvider>().user?.id;
-      context.read<DashboardProvider>().loadDashboard(userId: userId);
-      context.read<SkinProvider>().loadAllSkins();
+      // Only fetch from API if provider has no cached data yet
+      final dashProvider = context.read<DashboardProvider>();
+      if (!dashProvider.hasData) {
+        final userId = context.read<AuthProvider>().user?.id;
+        dashProvider.loadDashboard(userId: userId);
+      }
+      final skinProvider = context.read<SkinProvider>();
+      if (skinProvider.allSkins.isEmpty) {
+        skinProvider.loadAllSkins();
+      }
       context.read<NotificationProvider>().startPolling();
       _checkAndShowOnboarding();
       _subscribeFcmStreams();

@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import '../../data/models/mentor_models.dart';
 import '../../data/services/mentor_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/pagination_helper.dart';
 
 /// Manages booking operations and pre-chat messaging with mentors.
 /// Use alongside [MentorProvider] for discovery and availability.
 class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
   final MentorService _mentorService = MentorService();
 
-  // Bookings
-  List<MentorBooking> _bookings = [];
-  int _bookingsPage = 0;
-  bool _hasMoreBookings = true;
-  bool _isLoadingBookings = false;
+  // Bookings — using PaginationHelper
+  late final PaginationHelper<MentorBooking> _bookingsPagination;
 
   // Pre-chat
   List<PreChatThread> _chatThreads = [];
@@ -20,11 +18,32 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
   int _currentChatMentorId = 0;
   bool _isLoadingChat = false;
 
+  MentorBookingProvider() {
+    _bookingsPagination = PaginationHelper<MentorBooking>(
+      fetchPage: (page) async {
+        // PaginationHelper uses 1-based pages; API uses 0-based
+        final result = await _mentorService.getMyBookings(
+          page: page - 1,
+          size: 20,
+        );
+        return PaginatedResponse(
+          data: result.content,
+          currentPage: result.page,
+          totalPages: result.totalPages,
+          totalItems: result.totalElements,
+          hasMore: !result.last,
+        );
+      },
+      onStateChanged: () => notifyListeners(),
+    );
+  }
+
   // ==================== Getters ====================
 
-  List<MentorBooking> get bookings => _bookings;
-  bool get hasMoreBookings => _hasMoreBookings;
-  bool get isLoadingBookings => _isLoadingBookings;
+  List<MentorBooking> get bookings => _bookingsPagination.items;
+  bool get hasMoreBookings => _bookingsPagination.hasMore;
+  bool get isLoadingBookings => _bookingsPagination.isLoading;
+  bool get isLoadingBookingsMore => _bookingsPagination.isLoadingMore;
 
   List<PreChatThread> get chatThreads => _chatThreads;
   List<PreChatMessage> get currentChatMessages => _currentChatMessages;
@@ -34,33 +53,15 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
   // ==================== Booking ====================
 
   Future<void> loadBookings({bool refresh = false}) async {
-    if (_isLoadingBookings) return;
-
     if (refresh) {
-      _bookingsPage = 0;
-      _bookings = [];
-      _hasMoreBookings = true;
+      await _bookingsPagination.refresh();
+    } else {
+      await _bookingsPagination.loadFirstPage();
     }
+  }
 
-    if (!_hasMoreBookings) return;
-
-    _isLoadingBookings = true;
-    notifyListeners();
-
-    try {
-      final response = await _mentorService.getMyBookings(
-        page: _bookingsPage,
-        size: 20,
-      );
-      _bookings.addAll(response.content);
-      _hasMoreBookings = !response.last;
-      _bookingsPage++;
-    } catch (e) {
-      setError('Lỗi tải danh sách booking: ${e.toString()}');
-    } finally {
-      _isLoadingBookings = false;
-      notifyListeners();
-    }
+  Future<void> loadMoreBookings() async {
+    await _bookingsPagination.loadNextPage();
   }
 
   Future<MentorBooking?> createBookingWithWallet({
@@ -78,7 +79,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
         paymentMethod: 'WALLET',
       );
       final booking = await _mentorService.createBookingWithWallet(request);
-      _bookings.insert(0, booking);
+      _bookingsPagination.insertItem(booking);
       notifyListeners();
       return booking;
     }, errorMessageBuilder: (e) => 'Lỗi đặt lịch: ${e.toString()}');
@@ -90,10 +91,9 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
   Future<void> cancelBooking(int bookingId) async {
     await executeAsync(() async {
       final updatedBooking = await _mentorService.cancelBooking(bookingId);
-      final index = _bookings.indexWhere((b) => b.id == bookingId);
+      final index = _bookingsPagination.findIndex((b) => b.id == bookingId);
       if (index != -1) {
-        _bookings[index] = updatedBooking;
-        notifyListeners();
+        _bookingsPagination.updateItem(index, updatedBooking);
       }
     }, errorMessageBuilder: (e) => 'Lỗi hủy booking: ${e.toString()}');
   }
@@ -111,12 +111,12 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
         comment: comment,
         skillEndorsed: skillEndorsed,
       );
-      final index = _bookings.indexWhere((b) => b.id == bookingId);
+      final index = _bookingsPagination.findIndex((b) => b.id == bookingId);
       if (index != -1) {
-        _bookings[index] = _bookings[index].copyWith(
-          status: BookingStatus.completed,
+        _bookingsPagination.updateItem(
+          index,
+          bookings[index].copyWith(status: BookingStatus.completed),
         );
-        notifyListeners();
       }
     }, errorMessageBuilder: (e) => 'Lỗi đánh giá: ${e.toString()}');
   }
@@ -124,10 +124,9 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
   Future<void> confirmComplete(int bookingId) async {
     await executeAsync(() async {
       final updatedBooking = await _mentorService.confirmComplete(bookingId);
-      final index = _bookings.indexWhere((b) => b.id == bookingId);
+      final index = _bookingsPagination.findIndex((b) => b.id == bookingId);
       if (index != -1) {
-        _bookings[index] = updatedBooking;
-        notifyListeners();
+        _bookingsPagination.updateItem(index, updatedBooking);
       }
     }, errorMessageBuilder: (e) => 'Lỗi xác nhận hoàn thành: ${e.toString()}');
   }
@@ -135,14 +134,37 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
   Future<void> refreshBookingDetail(int bookingId) async {
     try {
       final updated = await _mentorService.getBookingDetail(bookingId);
-      final index = _bookings.indexWhere((b) => b.id == bookingId);
+      final index = _bookingsPagination.findIndex((b) => b.id == bookingId);
       if (index != -1) {
-        _bookings[index] = updated;
-        notifyListeners();
+        _bookingsPagination.updateItem(index, updated);
       }
     } catch (e) {
       debugPrint('Error refreshing booking detail: $e');
     }
+  }
+
+  /// Start the meeting — generates Jitsi link and transitions status to ONGOING
+  Future<MentorBooking?> startMeeting(int bookingId) async {
+    return await executeAsync(() async {
+      final updated = await _mentorService.startMeeting(bookingId);
+      final index = _bookingsPagination.findIndex((b) => b.id == bookingId);
+      if (index != -1) {
+        _bookingsPagination.updateItem(index, updated);
+      }
+      notifyListeners();
+      return updated;
+    }, errorMessageBuilder: (e) => 'Lỗi bắt đầu cuộc họp: ${e.toString()}');
+  }
+
+  /// Mentor marks booking completed → PENDING_COMPLETION
+  Future<void> completeBooking(int bookingId) async {
+    await executeAsync(() async {
+      final updated = await _mentorService.completeBooking(bookingId);
+      final index = _bookingsPagination.findIndex((b) => b.id == bookingId);
+      if (index != -1) {
+        _bookingsPagination.updateItem(index, updated);
+      }
+    }, errorMessageBuilder: (e) => 'Lỗi hoàn thành buổi học: ${e.toString()}');
   }
 
   // ==================== Pre-Chat ====================
@@ -171,7 +193,9 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
         page: 0,
         size: 50,
       );
-      _currentChatMessages = response.content.reversed.toList();
+      final messages = response.content.toList();
+      messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _currentChatMessages = messages;
     } catch (e) {
       debugPrint('Error loading chat history: $e');
     } finally {
@@ -180,14 +204,19 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
     }
   }
 
-  Future<bool> sendPreChatMessage(int mentorId, String content) async {
+  Future<bool> sendPreChatMessage(
+    int mentorId,
+    String content, {
+    void Function(PreChatMessage message)? onSent,
+  }) async {
     try {
       final message = await _mentorService.sendPreChatMessage(
         mentorId: mentorId,
         content: content,
       );
-      _currentChatMessages.add(message);
+      _currentChatMessages.insert(0, message);
       notifyListeners();
+      onSent?.call(message);
       return true;
     } catch (e) {
       setError('Lỗi gửi tin nhắn: ${e.toString()}');
@@ -207,15 +236,18 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
   // ==================== Reset ====================
 
   void reset() {
-    _bookings = [];
-    _bookingsPage = 0;
-    _hasMoreBookings = true;
+    _bookingsPagination.reset();
     _chatThreads = [];
     _currentChatMessages = [];
     _currentChatMentorId = 0;
-    _isLoadingBookings = false;
     _isLoadingChat = false;
     resetState();
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _bookingsPagination.dispose();
+    super.dispose();
   }
 }

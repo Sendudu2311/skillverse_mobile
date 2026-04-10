@@ -31,9 +31,17 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<UserProvider>().loadUserProfile();
-      context.read<PremiumProvider>().loadCurrentSubscription();
-      context.read<WalletProvider>().refresh();
+      // Only fetch from API if provider has no cached data yet
+      if (context.read<UserProvider>().userProfile == null) {
+        context.read<UserProvider>().loadUserProfile();
+      }
+      if (context.read<PremiumProvider>().currentSubscription == null) {
+        context.read<PremiumProvider>().loadCurrentSubscription();
+      }
+      if (context.read<WalletProvider>().cashBalance == 0 &&
+          context.read<WalletProvider>().coinBalance == 0) {
+        context.read<WalletProvider>().refresh();
+      }
     });
   }
 
@@ -814,6 +822,13 @@ class _ProfilePageState extends State<ProfilePage> {
             'Khóa học của tôi',
             Icons.school_outlined,
             () => context.push('/my-courses'),
+            isDark,
+          ),
+          _buildMenuItem(
+            context,
+            'Tin nhắn',
+            Icons.chat_outlined,
+            () => context.push('/messaging'),
             isDark,
           ),
           _buildMenuItem(

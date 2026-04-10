@@ -46,7 +46,7 @@ import '../pages/expert_chat/expert_chat_landing_page.dart';
 import '../pages/expert_chat/domain_selection_page.dart';
 import '../pages/expert_chat/role_selection_page.dart';
 import '../pages/expert_chat/expert_chat_page.dart';
-import '../pages/help/help_center_page.dart';
+import '../pages/support/help_center_page.dart';
 import '../pages/legal/privacy_policy_page.dart';
 import '../pages/terms/terms_of_service_page.dart';
 import '../pages/splash/splash_page.dart';

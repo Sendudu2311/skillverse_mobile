@@ -23,22 +23,39 @@ class MyApplicationsPage extends StatefulWidget {
 class _MyApplicationsPageState extends State<MyApplicationsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _scrollController.addListener(_onScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<JobProvider>();
-      provider.loadMyApplications();
-      provider.loadMyShortTermApplications();
+      if (provider.myLongTermApplications.isEmpty) {
+        provider.loadMyLongTermApplications();
+      }
+      if (provider.myShortTermApplications.isEmpty) {
+        provider.loadMyShortTermApplications();
+      }
     });
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final provider = context.read<JobProvider>();
+      if (provider.hasMoreShortTermApps && !provider.isLoadingMoreShortTermApps) {
+        provider.loadMoreShortTermApplications();
+      }
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -84,7 +101,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     }
 
     return RefreshIndicator(
-      onRefresh: () async => provider.loadMyApplications(),
+      onRefresh: () async => provider.loadMyLongTermApplications(),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: apps.length,
@@ -237,19 +254,53 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
   Widget _buildShortTermApplications(JobProvider provider) {
     final apps = provider.myShortTermApplications;
 
-    if (apps.isEmpty) {
+    if (apps.isEmpty && !provider.isLoadingShortTermApps) {
       return _buildEmptyState('Chưa có đơn freelance nào', isLongTerm: false);
     }
 
     return RefreshIndicator(
-      onRefresh: () async => provider.loadMyShortTermApplications(),
+      onRefresh: () async => provider.loadMyShortTermApplications(refresh: true),
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16),
-        itemCount: apps.length,
-        itemBuilder: (context, index) => AnimatedListItem(
-          index: index,
-          child: _buildShortTermAppCard(apps[index], provider),
-        ),
+        itemCount: apps.length + (provider.hasMoreShortTermApps ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == apps.length) {
+            if (provider.isLoadingMoreShortTermApps) {
+              return const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (!provider.hasMoreShortTermApps) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: Text(
+                    'Đã hiển thị tất cả',
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodySmall?.color,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                child: TextButton(
+                  onPressed: () => provider.loadMoreShortTermApplications(),
+                  child: const Text('Xem thêm'),
+                ),
+              ),
+            );
+          }
+          return AnimatedListItem(
+            index: index,
+            child: _buildShortTermAppCard(apps[index], provider),
+          );
+        },
       ),
     );
   }

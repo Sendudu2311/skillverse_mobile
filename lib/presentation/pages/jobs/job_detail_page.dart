@@ -35,7 +35,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
         provider.loadMyShortTermApplications();
       } else {
         provider.loadJobDetails(widget.jobId);
-        provider.loadMyApplications();
+        provider.loadMyLongTermApplications();
       }
     });
   }

@@ -26,6 +26,7 @@ class _JobsPageState extends State<JobsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
 
   // Filter state
@@ -37,15 +38,41 @@ class _JobsPageState extends State<JobsPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_onTabChanged);
+    _scrollController.addListener(_onScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<JobProvider>();
-      provider.loadPublicJobs();
-      provider.loadShortTermJobs();
+      // Only fetch from API if provider has no cached data yet
+      if (provider.longTermJobs.isEmpty && !provider.isLoadingJobs) {
+        provider.loadPublicJobs();
+      }
+      if (provider.shortTermJobs.isEmpty && !provider.isLoadingJobs) {
+        provider.loadShortTermJobs();
+      }
       // Pre-load applications for "Đã ứng tuyển" badges
-      provider.loadMyApplications();
-      provider.loadMyShortTermApplications();
+      if (provider.myLongTermApplications.isEmpty) {
+        provider.loadMyLongTermApplications();
+      }
+      if (provider.myShortTermApplications.isEmpty) {
+        provider.loadMyShortTermApplications();
+      }
     });
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final provider = context.read<JobProvider>();
+      if (_tabController.index == 0) {
+        if (provider.hasMoreLongTermJobs && !provider.isLoadingMoreLongTermJobs) {
+          provider.loadMoreLongTermJobs();
+        }
+      } else {
+        if (provider.hasMoreShortTermJobs && !provider.isLoadingMoreShortTermJobs) {
+          provider.loadMoreShortTermJobs();
+        }
+      }
+    }
   }
 
   void _onTabChanged() {
@@ -58,6 +85,7 @@ class _JobsPageState extends State<JobsPage>
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _scrollController.dispose();
     _debounce?.cancel();
     super.dispose();
   }
@@ -355,7 +383,7 @@ class _JobsPageState extends State<JobsPage>
         if (provider.hasError) {
           return ErrorStateWidget(
             message: provider.errorMessage ?? 'Lỗi tải dữ liệu',
-            onRetry: () => provider.loadPublicJobs(),
+            onRetry: () => provider.loadPublicJobs(refresh: true),
           );
         }
 
@@ -367,16 +395,51 @@ class _JobsPageState extends State<JobsPage>
 
         return RefreshIndicator(
           onRefresh: () async {
-            await provider.loadPublicJobs();
-            await provider.loadMyApplications();
+            await provider.loadPublicJobs(refresh: true);
+            await provider.loadMyLongTermApplications();
           },
           child: ListView.builder(
+            controller: _scrollController,
             padding: const EdgeInsets.all(16),
-            itemCount: jobs.length,
-            itemBuilder: (context, index) => AnimatedListItem(
-              index: index,
-              child: _buildLongTermJobCard(jobs[index]),
-            ),
+            itemCount: jobs.length + (provider.hasMoreLongTermJobs ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == jobs.length) {
+                // Load more sentinel
+                if (provider.isLoadingMoreLongTermJobs) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (!provider.hasMoreLongTermJobs) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: Text(
+                        'Đã hiển thị tất cả',
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: TextButton(
+                      onPressed: () => provider.loadMoreLongTermJobs(),
+                      child: const Text('Xem thêm'),
+                    ),
+                  ),
+                );
+              }
+              return AnimatedListItem(
+                index: index,
+                child: _buildLongTermJobCard(jobs[index]),
+              );
+            },
           ),
         );
       },
@@ -526,7 +589,7 @@ class _JobsPageState extends State<JobsPage>
         if (provider.hasError) {
           return ErrorStateWidget(
             message: provider.errorMessage ?? 'Lỗi tải dữ liệu',
-            onRetry: () => provider.loadShortTermJobs(),
+            onRetry: () => provider.loadShortTermJobs(refresh: true),
           );
         }
 
@@ -543,16 +606,50 @@ class _JobsPageState extends State<JobsPage>
 
         return RefreshIndicator(
           onRefresh: () async {
-            await provider.loadShortTermJobs();
+            await provider.loadShortTermJobs(refresh: true);
             await provider.loadMyShortTermApplications();
           },
           child: ListView.builder(
+            controller: _scrollController,
             padding: const EdgeInsets.all(16),
-            itemCount: jobs.length,
-            itemBuilder: (context, index) => AnimatedListItem(
-              index: index,
-              child: _buildShortTermJobCard(jobs[index]),
-            ),
+            itemCount: jobs.length + (provider.hasMoreShortTermJobs ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == jobs.length) {
+                if (provider.isLoadingMoreShortTermJobs) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (!provider.hasMoreShortTermJobs) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: Text(
+                        'Đã hiển thị tất cả',
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: TextButton(
+                      onPressed: () => provider.loadMoreShortTermJobs(),
+                      child: const Text('Xem thêm'),
+                    ),
+                  ),
+                );
+              }
+              return AnimatedListItem(
+                index: index,
+                child: _buildShortTermJobCard(jobs[index]),
+              );
+            },
           ),
         );
       },

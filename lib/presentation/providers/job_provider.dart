@@ -1,20 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../data/models/job_models.dart';
 import '../../data/services/job_service.dart';
+import '../../core/utils/pagination_helper.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
 
 class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
   final JobService _jobService = JobService();
 
   // ==================== STATE ====================
-
-  // Long-term jobs
-  List<JobPostingResponse> _longTermJobs = [];
-  List<JobApplicationResponse> _myLongTermApplications = [];
-
-  // Short-term jobs
-  List<ShortTermJobResponse> _shortTermJobs = [];
-  List<ShortTermApplicationResponse> _myShortTermApplications = [];
 
   // Job detail
   JobPostingResponse? _selectedJob;
@@ -23,36 +16,133 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
   // UI state
   int _selectedTab = 0; // 0 = long-term, 1 = short-term
   String _searchQuery = '';
-  bool _isLoadingJobs = false;
-  bool _isLoadingApplications = false;
+
+  // Loading flags
   bool _isApplying = false;
   bool _isSubmittingDeliverable = false;
+  bool _isLoadingLongTermApps = false;
+
+  // Lazy PaginationHelpers
+  PaginationHelper<JobPostingResponse>? _longTermPagination;
+  PaginationHelper<ShortTermJobResponse>? _shortTermPagination;
+  PaginationHelper<ShortTermApplicationResponse>?
+      _shortTermAppPagination;
+
+  // ==================== PAGINATION HELPERS ====================
+
+  PaginationHelper<JobPostingResponse> get _longTerm {
+    _longTermPagination ??= PaginationHelper<JobPostingResponse>(
+      fetchPage: (page) async {
+        final result = await _jobService.getPublicJobsPaged(
+          page: page - 1, // PaginationHelper uses 1-based
+          size: 10,
+        );
+        return PaginatedResponse<JobPostingResponse>(
+          data: result.content ?? [],
+          currentPage: page,
+          totalPages: result.totalPages,
+          totalItems: result.totalElements,
+          hasMore: !result.last,
+        );
+      },
+      onStateChanged: () => notifyListeners(),
+    );
+    return _longTermPagination!;
+  }
+
+  PaginationHelper<ShortTermJobResponse> get _shortTerm {
+    _shortTermPagination ??= PaginationHelper<ShortTermJobResponse>(
+      fetchPage: (page) async {
+        final result = await _jobService.getPublicShortTermJobsPaged(
+          page: page - 1,
+          size: 10,
+        );
+        return PaginatedResponse<ShortTermJobResponse>(
+          data: result.content ?? [],
+          currentPage: page,
+          totalPages: result.totalPages,
+          totalItems: result.totalElements,
+          hasMore: !result.last,
+        );
+      },
+      onStateChanged: () => notifyListeners(),
+    );
+    return _shortTermPagination!;
+  }
+
+  PaginationHelper<ShortTermApplicationResponse>
+      get _shortTermApp {
+    _shortTermAppPagination ??=
+        PaginationHelper<ShortTermApplicationResponse>(
+      fetchPage: (page) async {
+        final result = await _jobService.getMyShortTermApplicationsPaged(
+          page: page - 1,
+          size: 10,
+        );
+        return PaginatedResponse<ShortTermApplicationResponse>(
+          data: result.content ?? [],
+          currentPage: page,
+          totalPages: result.totalPages,
+          totalItems: result.totalElements,
+          hasMore: !result.last,
+        );
+      },
+      onStateChanged: () => notifyListeners(),
+    );
+    return _shortTermAppPagination!;
+  }
 
   // ==================== GETTERS ====================
 
-  List<JobPostingResponse> get longTermJobs => _longTermJobs;
-  List<ShortTermJobResponse> get shortTermJobs => _shortTermJobs;
-  List<JobApplicationResponse> get myLongTermApplications =>
-      _myLongTermApplications;
+  // Long-term jobs (paginated)
+  List<JobPostingResponse> get longTermJobs => _longTerm.items;
+  bool get isLoadingLongTermJobs => _longTerm.isInitialLoading;
+  bool get isLoadingMoreLongTermJobs => _longTerm.isLoadingMore;
+  bool get hasMoreLongTermJobs => _longTerm.hasMore;
+  bool get hasErrorLongTermJobs => _longTerm.hasError;
+
+  // Short-term jobs (paginated)
+  List<ShortTermJobResponse> get shortTermJobs => _shortTerm.items;
+  bool get isLoadingShortTermJobs => _shortTerm.isInitialLoading;
+  bool get isLoadingMoreShortTermJobs => _shortTerm.isLoadingMore;
+  bool get hasMoreShortTermJobs => _shortTerm.hasMore;
+  bool get hasErrorShortTermJobs => _shortTerm.hasError;
+
+  // Short-term applications (paginated)
   List<ShortTermApplicationResponse> get myShortTermApplications =>
-      _myShortTermApplications;
+      _shortTermApp.items;
+  bool get isLoadingShortTermApps => _shortTermApp.isInitialLoading;
+  bool get isLoadingMoreShortTermApps => _shortTermApp.isLoadingMore;
+  bool get hasMoreShortTermApps => _shortTermApp.hasMore;
+
+  // Long-term applications (simple list — no server-side pagination)
+  List<JobApplicationResponse> _longTermApplications = [];
+  List<JobApplicationResponse> get myLongTermApplications => _longTermApplications;
+
+  // Job detail
   JobPostingResponse? get selectedJob => _selectedJob;
   ShortTermJobResponse? get selectedShortTermJob => _selectedShortTermJob;
+
+  // UI state
   int get selectedTab => _selectedTab;
   String get searchQuery => _searchQuery;
-  bool get isLoadingJobs => _isLoadingJobs;
-  bool get isLoadingApplications => _isLoadingApplications;
+
+  // Loading flags
   bool get isApplying => _isApplying;
   bool get isSubmittingDeliverable => _isSubmittingDeliverable;
 
+  // Aliases for existing code compatibility
+  bool get isLoadingJobs => isLoadingLongTermJobs || isLoadingShortTermJobs;
+  bool get isLoadingApplications => _isLoadingLongTermApps || isLoadingShortTermApps;
+
   /// Check if user has already applied to a long-term job
   bool hasAppliedToJob(int jobId) {
-    return _myLongTermApplications.any((app) => app.jobId == jobId);
+    return myLongTermApplications.any((app) => app.jobId == jobId);
   }
 
   /// Check if user has already applied to a short-term job
   bool hasAppliedToShortTermJob(int jobId) {
-    return _myShortTermApplications.any((app) => app.jobId == jobId);
+    return myShortTermApplications.any((app) => app.jobId == jobId);
   }
 
   // ==================== TAB CONTROL ====================
@@ -62,85 +152,36 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
     notifyListeners();
   }
 
-  // ==================== LONG-TERM JOBS ====================
+  // ==================== LONG-TERM JOBS (PAGINATED) ====================
 
-  /// Load all public long-term jobs
-  Future<void> loadPublicJobs() async {
-    _isLoadingJobs = true;
-    notifyListeners();
-
-    try {
-      _longTermJobs = await _jobService.getPublicJobs();
-      setError(null);
-    } catch (e) {
-      setError('Lỗi tải việc làm: ${e.toString()}');
-    } finally {
-      _isLoadingJobs = false;
-      notifyListeners();
+  /// Load first page of public long-term jobs
+  Future<void> loadPublicJobs({bool refresh = false}) async {
+    if (refresh) {
+      await _longTerm.refresh();
+    } else {
+      await _longTerm.loadFirstPage();
     }
   }
 
-  /// Load long-term job details
-  Future<void> loadJobDetails(int jobId) async {
-    await executeAsync(() async {
-      _selectedJob = await _jobService.getJobDetails(jobId);
-      notifyListeners();
-    }, errorMessageBuilder: (e) => 'Lỗi tải chi tiết: ${e.toString()}');
+  /// Load next page of long-term jobs
+  Future<void> loadMoreLongTermJobs() async {
+    await _longTerm.loadNextPage();
   }
 
-  /// Apply to a long-term job
-  Future<bool> applyToJob(int jobId, {String? coverLetter}) async {
-    _isApplying = true;
-    notifyListeners();
+  // ==================== SHORT-TERM JOBS (PAGINATED) ====================
 
-    try {
-      final request = ApplyJobRequest(coverLetter: coverLetter);
-      await _jobService.applyToJob(jobId, request);
-      setError(null);
-      // Reload applications after applying
-      await loadMyApplications();
-      return true;
-    } catch (e) {
-      setError('Ứng tuyển thất bại: ${e.toString()}');
-      return false;
-    } finally {
-      _isApplying = false;
-      notifyListeners();
+  /// Load first page of published short-term jobs
+  Future<void> loadShortTermJobs({bool refresh = false}) async {
+    if (refresh) {
+      await _shortTerm.refresh();
+    } else {
+      await _shortTerm.loadFirstPage();
     }
   }
 
-  /// Load current user's long-term applications
-  Future<void> loadMyApplications() async {
-    _isLoadingApplications = true;
-    notifyListeners();
-
-    try {
-      _myLongTermApplications = await _jobService.getMyApplications();
-      setError(null);
-    } catch (e) {
-      setError('Lỗi tải đơn ứng tuyển: ${e.toString()}');
-    } finally {
-      _isLoadingApplications = false;
-      notifyListeners();
-    }
-  }
-
-  // ==================== SHORT-TERM JOBS ====================
-
-  /// Load all published short-term jobs
-  Future<void> loadShortTermJobs() async {
-    _isLoadingJobs = true;
-    notifyListeners();
-
-    try {
-      _shortTermJobs = await _jobService.getPublicShortTermJobs();
-      setError(null);
-    } catch (e) {
-      setError('Lỗi tải việc ngắn hạn: ${e.toString()}');
-    } finally {
-      _isLoadingJobs = false;
-      notifyListeners();
-    }
+  /// Load next page of short-term jobs
+  Future<void> loadMoreShortTermJobs() async {
+    await _shortTerm.loadNextPage();
   }
 
   /// Search short-term jobs with filters
@@ -152,25 +193,39 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
     String? urgency,
   }) async {
     _searchQuery = search ?? '';
-    _isLoadingJobs = true;
-    notifyListeners();
+    _shortTermPagination?.reset();
+    _shortTermPagination ??= PaginationHelper<ShortTermJobResponse>(
+      fetchPage: (page) async {
+        final r = await _jobService.searchShortTermJobs(
+          search: search,
+          minBudget: minBudget,
+          maxBudget: maxBudget,
+          isRemote: isRemote,
+          urgency: urgency,
+          page: page - 1,
+          size: 10,
+        );
+        return PaginatedResponse<ShortTermJobResponse>(
+          data: r.content ?? [],
+          currentPage: page,
+          totalPages: r.totalPages,
+          totalItems: r.totalElements,
+          hasMore: !r.last,
+        );
+      },
+      onStateChanged: () => notifyListeners(),
+    );
+    await _shortTermPagination!.loadFirstPage();
+  }
 
-    try {
-      final result = await _jobService.searchShortTermJobs(
-        search: search,
-        minBudget: minBudget,
-        maxBudget: maxBudget,
-        isRemote: isRemote,
-        urgency: urgency,
-      );
-      _shortTermJobs = result.content ?? [];
-      setError(null);
-    } catch (e) {
-      setError('Lỗi tìm kiếm: ${e.toString()}');
-    } finally {
-      _isLoadingJobs = false;
+  // ==================== JOB DETAIL ====================
+
+  /// Load long-term job details
+  Future<void> loadJobDetails(int jobId) async {
+    await executeAsync(() async {
+      _selectedJob = await _jobService.getJobDetails(jobId);
       notifyListeners();
-    }
+    }, errorMessageBuilder: (e) => 'Lỗi tải chi tiết: ${e.toString()}');
   }
 
   /// Load short-term job details
@@ -179,6 +234,28 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
       _selectedShortTermJob = await _jobService.getShortTermJobDetails(jobId);
       notifyListeners();
     }, errorMessageBuilder: (e) => 'Lỗi tải chi tiết: ${e.toString()}');
+  }
+
+  // ==================== APPLICATIONS ====================
+
+  /// Apply to a long-term job
+  Future<bool> applyToJob(int jobId, {String? coverLetter}) async {
+    _isApplying = true;
+    notifyListeners();
+
+    try {
+      final request = ApplyJobRequest(coverLetter: coverLetter);
+      await _jobService.applyToJob(jobId, request);
+      setError(null);
+      await loadMyLongTermApplications();
+      return true;
+    } catch (e) {
+      setError('Ứng tuyển thất bại: ${e.toString()}');
+      return false;
+    } finally {
+      _isApplying = false;
+      notifyListeners();
+    }
   }
 
   /// Apply to a short-term job
@@ -212,36 +289,51 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
     }
   }
 
-  /// Load current user's short-term applications
-  Future<void> loadMyShortTermApplications() async {
-    _isLoadingApplications = true;
+  /// Load current user's long-term applications (non-paginated)
+  Future<void> loadMyLongTermApplications({bool refresh = false}) async {
+    if (_isLoadingLongTermApps) return;
+    _isLoadingLongTermApps = true;
     notifyListeners();
 
     try {
-      _myShortTermApplications =
-          await _jobService.getMyShortTermApplications();
+      if (refresh) _longTermApplications = [];
+      final apps = await _jobService.getMyApplications();
+      _longTermApplications = apps;
       setError(null);
     } catch (e) {
       setError('Lỗi tải đơn ứng tuyển: ${e.toString()}');
     } finally {
-      _isLoadingApplications = false;
+      _isLoadingLongTermApps = false;
       notifyListeners();
     }
   }
 
-  /// Submit deliverables for a short-term job (worker bàn giao công việc)
+  /// Load first page of short-term applications (paginated)
+  Future<void> loadMyShortTermApplications({bool refresh = false}) async {
+    if (refresh) {
+      await _shortTermApp.refresh();
+    } else {
+      await _shortTermApp.loadFirstPage();
+    }
+  }
+
+  /// Load next page of short-term applications
+  Future<void> loadMoreShortTermApplications() async {
+    await _shortTermApp.loadNextPage();
+  }
+
+  /// Submit deliverables for a short-term job
   Future<bool> submitDeliverables(SubmitDeliverableRequest request) async {
     _isSubmittingDeliverable = true;
     notifyListeners();
 
     try {
       final updated = await _jobService.submitDeliverables(request);
-      final idx = _myShortTermApplications.indexWhere((a) => a.id == updated.id);
+      final idx = myShortTermApplications.indexWhere((a) => a.id == updated.id);
       if (idx != -1) {
-        _myShortTermApplications[idx] = updated;
+        _shortTermApp.updateItem(idx, updated);
       }
       setError(null);
-      notifyListeners();
       return true;
     } catch (e) {
       setError('Nộp bài thất bại: ${e.toString()}');
@@ -256,10 +348,8 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
   Future<bool> withdrawApplication(int applicationId) async {
     try {
       await _jobService.withdrawShortTermApplication(applicationId);
-      _myShortTermApplications
-          .removeWhere((app) => app.id == applicationId);
+      _shortTermApp.removeWhere((app) => app.id == applicationId);
       setError(null);
-      notifyListeners();
       return true;
     } catch (e) {
       setError('Rút đơn thất bại: ${e.toString()}');
@@ -282,9 +372,9 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
 
   /// Get filtered long-term jobs (client-side search)
   List<JobPostingResponse> get filteredLongTermJobs {
-    if (_searchQuery.isEmpty) return _longTermJobs;
+    if (_searchQuery.isEmpty) return longTermJobs;
     final q = _searchQuery.toLowerCase();
-    return _longTermJobs.where((job) {
+    return longTermJobs.where((job) {
       return (job.title?.toLowerCase().contains(q) ?? false) ||
           (job.description?.toLowerCase().contains(q) ?? false) ||
           (job.recruiterCompanyName?.toLowerCase().contains(q) ?? false);
@@ -296,12 +386,12 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
   /// Refresh all data
   Future<void> refresh() async {
     if (_selectedTab == 0) {
-      await loadPublicJobs();
+      await loadPublicJobs(refresh: true);
     } else {
       if (_searchQuery.isNotEmpty) {
         await searchShortTermJobs(search: _searchQuery);
       } else {
-        await loadShortTermJobs();
+        await loadShortTermJobs(refresh: true);
       }
     }
   }

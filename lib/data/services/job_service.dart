@@ -12,7 +12,7 @@ class JobService {
 
   // ==================== LONG-TERM JOBS ====================
 
-  /// Get all public (OPEN) long-term jobs
+  /// Get all public (OPEN) long-term jobs (non-paginated)
   Future<List<JobPostingResponse>> getPublicJobs() async {
     try {
       final response = await _apiClient.dio.get<List<dynamic>>('/jobs/public');
@@ -29,6 +29,92 @@ class JobService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Lấy danh sách việc làm thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Get public long-term jobs with pagination
+  /// GET /api/jobs/public/paged
+  Future<JobPageResponse<JobPostingResponse>> getPublicJobsPaged({
+    int page = 0,
+    int size = 10,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/jobs/public/paged',
+        queryParameters: {'page': page, 'size': size},
+      );
+
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+
+      return JobPageResponse<JobPostingResponse>.fromJson(
+        response.data!,
+        (json) => JobPostingResponse.fromJson(json as Map<String, dynamic>),
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Lấy danh sách việc làm thất bại: ${e.toString()}');
+    }
+  }
+
+  /// Get public short-term jobs with pagination
+  /// GET /api/short-term-jobs/public/paged
+  Future<JobPageResponse<ShortTermJobResponse>>
+  getPublicShortTermJobsPaged({
+    int page = 0,
+    int size = 10,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/short-term-jobs/public/paged',
+        queryParameters: {'page': page, 'size': size},
+      );
+
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+
+      return JobPageResponse<ShortTermJobResponse>.fromJson(
+        response.data!,
+        (json) => ShortTermJobResponse.fromJson(json as Map<String, dynamic>),
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(
+        'Lấy danh sách việc ngắn hạn thất bại: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Get my short-term applications with pagination
+  /// GET /api/short-term-jobs/my-applications/paged
+  Future<JobPageResponse<ShortTermApplicationResponse>>
+  getMyShortTermApplicationsPaged({
+    int page = 0,
+    int size = 10,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/short-term-jobs/my-applications/paged',
+        queryParameters: {'page': page, 'size': size},
+      );
+
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+
+      return JobPageResponse<ShortTermApplicationResponse>.fromJson(
+        response.data!,
+        (json) => ShortTermApplicationResponse.fromJson(
+          json as Map<String, dynamic>,
+        ),
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(
+        'Lấy danh sách đơn ứng tuyển ngắn hạn thất bại: ${e.toString()}',
+      );
     }
   }
 
@@ -74,7 +160,7 @@ class JobService {
     }
   }
 
-  /// Get current user's long-term job applications
+  /// Get current user's long-term applications (non-paginated)
   Future<List<JobApplicationResponse>> getMyApplications() async {
     try {
       final response = await _apiClient.dio.get<List<dynamic>>(

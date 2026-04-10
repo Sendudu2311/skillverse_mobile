@@ -122,7 +122,7 @@ class _NotificationPageState extends State<NotificationPage> {
             controller: _scrollController,
             padding: const EdgeInsets.only(bottom: 24),
             itemCount:
-                provider.notifications.length + (provider.isLoadingMore ? 1 : 0),
+                provider.notifications.length + (provider.hasMore && provider.isLoadingMore ? 1 : 0),
             separatorBuilder: (_, __) =>
                 const Divider(height: 1, indent: 72),
             itemBuilder: (context, index) {

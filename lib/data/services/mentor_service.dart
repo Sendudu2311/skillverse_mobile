@@ -240,6 +240,55 @@ class MentorService {
     }
   }
 
+  /// Start meeting — generates Jitsi link and transitions to ONGOING
+  Future<MentorBooking> startMeeting(int bookingId) async {
+    try {
+      final response = await _apiClient.put(
+        '/mentor-bookings/$bookingId/start',
+      );
+      return MentorBooking.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Mentor marks booking as complete (PENDING_COMPLETION)
+  Future<MentorBooking> completeBooking(int bookingId) async {
+    try {
+      final response = await _apiClient.put(
+        '/mentor-bookings/$bookingId/complete',
+      );
+      return MentorBooking.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Mentor approves a PENDING booking
+  Future<MentorBooking> approveBooking(int bookingId) async {
+    try {
+      final response = await _apiClient.put(
+        '/mentor-bookings/$bookingId/approve',
+      );
+      return MentorBooking.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Mentor rejects a PENDING booking
+  Future<MentorBooking> rejectBooking(int bookingId, {String? reason}) async {
+    try {
+      final response = await _apiClient.put(
+        '/mentor-bookings/$bookingId/reject',
+        queryParameters: reason != null ? {'reason': reason} : null,
+      );
+      return MentorBooking.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   /// Download booking invoice
   Future<List<int>> downloadInvoice(int bookingId) async {
     try {

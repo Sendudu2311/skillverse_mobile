@@ -27,14 +27,28 @@ class _MyBookingsPageState extends State<MyBookingsPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MentorBookingProvider>().loadBookings(refresh: true);
     });
   }
 
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final provider = context.read<MentorBookingProvider>();
+      if (provider.hasMoreBookings && !provider.isLoadingBookingsMore) {
+        provider.loadMoreBookings();
+      }
+    }
+  }
+
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void dispose() {
     _tabController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -158,9 +172,28 @@ class _MyBookingsPageState extends State<MyBookingsPage>
     return RefreshIndicator(
       onRefresh: () => provider.loadBookings(refresh: true),
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16),
-        itemCount: filteredBookings.length,
+        itemCount: filteredBookings.length + (provider.hasMoreBookings ? 1 : 0),
         itemBuilder: (context, index) {
+          if (index == filteredBookings.length) {
+            // Load more indicator at the bottom
+            if (provider.isLoadingBookingsMore && provider.hasMoreBookings) {
+              return const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                child: TextButton(
+                  onPressed: () => provider.loadMoreBookings(),
+                  child: const Text('Xem thêm'),
+                ),
+              ),
+            );
+          }
           final booking = filteredBookings[index];
           return _buildBookingCard(context, booking, isDark, provider);
         },
@@ -178,6 +211,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
       margin: const EdgeInsets.only(bottom: 16),
       child: GlassCard(
         padding: const EdgeInsets.all(16),
+        onTap: () => context.push('/mentor-booking-detail/${booking.id}'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

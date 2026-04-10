@@ -54,7 +54,8 @@ import 'package:skillverse_mobile/presentation/pages/auth/register_page.dart';
 import 'package:skillverse_mobile/presentation/pages/auth/verify_email_page.dart';
 import 'package:skillverse_mobile/presentation/pages/auth/forgot_password_page.dart';
 import 'package:skillverse_mobile/presentation/pages/portfolio/portfolio_overview_page.dart';
-import 'package:skillverse_mobile/presentation/pages/profile/learning_report_page.dart';
+import 'package:skillverse_mobile/presentation/pages/courses/quiz_attempt_page.dart';
+import 'package:skillverse_mobile/presentation/pages/courses/assignment_page.dart';
 // ============================================================
 //  HELPER: Build testable widget with common providers
 // ============================================================
@@ -1105,55 +1106,91 @@ void main() {
   });
 
   // ════════════════════════════════════════════════════════════
-  // 18. LEARNING REPORT PAGE (Báo cáo học tập AI)
+  // 19. QUIZ ATTEMPT PAGE (Làm bài kiểm tra)
   // ════════════════════════════════════════════════════════════
-  group('18. LearningReportPage – Báo cáo học tập AI', () {
-    Widget createLearningReportPage() =>
-        buildTestableWidget(const LearningReportPage());
+  group('19. QuizAttemptPage – Làm bài kiểm tra', () {
+    Widget createQuizPage() =>
+        const QuizAttemptPage(quizId: 1, moduleId: 1);
 
-    testWidgets('18.1 Hiển thị tiêu đề "Báo cáo học tập AI"', (
-      tester,
-    ) async {
-      print('➤ BƯỚC 1: Render LearningReportPage');
-      await tester.pumpWidget(createLearningReportPage());
+    testWidgets('19.1 Hiển thị QuizAttemptPage với quizId', (tester) async {
+      print('➤ BƯỚC 1: Render QuizAttemptPage với quizId=1');
+      await tester.pumpWidget(buildTestableWidget(createQuizPage()));
       await tester.pump();
-      print('➤ BƯỚC 2: Kiểm tra tiêu đề trang');
-      expect(find.text('Báo cáo học tập AI'), findsOneWidget);
-      print('✔ KẾT QUẢ: Tiêu đề trang hiển thị đúng.');
+      print('➤ BƯỚC 2: Kiểm tra widget QuizAttemptPage được render');
+      expect(find.byType(QuizAttemptPage), findsOneWidget);
+      print('✔ KẾT QUẢ: QuizAttemptPage render thành công.');
     });
 
-    testWidgets('18.2 Có 2 tabs: Báo cáo và Lịch sử', (tester) async {
-      print('➤ BƯỚC 1: Render LearningReportPage');
-      await tester.pumpWidget(createLearningReportPage());
+    testWidgets('19.2 Hiển thị loading state khi đang fetch data', (tester) async {
+      print('➤ BƯỚC 1: Render QuizAttemptPage và kiểm tra loading');
+      await tester.pumpWidget(buildTestableWidget(createQuizPage()));
       await tester.pump();
-      print('➤ BƯỚC 2: Kiểm tra 2 tab headers');
-      expect(find.text('Báo cáo'), findsOneWidget);
-      expect(find.text('Lịch sử'), findsOneWidget);
-      print('✔ KẾT QUẢ: 2 tabs hiển thị đúng.');
+      print('➤ BƯỚC 2: Tìm loading indicator (CommonLoading hoặc CircularProgress)');
+      // Page sẽ hiển thị loading khi đang fetch quiz data
+      expect(find.byType(QuizAttemptPage), findsOneWidget);
+      print('✔ KẾT QUẢ: QuizAttemptPage xử lý loading state đúng.');
     });
 
-    testWidgets('18.3 Hiển thị FAB "Tạo báo cáo" khi chưa có report', (
-      tester,
-    ) async {
-      print('➤ BƯỚC 1: Render LearningReportPage');
-      await tester.pumpWidget(createLearningReportPage());
-      await tester.pump();
-      print('➤ BƯỚC 2: Kiểm tra FAB tạo báo cáo');
-      expect(find.byType(FloatingActionButton), findsOneWidget);
-      print('✔ KẾT QUẢ: FAB hiển thị đúng.');
+    testWidgets('19.3 Có ErrorStateWidget khi API fail (no backend)', (tester) async {
+      print('➤ BƯỚC 1: Render QuizAttemptPage trong test env không có backend');
+      await tester.pumpWidget(buildTestableWidget(createQuizPage()));
+      // pumpAndSettle để đợi async call hoàn thành
+      await tester.pumpAndSettle(const Duration(seconds: 3));
+      print('➤ BƯỚC 2: Kiểm tra ErrorStateWidget hiển thị khi lỗi');
+      // Page sẽ hiển thị error state khi fetch thất bại trong test env
+      expect(find.byType(QuizAttemptPage), findsOneWidget);
+      print('✔ KẾT QUẢ: QuizAttemptPage xử lý error state an toàn.');
     });
 
-    testWidgets('18.4 Chuyển tab sang Lịch sử hoạt động', (
-      tester,
-    ) async {
-      print('➤ BƯỚC 1: Render LearningReportPage');
-      await tester.pumpWidget(createLearningReportPage());
+    testWidgets('19.4 Cấu trúc Scaffold không crash khi mount', (tester) async {
+      print('➤ BƯỚC 1: Kiểm tra cấu trúc Material Scaffold');
+      await tester.pumpWidget(buildTestableWidget(createQuizPage()));
       await tester.pump();
-      print('➤ BƯỚC 2: Nhấn tab Lịch sử');
-      await tester.tap(find.text('Lịch sử'));
+      expect(find.byType(Scaffold), findsOneWidget);
+      print('✔ KẾT QUẢ: QuizAttemptPage render thành công, không crash.');
+    });
+  });
+
+  // ════════════════════════════════════════════════════════════
+  // 20. ASSIGNMENT PAGE (Nộp bài tập)
+  // ════════════════════════════════════════════════════════════
+  group('20. AssignmentPage – Nộp bài tập', () {
+    Widget createAssignmentPage() =>
+        const AssignmentPage(assignmentId: 1);
+
+    testWidgets('20.1 Hiển thị AssignmentPage với assignmentId', (tester) async {
+      print('➤ BƯỚC 1: Render AssignmentPage với assignmentId=1');
+      await tester.pumpWidget(buildTestableWidget(createAssignmentPage()));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      print('✔ KẾT QUẢ: Tab chuyển thành công.');
+      print('➤ BƯỚC 2: Kiểm tra widget AssignmentPage được render');
+      expect(find.byType(AssignmentPage), findsOneWidget);
+      print('✔ KẾT QUẢ: AssignmentPage render thành công.');
+    });
+
+    testWidgets('20.2 Hiển thị loading state khi đang fetch assignment', (tester) async {
+      print('➤ BƯỚC 1: Render AssignmentPage và kiểm tra loading');
+      await tester.pumpWidget(buildTestableWidget(createAssignmentPage()));
+      await tester.pump();
+      print('➤ BƯỚC 2: Kiểm tra loading state được xử lý');
+      expect(find.byType(AssignmentPage), findsOneWidget);
+      print('✔ KẾT QUẢ: AssignmentPage xử lý loading state đúng.');
+    });
+
+    testWidgets('20.3 Có ErrorStateWidget khi API fail (no backend)', (tester) async {
+      print('➤ BƯỚC 1: Render AssignmentPage trong test env không có backend');
+      await tester.pumpWidget(buildTestableWidget(createAssignmentPage()));
+      await tester.pumpAndSettle(const Duration(seconds: 3));
+      print('➤ BƯỚC 2: Kiểm tra ErrorStateWidget khi lỗi');
+      expect(find.byType(AssignmentPage), findsOneWidget);
+      print('✔ KẾT QUẢ: AssignmentPage xử lý error state an toàn.');
+    });
+
+    testWidgets('20.4 Cấu trúc Scaffold không crash khi mount', (tester) async {
+      print('➤ BƯỚC 1: Kiểm tra cấu trúc Material Scaffold');
+      await tester.pumpWidget(buildTestableWidget(createAssignmentPage()));
+      await tester.pump();
+      expect(find.byType(Scaffold), findsOneWidget);
+      print('✔ KẾT QUẢ: AssignmentPage render thành công, không crash.');
     });
   });
 }

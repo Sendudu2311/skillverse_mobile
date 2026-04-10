@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:convert';
 import '../../core/constants/app_constants.dart';
+import '../../core/error/exceptions.dart';
 import '../../core/exceptions/api_exception.dart';
 import '../../core/network/api_client.dart';
 import '../models/auth_models.dart';
@@ -26,7 +27,7 @@ class AuthService {
   /// Đăng nhập người dùng
   Future<AuthResponse> login(LoginRequest request) async {
     try {
-      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+      final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/login',
         data: request.toJson(),
       );
@@ -52,14 +53,15 @@ class AuthService {
     } catch (e) {
       debugPrint('Login error: $e');
       if (e is ApiException) rethrow;
-      throw ApiException('Đăng nhập thất bại: ${e.toString()}');
+      if (e is AppException) throw ApiException(e.message);
+      throw ApiException('Đăng nhập thất bại');
     }
   }
 
   /// Đăng ký người dùng mới
   Future<AuthResponse> register(RegisterRequest request) async {
     try {
-      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+      final response = await _apiClient.post<Map<String, dynamic>>(
         '/users/register',
         data: request.toJson(),
       );
@@ -71,7 +73,8 @@ class AuthService {
       return AuthResponse.fromJson(response.data!);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Đăng ký thất bại: ${e.toString()}');
+      if (e is AppException) throw ApiException(e.message);
+      throw ApiException('Đăng ký thất bại');
     }
   }
 
@@ -99,7 +102,7 @@ class AuthService {
       }
 
       // Send token to backend (idToken preferred, accessToken as fallback)
-      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+      final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/google',
         data: {
           'idToken':
@@ -130,7 +133,8 @@ class AuthService {
       await _googleSignIn.signOut();
 
       if (e is ApiException) rethrow;
-      throw ApiException('Đăng nhập Google thất bại: ${e.toString()}');
+      if (e is AppException) throw ApiException(e.message);
+      throw ApiException('Đăng nhập Google thất bại');
     }
   }
 
@@ -146,39 +150,42 @@ class AuthService {
   /// Xác thực email với OTP
   Future<void> verifyEmail(String email, String otp) async {
     try {
-      await _apiClient.dio.post(
+      await _apiClient.post(
         '/auth/verify-email',
         data: {'email': email, 'otp': otp},
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Xác thực email thất bại: ${e.toString()}');
+      if (e is AppException) throw ApiException(e.message);
+      throw ApiException('Xác thực email thất bại');
     }
   }
 
   /// Gửi lại OTP
   Future<void> resendOtp(String email) async {
     try {
-      await _apiClient.dio.post<Map<String, dynamic>>(
+      await _apiClient.post<Map<String, dynamic>>(
         '/auth/resend-otp',
         data: {'email': email},
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Gửi lại OTP thất bại: ${e.toString()}');
+      if (e is AppException) throw ApiException(e.message);
+      throw ApiException('Gửi lại OTP thất bại');
     }
   }
 
   /// Quên mật khẩu
   Future<void> forgotPassword(String email) async {
     try {
-      await _apiClient.dio.post<Map<String, dynamic>>(
+      await _apiClient.post<Map<String, dynamic>>(
         '/auth/forgot-password',
         data: {'email': email},
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Gửi email quên mật khẩu thất bại: ${e.toString()}');
+      if (e is AppException) throw ApiException(e.message);
+      throw ApiException('Gửi email quên mật khẩu thất bại');
     }
   }
 

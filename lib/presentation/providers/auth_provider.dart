@@ -3,6 +3,7 @@ import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/auth_models.dart';
 import '../../data/services/auth_service.dart';
 import '../../core/network/api_client.dart';
+import '../../core/utils/error_handler.dart';
 import '../../core/exceptions/api_exception.dart';
 import '../../core/utils/storage_helper.dart';
 import '../../core/services/firebase_push_notification_service.dart';
@@ -190,12 +191,12 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
     }
   }
 
-  // Helper: extract error from ApiException
+  // Helper: extract user-friendly error message using shared ErrorHandler
   String _getErrorMessage(dynamic error) {
     if (error is ApiException) {
       return error.message;
     }
-    return error.toString();
+    return ErrorHandler.getErrorMessage(error);
   }
 
   /// Xóa lỗi hiện tại
