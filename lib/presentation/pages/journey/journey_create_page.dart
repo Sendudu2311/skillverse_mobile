@@ -565,10 +565,10 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
 
   Widget _buildStep2DomainSelection(bool isDark) {
     if (_isLoadingExpertFields) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
+          padding: const EdgeInsets.all(32.0),
+          child: CommonLoading.center(),
         ),
       );
     }

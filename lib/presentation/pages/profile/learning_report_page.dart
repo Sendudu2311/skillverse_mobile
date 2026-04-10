@@ -98,13 +98,10 @@ class _LearningReportPageState extends State<LearningReportPage>
                     }
                   },
             icon: provider.isGenerating
-                ? const SizedBox(
+                ? SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
+                    child: CommonLoading.button(color: Colors.white),
                   )
                 : Icon(!canGen ? Icons.timer : Icons.auto_awesome),
             label: Text(
@@ -934,11 +931,10 @@ class _LearningReportPageState extends State<LearningReportPage>
                       }
                     },
               icon: provider.isDownloadingPDF
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 16,
                       height: 16,
-                      child:
-                          CircularProgressIndicator(strokeWidth: 2),
+                      child: CommonLoading.small(color: Colors.white),
                     )
                   : const Icon(Icons.download_outlined, size: 18),
               label: Text(
@@ -966,13 +962,10 @@ class _LearningReportPageState extends State<LearningReportPage>
                       await provider.sharePDF();
                     },
               icon: provider.isSharingPDF
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                      child: CommonLoading.small(color: Colors.white),
                     )
                   : const Icon(Icons.share_outlined, size: 18),
               label: Text(
@@ -1039,9 +1032,9 @@ class _LearningReportPageState extends State<LearningReportPage>
             }
 
             if (provider.isLoadingHistory) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(child: CircularProgressIndicator()),
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: CommonLoading.center(),
               );
             }
 
