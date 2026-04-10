@@ -114,5 +114,3 @@ class ShimmerBox extends StatelessWidget {
     );
   }
 }
-
-/// Course card skeleton for loading state

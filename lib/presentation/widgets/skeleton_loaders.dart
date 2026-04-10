@@ -693,3 +693,264 @@ class CourseCardSkeleton extends StatelessWidget {
     );
   }
 }
+
+/// Chat bubble skeleton (for chat message loading states)
+class ChatBubbleSkeleton extends StatelessWidget {
+  /// Number of message pairs to show
+  final int pairCount;
+
+  const ChatBubbleSkeleton({super.key, this.pairCount = 3});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Column(
+        children: List.generate(pairCount, (pairIndex) {
+          return Column(
+            children: [
+              // Assistant bubble (left-aligned)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const ShimmerBox(width: 32, height: 32, borderRadius: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ShimmerBox(
+                            width: MediaQuery.of(context).size.width * 0.65,
+                            height: 16,
+                            margin: const EdgeInsets.only(bottom: 6),
+                          ),
+                          ShimmerBox(
+                            width: MediaQuery.of(context).size.width * 0.5,
+                            height: 16,
+                            margin: const EdgeInsets.only(bottom: 6),
+                          ),
+                          ShimmerBox(
+                            width: MediaQuery.of(context).size.width * 0.35,
+                            height: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                  ],
+                ),
+              ),
+              // User bubble (right-aligned)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          ShimmerBox(
+                            width: MediaQuery.of(context).size.width * 0.45,
+                            height: 16,
+                            margin: const EdgeInsets.only(bottom: 6),
+                          ),
+                          ShimmerBox(
+                            width: MediaQuery.of(context).size.width * 0.3,
+                            height: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const ShimmerBox(width: 32, height: 32, borderRadius: 16),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+}
+
+/// Dashboard Hero Card skeleton — matches the welcome card with avatar
+class HeroCardSkeleton extends StatelessWidget {
+  const HeroCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 8, 8, 20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Notification bell placeholder
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [ShimmerBox(width: 36, height: 36, borderRadius: 18)],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Left: greeting + name + streak
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ShimmerBox(
+                        width: MediaQuery.of(context).size.width * 0.35,
+                        height: 13,
+                        margin: const EdgeInsets.only(bottom: 4),
+                      ),
+                      ShimmerBox(
+                        width: MediaQuery.of(context).size.width * 0.5,
+                        height: 27,
+                        margin: const EdgeInsets.only(bottom: 10),
+                      ),
+                      // Streak badge + weekly dots
+                      Row(
+                        children: [
+                          const ShimmerBox(
+                            width: 80,
+                            height: 24,
+                            borderRadius: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          ...List.generate(
+                            7,
+                            (_) => const Padding(
+                              padding: EdgeInsets.only(right: 5),
+                              child: ShimmerBox(
+                                width: 10,
+                                height: 10,
+                                borderRadius: 2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      // Check-in button
+                      const ShimmerBox(
+                        width: 110,
+                        height: 30,
+                        borderRadius: 20,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Right: Meowl avatar
+                const ShimmerBox(width: 92, height: 92, borderRadius: 16),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Dashboard Quick Actions skeleton — 4 circular action buttons in a row
+class QuickActionsSkeleton extends StatelessWidget {
+  const QuickActionsSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: List.generate(
+            4,
+            (_) => const Column(
+              children: [
+                ShimmerBox(width: 48, height: 48, borderRadius: 24),
+                SizedBox(height: 8),
+                ShimmerBox(width: 40, height: 10),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Dashboard Stats Grid skeleton — 2x2 stat cards
+class StatsGridSkeleton extends StatelessWidget {
+  const StatsGridSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                _buildStatCell(context),
+                const SizedBox(height: 12),
+                _buildStatCell(context),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              children: [
+                _buildStatCell(context),
+                const SizedBox(height: 12),
+                _buildStatCell(context),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCell(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+        ),
+      ),
+      child: const Column(
+        children: [
+          ShimmerBox(width: 40, height: 40, borderRadius: 20),
+          SizedBox(height: 8),
+          ShimmerBox(width: 50, height: 20),
+          SizedBox(height: 4),
+          ShimmerBox(width: 60, height: 12),
+        ],
+      ),
+    );
+  }
+}
