@@ -112,6 +112,7 @@ class QuizQuestionDetailDto {
   final QuestionType questionType;
   final int score;
   final int orderIndex;
+  final int? correctOptionCount;
   final List<QuizOptionDto>? options;
 
   const QuizQuestionDetailDto({
@@ -120,6 +121,7 @@ class QuizQuestionDetailDto {
     required this.questionType,
     required this.score,
     required this.orderIndex,
+    this.correctOptionCount,
     this.options,
   });
 
@@ -341,4 +343,95 @@ class QuizAttemptSessionDto {
       _$QuizAttemptSessionDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$QuizAttemptSessionDtoToJson(this);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MISSING: Quiz Review DTOs — needed for full quiz attempt review
+// ══════════════════════════════════════════════════════════════
+
+/// Per-question answer review (returned from /my-latest-review)
+@JsonSerializable()
+class QuizAttemptAnswerReviewDto {
+  final int questionId;
+  final int? questionOrderIndex;
+  final String? questionText;
+  final String? questionTypeRaw;
+
+  /// Submitted answer snapshot — list of selected option IDs
+  final List<int>? submittedAnswer;
+
+  /// Snapshot of options at attempt time (for display)
+  final List<QuizOptionSnapshotDto>? optionsSnapshot;
+
+  /// Text answer (for SHORT_ANSWER questions)
+  final String? submittedAnswerText;
+
+  /// Correct answer display text
+  final String? correctAnswerText;
+
+  final bool? answered;
+  final bool? correct;
+  final int? scoreEarned;
+
+  const QuizAttemptAnswerReviewDto({
+    required this.questionId,
+    this.questionOrderIndex,
+    this.questionText,
+    this.questionTypeRaw,
+    this.submittedAnswer,
+    this.optionsSnapshot,
+    this.submittedAnswerText,
+    this.correctAnswerText,
+    this.answered,
+    this.correct,
+    this.scoreEarned,
+  });
+
+  factory QuizAttemptAnswerReviewDto.fromJson(Map<String, dynamic> json) =>
+      _$QuizAttemptAnswerReviewDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$QuizAttemptAnswerReviewDtoToJson(this);
+}
+
+/// Option snapshot for review mode
+@JsonSerializable()
+class QuizOptionSnapshotDto {
+  final int optionId;
+  final int? orderIndex;
+  final String? optionText;
+  final bool? correct;
+  final bool? selected;
+  final String? feedback;
+
+  const QuizOptionSnapshotDto({
+    required this.optionId,
+    this.orderIndex,
+    this.optionText,
+    this.correct,
+    this.selected,
+    this.feedback,
+  });
+
+  factory QuizOptionSnapshotDto.fromJson(Map<String, dynamic> json) =>
+      _$QuizOptionSnapshotDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$QuizOptionSnapshotDtoToJson(this);
+}
+
+/// Full quiz attempt review DTO
+/// Returned from GET /quizzes/{quizId}/my-latest-review
+@JsonSerializable()
+class QuizAttemptReviewDto {
+  final QuizAttemptDto attempt;
+  final List<QuizAttemptAnswerReviewDto>? answers;
+
+  const QuizAttemptReviewDto({
+    required this.attempt,
+    this.answers,
+  });
+
+  factory QuizAttemptReviewDto.fromJson(Map<String, dynamic> json) =>
+      _$QuizAttemptReviewDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$QuizAttemptReviewDtoToJson(this);
 }

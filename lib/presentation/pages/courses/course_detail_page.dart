@@ -34,7 +34,6 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     with SingleTickerProviderStateMixin {
   bool _isLoadingCourse = false;
   String? _errorMessage;
-  bool isWishlisted = false;
   String activeTab = 'overview';
   int? expandedModule;
 
@@ -186,8 +185,6 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       ),
     );
   }
-
-  void toggleWishlist() => setState(() => isWishlisted = !isWishlisted);
 
   void toggleModule(int id) =>
       setState(() => expandedModule = expandedModule == id ? null : id);
@@ -560,48 +557,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           ),
                         ),
                       ),
-                      // Save & Share buttons
-                      Positioned(
-                        top: MediaQuery.of(context).padding.top + 8,
-                        right: 16,
-                        child: Row(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.5),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: IconButton(
-                                icon: Icon(
-                                  isWishlisted
-                                      ? Icons.bookmark
-                                      : Icons.bookmark_border,
-                                  color: isWishlisted
-                                      ? AppTheme.themeOrangeStart
-                                      : Colors.white,
-                                ),
-                                onPressed: toggleWishlist,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.5),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.share,
-                                  color: Colors.white,
-                                ),
-                                onPressed: () {
-                                  // TODO: Implement share functionality
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+
                     ],
                   ),
 
@@ -769,7 +725,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               CourseStatItem(
                                 icon: Icons.auto_stories_outlined,
                                 label: 'Modules',
-                                value: '${_course!.moduleCount ?? 0}',
+                                value: '${(_course!.moduleCount != null && _course!.moduleCount! > 0) ? _course!.moduleCount : _fullModules.length}',
                                 color: AppTheme.themePurpleStart,
                                 isDark: isDark,
                               ),

@@ -128,4 +128,23 @@ class QuizService {
       throw ApiException('Heartbeat quiz session thất bại: ${e.toString()}');
     }
   }
+
+  /// Get full review of the latest quiz attempt (answer-by-answer with correct answers)
+  /// GET /quizzes/{quizId}/my-latest-review
+  /// NOTE: Requires user to have passed the quiz (BE only returns correct answers on pass)
+  Future<QuizAttemptReviewDto?> getMyLatestReview({
+    required int quizId,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/quizzes/$quizId/my-latest-review',
+      );
+
+      if (response.data == null) return null;
+      return QuizAttemptReviewDto.fromJson(response.data);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Lấy đáp án bài kiểm tra thất bại: ${e.toString()}');
+    }
+  }
 }

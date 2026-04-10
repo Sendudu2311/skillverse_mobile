@@ -67,9 +67,10 @@ class DashboardService {
   }
 
   /// Fetch AI roadmaps (delegates to RoadmapService)
+  /// Uses size=10 to avoid unbounded fetch on every dashboard load.
   Future<List<RoadmapSession>> fetchRoadmaps() async {
     try {
-      final summaries = await RoadmapService().getUserRoadmaps();
+      final summaries = await RoadmapService().getUserRoadmaps(size: 10);
       return summaries.map((s) => RoadmapSession.fromSummary(s.toJson())).toList();
     } catch (e) {
       if (e is ApiException) rethrow;

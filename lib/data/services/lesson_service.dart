@@ -106,4 +106,76 @@ class LessonService {
       return [];
     }
   }
+
+  /// Get aggregated course learning status (progress, certificate, completed IDs)
+  /// GET /api/course-learning/courses/{courseId}/status
+  Future<CourseLearningStatusDto> getCourseLearningStatus({
+    required int courseId,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/course-learning/courses/$courseId/status',
+      );
+      return CourseLearningStatusDto.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+}
+
+/// Aggregated course learning status from backend
+class CourseLearningStatusDto {
+  final int courseId;
+  final int userId;
+  final List<int> completedLessonIds;
+  final List<int> completedQuizIds;
+  final List<int> completedAssignmentIds;
+  final int completedItemCount;
+  final int totalItemCount;
+  final int percent;
+  final int? certificateId;
+  final String? certificateSerial;
+  final bool certificateRevoked;
+
+  const CourseLearningStatusDto({
+    required this.courseId,
+    required this.userId,
+    required this.completedLessonIds,
+    required this.completedQuizIds,
+    required this.completedAssignmentIds,
+    required this.completedItemCount,
+    required this.totalItemCount,
+    required this.percent,
+    this.certificateId,
+    this.certificateSerial,
+    this.certificateRevoked = false,
+  });
+
+  factory CourseLearningStatusDto.fromJson(Map<String, dynamic> json) {
+    return CourseLearningStatusDto(
+      courseId: (json['courseId'] as num?)?.toInt() ?? 0,
+      userId: (json['userId'] as num?)?.toInt() ?? 0,
+      completedLessonIds: (json['completedLessonIds'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          [],
+      completedQuizIds: (json['completedQuizIds'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          [],
+      completedAssignmentIds:
+          (json['completedAssignmentIds'] as List<dynamic>?)
+                  ?.map((e) => (e as num).toInt())
+                  .toList() ??
+              [],
+      completedItemCount: (json['completedItemCount'] as num?)?.toInt() ?? 0,
+      totalItemCount: (json['totalItemCount'] as num?)?.toInt() ?? 0,
+      percent: (json['percent'] as num?)?.toInt() ?? 0,
+      certificateId: (json['certificateId'] as num?)?.toInt(),
+      certificateSerial: json['certificateSerial'] as String?,
+      certificateRevoked: json['certificateRevoked'] == true,
+    );
+  }
 }

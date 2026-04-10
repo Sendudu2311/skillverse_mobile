@@ -26,11 +26,15 @@ class RoadmapService {
   /// API: GET /api/v1/ai/roadmap
   Future<List<RoadmapSessionSummary>> getUserRoadmaps({
     bool includeDeleted = false,
+    int size = 20,
   }) async {
     try {
       final response = await _apiClient.dio.get<List<dynamic>>(
         '/v1/ai/roadmap',
-        queryParameters: {if (includeDeleted) 'includeDeleted': true},
+        queryParameters: {
+          if (includeDeleted) 'includeDeleted': true,
+          'size': size,
+        },
       );
 
       if (response.data == null) {

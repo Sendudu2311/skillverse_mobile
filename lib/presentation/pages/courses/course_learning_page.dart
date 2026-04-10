@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../themes/app_theme.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../data/models/module_with_content_models.dart';
 import '../../../data/models/lesson_models.dart';
 import '../../../data/services/module_service.dart';
 import '../../../data/services/lesson_service.dart';
-import '../../../data/services/quiz_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/video_lesson_player.dart';
 import '../../widgets/reading_lesson_content.dart';
-import '../../widgets/quiz_lesson_widget.dart';
+import 'quiz_attempt_page.dart';
+import 'assignment_page.dart';
+import 'certificate_view_page.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/empty_state_widget.dart';
@@ -69,15 +69,19 @@ class CourseLearningPage extends StatefulWidget {
 class _CourseLearningPageState extends State<CourseLearningPage> {
   final ModuleService _moduleService = ModuleService();
   final LessonService _lessonService = LessonService();
-  final QuizService _quizService = QuizService();
 
   List<ModuleWithContentDto> _modules = [];
   List<_CurriculumItem> _curriculumItems = [];
   final Set<int> _completedLessonIds = {};
   final Set<int> _completedQuizIds = {};
+  final Set<int> _completedAssignmentIds = {};
 
   int _activeCurriculumIndex = -1;
   LessonDetailDto? _currentLessonDetail; // Only for lesson items
+
+  // Course completion / certificate state
+  int _coursePercent = 0;
+  int? _certificateId;
 
   // GlobalKey giữ state VideoLessonPlayer sống sót khi tree restructure (portrait ↔ landscape)
   // Reset key khi đổi bài để buộc tạo player mới
@@ -132,8 +136,10 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
 
       await _loadCompletedLessonIds();
 
+      // Auto-select first uncompleted item
       if (_curriculumItems.isNotEmpty) {
-        await _selectCurriculumItem(0);
+        final targetIndex = _findFirstUncompletedIndex();
+        await _selectCurriculumItem(targetIndex);
       }
     }, setLoading: (val) => setState(() => _isLoadingModules = val));
   }
@@ -222,34 +228,62 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     }
   }
 
-  /// Load completed lesson IDs from backend
+  /// Load course learning status (completed IDs, progress, certificate) from backend
   Future<void> _loadCompletedLessonIds() async {
     await _executeAsync(() async {
-      final authProvider = context.read<AuthProvider>();
-      if (authProvider.user == null) return;
-
       final courseId = int.parse(widget.courseId);
-      final completedIds = await _lessonService.getCompletedLessonIds(
-        courseId: courseId,
-        userId: authProvider.user!.id,
-      );
 
-      final quizItems = _curriculumItems.where((i) => i.itemType == 'quiz');
-      final passedQuizIds = <int>{};
-      for (final quizItem in quizItems) {
-        try {
-          final status = await _quizService.getQuizAttemptStatus(quizId: quizItem.itemId);
-          if (status.hasPassed) passedQuizIds.add(quizItem.itemId);
-        } catch (_) {}
-      }
+      try {
+        // Single API call replaces separate lesson + N quiz calls
+        final status = await _lessonService.getCourseLearningStatus(
+          courseId: courseId,
+        );
 
-      if (mounted) {
-        setState(() {
-          _completedLessonIds.addAll(completedIds);
-          _completedQuizIds.addAll(passedQuizIds);
-        });
+        if (mounted) {
+          setState(() {
+            _completedLessonIds.addAll(status.completedLessonIds);
+            _completedQuizIds.addAll(status.completedQuizIds);
+            _completedAssignmentIds.addAll(status.completedAssignmentIds);
+            _coursePercent = status.percent;
+            _certificateId = status.certificateId;
+          });
+        }
+      } catch (_) {
+        // Fallback: use old API if course-learning/status is not available
+        if (!mounted) return;
+        final authProvider = context.read<AuthProvider>();
+        if (authProvider.user == null) return;
+        final completedIds = await _lessonService.getCompletedLessonIds(
+          courseId: courseId,
+          userId: authProvider.user!.id,
+        );
+        if (mounted) {
+          setState(() {
+            _completedLessonIds.addAll(completedIds);
+          });
+        }
       }
     }, onError: (msg) => debugPrint('Error loading completion status: $msg'));
+  }
+
+  /// Find the first curriculum item that is NOT completed
+  int _findFirstUncompletedIndex() {
+    for (int i = 0; i < _curriculumItems.length; i++) {
+      final item = _curriculumItems[i];
+      switch (item.itemType) {
+        case 'lesson':
+          if (!_completedLessonIds.contains(item.itemId)) return i;
+          break;
+        case 'quiz':
+          if (!_completedQuizIds.contains(item.itemId)) return i;
+          break;
+        case 'assignment':
+          if (!_completedAssignmentIds.contains(item.itemId)) return i;
+          break;
+      }
+    }
+    // All completed — default to first item
+    return 0;
   }
 
   // ── Item Selection ────────────────────────────
@@ -478,7 +512,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                                 selected: isActive,
                                 selectedTileColor: Theme.of(
                                   context,
-                                ).colorScheme.primaryContainer.withOpacity(0.3),
+                                ).colorScheme.primaryContainer.withValues(alpha: 0.3),
                                 onTap: () {
                                   _selectCurriculumItem(globalIndex);
                                   Navigator.pop(context);
@@ -565,6 +599,84 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       return const Center(child: Text('Chọn một bài học để bắt đầu'));
     }
 
+    // Show certificate banner if course is 100% complete
+    if (_coursePercent >= 100 && _certificateId != null) {
+      return Column(
+        children: [
+          _buildCertificateBanner(),
+          Expanded(child: _buildLearningContent()),
+        ],
+      );
+    }
+
+    return _buildLearningContent();
+  }
+
+  Widget _buildCertificateBanner() {
+    return GestureDetector(
+      onTap: () {
+        if (_certificateId != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CertificateViewPage(
+                certificateId: _certificateId!,
+              ),
+            ),
+          );
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.green.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.workspace_premium, color: Colors.white, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Chúc mừng! Bạn đã hoàn thành khóa học 🎉',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Nhấn để xem chứng chỉ',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.white70, size: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLearningContent() {
+
     final item = _curriculumItems[_activeCurriculumIndex];
 
     final isVideoLesson = item.itemType == 'lesson' &&
@@ -607,6 +719,18 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                   ],
                 ),
               ),
+            ],
+          );
+        }
+
+        // Quiz or Assignment items need Expanded layout (they manage own scrolling)
+        final isExpandedItem = item.itemType == 'quiz' || item.itemType == 'assignment';
+
+        if (isExpandedItem) {
+          return Column(
+            children: [
+              Expanded(child: _buildItemContent(item)),
+              _buildBottomBar(item),
             ],
           );
         }
@@ -768,13 +892,21 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
           resourceUrl: lesson.resourceUrl,
         );
       case LessonType.quiz:
-        // Inline quiz within a lesson (rare, but supported)
-        return QuizLessonWidget(
+        // Inline quiz within a lesson — use QuizAttemptPage (replaces old QuizLessonWidget)
+        return QuizAttemptPage(
+          key: ValueKey('lesson_quiz_${lesson.id}'),
           quizId: lesson.id,
+          isInline: true,
           onCompleted: _onQuizCompleted,
         );
       case LessonType.assignment:
-        return _buildAssignmentPlaceholder();
+        // Render assignment inline
+        return AssignmentPage(
+          key: ValueKey('lesson_assignment_${lesson.id}'),
+          assignmentId: lesson.id,
+          isInline: true,
+          onSubmitted: () {},
+        );
       case LessonType.codelab:
         return const Padding(
           padding: EdgeInsets.all(24),
@@ -784,59 +916,28 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
   }
 
   Widget _buildQuizContent(_CurriculumItem item) {
-    return QuizLessonWidget(quizId: item.itemId, onCompleted: _onQuizCompleted);
+    // Render quiz inline instead of pushing a separate route
+    return QuizAttemptPage(
+      key: ValueKey('quiz_${item.itemId}'),
+      quizId: item.itemId,
+      moduleId: item.moduleId,
+      isInline: true,
+      onCompleted: () {
+        setState(() => _completedQuizIds.add(item.itemId));
+        _onQuizCompleted();
+      },
+    );
   }
 
   Widget _buildAssignmentContent(_CurriculumItem item) {
-    return _buildAssignmentPlaceholder();
-  }
-
-  Widget _buildAssignmentPlaceholder() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Card(
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.laptop_mac_outlined,
-                size: 64,
-                color: AppTheme.warningColor,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Bài tập cần nộp trên Web',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Bài tập này yêu cầu nộp file hoặc nhập nội dung dài. '
-                'Vui lòng truy cập skillverse.vn trên máy tính để hoàn thành.',
-                textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.lightTextSecondary),
-              ),
-              const SizedBox(height: 20),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final uri = Uri.parse('https://skillverse.vn');
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                icon: const Icon(Icons.open_in_browser),
-                label: const Text('Mở SkillVerse trên trình duyệt'),
-              ),
-            ],
-          ),
-        ),
-      ),
+    // Render assignment inline instead of pushing a separate route
+    return AssignmentPage(
+      key: ValueKey('assignment_${item.itemId}'),
+      assignmentId: item.itemId,
+      isInline: true,
+      onSubmitted: () {
+        // Refresh or show success
+      },
     );
   }
 
@@ -844,6 +945,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     final isLesson = item.itemType == 'lesson';
     final isQuiz = item.itemType == 'quiz';
     final isAssignment = item.itemType == 'assignment';
+    final isInlineItem = isQuiz || isAssignment;
 
     // Determine complete button state
     String completeLabel;
@@ -855,10 +957,11 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       canComplete = !_isMarkingComplete;
       onCompletePressed = _markLessonComplete;
     } else if (isQuiz) {
-      // Quiz auto-completes via QuizLessonWidget — show next
-      completeLabel = 'Tiếp theo';
-      canComplete = _activeCurriculumIndex < _curriculumItems.length - 1;
-      onCompletePressed = _goToNextItem;
+      // Quiz: only allow navigating to next if passed
+      final quizPassed = _completedQuizIds.contains(item.itemId);
+      completeLabel = quizPassed ? 'Tiếp theo' : 'Làm bài kiểm tra';
+      canComplete = quizPassed && _activeCurriculumIndex < _curriculumItems.length - 1;
+      onCompletePressed = quizPassed ? _goToNextItem : null;
     } else if (isAssignment) {
       completeLabel = 'Tiếp theo';
       canComplete = _activeCurriculumIndex < _curriculumItems.length - 1;
@@ -897,36 +1000,37 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            // Complete button
-            Expanded(
-              flex: 2,
-              child: ElevatedButton.icon(
-                onPressed: canComplete ? onCompletePressed : null,
-                icon: _isMarkingComplete
-                    ? CommonLoading.button()
-                    : Icon(
-                        isLesson
-                            ? Icons.check
-                            : isQuiz
-                            ? Icons.quiz_outlined
-                            : Icons.laptop_mac_outlined,
-                        size: 20,
-                      ),
-                label: Text(
-                  completeLabel,
-                  style: const TextStyle(fontSize: 13),
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+            // Complete/Action button (Hidden for inline Quiz/Assignment to avoid redundancy)
+            if (!isInlineItem)
+              const SizedBox(width: 12),
+            if (!isInlineItem)
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  onPressed: canComplete ? onCompletePressed : null,
+                  icon: _isMarkingComplete
+                      ? CommonLoading.button()
+                      : Icon(
+                          isLesson
+                              ? Icons.check
+                              : Icons.laptop_mac_outlined,
+                          size: 20,
+                        ),
+                  label: Text(
+                    completeLabel,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
                 ),
               ),
-            ),
             const SizedBox(width: 12),
             // Next button
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _activeCurriculumIndex < _curriculumItems.length - 1
+                onPressed: (_activeCurriculumIndex < _curriculumItems.length - 1
+                    && !(isQuiz && !_completedQuizIds.contains(item.itemId)))
                     ? _goToNextItem
                     : null,
                 icon: const Icon(Icons.chevron_right, size: 20),
@@ -997,7 +1101,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       case 'quiz':
         return 'Quiz${item.passScore != null ? ' · Cần ${item.passScore}% để đạt' : ''}';
       case 'assignment':
-        return 'Bài tập · Nộp trên Web';
+        return 'Bài tập';
       case 'lesson':
       default:
         final type = _getItemTypeName(item);

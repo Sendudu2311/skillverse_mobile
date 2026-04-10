@@ -427,4 +427,302 @@ void main() {
       expect(result.textAnswer, 'Wrong answer');
     });
   });
+
+  // ============================================================
+  // QuizAttemptSessionDto Tests
+  // ============================================================
+  group('QuizAttemptSessionDto', () {
+    test('fromJson() with all fields', () {
+      final json = {
+        'quizId': 1,
+        'userId': 42,
+        'sessionToken': 'tok_abc123',
+        'status': 'IN_PROGRESS',
+        'startedAt': '2024-06-01T10:00:00',
+        'lastSeenAt': '2024-06-01T10:05:00',
+        'expiresAt': '2024-06-01T11:00:00',
+      };
+      final session = QuizAttemptSessionDto.fromJson(json);
+
+      expect(session.quizId, 1);
+      expect(session.userId, 42);
+      expect(session.sessionToken, 'tok_abc123');
+      expect(session.status, 'IN_PROGRESS');
+      expect(session.startedAt, isNotNull);
+      expect(session.expiresAt, isNotNull);
+    });
+
+    test('fromJson() with null optional fields', () {
+      final json = {
+        'sessionToken': 'tok_xyz',
+        'status': 'EXPIRED',
+      };
+      final session = QuizAttemptSessionDto.fromJson(json);
+
+      expect(session.quizId, isNull);
+      expect(session.userId, isNull);
+      expect(session.sessionToken, 'tok_xyz');
+      expect(session.status, 'EXPIRED');
+    });
+
+    test('toJson() round-trip preserves data', () {
+      final original = {
+        'quizId': 5,
+        'userId': 99,
+        'sessionToken': 'tok_test',
+        'status': 'SUBMITTED',
+        'startedAt': '2024-06-01T10:00:00',
+        'lastSeenAt': '2024-06-01T10:30:00',
+        'expiresAt': '2024-06-01T11:00:00',
+      };
+      final result =
+          QuizAttemptSessionDto.fromJson(original).toJson();
+
+      expect(result['quizId'], 5);
+      expect(result['sessionToken'], 'tok_test');
+      expect(result['status'], 'SUBMITTED');
+    });
+  });
+
+  // ============================================================
+  // QuizAttemptAnswerReviewDto Tests
+  // ============================================================
+  group('QuizAttemptAnswerReviewDto', () {
+    test('fromJson() with multiple choice answer', () {
+      final json = {
+        'questionId': 1,
+        'questionOrderIndex': 0,
+        'questionText': 'What is Flutter?',
+        'questionTypeRaw': 'MULTIPLE_CHOICE',
+        'submittedAnswer': [1, 3],
+        'optionsSnapshot': [
+          {
+            'optionId': 1,
+            'orderIndex': 0,
+            'optionText': 'A framework',
+            'correct': true,
+            'selected': true,
+            'feedback': 'Correct!',
+          },
+          {
+            'optionId': 2,
+            'orderIndex': 1,
+            'optionText': 'A language',
+            'correct': false,
+            'selected': false,
+          },
+          {
+            'optionId': 3,
+            'orderIndex': 2,
+            'optionText': 'A database',
+            'correct': false,
+            'selected': true,
+          },
+        ],
+        'answered': true,
+        'correct': false,
+        'scoreEarned': 0,
+      };
+      final review = QuizAttemptAnswerReviewDto.fromJson(json);
+
+      expect(review.questionId, 1);
+      expect(review.questionOrderIndex, 0);
+      expect(review.questionText, 'What is Flutter?');
+      expect(review.questionTypeRaw, 'MULTIPLE_CHOICE');
+      expect(review.submittedAnswer, [1, 3]);
+      expect(review.optionsSnapshot?.length, 3);
+      expect(review.answered, true);
+      expect(review.correct, false);
+      expect(review.scoreEarned, 0);
+      // Check snapshot
+      expect(review.optionsSnapshot![0].correct, true);
+      expect(review.optionsSnapshot![0].selected, true);
+      expect(review.optionsSnapshot![1].correct, false);
+    });
+
+    test('fromJson() with short answer', () {
+      final json = {
+        'questionId': 5,
+        'questionOrderIndex': 3,
+        'questionText': 'Explain polymorphism',
+        'questionTypeRaw': 'SHORT_ANSWER',
+        'submittedAnswerText': 'It allows objects to take many forms',
+        'correctAnswerText': 'Objects of different classes respond to the same message in different ways',
+        'answered': true,
+        'correct': null,
+        'scoreEarned': 5,
+      };
+      final review = QuizAttemptAnswerReviewDto.fromJson(json);
+
+      expect(review.questionId, 5);
+      expect(review.questionTypeRaw, 'SHORT_ANSWER');
+      expect(review.submittedAnswerText,
+          'It allows objects to take many forms');
+      expect(review.correctAnswerText, isNotNull);
+      expect(review.answered, true);
+    });
+
+    test('fromJson() with unanswered question', () {
+      final json = {
+        'questionId': 7,
+        'answered': false,
+        'correct': false,
+        'scoreEarned': 0,
+      };
+      final review = QuizAttemptAnswerReviewDto.fromJson(json);
+
+      expect(review.questionId, 7);
+      expect(review.answered, false);
+      expect(review.submittedAnswer, isNull);
+    });
+
+    test('toJson() round-trip preserves data', () {
+      final original = {
+        'questionId': 2,
+        'questionOrderIndex': 1,
+        'submittedAnswer': [4],
+        'answered': true,
+        'correct': true,
+        'scoreEarned': 10,
+      };
+      final result =
+          QuizAttemptAnswerReviewDto.fromJson(original).toJson();
+
+      expect(result['questionId'], 2);
+      expect(result['submittedAnswer'], [4]);
+      expect(result['correct'], true);
+    });
+  });
+
+  // ============================================================
+  // QuizOptionSnapshotDto Tests
+  // ============================================================
+  group('QuizOptionSnapshotDto', () {
+    test('fromJson() with all fields', () {
+      final json = {
+        'optionId': 1,
+        'orderIndex': 0,
+        'optionText': 'Dart is compiled to machine code',
+        'correct': false,
+        'selected': false,
+        'feedback': 'Dart compiles to native code or JavaScript',
+      };
+      final snapshot = QuizOptionSnapshotDto.fromJson(json);
+
+      expect(snapshot.optionId, 1);
+      expect(snapshot.orderIndex, 0);
+      expect(snapshot.optionText, 'Dart is compiled to machine code');
+      expect(snapshot.correct, false);
+      expect(snapshot.selected, false);
+      expect(snapshot.feedback, isNotNull);
+    });
+
+    test('fromJson() with null optional fields', () {
+      final json = {'optionId': 2};
+      final snapshot = QuizOptionSnapshotDto.fromJson(json);
+
+      expect(snapshot.optionId, 2);
+      expect(snapshot.orderIndex, isNull);
+      expect(snapshot.optionText, isNull);
+      expect(snapshot.correct, isNull);
+      expect(snapshot.selected, isNull);
+    });
+
+    test('toJson() round-trip preserves data', () {
+      final original = {
+        'optionId': 5,
+        'orderIndex': 1,
+        'optionText': 'Correct answer',
+        'correct': true,
+        'selected': true,
+        'feedback': 'Great!',
+      };
+      final result = QuizOptionSnapshotDto.fromJson(original).toJson();
+
+      expect(result['optionId'], 5);
+      expect(result['correct'], true);
+      expect(result['selected'], true);
+    });
+  });
+
+  // ============================================================
+  // QuizAttemptReviewDto Tests
+  // ============================================================
+  group('QuizAttemptReviewDto', () {
+    test('fromJson() with full review data', () {
+      final json = {
+        'attempt': {
+          'id': 10,
+          'quizId': 1,
+          'userId': 42,
+          'score': 85,
+          'passed': true,
+          'correctAnswers': 8,
+          'totalQuestions': 10,
+        },
+        'answers': [
+          {
+            'questionId': 1,
+            'questionOrderIndex': 0,
+            'answered': true,
+            'correct': true,
+            'scoreEarned': 10,
+          },
+          {
+            'questionId': 2,
+            'questionOrderIndex': 1,
+            'answered': true,
+            'correct': false,
+            'scoreEarned': 0,
+          },
+        ],
+      };
+      final review = QuizAttemptReviewDto.fromJson(json);
+
+      expect(review.attempt.id, 10);
+      expect(review.attempt.score, 85);
+      expect(review.attempt.passed, true);
+      expect(review.answers?.length, 2);
+      expect(review.answers![0].correct, true);
+      expect(review.answers![1].correct, false);
+    });
+
+    test('fromJson() with null answers', () {
+      final json = {
+        'attempt': {
+          'id': 5,
+          'quizId': 2,
+          'score': 50,
+          'passed': false,
+        },
+      };
+      final review = QuizAttemptReviewDto.fromJson(json);
+
+      expect(review.attempt.id, 5);
+      expect(review.answers, isNull);
+    });
+
+    test('toJson() round-trip preserves data', () {
+      final original = {
+        'attempt': {
+          'id': 3,
+          'quizId': 7,
+          'score': 70,
+          'passed': true,
+        },
+        'answers': [
+          {
+            'questionId': 1,
+            'answered': true,
+            'correct': true,
+            'scoreEarned': 10,
+          },
+        ],
+      };
+      final result = QuizAttemptReviewDto.fromJson(original).toJson();
+
+      expect(result['attempt'], isA<QuizAttemptDto>());
+      expect((result['answers'] as List).length, 1);
+    });
+  });
 }

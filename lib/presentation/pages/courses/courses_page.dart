@@ -43,12 +43,16 @@ class _CoursesPageState extends State<CoursesPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final courseProvider = context.read<CourseProvider>();
       final enrollmentProvider = context.read<EnrollmentProvider>();
-      courseProvider.reset();
-      courseProvider.loadCourses();
+
+      // Only fetch from API if provider has no cached data yet
+      if (courseProvider.isEmpty && !courseProvider.isInitialLoading) {
+        courseProvider.loadCourses();
+      }
 
       // Load enrollment data so cards show "Đã sở hữu" instead of price
       final authProvider = context.read<AuthProvider>();
-      if (authProvider.user != null) {
+      if (authProvider.user != null &&
+          enrollmentProvider.enrollments.isEmpty) {
         await enrollmentProvider.fetchUserEnrollments(
           userId: authProvider.user!.id,
         );
