@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common_loading.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import 'package:go_router/go_router.dart';
@@ -179,9 +180,9 @@ class _MyBookingsPageState extends State<MyBookingsPage>
           if (index == filteredBookings.length) {
             // Load more indicator at the bottom
             if (provider.isLoadingBookingsMore && provider.hasMoreBookings) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: CommonLoading.center(),
               );
             }
             return Padding(

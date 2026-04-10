@@ -79,18 +79,31 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
 
                   // Plan cards
                   ...provider.displayPlans.map(
-                    (plan) => Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _PlanCard(
-                        plan: plan,
-                        isCurrentPlan:
-                            provider.currentSubscription != null &&
-                            provider.currentSubscription!.plan.id == plan.id,
-                        hasActivePlan: provider.hasPremium,
-                        onPayOS: () => _handlePayOS(plan),
-                        onWallet: () => _handleWalletPay(plan),
-                      ),
-                    ),
+                    (plan) {
+                      final currentSubscription = provider.currentSubscription;
+                      final isCurrentPlan = currentSubscription != null &&
+                          currentSubscription.plan.id == plan.id;
+                      final currentPlanWeight =
+                          currentSubscription?.plan.planType.weight ?? -1;
+                      
+                      // Identify downgrade if user has active plan, it's not the same plan,
+                      // and the current weight is higher than the target plan's weight.
+                      final isDowngrade = provider.hasPremium &&
+                          !isCurrentPlan &&
+                          (currentPlanWeight > plan.planType.weight);
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _PlanCard(
+                          plan: plan,
+                          isCurrentPlan: isCurrentPlan,
+                          isDowngrade: isDowngrade,
+                          hasActivePlan: provider.hasPremium,
+                          onPayOS: () => _handlePayOS(plan),
+                          onWallet: () => _handleWalletPay(plan),
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 16),
@@ -765,6 +778,7 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
 class _PlanCard extends StatelessWidget {
   final PremiumPlanDto plan;
   final bool isCurrentPlan;
+  final bool isDowngrade;
   final bool hasActivePlan;
   final VoidCallback onPayOS;
   final VoidCallback onWallet;
@@ -772,6 +786,7 @@ class _PlanCard extends StatelessWidget {
   const _PlanCard({
     required this.plan,
     required this.isCurrentPlan,
+    required this.isDowngrade,
     required this.hasActivePlan,
     required this.onPayOS,
     required this.onWallet,
@@ -977,7 +992,50 @@ class _PlanCard extends StatelessWidget {
               ],
 
               // Action buttons
-              if (!isCurrentPlan) ...[
+              if (isCurrentPlan) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.successColor.withValues(
+                        alpha: 0.2,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      '✅ Gói hiện tại',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ] else if (isDowngrade) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.black.withValues(alpha: 0.05),
+                      foregroundColor: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      '⚠️ Không thể hạ cấp',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ] else ...[
                 Row(
                   children: [
                     Expanded(
@@ -1016,26 +1074,6 @@ class _PlanCard extends StatelessWidget {
                       ),
                     ),
                   ],
-                ),
-              ] else if (isCurrentPlan) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.successColor.withValues(
-                        alpha: 0.2,
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text(
-                      '✅ Gói hiện tại',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
                 ),
               ],
             ],

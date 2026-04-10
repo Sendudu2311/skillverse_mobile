@@ -585,13 +585,10 @@ class _CancelRefundSheetState extends State<CancelRefundSheet> {
                 ? _handleCancelWithRefund
                 : _handleCancelAutoRenewal,
             icon: _processing
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
+                    child: CommonLoading.button(color: Colors.white),
                   )
                 : Icon(
                     _refundPercentage > 0 ? Icons.cancel : Icons.toggle_off,

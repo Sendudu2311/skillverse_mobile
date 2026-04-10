@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/common_loading.dart';
 import '../../widgets/glass_card.dart';
 import '../../../data/services/booking_review_service.dart';
 import '../../../data/models/booking_review_model.dart';
@@ -97,7 +98,7 @@ class _BookingReviewPageState extends State<BookingReviewPage> {
         ),
       ),
       body: _isCheckingExisting
-          ? const Center(child: CircularProgressIndicator())
+          ? CommonLoading.center()
           : _existingReview != null
           ? _buildExistingReview(isDark)
           : _buildReviewForm(isDark),
@@ -392,11 +393,10 @@ class _BookingReviewPageState extends State<BookingReviewPage> {
                 ),
               ),
               child: _isLoading
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
+                      child: CommonLoading.button(
                         color: Colors.white,
                       ),
                     )
