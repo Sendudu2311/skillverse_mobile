@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/post_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/post_card.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/empty_state_widget.dart';
@@ -30,9 +31,12 @@ class _CommunityPageState extends State<CommunityPage> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<PostProvider>();
-      provider.reset();
-      provider.loadPosts();
-      provider.fetchStatsAndTrends(); // Fetch stats and trends on init
+
+      // Only fetch from API if provider has no cached data yet
+      if (provider.isEmpty && !provider.isInitialLoading) {
+        provider.loadPosts();
+        provider.fetchStatsAndTrends();
+      }
 
       // Add pagination listener
       _scrollController.addListener(() {
@@ -123,6 +127,8 @@ class _CommunityPageState extends State<CommunityPage> {
   }
 
   Widget _buildPostList(PostProvider provider) {
+    final currentUserId = context.read<AuthProvider>().user?.id;
+
     // Show skeleton during initial load or refresh
     if (provider.isInitialLoading || provider.pagination.isRefreshing) {
       return ListView.builder(
@@ -181,12 +187,35 @@ class _CommunityPageState extends State<CommunityPage> {
           onLike: () => provider.toggleLike(post.id),
           onSave: () => provider.toggleSave(post.id),
           onComment: () => context.push('/community/${post.id}'),
-          // Show delete option only for own posts (TODO: check auth)
-          // onDelete: post.authorId == currentUserId
-          //     ? () => _showDeleteDialog(provider, post.id)
-          //     : null,
+          // Show delete option only for own posts
+          onDelete: post.authorId == currentUserId
+              ? () => _showDeleteDialog(provider, post.id)
+              : null,
         );
       },
+    );
+  }
+
+  void _showDeleteDialog(PostProvider provider, int postId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa bài viết'),
+        content: const Text('Bạn có chắc chắn muốn xóa bài viết này không? Hành động này không thể hoàn tác.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              provider.deletePost(postId);
+            },
+            child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 }

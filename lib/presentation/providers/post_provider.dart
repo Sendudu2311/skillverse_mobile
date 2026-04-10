@@ -3,6 +3,7 @@ import '../../data/models/post_models.dart';
 import '../../data/services/post_service.dart';
 import '../../core/utils/pagination_helper.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/error_handler.dart';
 
 class PostProvider with ChangeNotifier, LoadingStateProviderMixin {
   final PostService _postService = PostService();
@@ -13,6 +14,9 @@ class PostProvider with ChangeNotifier, LoadingStateProviderMixin {
   int? _authorFilter;
   String? _categoryFilter;
   bool _showSavedOnly = false;
+  
+  // Local cache for saved posts (since backend omits savedByCurrentUser)
+  final Set<int> _savedPostIds = {};
 
   // Stats and Trends
   PostStats? _stats;
@@ -43,15 +47,28 @@ class PostProvider with ChangeNotifier, LoadingStateProviderMixin {
         } else {
           response = await _postService.getPosts(
             search: _searchQuery,
-            status: _statusFilter,
+            status: _statusFilter ?? (_authorFilter == null ? PostStatus.published : null),
             authorId: _authorFilter,
             page: page - 1,
             size: 20,
           );
         }
 
+        // Process content to inject isSaved state client-side
+        final processedContent = response.content.map((p) {
+          if (_showSavedOnly) {
+            _savedPostIds.add(p.id);
+            return p.copyWith(isSaved: true);
+          } else {
+            if (_savedPostIds.contains(p.id)) {
+              return p.copyWith(isSaved: true);
+            }
+            return p;
+          }
+        }).toList();
+
         return PaginatedResponse<Post>(
-          data: response.content,
+          data: processedContent,
           currentPage: page,
           totalPages: response.totalPages,
           totalItems: response.totalElements,
@@ -176,12 +193,13 @@ class PostProvider with ChangeNotifier, LoadingStateProviderMixin {
   }
 
   /// Create new post
-  Future<Post?> createPost(String content, {String? title}) async {
+  Future<Post?> createPost(String content,
+      {String? title, PostStatus status = PostStatus.published}) async {
     return await executeAsync(() async {
       final request = PostCreateRequest(
         title: title,
         content: content,
-        status: PostStatus.published,
+        status: status,
       );
       final post = await _postService.createPost(request);
 
@@ -189,13 +207,13 @@ class PostProvider with ChangeNotifier, LoadingStateProviderMixin {
       if (_statusFilter == null &&
           _searchQuery == null &&
           _authorFilter == null &&
-          !_showSavedOnly) {
-        _pagination.items.insert(0, post);
-        notifyListeners();
+          !_showSavedOnly &&
+          post.status == PostStatus.published) {
+        _pagination.insertItem(post);
       }
 
       return post;
-    }, errorMessageBuilder: (e) => 'Lỗi tạo bài viết: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   /// Update post
@@ -214,14 +232,13 @@ class PostProvider with ChangeNotifier, LoadingStateProviderMixin {
       final updatedPost = await _postService.updatePost(postId, request);
 
       // Update in list
-      final index = _pagination.items.indexWhere((p) => p.id == postId);
+      final index = _pagination.findIndex((p) => p.id == postId);
       if (index != -1) {
-        _pagination.items[index] = updatedPost;
-        notifyListeners();
+        _pagination.updateItem(index, updatedPost);
       }
 
       return updatedPost;
-    }, errorMessageBuilder: (e) => 'Lỗi cập nhật bài viết: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   /// Delete post
@@ -230,26 +247,24 @@ class PostProvider with ChangeNotifier, LoadingStateProviderMixin {
       await _postService.deletePost(postId);
 
       // Remove from list
-      _pagination.items.removeWhere((p) => p.id == postId);
-      notifyListeners();
-    }, errorMessageBuilder: (e) => 'Lỗi xóa bài viết: ${e.toString()}');
+      _pagination.removeWhere((p) => p.id == postId);
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   /// Toggle like on post
   Future<void> toggleLike(int postId) async {
     // Find post in list
-    final index = _pagination.items.indexWhere((p) => p.id == postId);
+    final index = _pagination.findIndex((p) => p.id == postId);
     if (index == -1) return;
 
     final post = _pagination.items[index];
     final wasLiked = post.isLiked;
 
     // Optimistic update
-    _pagination.items[index] = post.copyWith(
+    _pagination.updateItem(index, post.copyWith(
       isLiked: !wasLiked,
       likeCount: wasLiked ? post.likeCount - 1 : post.likeCount + 1,
-    );
-    notifyListeners();
+    ));
 
     // API call
     try {
@@ -258,12 +273,10 @@ class PostProvider with ChangeNotifier, LoadingStateProviderMixin {
           : await _postService.likePost(postId);
 
       // Update with real data
-      _pagination.items[index] = updatedPost;
-      notifyListeners();
+      _pagination.updateItem(index, updatedPost);
     } catch (e) {
       // Revert on error
-      _pagination.items[index] = post;
-      notifyListeners();
+      _pagination.updateItem(index, post);
       rethrow;
     }
   }
@@ -271,23 +284,33 @@ class PostProvider with ChangeNotifier, LoadingStateProviderMixin {
   /// Toggle save on post
   Future<void> toggleSave(int postId) async {
     // Find post in list
-    final index = _pagination.items.indexWhere((p) => p.id == postId);
+    final index = _pagination.findIndex((p) => p.id == postId);
     if (index == -1) return;
 
     final post = _pagination.items[index];
     final wasSaved = post.isSaved;
 
+    // Local id cache tracking
+    if (wasSaved) {
+      _savedPostIds.remove(postId);
+    } else {
+      _savedPostIds.add(postId);
+    }
+
     // Optimistic update
-    _pagination.items[index] = post.copyWith(isSaved: !wasSaved);
-    notifyListeners();
+    _pagination.updateItem(index, post.copyWith(isSaved: !wasSaved));
 
     // API call
     try {
       await _postService.savePost(postId);
     } catch (e) {
       // Revert on error
-      _pagination.items[index] = post;
-      notifyListeners();
+      if (wasSaved) {
+        _savedPostIds.add(postId);
+      } else {
+        _savedPostIds.remove(postId);
+      }
+      _pagination.updateItem(index, post);
       rethrow;
     }
   }

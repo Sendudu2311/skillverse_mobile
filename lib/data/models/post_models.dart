@@ -27,9 +27,9 @@ class Post {
   final String? authorAvatar;
   final int likeCount;
   final int commentCount;
-  @JsonKey(defaultValue: false)
+  @JsonKey(name: 'likedByCurrentUser', defaultValue: false)
   final bool isLiked;
-  @JsonKey(defaultValue: false)
+  @JsonKey(name: 'savedByCurrentUser', defaultValue: false)
   final bool isSaved;
   final DateTime createdAt;
   final DateTime? updatedAt;

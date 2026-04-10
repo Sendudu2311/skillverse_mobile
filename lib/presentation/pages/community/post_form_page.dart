@@ -5,6 +5,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../../providers/post_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../../data/models/post_models.dart';
+import '../../../core/utils/error_handler.dart';
 
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
@@ -36,8 +37,6 @@ class _PostFormPageState extends State<PostFormPage> {
 
   Future<void> _loadPost() async {
     setState(() => _isLoading = true);
-    final messenger = ScaffoldMessenger.of(context);
-    final router = GoRouter.of(context);
     try {
       final provider = context.read<PostProvider>();
       final post = provider.posts.firstWhere(
@@ -49,13 +48,8 @@ class _PostFormPageState extends State<PostFormPage> {
       _quillController.document = quill.Document()..insert(0, post.content);
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-        router.pop();
+        ErrorHandler.showErrorSnackBar(context, e);
+        context.pop();
       }
     } finally {
       setState(() => _isLoading = false);
@@ -92,13 +86,19 @@ class _PostFormPageState extends State<PostFormPage> {
                     TextFormField(
                       controller: _titleController,
                       decoration: InputDecoration(
-                        labelText: 'Tiêu đề (tùy chọn)',
+                        labelText: 'Tiêu đề *',
                         hintText: 'Nhập tiêu đề bài viết...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       maxLength: 200,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập tiêu đề';
+                        }
+                        return null;
+                      },
                     ),
 
                     const SizedBox(height: 16),
@@ -174,68 +174,64 @@ class _PostFormPageState extends State<PostFormPage> {
     // Get plain text from quill document
     final content = _quillController.document.toPlainText().trim();
     if (content.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng nhập nội dung bài viết'),
-          backgroundColor: AppTheme.accentGold,
-        ),
-      );
+      if (mounted) {
+        ErrorHandler.showWarningSnackBar(context, 'Vui lòng nhập nội dung bài viết');
+      }
       return;
     }
 
     setState(() => _isLoading = true);
     final provider = context.read<PostProvider>();
-    final messenger = ScaffoldMessenger.of(context);
-    final router = GoRouter.of(context);
+    final targetStatus = isDraft ? PostStatus.draft : PostStatus.published;
 
     try {
       if (widget.postId == null) {
         // Create new post
         final post = await provider.createPost(
           content,
-          title: _titleController.text.trim().isEmpty
-              ? null
-              : _titleController.text.trim(),
-        );
-
-        if (post != null && mounted) {
-          router.pop();
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(isDraft ? 'Đã lưu nháp' : 'Đã đăng bài viết'),
-              backgroundColor: AppTheme.successColor,
-            ),
-          );
-        }
-      } else {
-        // Update existing post
-        await provider.updatePost(
-          widget.postId!,
-          title: _titleController.text.trim().isEmpty
-              ? null
-              : _titleController.text.trim(),
-          content: content,
-          status: isDraft ? PostStatus.draft : PostStatus.published,
+          title: _titleController.text.trim(),
+          status: targetStatus,
         );
 
         if (mounted) {
-          router.pop();
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Đã cập nhật bài viết'),
-              backgroundColor: AppTheme.successColor,
-            ),
-          );
+          if (post != null) {
+            ErrorHandler.showSuccessSnackBar(
+              context,
+              isDraft ? 'Đã lưu nháp thành công' : 'Đã đăng bài viết thành công',
+            );
+            context.pop();
+          } else {
+            // provider.executeAsync caught the error → show from provider.errorMessage
+            ErrorHandler.showErrorSnackBar(
+              context,
+              provider.errorMessage ?? 'Tạo bài viết thất bại',
+            );
+          }
+        }
+      } else {
+        // Update existing post
+        final updated = await provider.updatePost(
+          widget.postId!,
+          title: _titleController.text.trim(),
+          content: content,
+          status: targetStatus,
+        );
+
+        if (mounted) {
+          if (updated != null) {
+            ErrorHandler.showSuccessSnackBar(context, 'Đã cập nhật bài viết');
+            context.pop();
+          } else {
+            ErrorHandler.showErrorSnackBar(
+              context,
+              provider.errorMessage ?? 'Cập nhật bài viết thất bại',
+            );
+          }
         }
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {
