@@ -57,6 +57,21 @@ class GroupChatService {
     }
   }
 
+  /// Get a group by course ID
+  Future<GroupChatResponse?> getGroupByCourse(int courseId, int userId) async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/group-chats/course/$courseId',
+        queryParameters: {'userId': userId},
+      );
+      if (response.data == null) return null;
+      return GroupChatResponse.fromJson(response.data!);
+    } catch (e) {
+      debugPrint('Error loading group by course: $e');
+      return null;
+    }
+  }
+
   /// Get messages for a group
   Future<List<GroupChatMessageDTO>> getGroupMessages(
       int groupId, int userId) async {

@@ -5,7 +5,9 @@ import '../../../data/models/job_models.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/animated_list_item.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/skeleton_loaders.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/status_badge.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/date_time_helper.dart';
@@ -62,9 +64,8 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Đơn Ứng Tuyển'),
-        elevation: 0,
+      appBar: SkillVerseAppBar(
+        title: 'Đơn Ứng Tuyển',
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -76,7 +77,11 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
       body: Consumer<JobProvider>(
         builder: (context, provider, _) {
           if (provider.isLoadingApplications) {
-            return CommonLoading.center(message: 'Đang tải...');
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: 4,
+              itemBuilder: (_, __) => const ListItemSkeleton(lineCount: 3),
+            );
           }
 
           return TabBarView(

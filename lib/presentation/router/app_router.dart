@@ -17,6 +17,8 @@ import '../pages/chat/chat_page.dart';
 import '../pages/chat/messaging_page.dart';
 import '../pages/chat/community_groups_page.dart';
 import '../pages/chat/group_chat_window.dart';
+import '../pages/chat/recruitment_sessions_page.dart';
+import '../pages/chat/recruitment_chat_window.dart';
 import '../../data/models/messaging_models.dart';
 import '../pages/profile/profile_page.dart';
 import '../pages/profile/profile_settings_page.dart';
@@ -40,6 +42,9 @@ import '../pages/task_board/task_board_page.dart';
 import '../pages/jobs/jobs_page.dart';
 import '../pages/jobs/job_detail_page.dart';
 import '../pages/jobs/my_applications_page.dart';
+import '../pages/contract/my_contracts_page.dart';
+import '../pages/contract/contract_detail_page.dart';
+import '../pages/contract/contract_sign_page.dart';
 import '../pages/wallet/wallet_page.dart';
 import '../pages/journey/journey_list_page.dart';
 import '../pages/journey/journey_create_page.dart';
@@ -268,6 +273,21 @@ class AppRouter {
           },
         ),
 
+        // Recruitment Chat Routes
+        GoRoute(
+          path: '/recruitment-sessions',
+          name: 'recruitment-sessions',
+          builder: (context, state) => const RecruitmentSessionsPage(),
+        ),
+        GoRoute(
+          path: '/recruitment-chat/:sessionId',
+          name: 'recruitment-chat',
+          builder: (context, state) {
+            final sessionId = int.parse(state.pathParameters['sessionId']!);
+            return RecruitmentChatWindow(sessionId: sessionId);
+          },
+        ),
+
         // Jobs Route
         GoRoute(
           path: '/jobs',
@@ -291,6 +311,29 @@ class AppRouter {
           path: '/my-applications',
           name: 'my-applications',
           builder: (context, state) => const MyApplicationsPage(),
+        ),
+
+        // Contract Routes
+        GoRoute(
+          path: '/my-contracts',
+          name: 'my-contracts',
+          builder: (context, state) => const MyContractsPage(),
+        ),
+        GoRoute(
+          path: '/contracts/:contractId',
+          name: 'contract-detail',
+          builder: (context, state) {
+            final contractId = int.parse(state.pathParameters['contractId']!);
+            return ContractDetailPage(contractId: contractId);
+          },
+        ),
+        GoRoute(
+          path: '/contracts/:contractId/sign',
+          name: 'contract-sign',
+          builder: (context, state) {
+            final contractId = int.parse(state.pathParameters['contractId']!);
+            return ContractSignPage(contractId: contractId);
+          },
         ),
 
         // Community Routes

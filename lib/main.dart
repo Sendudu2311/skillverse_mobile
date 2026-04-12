@@ -30,6 +30,8 @@ import 'presentation/providers/wallet_provider.dart';
 import 'presentation/providers/notification_provider.dart';
 import 'presentation/providers/learning_report_provider.dart';
 import 'presentation/providers/group_chat_provider.dart';
+import 'presentation/providers/contract_provider.dart';
+import 'presentation/providers/recruitment_chat_provider.dart';
 import 'presentation/app.dart';
 import 'core/utils/storage_helper.dart';
 import 'core/utils/date_time_helper.dart';
@@ -93,6 +95,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => LearningReportProvider()),
         ChangeNotifierProvider(create: (_) => GroupChatProvider()),
+        ChangeNotifierProvider(create: (_) => ContractProvider()),
+        ChangeNotifierProvider(create: (_) => RecruitmentChatProvider()),
       ],
       child: const SkillVerseApp(),
     ),

@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/common_loading.dart';
 import '../../../core/utils/validation_helper.dart';
+import '../../../data/services/journey_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -37,7 +38,7 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     if (success && mounted) {
-      context.go('/dashboard');
+      await _navigateAfterAuth();
     } else if (mounted) {
       ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Đăng nhập thất bại');
     }
@@ -49,9 +50,27 @@ class _LoginPageState extends State<LoginPage> {
     final success = await authProvider.signInWithGoogle();
 
     if (success && mounted) {
-      context.go('/dashboard');
+      await _navigateAfterAuth();
     } else if (mounted) {
       ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Đăng nhập Google thất bại');
+    }
+  }
+
+  /// Check if user has any journeys. If not, redirect to /journey/create
+  /// for onboarding assessment. Otherwise, go to /dashboard.
+  Future<void> _navigateAfterAuth() async {
+    if (!mounted) return;
+    try {
+      final journeys = await JourneyService().getUserJourneys(page: 0, size: 1);
+      if (!mounted) return;
+      if (journeys.isEmpty) {
+        context.go('/journey/create');
+      } else {
+        context.go('/dashboard');
+      }
+    } catch (_) {
+      // Fallback to dashboard if journey check fails
+      if (mounted) context.go('/dashboard');
     }
   }
 

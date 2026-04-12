@@ -10,8 +10,7 @@ import '../../providers/dashboard_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/skin_provider.dart';
 import '../../themes/app_theme.dart';
-import '../../../core/utils/storage_helper.dart';
-import '../../widgets/onboarding_prompt.dart';
+// OnboardingPrompt disabled — redirect handled by LoginPage._navigateAfterAuth()
 import '../../widgets/glass_card.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../../core/utils/error_handler.dart';
@@ -140,20 +139,9 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _checkAndShowOnboarding() async {
-    final shouldShow =
-        StorageHelper.instance.readBool(StorageKey.showOnboardingPrompt) ??
-        false;
-    if (shouldShow && mounted) {
-      OnboardingPrompt.show(
-        context,
-        onDismiss: () {
-          StorageHelper.instance.writeBool(
-            StorageKey.showOnboardingPrompt,
-            false,
-          );
-        },
-      );
-    }
+    // Disabled: New user onboarding is now handled by LoginPage._navigateAfterAuth()
+    // which redirects users with 0 journeys directly to /journey/create.
+    // Keeping method stub for potential future use.
   }
 
   String _getGreeting() {
@@ -178,7 +166,9 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 HeroCardSkeleton(),
                 SizedBox(height: 16),
-                CardSkeleton(imageHeight: null, hasFooter: false),
+                ContinueLearningSkeleton(),
+                SizedBox(height: 16),
+                ActiveRoadmapSkeleton(),
                 SizedBox(height: 16),
                 QuickActionsSkeleton(),
                 SizedBox(height: 16),

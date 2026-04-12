@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../../data/models/group_chat_models.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/skeleton_loaders.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import '../../themes/app_theme.dart';
 
 /// Page showing the list of groups the current user belongs to.
@@ -42,8 +43,8 @@ class _CommunityGroupsPageState extends State<CommunityGroupsPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nhóm Chat'),
+      appBar: const SkillVerseAppBar(
+        title: 'Nhóm Chat',
         centerTitle: true,
       ),
       body: Consumer<GroupChatProvider>(
@@ -52,7 +53,7 @@ class _CommunityGroupsPageState extends State<CommunityGroupsPage> {
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: 5,
-              itemBuilder: (_, __) => const CardSkeleton(),
+              itemBuilder: (_, __) => const GroupCardSkeleton(),
             );
           }
 

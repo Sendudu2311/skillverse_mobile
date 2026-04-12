@@ -7,6 +7,7 @@ import '../../themes/app_theme.dart';
 import '../../widgets/selectable_chip_row.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/animated_list_item.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
@@ -98,7 +99,13 @@ class _NotificationPageState extends State<NotificationPage> {
     return Consumer<NotificationProvider>(
       builder: (context, provider, _) {
         if (provider.isLoading) {
-          return CommonLoading.center();
+          return ListView.separated(
+            padding: const EdgeInsets.only(bottom: 24),
+            itemCount: 8,
+            separatorBuilder: (_, __) =>
+                const Divider(height: 1, indent: 72),
+            itemBuilder: (_, __) => const NotificationSkeleton(),
+          );
         }
 
         if (provider.hasError) {

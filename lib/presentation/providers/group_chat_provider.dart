@@ -135,10 +135,16 @@ class GroupChatProvider extends ChangeNotifier {
         optimistic,
       );
 
-      // Replace temp message with server response
-      final idx = _messages.indexWhere((m) => m.id == tempId);
-      if (idx >= 0) {
-        _messages[idx] = saved;
+      // Handle race condition between REST response and STOMP broadcast
+      final hasStompAdded = _messages.any((m) => m.id == saved.id);
+      final tempIdx = _messages.indexWhere((m) => m.id == tempId);
+
+      if (hasStompAdded) {
+        // STOMP arrived first and is already in the list. Remove temp if it wasn't replaced.
+        if (tempIdx >= 0) _messages.removeAt(tempIdx);
+      } else {
+        // REST arrived first. Replace temp message with server response.
+        if (tempIdx >= 0) _messages[tempIdx] = saved;
       }
     } catch (e) {
       // Remove failed message
@@ -153,17 +159,23 @@ class GroupChatProvider extends ChangeNotifier {
 
   // ── Incoming WebSocket message ───────────────────────────────────────
   void _handleIncomingMessage(GroupChatMessageDTO msg) {
-    // Deduplicate
-    final isDuplicate = _messages.any((m) =>
-        m.id == msg.id ||
-        (m.senderId == msg.senderId &&
-            m.content == msg.content &&
-            m.timestamp == msg.timestamp));
+    if (_messages.any((m) => m.id == msg.id)) return;
 
-    if (!isDuplicate) {
+    // Check if this incoming message matches a pending optimistic message
+    final tempIdx = _messages.indexWhere((m) =>
+        m.id != null &&
+        m.id! < 0 &&
+        m.senderId == msg.senderId &&
+        m.content == msg.content &&
+        m.messageType == msg.messageType);
+
+    if (tempIdx >= 0) {
+      // Replace the temp message to avoid visual flicker
+      _messages[tempIdx] = msg;
+    } else {
       _messages.add(msg);
-      notifyListeners();
     }
+    notifyListeners();
   }
 
   // ── Cleanup ──────────────────────────────────────────────────────────

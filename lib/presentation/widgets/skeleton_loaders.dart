@@ -298,7 +298,9 @@ class GridItemSkeleton extends StatelessWidget {
   }
 }
 
-/// Job card skeleton
+/// Job card skeleton — matches _buildLongTermJobCard in jobs_page.dart
+/// Layout: Header (48px avatar + title/company) → Salary row → Description
+///         → Skill chips → Info chips → Footer (deadline + applicants)
 class JobCardSkeleton extends StatelessWidget {
   const JobCardSkeleton({super.key});
 
@@ -307,7 +309,7 @@ class JobCardSkeleton extends StatelessWidget {
     return ShimmerLoading(
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
@@ -318,9 +320,10 @@ class JobCardSkeleton extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header: avatar + title + company
             Row(
               children: [
-                const ShimmerBox(width: 56, height: 56, borderRadius: 12),
+                const ShimmerBox(width: 48, height: 48, borderRadius: 12),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -329,34 +332,72 @@ class JobCardSkeleton extends StatelessWidget {
                       const ShimmerBox(
                         width: double.infinity,
                         height: 18,
-                        margin: EdgeInsets.only(bottom: 6),
+                        margin: EdgeInsets.only(bottom: 4),
                       ),
                       ShimmerBox(
-                        width: MediaQuery.of(context).size.width * 0.5,
-                        height: 14,
+                        width: MediaQuery.of(context).size.width * 0.35,
+                        height: 13,
                       ),
                     ],
                   ),
                 ),
               ],
             ),
+            // Salary highlight row
             const SizedBox(height: 12),
-            Row(
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                children: [
+                  ShimmerBox(width: 18, height: 18, borderRadius: 4),
+                  SizedBox(width: 8),
+                  ShimmerBox(width: 140, height: 14),
+                ],
+              ),
+            ),
+            // Description
+            const SizedBox(height: 10),
+            const ShimmerBox(
+              width: double.infinity,
+              height: 14,
+              margin: EdgeInsets.only(bottom: 4),
+            ),
+            ShimmerBox(
+              width: MediaQuery.of(context).size.width * 0.6,
+              height: 14,
+            ),
+            // Skill chips
+            const SizedBox(height: 10),
+            const Row(
               children: [
-                const ShimmerBox(width: 100, height: 14),
-                const SizedBox(width: 16),
-                const ShimmerBox(width: 80, height: 14),
+                ShimmerBox(width: 60, height: 26, borderRadius: 12),
+                SizedBox(width: 8),
+                ShimmerBox(width: 72, height: 26, borderRadius: 12),
+                SizedBox(width: 8),
+                ShimmerBox(width: 56, height: 26, borderRadius: 12),
               ],
             ),
+            // Info chips row
             const SizedBox(height: 12),
-            ShimmerBox(
-              width: MediaQuery.of(context).size.width * 0.9,
-              height: 14,
-              margin: const EdgeInsets.only(bottom: 4),
+            const Row(
+              children: [
+                ShimmerBox(width: 70, height: 14),
+                SizedBox(width: 12),
+                ShimmerBox(width: 80, height: 14),
+              ],
             ),
-            ShimmerBox(
-              width: MediaQuery.of(context).size.width * 0.7,
-              height: 14,
+            // Footer: deadline + applicants
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const ShimmerBox(width: 80, height: 12),
+                const ShimmerBox(width: 70, height: 12),
+              ],
             ),
           ],
         ),
@@ -412,7 +453,9 @@ class CommentSkeleton extends StatelessWidget {
   }
 }
 
-/// Post card skeleton (for community/social feed)
+/// Post card skeleton — matches PostCard in post_card.dart
+/// Layout: Author header (avatar + name + time + menu) → Title → Content
+///         → Action buttons (like, comment, spacer, bookmark)
 class PostCardSkeleton extends StatelessWidget {
   const PostCardSkeleton({super.key});
 
@@ -453,35 +496,45 @@ class PostCardSkeleton extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Menu icon placeholder
+                const ShimmerBox(width: 24, height: 24, borderRadius: 12),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
-            // Post content
+            // Title
+            ShimmerBox(
+              width: MediaQuery.of(context).size.width * 0.7,
+              height: 18,
+              margin: const EdgeInsets.only(bottom: 8),
+            ),
+
+            // Content lines
             const ShimmerBox(
               width: double.infinity,
-              height: 16,
-              margin: EdgeInsets.only(bottom: 8),
+              height: 14,
+              margin: EdgeInsets.only(bottom: 6),
             ),
             const ShimmerBox(
               width: double.infinity,
               height: 14,
-              margin: EdgeInsets.only(bottom: 8),
+              margin: EdgeInsets.only(bottom: 6),
             ),
             ShimmerBox(
-              width: MediaQuery.of(context).size.width * 0.6,
+              width: MediaQuery.of(context).size.width * 0.5,
               height: 14,
-              margin: const EdgeInsets.only(bottom: 16),
             ),
 
-            // Action buttons
-            Row(
+            const SizedBox(height: 16),
+
+            // Action buttons: like + comment + spacer + bookmark
+            const Row(
               children: [
-                const ShimmerBox(width: 60, height: 32, borderRadius: 16),
-                const SizedBox(width: 12),
-                const ShimmerBox(width: 60, height: 32, borderRadius: 16),
-                const SizedBox(width: 12),
-                const ShimmerBox(width: 60, height: 32, borderRadius: 16),
+                ShimmerBox(width: 48, height: 28, borderRadius: 14),
+                SizedBox(width: 16),
+                ShimmerBox(width: 48, height: 28, borderRadius: 14),
+                Spacer(),
+                ShimmerBox(width: 28, height: 28, borderRadius: 14),
               ],
             ),
           ],
@@ -491,6 +544,9 @@ class PostCardSkeleton extends StatelessWidget {
   }
 }
 
+/// Mentor card skeleton — matches _buildMentorCard in mentor_list_page.dart
+/// Layout: Gradient header (72px avatar + name + specialization + rating)
+///         → Body (skill chips + price row + action buttons)
 class MentorCardSkeleton extends StatelessWidget {
   const MentorCardSkeleton({super.key});
 
@@ -498,8 +554,7 @@ class MentorCardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShimmerLoading(
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
@@ -507,29 +562,93 @@ class MentorCardSkeleton extends StatelessWidget {
             color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
           ),
         ),
-        child: Row(
+        child: Column(
           children: [
-            const ShimmerBox(width: 64, height: 64, borderRadius: 32),
-            const SizedBox(width: 12),
-            Expanded(
+            // Header with gradient tint
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.04),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Avatar
+                  const ShimmerBox(width: 72, height: 72, borderRadius: 36),
+                  const SizedBox(width: 16),
+                  // Name + specialization + rating
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ShimmerBox(
+                          width: MediaQuery.of(context).size.width * 0.4,
+                          height: 20,
+                          margin: const EdgeInsets.only(bottom: 4),
+                        ),
+                        ShimmerBox(
+                          width: MediaQuery.of(context).size.width * 0.3,
+                          height: 14,
+                          margin: const EdgeInsets.only(bottom: 6),
+                        ),
+                        const Row(
+                          children: [
+                            ShimmerBox(width: 16, height: 16, borderRadius: 2),
+                            SizedBox(width: 4),
+                            ShimmerBox(width: 30, height: 13),
+                            SizedBox(width: 12),
+                            ShimmerBox(width: 14, height: 14, borderRadius: 2),
+                            SizedBox(width: 4),
+                            ShimmerBox(width: 44, height: 12),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Favorite icon
+                  const ShimmerBox(width: 24, height: 24, borderRadius: 12),
+                ],
+              ),
+            ),
+            // Body
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const ShimmerBox(
-                    width: double.infinity,
-                    height: 18,
-                    margin: EdgeInsets.only(bottom: 8),
+                  // Skill chips
+                  const Row(
+                    children: [
+                      ShimmerBox(width: 70, height: 30, borderRadius: 12),
+                      SizedBox(width: 8),
+                      ShimmerBox(width: 85, height: 30, borderRadius: 12),
+                      SizedBox(width: 8),
+                      ShimmerBox(width: 55, height: 30, borderRadius: 12),
+                    ],
                   ),
-                  ShimmerBox(
-                    width: MediaQuery.of(context).size.width * 0.4,
-                    height: 14,
-                    margin: const EdgeInsets.only(bottom: 8),
-                  ),
+                  const SizedBox(height: 16),
+                  // Price + action buttons
                   Row(
                     children: [
-                      const ShimmerBox(width: 60, height: 12),
-                      const SizedBox(width: 12),
-                      const ShimmerBox(width: 60, height: 12),
+                      // Price
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const ShimmerBox(width: 60, height: 11),
+                            const SizedBox(height: 2),
+                            const ShimmerBox(width: 80, height: 18),
+                          ],
+                        ),
+                      ),
+                      // Chat button
+                      const ShimmerBox(width: 72, height: 36, borderRadius: 12),
+                      const SizedBox(width: 8),
+                      // Arrow button
+                      const ShimmerBox(width: 40, height: 36, borderRadius: 12),
                     ],
                   ),
                 ],
@@ -599,6 +718,9 @@ class JourneyCardSkeleton extends StatelessWidget {
   }
 }
 
+/// Course card skeleton — matches CourseCard in course_card.dart
+/// Layout: 160px thumbnail → Title → Author row (24px avatar + name)
+///         → Stats row (rating + students + modules) → Price + CTA button
 class CourseCardSkeleton extends StatelessWidget {
   const CourseCardSkeleton({super.key});
 
@@ -617,6 +739,7 @@ class CourseCardSkeleton extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Thumbnail
             const ShimmerBox(
               width: double.infinity,
               height: 160,
@@ -627,17 +750,13 @@ class CourseCardSkeleton extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title (2 lines)
                   const ShimmerBox(
                     width: double.infinity,
-                    height: 20,
+                    height: 18,
                     margin: EdgeInsets.only(bottom: 8),
                   ),
-                  ShimmerBox(
-                    width: MediaQuery.of(context).size.width * 0.7,
-                    height: 18,
-                    margin: const EdgeInsets.only(bottom: 8),
-                  ),
-                  const SizedBox(height: 8),
+                  // Author row
                   Row(
                     children: [
                       const ShimmerBox(
@@ -646,42 +765,122 @@ class CourseCardSkeleton extends StatelessWidget {
                         borderRadius: 12,
                         margin: EdgeInsets.only(right: 8),
                       ),
-                      Expanded(
-                        child: ShimmerBox(
-                          width: MediaQuery.of(context).size.width * 0.4,
-                          height: 14,
-                        ),
+                      ShimmerBox(
+                        width: MediaQuery.of(context).size.width * 0.35,
+                        height: 14,
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Row(
+                  // Stats row: rating + students + modules
+                  const Row(
                     children: [
-                      ShimmerBox(
-                        width: MediaQuery.of(context).size.width * 0.15,
-                        height: 14,
-                        margin: const EdgeInsets.only(right: 16),
-                      ),
-                      ShimmerBox(
-                        width: MediaQuery.of(context).size.width * 0.2,
-                        height: 14,
-                      ),
+                      ShimmerBox(width: 16, height: 16, borderRadius: 2),
+                      SizedBox(width: 4),
+                      ShimmerBox(width: 24, height: 14),
+                      SizedBox(width: 16),
+                      ShimmerBox(width: 16, height: 16, borderRadius: 2),
+                      SizedBox(width: 4),
+                      ShimmerBox(width: 24, height: 14),
+                      SizedBox(width: 16),
+                      ShimmerBox(width: 16, height: 16, borderRadius: 2),
+                      SizedBox(width: 4),
+                      ShimmerBox(width: 60, height: 14),
                     ],
                   ),
                   const SizedBox(height: 16),
+                  // Price + CTA button
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const ShimmerBox(
-                        width: 100,
-                        height: 36,
+                        width: 80,
+                        height: 32,
                         borderRadius: 8,
                       ),
+                      const Spacer(),
                       ShimmerBox(
-                        width: MediaQuery.of(context).size.width * 0.35,
-                        height: 40,
+                        width: MediaQuery.of(context).size.width * 0.3,
+                        height: 38,
                         borderRadius: 8,
                       ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Course card skeleton (horizontal) — matches CourseCardV3 in course_card_v3.dart
+/// Layout: Row( 120x90 thumbnail | Column(Title, Author, Stats/Price) )
+class CourseCardV3Skeleton extends StatelessWidget {
+  const CourseCardV3Skeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Thumbnail
+            const ShimmerBox(width: 120, height: 90, borderRadius: 12),
+            const SizedBox(width: 14),
+            // Info block
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title (2 lines)
+                  const ShimmerBox(
+                    width: double.infinity,
+                    height: 15,
+                    margin: EdgeInsets.only(bottom: 6),
+                  ),
+                  ShimmerBox(
+                    width: MediaQuery.of(context).size.width * 0.35,
+                    height: 15,
+                    margin: const EdgeInsets.only(bottom: 8),
+                  ),
+                  // Author row
+                  Row(
+                    children: [
+                      const ShimmerBox(width: 13, height: 13, borderRadius: 2),
+                      const SizedBox(width: 4),
+                      ShimmerBox(
+                        width: MediaQuery.of(context).size.width * 0.25,
+                        height: 12,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Stats row + Price badge
+                  Row(
+                    children: [
+                      const ShimmerBox(width: 14, height: 14, borderRadius: 2),
+                      const SizedBox(width: 2),
+                      const ShimmerBox(width: 20, height: 12),
+                      const SizedBox(width: 12),
+                      const ShimmerBox(width: 14, height: 14, borderRadius: 2),
+                      const SizedBox(width: 2),
+                      const ShimmerBox(width: 20, height: 12),
+                      const Spacer(),
+                      // Price badge
+                      const ShimmerBox(width: 60, height: 22, borderRadius: 8),
                     ],
                   ),
                 ],
@@ -778,6 +977,122 @@ class ChatBubbleSkeleton extends StatelessWidget {
   }
 }
 
+/// Dashboard Continue-Learning skeleton — matches GradientGlassCard with
+/// 48×48 icon block, title, subtitle and a thin progress bar.
+class ContinueLearningSkeleton extends StatelessWidget {
+  const ContinueLearningSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Row(
+          children: [
+            // Icon block placeholder
+            const ShimmerBox(width: 48, height: 48, borderRadius: 12),
+            const SizedBox(width: 12),
+            // Text + progress bar
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ShimmerBox(
+                    width: 80,
+                    height: 10,
+                    margin: EdgeInsets.only(bottom: 4),
+                  ),
+                  ShimmerBox(
+                    width: MediaQuery.of(context).size.width * 0.5,
+                    height: 14,
+                    margin: const EdgeInsets.only(bottom: 8),
+                  ),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: ShimmerBox(
+                          width: double.infinity,
+                          height: 4,
+                          borderRadius: 4,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const ShimmerBox(width: 30, height: 11),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const ShimmerBox(width: 20, height: 20, borderRadius: 10),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Dashboard Active-Roadmap skeleton — matches compact roadmap card with
+/// icon, title, percentage, progress bar and quest count text.
+class ActiveRoadmapSkeleton extends StatelessWidget {
+  const ActiveRoadmapSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title row: icon + title + percentage + chevron
+            Row(
+              children: [
+                const ShimmerBox(width: 18, height: 18, borderRadius: 4),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ShimmerBox(
+                    width: MediaQuery.of(context).size.width * 0.4,
+                    height: 14,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const ShimmerBox(width: 32, height: 13),
+                const SizedBox(width: 4),
+                const ShimmerBox(width: 18, height: 18, borderRadius: 9),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // Progress bar
+            const ShimmerBox(
+              width: double.infinity,
+              height: 6,
+              borderRadius: 4,
+            ),
+            const SizedBox(height: 6),
+            // Quest count
+            const ShimmerBox(width: 90, height: 11),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Dashboard Hero Card skeleton — matches the welcome card with avatar
 class HeroCardSkeleton extends StatelessWidget {
   const HeroCardSkeleton({super.key});
@@ -865,15 +1180,170 @@ class HeroCardSkeleton extends StatelessWidget {
   }
 }
 
-/// Dashboard Quick Actions skeleton — 4 circular action buttons in a row
+/// Dashboard Quick Actions skeleton — matches 4-column GridView with 8 cells.
+/// Each cell has a 36×36 rounded-rect icon box + a small text label below.
 class QuickActionsSkeleton extends StatelessWidget {
   const QuickActionsSkeleton({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ShimmerLoading(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section title placeholder
+          const ShimmerBox(width: 100, height: 14),
+          const SizedBox(height: 12),
+          // 4-column grid, 2 rows = 8 cells (default visible count)
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 0.85,
+            ),
+            itemCount: 8,
+            itemBuilder: (_, __) => Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+                ),
+              ),
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ShimmerBox(width: 36, height: 36, borderRadius: 10),
+                  SizedBox(height: 6),
+                  ShimmerBox(width: 36, height: 10),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dashboard Stats Grid skeleton — matches 2×2 stat cards with
+/// 40×40 icon + value + label in a Row layout per card.
+class StatsGridSkeleton extends StatelessWidget {
+  const StatsGridSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.6,
+        ),
+        itemCount: 4,
+        itemBuilder: (_, __) => _buildStatCell(context),
+      ),
+    );
+  }
+
+  Widget _buildStatCell(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+        ),
+      ),
+      child: const Row(
+        children: [
+          ShimmerBox(width: 40, height: 40, borderRadius: 10),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ShimmerBox(width: 36, height: 22),
+                SizedBox(height: 3),
+                ShimmerBox(width: 60, height: 10),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Notification tile skeleton — matches _NotificationTile in notification_page.dart
+/// Layout: Row( 44px avatar + Column(title, message, time) + unread dot )
+class NotificationSkeleton extends StatelessWidget {
+  const NotificationSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Avatar
+            const ShimmerBox(width: 44, height: 44, borderRadius: 22),
+            const SizedBox(width: 12),
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerBox(
+                    width: MediaQuery.of(context).size.width * 0.5,
+                    height: 13,
+                    margin: const EdgeInsets.only(bottom: 4),
+                  ),
+                  const ShimmerBox(
+                    width: double.infinity,
+                    height: 12,
+                    margin: EdgeInsets.only(bottom: 4),
+                  ),
+                  ShimmerBox(
+                    width: MediaQuery.of(context).size.width * 0.7,
+                    height: 12,
+                    margin: const EdgeInsets.only(bottom: 4),
+                  ),
+                  const ShimmerBox(width: 60, height: 11),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Unread dot
+            const ShimmerBox(width: 8, height: 8, borderRadius: 4),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Group card skeleton — matches _GroupCard in community_groups_page.dart
+/// Layout: Row( 56px avatar + Column(name, members row) + chevron icon )
+class GroupCardSkeleton extends StatelessWidget {
+  const GroupCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoading(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
@@ -882,74 +1352,36 @@ class QuickActionsSkeleton extends StatelessWidget {
           ),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(
-            4,
-            (_) => const Column(
-              children: [
-                ShimmerBox(width: 48, height: 48, borderRadius: 24),
-                SizedBox(height: 8),
-                ShimmerBox(width: 40, height: 10),
-              ],
+          children: [
+            // Group avatar
+            const ShimmerBox(width: 56, height: 56, borderRadius: 28),
+            const SizedBox(width: 14),
+            // Group info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerBox(
+                    width: MediaQuery.of(context).size.width * 0.45,
+                    height: 15,
+                    margin: const EdgeInsets.only(bottom: 6),
+                  ),
+                  const Row(
+                    children: [
+                      ShimmerBox(width: 14, height: 14, borderRadius: 2),
+                      SizedBox(width: 4),
+                      ShimmerBox(width: 80, height: 12),
+                      SizedBox(width: 8),
+                      ShimmerBox(width: 90, height: 12),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
+            // Chevron
+            const ShimmerBox(width: 24, height: 24, borderRadius: 12),
+          ],
         ),
-      ),
-    );
-  }
-}
-
-/// Dashboard Stats Grid skeleton — 2x2 stat cards
-class StatsGridSkeleton extends StatelessWidget {
-  const StatsGridSkeleton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ShimmerLoading(
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              children: [
-                _buildStatCell(context),
-                const SizedBox(height: 12),
-                _buildStatCell(context),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              children: [
-                _buildStatCell(context),
-                const SizedBox(height: 12),
-                _buildStatCell(context),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCell(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-        ),
-      ),
-      child: const Column(
-        children: [
-          ShimmerBox(width: 40, height: 40, borderRadius: 20),
-          SizedBox(height: 8),
-          ShimmerBox(width: 50, height: 20),
-          SizedBox(height: 4),
-          ShimmerBox(width: 60, height: 12),
-        ],
       ),
     );
   }
