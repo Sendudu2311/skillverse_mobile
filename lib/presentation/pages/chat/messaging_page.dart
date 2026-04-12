@@ -9,6 +9,7 @@ import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/animated_list_item.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import '../../../core/utils/date_time_helper.dart';
 
 class MessagingPage extends StatefulWidget {
@@ -32,13 +33,18 @@ class _MessagingPageState extends State<MessagingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tin nhắn'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+      appBar: SkillVerseAppBar(
+        title: 'Tin nhắn',
+        onBack: () => context.pop(),
         actions: [
+          IconButton(
+            onPressed: () => context.push('/recruitment-sessions'),
+            icon: Icon(
+              Icons.work_outline,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            tooltip: 'Chat tuyển dụng',
+          ),
           IconButton(
             onPressed: () => context.push('/community-groups'),
             icon: Icon(
