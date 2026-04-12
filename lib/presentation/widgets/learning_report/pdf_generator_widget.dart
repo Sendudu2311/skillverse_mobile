@@ -4,21 +4,25 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../../../data/models/learning_report_model.dart';
 
-/// Branded PDF generator for Learning Reports.
-/// Creates professional A4 PDF with gradient cover, all sections, and metrics.
+/// Premium Branded PDF generator for Learning Reports.
+/// Creates a high-end A4 PDF with a Galaxy/Glassmorphism theme reflecting the Super App aesthetic.
 class PdfGeneratorWidget {
   PdfGeneratorWidget._();
 
-  // Brand colors
-  static const _primaryColor = PdfColor.fromInt(0xFF4F46E5);
-  static const _secondaryColor = PdfColor.fromInt(0xFF8B5CF6);
-  static const _accentColor = PdfColor.fromInt(0xFF06B6D4);
-  static const _successColor = PdfColor.fromInt(0xFF22C55E);
-  static const _warningColor = PdfColor.fromInt(0xFFFBBF24);
-  static const _errorColor = PdfColor.fromInt(0xFFEF4444);
-  static const _textPrimary = PdfColor.fromInt(0xFF1F2937);
-  static const _textSecondary = PdfColor.fromInt(0xFF6B7280);
-  static const _borderColor = PdfColor.fromInt(0xFFE5E7EB);
+  // ----- Brand Colors (Aligned with AppTheme) -----
+  static const _galaxyDarkest = PdfColor.fromInt(0xFF050510);
+  static const _galaxyDark = PdfColor.fromInt(0xFF0A0A14);
+  static const _primaryBlue = PdfColor.fromInt(0xFF4F46E5);
+  static const _accentCyan = PdfColor.fromInt(0xFF00D4FF);
+  static const _secondaryPurple = PdfColor.fromInt(0xFF8B5CF6);
+  static const _successColor = PdfColor.fromInt(0xFF10B981);
+  static const _warningColor = PdfColor.fromInt(0xFFF59E0B);
+  static const _errorColor = PdfColor.fromInt(0xFFDC2626);
+  
+  static const _textPrimary = PdfColor.fromInt(0xFF1E293B);
+  static const _textSecondary = PdfColor.fromInt(0xFF64748B);
+  static const _borderColor = PdfColor.fromInt(0xFFE2E8F0);
+  static const _cardBgLight = PdfColor.fromInt(0xFFF8FAFC);
 
   /// Generate full PDF bytes from a report.
   static Future<Uint8List> generateReportPdf({
@@ -30,16 +34,23 @@ class PdfGeneratorWidget {
     final fontData = await rootBundle.load('assets/fonts/Roboto-Variable.ttf');
     final roboto = pw.Font.ttf(fontData);
 
+    // Load Avatar
+    Uint8List? avatarImageBytes;
+    try {
+      final byteData = await rootBundle.load('assets/meowl_bg_clear.png');
+      avatarImageBytes = byteData.buffer.asUint8List();
+    } catch (_) {}
+
     final doc = pw.Document(
       theme: pw.ThemeData.withFont(base: roboto, bold: roboto),
     );
 
-    // Page 1 — Cover & Overview
+    // Page 1 — Premium Cover & Overview
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: pw.EdgeInsets.zero,
-        build: (ctx) => _buildCoverPage(report, streakDisplay),
+        build: (ctx) => _buildCoverPage(report, streakDisplay, avatarImageBytes),
       ),
     );
 
@@ -51,25 +62,7 @@ class PdfGeneratorWidget {
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(40),
           header: (ctx) => pw.SizedBox.shrink(),
-          footer: (ctx) => pw.Container(
-            padding: const pw.EdgeInsets.symmetric(vertical: 8),
-            decoration: const pw.BoxDecoration(
-              border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300)),
-            ),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'SkillVerse · skillverse.vn · Confidential',
-                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
-                ),
-                pw.Text(
-                  'Trang ${ctx.pageNumber}',
-                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
-                ),
-              ],
-            ),
-          ),
+          footer: _buildFooter,
           build: (ctx) => _buildSectionsContent(sections, report),
         ),
       );
@@ -81,25 +74,7 @@ class PdfGeneratorWidget {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
         header: (ctx) => pw.SizedBox.shrink(),
-        footer: (ctx) => pw.Container(
-          padding: const pw.EdgeInsets.symmetric(vertical: 8),
-          decoration: const pw.BoxDecoration(
-            border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300)),
-          ),
-          child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                'SkillVerse · skillverse.vn · Confidential',
-                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
-              ),
-              pw.Text(
-                'Trang ${ctx.pageNumber}',
-                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
-              ),
-            ],
-          ),
-        ),
+        footer: _buildFooter,
         build: (ctx) => _buildMetricsContent(report, streakDisplay),
       ),
     );
@@ -107,10 +82,38 @@ class PdfGeneratorWidget {
     return doc.save();
   }
 
-  /// Cover page with gradient header and report overview.
+  static pw.Widget _buildFooter(pw.Context ctx) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 12),
+      decoration: const pw.BoxDecoration(
+        border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300)),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'SkillVerse · Super App · Báo Cáo Phân Tích AI',
+            style: pw.TextStyle(
+              fontSize: 9,
+              color: PdfColors.grey500,
+              fontWeight: pw.FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+          pw.Text(
+            'Trang ${ctx.pageNumber}',
+            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Cover page with deep Galaxy theme and sleek UI elements
   static pw.Widget _buildCoverPage(
     StudentLearningReportResponse report,
     ({int value, String emoji, String description}) streakDisplay,
+    Uint8List? avatarBytes,
   ) {
     final metrics = report.metrics;
     final typeKey = (report.reportType ?? 'COMPREHENSIVE').toUpperCase();
@@ -125,283 +128,278 @@ class PdfGeneratorWidget {
 
     final trendKey = (report.learningTrend ?? 'stable').toLowerCase();
     final trendConfig = {
-      'improving': (_successColor, 'Đang tiến bộ'),
-      'stable': (_warningColor, 'Ổn định'),
-      'declining': (_errorColor, 'Cần tập trung'),
+      'improving': (_successColor, 'Đang tiến bộ mạnh mẽ'),
+      'stable': (_primaryBlue, 'Phong độ ổn định'),
+      'declining': (_errorColor, 'Cần tập trung thêm'),
     };
-    final (trendColor, trendLabel) =
-        trendConfig[trendKey] ?? (_warningColor, 'Ổn định');
+    final (trendColor, trendLabel) = trendConfig[trendKey] ?? (_primaryBlue, 'Ổn định');
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-      children: [
-        // Gradient header
-        pw.Container(
-          height: 200,
+    return pw.Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: PdfColors.white,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          // --- Minimalist Header ---
+          pw.Container(
+          height: 160,
           decoration: pw.BoxDecoration(
-            gradient: pw.LinearGradient(
-              colors: [_primaryColor, _secondaryColor, const PdfColor.fromInt(0xFF7C3AED)],
-              begin: pw.Alignment.topLeft,
-              end: pw.Alignment.bottomRight,
+            color: PdfColors.white,
+            border: pw.Border(
+              bottom: pw.BorderSide(color: _borderColor, width: 1),
             ),
           ),
-          padding: const pw.EdgeInsets.all(32),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
-              // Brand row
-              pw.Row(
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                mainAxisAlignment: pw.MainAxisAlignment.center,
                 children: [
                   pw.Container(
-                    width: 56,
-                    height: 56,
-                    decoration: const pw.BoxDecoration(
-                      shape: pw.BoxShape.circle,
-                      color: PdfColors.white,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: pw.BoxDecoration(
+                      color: _accentCyan.shade(.1),
+                      borderRadius: pw.BorderRadius.circular(6),
                     ),
-                    child: pw.Center(
-                      child: pw.Text(
-                        'M',
-                        style: pw.TextStyle(
-                          fontSize: 28,
-                          fontWeight: pw.FontWeight.bold,
-                          color: _primaryColor,
-                        ),
+                    child: pw.Text(
+                      'BÁO CÁO $typeLabel',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _primaryBlue.shade(.8),
+                        letterSpacing: 1.5,
                       ),
                     ),
                   ),
-                  pw.SizedBox(width: 16),
-                  pw.Column(
+                  pw.SizedBox(height: 12),
+                  pw.Text(
+                    'AI LEARNING REPORT',
+                    style: pw.TextStyle(
+                      color: _galaxyDarkest,
+                      fontSize: 28,
+                      fontWeight: pw.FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  pw.SizedBox(height: 8),
+                  pw.Text(
+                    '${report.studentName ?? "Học viên"} · #${report.id ?? "N/A"} · ${report.generatedAt != null ? _formatDate(report.generatedAt!) : "N/A"}',
+                    style: pw.TextStyle(
+                      fontSize: 12,
+                      color: PdfColors.grey600,
+                    ),
+                  ),
+                ],
+              ),
+              if (avatarBytes != null)
+                pw.Container(
+                  width: 70,
+                  height: 70,
+                  decoration: pw.BoxDecoration(
+                    shape: pw.BoxShape.circle,
+                    boxShadow: [
+                      pw.BoxShadow(
+                        color: PdfColors.grey200,
+                        blurRadius: 8,
+                        offset: const PdfPoint(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: pw.ClipOval(
+                    child: pw.Image(
+                      pw.MemoryImage(avatarBytes),
+                      fit: pw.BoxFit.cover,
+                    ),
+                  ),
+                )
+              else
+                pw.Container(
+                  width: 70,
+                  height: 70,
+                  decoration: pw.BoxDecoration(
+                    shape: pw.BoxShape.circle,
+                    color: _galaxyDark.shade(.05),
+                  ),
+                  child: pw.Center(
+                    child: pw.Text(
+                      'SV',
+                      style: pw.TextStyle(
+                        fontSize: 24,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _galaxyDarkest,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        pw.SizedBox(height: 32),
+
+        // --- Bento Grid Layout ---
+        pw.Container(
+          margin: const pw.EdgeInsets.symmetric(horizontal: 40),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Left side: Overall Progress
+              pw.Expanded(
+                flex: 4,
+                child: pw.Container(
+                  height: 220,
+                  padding: const pw.EdgeInsets.all(24),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.white,
+                    borderRadius: pw.BorderRadius.circular(16),
+                    border: pw.Border.all(color: _borderColor, width: 1),
+                  ),
+                  child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
                     children: [
                       pw.Text(
-                        'SKILLVERSE',
+                        'TIẾN ĐỘ TỔNG THỂ',
                         style: pw.TextStyle(
-                          fontSize: 22,
+                          fontSize: 11,
                           fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.white,
-                          letterSpacing: 2,
+                          color: _textSecondary,
+                          letterSpacing: 1.2,
                         ),
                       ),
+                      pw.Spacer(),
                       pw.Text(
-                        'AI Learning Report',
+                        '${report.overallProgress ?? 0}%',
                         style: pw.TextStyle(
-                          fontSize: 14,
-                          color: PdfColors.grey100,
+                          fontSize: 56,
+                          fontWeight: pw.FontWeight.bold,
+                          color: _primaryBlue,
+                        ),
+                      ),
+                      pw.Spacer(),
+                      pw.Stack(
+                        children: [
+                          pw.Container(
+                            height: 8,
+                            decoration: pw.BoxDecoration(
+                              color: PdfColors.grey100,
+                              borderRadius: pw.BorderRadius.circular(4),
+                            ),
+                          ),
+                          pw.Container(
+                            width: (report.overallProgress ?? 0) / 100 * 180,
+                            height: 8,
+                            decoration: pw.BoxDecoration(
+                              color: _accentCyan,
+                              borderRadius: pw.BorderRadius.circular(4),
+                            ),
+                          ),
+                        ],
+                      ),
+                      pw.SizedBox(height: 10),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: pw.BoxDecoration(
+                          color: trendColor.shade(.1),
+                          borderRadius: pw.BorderRadius.circular(4),
+                        ),
+                        child: pw.Text(
+                          trendLabel,
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            color: trendColor,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-              pw.Spacer(),
-              // Report type badge
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: pw.BoxDecoration(
-                  color: const PdfColor.fromInt(0x334F46E5),
-                  borderRadius: pw.BorderRadius.circular(6),
-                ),
-                child: pw.Text(
-                  typeLabel,
-                  style: pw.TextStyle(
-                    fontSize: 12,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.white,
-                    letterSpacing: 1,
-                  ),
                 ),
               ),
-            ],
-          ),
-        ),
-
-        // Report meta card — Student name prominent
-        pw.Container(
-          margin: const pw.EdgeInsets.all(24),
-          padding: const pw.EdgeInsets.all(16),
-          decoration: pw.BoxDecoration(
-            color: PdfColors.grey100,
-            borderRadius: pw.BorderRadius.circular(10),
-            border: pw.Border.all(color: _borderColor, width: 0.5),
-          ),
-          child: pw.Column(
-            children: [
-              pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(vertical: 6),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      'Học sinh',
-                      style: pw.TextStyle(fontSize: 12, color: _textSecondary),
-                    ),
-                    pw.Text(
-                      report.studentName ?? 'Học sinh SkillVerse',
-                      style: pw.TextStyle(
-                        fontSize: 18,
-                        fontWeight: pw.FontWeight.bold,
-                        color: _primaryColor,
+              pw.SizedBox(width: 16),
+              // Right side: Quick Stats 2x2 Grid
+              pw.Expanded(
+                flex: 5,
+                child: pw.Container(
+                  height: 220,
+                  child: pw.Column(
+                    children: [
+                      pw.Expanded(
+                        child: pw.Row(
+                          children: [
+                            pw.Expanded(child: _eliteStatCard('Giờ Học', '${metrics?.studyHours ?? 0}h', _accentCyan)),
+                            pw.SizedBox(width: 16),
+                            pw.Expanded(child: _eliteStatCard('Chuỗi', '${streakDisplay.value} ngày', _warningColor)),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      pw.SizedBox(height: 16),
+                      pw.Expanded(
+                        child: pw.Row(
+                          children: [
+                            pw.Expanded(child: _eliteStatCard('Nhiệm vụ', '${metrics?.tasksCompleted ?? 0}', _successColor)),
+                            pw.SizedBox(width: 16),
+                            pw.Expanded(child: _eliteStatCard('Khóa học', '${metrics?.totalEnrolledCourses ?? 0}', _secondaryPurple)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              _metaRow('Mã báo cáo', '#${report.id ?? 'N/A'}'),
-              if (report.generatedAt != null)
-                _metaRow('Ngày tạo', _formatDate(report.generatedAt!)),
             ],
           ),
         ),
 
-        // Overall progress
-        pw.Container(
-          margin: const pw.EdgeInsets.symmetric(horizontal: 24),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text(
-                    'Tiến độ tổng thể',
-                    style: pw.TextStyle(
-                      fontSize: 14,
-                      fontWeight: pw.FontWeight.bold,
-                      color: _textPrimary,
-                    ),
-                  ),
-                  pw.Text(
-                    '${report.overallProgress ?? 0}%',
-                    style: pw.TextStyle(
-                      fontSize: 32,
-                      fontWeight: pw.FontWeight.bold,
-                      color: _primaryColor,
-                    ),
-                  ),
-                ],
-              ),
-              pw.SizedBox(height: 8),
-              pw.Stack(
-                children: [
-                  pw.Container(
-                    height: 12,
-                    decoration: pw.BoxDecoration(
-                      color: PdfColors.grey200,
-                      borderRadius: pw.BorderRadius.circular(6),
-                    ),
-                  ),
-                  pw.Container(
-                    width: (report.overallProgress ?? 0) / 100 *
-                        (PdfPageFormat.a4.width - 80),
-                    height: 12,
-                    decoration: pw.BoxDecoration(
-                      gradient: pw.LinearGradient(
-                        colors: [_primaryColor, _accentColor],
-                      ),
-                      borderRadius: pw.BorderRadius.circular(6),
-                    ),
-                  ),
-                ],
-              ),
-              pw.SizedBox(height: 8),
-              pw.Row(
-                children: [
-                  pw.Container(
-                    width: 8,
-                    height: 8,
-                    decoration: pw.BoxDecoration(
-                      shape: pw.BoxShape.circle,
-                      color: trendColor,
-                    ),
-                  ),
-                  pw.SizedBox(width: 6),
-                  pw.Text(
-                    trendLabel,
-                    style: pw.TextStyle(
-                      fontSize: 12,
-                      color: trendColor,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        pw.SizedBox(height: 32),
 
-        pw.SizedBox(height: 24),
-
-        // Quick stats grid (2x2)
-        pw.Container(
-          margin: const pw.EdgeInsets.symmetric(horizontal: 24),
-          child: pw.Table(
-            columnWidths: {
-              0: const pw.FlexColumnWidth(1),
-              1: const pw.FlexColumnWidth(1),
-            },
-            children: [
-              pw.TableRow(
-                children: [
-                  _pdfStatCard(
-                    'Giờ học',
-                    '${metrics?.studyHours ?? 0}h',
-                  ),
-                  _pdfStatCard(
-                    'Streak',
-                    '${streakDisplay.value} ngày',
-                  ),
-                ],
-              ),
-              pw.TableRow(
-                children: [
-                  _pdfStatCard(
-                    'Tasks hoàn thành',
-                    '${metrics?.tasksCompleted ?? 0}',
-                  ),
-                  _pdfStatCard(
-                    'Khóa học đã ghi danh',
-                    '${metrics?.totalEnrolledCourses ?? 0}',
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        pw.SizedBox(height: 24),
-
-        // Recommended focus
-        if (report.recommendedFocus != null &&
-            report.recommendedFocus!.isNotEmpty)
+        // --- Recommended Focus (AI Highlight) ---
+        if (report.recommendedFocus != null && report.recommendedFocus!.isNotEmpty)
           pw.Container(
-            margin: const pw.EdgeInsets.symmetric(horizontal: 24),
-            padding: const pw.EdgeInsets.all(14),
+            margin: const pw.EdgeInsets.symmetric(horizontal: 40),
+            padding: const pw.EdgeInsets.all(20),
             decoration: pw.BoxDecoration(
-              color: const PdfColor.fromInt(0x14FBBF24),
-              border: pw.Border(
-                left: pw.BorderSide(color: _warningColor, width: 4),
-              ),
+              color: PdfColors.white,
+              borderRadius: pw.BorderRadius.circular(16),
+              border: pw.Border.all(color: _primaryBlue.shade(.3), width: 1),
             ),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(
-                  'ĐỀ XUẤT TẬP TRUNG',
-                  style: pw.TextStyle(
-                    fontSize: 11,
-                    fontWeight: pw.FontWeight.bold,
-                    color: _warningColor,
-                    letterSpacing: 1,
-                  ),
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    pw.Container(
+                      width: 8,
+                      height: 8,
+                      decoration: pw.BoxDecoration(
+                        color: _primaryBlue,
+                        shape: pw.BoxShape.circle,
+                      ),
+                    ),
+                    pw.SizedBox(width: 8),
+                    pw.Text(
+                      'AI KHUYẾN NGHỊ TRỌNG TÂM',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _primaryBlue,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
                 ),
-                pw.SizedBox(height: 6),
+                pw.SizedBox(height: 12),
                 pw.Text(
                   report.recommendedFocus!,
                   style: pw.TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     color: _textPrimary,
-                    lineSpacing: 4,
+                    lineSpacing: 5,
                   ),
                 ),
               ],
@@ -409,35 +407,47 @@ class PdfGeneratorWidget {
           ),
 
         pw.Spacer(),
-
-        // Footer
-        pw.Container(
-          margin: const pw.EdgeInsets.all(24),
-          padding: const pw.EdgeInsets.symmetric(vertical: 12),
-          decoration: const pw.BoxDecoration(
-            border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300)),
-          ),
-          child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                'SkillVerse · skillverse.vn · Báo cáo #${report.id ?? 'N/A'} · Confidential',
-                style: const pw.TextStyle(
-                  fontSize: 9,
-                  color: PdfColors.grey500,
-                ),
-              ),
-              pw.Text(
-                'Trang 1',
-                style: const pw.TextStyle(
-                  fontSize: 9,
-                  color: PdfColors.grey500,
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
+    ),
+    );
+  }
+
+  /// Elite style smaller stat card
+  static pw.Widget _eliteStatCard(String label, String value, PdfColor accentColor) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        color: _cardBgLight,
+        borderRadius: pw.BorderRadius.circular(12),
+        border: pw.Border.all(color: _borderColor, width: 1),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: 32,
+            height: 4,
+            decoration: pw.BoxDecoration(
+              color: accentColor,
+              borderRadius: pw.BorderRadius.circular(2),
+            ),
+          ),
+          pw.SizedBox(height: 12),
+          pw.Text(
+            value,
+            style: pw.TextStyle(
+              fontSize: 24,
+              fontWeight: pw.FontWeight.bold,
+              color: _textPrimary,
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            label,
+            style: pw.TextStyle(fontSize: 11, color: _textSecondary),
+          ),
+        ],
+      ),
     );
   }
 
@@ -448,114 +458,92 @@ class PdfGeneratorWidget {
   ) {
     final widgets = <pw.Widget>[];
 
-    // Section title page
+    // Premium Section Title
     widgets.add(
       pw.Container(
         padding: const pw.EdgeInsets.only(bottom: 16),
-        decoration: const pw.BoxDecoration(
-          border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
+        decoration: pw.BoxDecoration(
+          border: pw.Border(bottom: pw.BorderSide(color: _primaryBlue, width: 2)),
         ),
         child: pw.Row(
           children: [
             pw.Text(
-              'NỘI DUNG CHI TIẾT',
+              'PHÂN TÍCH CHUYÊN SÂU',
               style: pw.TextStyle(
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: pw.FontWeight.bold,
-                color: _primaryColor,
+                color: _galaxyDarkest,
                 letterSpacing: 1.5,
+              ),
+            ),
+            pw.Spacer(),
+            pw.Text(
+              'SKILLVERSE AI',
+              style: pw.TextStyle(
+                fontSize: 10,
+                color: _accentCyan,
+                fontWeight: pw.FontWeight.bold,
               ),
             ),
           ],
         ),
       ),
     );
-    widgets.add(pw.SizedBox(height: 16));
-
-    final sectionIcons = {
-      'Kỹ năng hiện có': '[KN]',
-      'Mục tiêu học tập': '[MT]',
-      'Tổng kết tiến độ': '[TD]',
-      'Điểm mạnh': '[DM]',
-      'Cần cải thiện': '[CT]',
-      'Khuyến nghị': '[KN]',
-      'Khoảng trống kỹ năng': '[KT]',
-      'Bước tiếp theo': '[>>]',
-      'Động lực': '[DL]',
-    };
+    widgets.add(pw.SizedBox(height: 24));
 
     for (final entry in sections.entries) {
-      widgets.addAll(_buildSectionBlock(
-        entry.key,
-        entry.value,
-        sectionIcons[entry.key] ?? '[*]',
-      ));
-      widgets.add(pw.SizedBox(height: 16));
+      widgets.addAll(_buildSectionBlock(entry.key, entry.value));
+      widgets.add(pw.SizedBox(height: 24));
     }
 
     return widgets;
   }
 
-  /// Build a single section as multiple widgets so MultiPage can split them across pages.
-  static List<pw.Widget> _buildSectionBlock(String title, String content, String icon) {
+  /// Premium Section Block (Sleek cards with deep side borders)
+  static List<pw.Widget> _buildSectionBlock(String title, String content) {
     final cleaned = _sanitizePdfContent(content);
     final segments = _splitContentByTables(cleaned);
     final result = <pw.Widget>[];
 
-    // Section header (stays together)
+    // Section header
     result.add(
-      pw.Container(
-        padding: const pw.EdgeInsets.fromLTRB(14, 14, 14, 8),
-        decoration: pw.BoxDecoration(
-          color: PdfColors.grey50,
-          borderRadius: pw.BorderRadius.only(
-            topLeft: pw.Radius.circular(8),
-            topRight: pw.Radius.circular(8),
-          ),
-          border: pw.Border.all(color: _borderColor, width: 0.5),
-        ),
-        child: pw.Row(
-          children: [
-            pw.Text(icon, style: const pw.TextStyle(fontSize: 14)),
-            pw.SizedBox(width: 8),
-            pw.Text(
+      pw.Row(
+        children: [
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: pw.BoxDecoration(
+              color: _primaryBlue,
+              borderRadius: pw.BorderRadius.circular(4),
+            ),
+            child: pw.Text(
               title.toUpperCase(),
               style: pw.TextStyle(
                 fontSize: 12,
                 fontWeight: pw.FontWeight.bold,
-                color: _primaryColor,
+                color: PdfColors.white,
                 letterSpacing: 0.5,
               ),
             ),
-          ],
-        ),
-      ),
-    );
-
-    // Each content segment as separate widget
-    for (final seg in segments) {
-      result.add(
-        pw.Container(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          color: PdfColors.grey50,
-          child: seg.isTable ? _buildPdfTable(seg.content) : _buildPdfText(seg.content),
-        ),
-      );
-    }
-
-    // Bottom spacer with border
-    result.add(
-      pw.Container(
-        height: 14,
-        decoration: pw.BoxDecoration(
-          color: PdfColors.grey50,
-          borderRadius: pw.BorderRadius.only(
-            bottomLeft: pw.Radius.circular(8),
-            bottomRight: pw.Radius.circular(8),
           ),
-        ),
+        ],
       ),
     );
+    result.add(pw.SizedBox(height: 12));
+
+    // Each content segment as separate widget, wrapped in a subtle left-bordered container
+    for (int i = 0; i < segments.length; i++) {
+        final seg = segments[i];
+        final isLast = i == segments.length - 1;
+        result.add(
+          pw.Container(
+            padding: pw.EdgeInsets.only(left: 16, bottom: isLast ? 0 : 8),
+            decoration: pw.BoxDecoration(
+              border: pw.Border(left: pw.BorderSide(color: _borderColor, width: 3)),
+            ),
+            child: seg.isTable ? _buildPdfTable(seg.content) : _buildPdfText(seg.content),
+          ),
+        );
+    }
 
     return result;
   }
@@ -568,21 +556,21 @@ class PdfGeneratorWidget {
     for (final line in lines) {
       final trimmed = line.trim();
       if (trimmed.isEmpty) {
-        widgets.add(pw.SizedBox(height: 4));
+        widgets.add(pw.SizedBox(height: 6));
         continue;
       }
 
-      // Check for bold headers (lines starting with ## or ###)
+      // Check for bold headers
       if (trimmed.startsWith('## ')) {
         widgets.add(
           pw.Padding(
-            padding: const pw.EdgeInsets.only(top: 6, bottom: 2),
+            padding: const pw.EdgeInsets.only(top: 8, bottom: 4),
             child: pw.Text(
               trimmed.substring(3),
               style: pw.TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: pw.FontWeight.bold,
-                color: _textPrimary,
+                color: _galaxyDarkest,
               ),
             ),
           ),
@@ -592,13 +580,13 @@ class PdfGeneratorWidget {
       if (trimmed.startsWith('### ')) {
         widgets.add(
           pw.Padding(
-            padding: const pw.EdgeInsets.only(top: 4, bottom: 2),
+            padding: const pw.EdgeInsets.only(top: 6, bottom: 2),
             child: pw.Text(
               trimmed.substring(4),
               style: pw.TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: pw.FontWeight.bold,
-                color: _accentColor,
+                color: _secondaryPurple,
               ),
             ),
           ),
@@ -610,18 +598,26 @@ class PdfGeneratorWidget {
       if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
         widgets.add(
           pw.Padding(
-            padding: const pw.EdgeInsets.only(left: 8, bottom: 2),
+            padding: const pw.EdgeInsets.only(left: 8, bottom: 4),
             child: pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('• ', style: const pw.TextStyle(fontSize: 12)),
+                pw.Container(
+                   margin: const pw.EdgeInsets.only(top: 5, right: 8),
+                   width: 5,
+                   height: 5,
+                   decoration: pw.BoxDecoration(
+                     shape: pw.BoxShape.circle,
+                     color: _primaryBlue,
+                   )
+                ),
                 pw.Expanded(
                   child: pw.Text(
                     trimmed.substring(2),
                     style: pw.TextStyle(
                       fontSize: 12,
                       color: _textPrimary,
-                      lineSpacing: 3,
+                      lineSpacing: 4,
                     ),
                   ),
                 ),
@@ -637,17 +633,20 @@ class PdfGeneratorWidget {
       if (numberedMatch != null) {
         widgets.add(
           pw.Padding(
-            padding: const pw.EdgeInsets.only(left: 8, bottom: 2),
+            padding: const pw.EdgeInsets.only(left: 8, bottom: 4),
             child: pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(
-                  '${numberedMatch.group(1)}. ',
-                  style: pw.TextStyle(
-                    fontSize: 12,
-                    fontWeight: pw.FontWeight.bold,
-                    color: _primaryColor,
-                  ),
+                pw.Container(
+                   margin: const pw.EdgeInsets.only(right: 8),
+                   child: pw.Text(
+                     '${numberedMatch.group(1)}.',
+                     style: pw.TextStyle(
+                       fontSize: 12,
+                       fontWeight: pw.FontWeight.bold,
+                       color: _primaryBlue,
+                     ),
+                   )
                 ),
                 pw.Expanded(
                   child: pw.Text(
@@ -655,7 +654,7 @@ class PdfGeneratorWidget {
                     style: pw.TextStyle(
                       fontSize: 12,
                       color: _textPrimary,
-                      lineSpacing: 3,
+                      lineSpacing: 4,
                     ),
                   ),
                 ),
@@ -666,16 +665,16 @@ class PdfGeneratorWidget {
         continue;
       }
 
-      // Regular paragraph — wrap long lines
+      // Regular paragraph
       widgets.add(
         pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 3),
+          padding: const pw.EdgeInsets.only(bottom: 4),
           child: pw.Text(
             trimmed,
             style: pw.TextStyle(
               fontSize: 12,
               color: _textPrimary,
-              lineSpacing: 3,
+              lineSpacing: 4,
             ),
           ),
         ),
@@ -688,7 +687,7 @@ class PdfGeneratorWidget {
     );
   }
 
-  /// Build a markdown table in PDF.
+  /// Premium Markdown table in PDF
   static pw.Widget _buildPdfTable(String tableMarkdown) {
     final lines = tableMarkdown.split('\n').where((l) => l.trim().isNotEmpty).toList();
     if (lines.isEmpty) return pw.SizedBox.shrink();
@@ -697,7 +696,6 @@ class PdfGeneratorWidget {
     bool isHeader = true;
 
     for (final line in lines) {
-      // Skip separator lines
       if (RegExp(r'^\|[\s:\-|]+\|$').hasMatch(line.trim())) continue;
 
       final cells = line
@@ -711,21 +709,21 @@ class PdfGeneratorWidget {
       rows.add(
         pw.TableRow(
           decoration: isHeader
-              ? pw.BoxDecoration(color: const PdfColor.fromInt(0x1A4F46E5))
+              ? pw.BoxDecoration(color: _primaryBlue.shade(.05))
               : null,
           children: cells.map((cell) {
             final style = isHeader
                 ? pw.TextStyle(
                     fontSize: 11,
                     fontWeight: pw.FontWeight.bold,
-                    color: _primaryColor,
+                    color: _primaryBlue,
                   )
                 : pw.TextStyle(
                     fontSize: 11,
                     color: _textPrimary,
                   );
             return pw.Padding(
-              padding: const pw.EdgeInsets.all(6),
+              padding: const pw.EdgeInsets.all(10),
               child: pw.Text(cell, style: style),
             );
           }).toList(),
@@ -737,19 +735,28 @@ class PdfGeneratorWidget {
     if (rows.isEmpty) return pw.SizedBox.shrink();
 
     return pw.Container(
-      margin: const pw.EdgeInsets.only(top: 6, bottom: 6),
-      child: pw.Table(
-        border: pw.TableBorder.all(color: _borderColor, width: 0.5),
-        columnWidths: {
-          for (int i = 0; i < rows.first.children.length; i++)
-            i: const pw.FlexColumnWidth(1),
-        },
-        children: rows,
+      margin: const pw.EdgeInsets.only(top: 10, bottom: 10),
+      decoration: pw.BoxDecoration(
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: _borderColor, width: 1),
+      ),
+      child: pw.ClipRRect(
+        horizontalRadius: 8,
+        verticalRadius: 8,
+        child: pw.Table(
+          border: pw.TableBorder.symmetric(
+              inside: pw.BorderSide(color: _borderColor, width: 0.5)),
+          columnWidths: {
+            for (int i = 0; i < rows.first.children.length; i++)
+              i: const pw.FlexColumnWidth(1),
+          },
+          children: rows,
+        ),
       ),
     );
   }
 
-  /// Build metrics content as a list for MultiPage.
+  /// Premium Metrics content pages
   static List<pw.Widget> _buildMetricsContent(
     StudentLearningReportResponse report,
     ({int value, String emoji, String description}) streakDisplay,
@@ -757,78 +764,96 @@ class PdfGeneratorWidget {
     final metrics = report.metrics;
     final widgets = <pw.Widget>[];
 
-    // Header
     widgets.add(
       pw.Container(
-        padding: const pw.EdgeInsets.only(bottom: 12),
-        decoration: const pw.BoxDecoration(
-          border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
+        padding: const pw.EdgeInsets.only(bottom: 16),
+        decoration: pw.BoxDecoration(
+          border: pw.Border(bottom: pw.BorderSide(color: _primaryBlue, width: 2)),
         ),
         child: pw.Row(
           children: [
             pw.Text(
-              'PHÂN TÍCH CHI TIẾT',
+              'CHỈ SỐ HỌC TẬP',
               style: pw.TextStyle(
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: pw.FontWeight.bold,
-                color: _primaryColor,
+                color: _galaxyDarkest,
                 letterSpacing: 1.5,
+              ),
+            ),
+            pw.Spacer(),
+            pw.Text(
+              'SKILLVERSE MAPPING',
+              style: pw.TextStyle(
+                fontSize: 10,
+                color: _accentCyan,
+                fontWeight: pw.FontWeight.bold,
               ),
             ),
           ],
         ),
       ),
     );
-    widgets.add(pw.SizedBox(height: 20));
+    widgets.add(pw.SizedBox(height: 24));
 
     // Top skills
     if (metrics?.topSkills != null && metrics!.topSkills!.isNotEmpty) {
-      widgets.add(_metricsSectionTitle('Top Kỹ năng', '#'));
-      widgets.add(pw.SizedBox(height: 10));
+      widgets.add(_metricsSectionTitle('BẢN ĐỒ KỸ NĂNG CỐT LÕI'));
+      widgets.add(pw.SizedBox(height: 16));
       for (final skill in metrics.topSkills!.take(10)) {
         final pct = skill.progressPercent ?? 0;
         widgets.add(
           pw.Container(
-            margin: const pw.EdgeInsets.only(bottom: 8),
+            margin: const pw.EdgeInsets.only(bottom: 12),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      skill.skillName ?? 'N/A',
-                      style: pw.TextStyle(
-                        fontSize: 12,
-                        fontWeight: pw.FontWeight.bold,
-                        color: _textPrimary,
-                      ),
-                    ),
-                    pw.Text(
-                      '${skill.level ?? 'N/A'} · $pct%',
-                      style: pw.TextStyle(
-                        fontSize: 11,
-                        color: _textSecondary,
-                      ),
-                    ),
-                  ],
+                pw.Text(
+                  skill.skillName ?? 'N/A',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                    color: _textPrimary,
+                  ),
                 ),
-                pw.SizedBox(height: 4),
-                pw.Stack(
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  skill.level ?? "N/A",
+                  style: pw.TextStyle(fontSize: 10, color: _textSecondary),
+                ),
+                pw.SizedBox(height: 8),
+                pw.Row(
                   children: [
-                    pw.Container(
-                      height: 6,
-                      decoration: pw.BoxDecoration(
-                        color: PdfColors.grey200,
-                        borderRadius: pw.BorderRadius.circular(3),
+                    pw.Expanded(
+                      child: pw.Stack(
+                        children: [
+                          pw.Container(
+                            height: 6,
+                            decoration: pw.BoxDecoration(
+                              color: PdfColors.grey200,
+                              borderRadius: pw.BorderRadius.circular(3),
+                            ),
+                          ),
+                          pw.Container(
+                            width: pct / 100 * 300, 
+                            height: 6,
+                            decoration: pw.BoxDecoration(
+                              gradient: pw.LinearGradient(
+                                  colors: [_accentCyan, _primaryBlue]
+                              ),
+                              borderRadius: pw.BorderRadius.circular(3),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    pw.Container(
-                      width: pct / 100 * 200,
-                      height: 6,
-                      decoration: pw.BoxDecoration(
-                        color: _accentColor,
-                        borderRadius: pw.BorderRadius.circular(3),
+                    pw.SizedBox(width: 12),
+                    pw.Text(
+                      '$pct%',
+                      style: pw.TextStyle(
+                          fontSize: 11, 
+                          fontWeight: pw.FontWeight.bold, 
+                          color: _primaryBlue
                       ),
                     ),
                   ],
@@ -838,212 +863,139 @@ class PdfGeneratorWidget {
           ),
         );
       }
-      widgets.add(pw.SizedBox(height: 20));
+      widgets.add(pw.SizedBox(height: 32));
     }
 
     // Roadmap details
     if (metrics?.roadmapDetails != null && metrics!.roadmapDetails!.isNotEmpty) {
-      widgets.add(_metricsSectionTitle('Lộ trình học tập', '#'));
-      widgets.add(pw.SizedBox(height: 10));
+      widgets.add(_metricsSectionTitle('TIẾN ĐỘ THEO LỘ TRÌNH'));
+      widgets.add(pw.SizedBox(height: 16));
+      
+      final roadmapWidgets = <pw.Widget>[];
       for (final r in metrics.roadmapDetails!.take(5)) {
         final pct = r.progressPercent ?? 0;
         final quests = '${r.completedQuests ?? 0}/${r.totalQuests ?? 0}';
-        widgets.add(
-          pw.Container(
-            margin: const pw.EdgeInsets.only(bottom: 10),
-            padding: const pw.EdgeInsets.all(12),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.grey50,
-              borderRadius: pw.BorderRadius.circular(8),
-              border: pw.Border.all(color: _borderColor, width: 0.5),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        roadmapWidgets.add(
+          pw.Wrap(
+            children: [
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(16),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.white,
+                  borderRadius: pw.BorderRadius.circular(12),
+                  border: pw.Border.all(color: _borderColor, width: 1),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Expanded(
-                      child: pw.Text(
-                        r.title ?? 'Lộ trình',
-                        style: pw.TextStyle(
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold,
-                          color: _textPrimary,
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Expanded(
+                          child: pw.Text(
+                            r.title ?? 'Lộ trình',
+                            style: pw.TextStyle(
+                              fontSize: 13,
+                              fontWeight: pw.FontWeight.bold,
+                              color: _textPrimary,
+                            ),
+                          ),
                         ),
-                      ),
+                        pw.SizedBox(width: 12),
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: pw.BoxDecoration(
+                            color: _secondaryPurple.shade(.1),
+                            borderRadius: pw.BorderRadius.circular(6),
+                          ),
+                          child: pw.Text(
+                            '$pct%',
+                            style: pw.TextStyle(
+                              fontSize: 11,
+                              fontWeight: pw.FontWeight.bold,
+                              color: _secondaryPurple,
+                            ),
+                          ),
+                        )
+                      ],
                     ),
-                    pw.Text(
-                      '$quests Quests · ${r.totalEstimatedHours?.toStringAsFixed(1) ?? '?'}h',
-                      style: pw.TextStyle(
-                        fontSize: 10,
-                        color: _textSecondary,
-                      ),
+                    pw.SizedBox(height: 16),
+                    pw.Stack(
+                      children: [
+                        pw.Container(
+                          height: 6,
+                          decoration: pw.BoxDecoration(
+                            color: PdfColors.grey100,
+                            borderRadius: pw.BorderRadius.circular(3),
+                          ),
+                        ),
+                        pw.Container(
+                          width: pct / 100 * 250,
+                          height: 6,
+                          decoration: pw.BoxDecoration(
+                            gradient: pw.LinearGradient(
+                              colors: [_secondaryPurple, _primaryBlue],
+                            ),
+                            borderRadius: pw.BorderRadius.circular(3),
+                          ),
+                        ),
+                      ],
                     ),
+                    pw.SizedBox(height: 12),
+                    pw.Row(
+                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                       children: [
+                          pw.Text(
+                            'Quests: $quests',
+                            style: pw.TextStyle(fontSize: 11, color: _textSecondary),
+                          ),
+                          pw.Text(
+                            'Thời lượng: ${r.totalEstimatedHours?.toStringAsFixed(1) ?? "?"}h',
+                            style: pw.TextStyle(fontSize: 11, color: _textSecondary),
+                          ),
+                       ]
+                    )
                   ],
                 ),
-                pw.SizedBox(height: 6),
-                pw.Stack(
-                  children: [
-                    pw.Container(
-                      height: 6,
-                      decoration: pw.BoxDecoration(
-                        color: PdfColors.grey200,
-                        borderRadius: pw.BorderRadius.circular(3),
-                      ),
-                    ),
-                    pw.Container(
-                      width: pct / 100 * 200,
-                      height: 6,
-                      decoration: pw.BoxDecoration(
-                        gradient: pw.LinearGradient(
-                          colors: [_primaryColor, _secondaryColor],
-                        ),
-                        borderRadius: pw.BorderRadius.circular(3),
-                      ),
-                    ),
-                  ],
-                ),
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  '$pct%',
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                    color: _primaryColor,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       }
-      widgets.add(pw.SizedBox(height: 20));
+      
+      for (int i=0; i < roadmapWidgets.length; i++) {
+          widgets.add(roadmapWidgets[i]);
+          widgets.add(pw.SizedBox(height: 16));
+      }
     }
-
-    // Study sessions summary
-    widgets.add(_metricsSectionTitle('Phiên học tập', '#'));
-    widgets.add(pw.SizedBox(height: 10));
-    widgets.add(
-      pw.Container(
-        padding: const pw.EdgeInsets.all(14),
-        decoration: pw.BoxDecoration(
-          color: PdfColors.grey50,
-          borderRadius: pw.BorderRadius.circular(8),
-          border: pw.Border.all(color: _borderColor, width: 0.5),
-        ),
-        child: pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-          children: [
-            _miniMetric('Tổng phiên', '${metrics?.totalStudySessions ?? 0}'),
-            _miniMetric(
-              'TB/phiên',
-              _formatDuration(metrics?.averageSessionDuration ?? 0),
-            ),
-            _miniMetric(
-              'Streak hiện tại',
-              '${streakDisplay.value} ngày',
-            ),
-            _miniMetric(
-              'Streak dài nhất',
-              '${metrics?.longestStreak ?? 0} ngày',
-            ),
-          ],
-        ),
-      ),
-    );
 
     return widgets;
   }
 
   // ==================== Helpers ====================
 
-  static pw.Widget _metaRow(String label, String value) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 3),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Text(
-            label,
-            style: pw.TextStyle(fontSize: 12, color: _textSecondary),
-          ),
-          pw.Text(
-            value,
-            style: pw.TextStyle(
-              fontSize: 12,
-              fontWeight: pw.FontWeight.bold,
-              color: _textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static pw.Widget _pdfStatCard(String label, String value) {
-    return pw.Container(
-      margin: const pw.EdgeInsets.all(4),
-      padding: const pw.EdgeInsets.all(12),
-      decoration: pw.BoxDecoration(
-        color: PdfColors.grey50,
-        borderRadius: pw.BorderRadius.circular(10),
-        border: pw.Border.all(color: _borderColor, width: 0.5),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text(
-            value,
-            style: pw.TextStyle(
-              fontSize: 18,
-              fontWeight: pw.FontWeight.bold,
-              color: _primaryColor,
-            ),
-          ),
-          pw.SizedBox(height: 2),
-          pw.Text(
-            label,
-            style: pw.TextStyle(fontSize: 10, color: _textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static pw.Widget _metricsSectionTitle(String title, String icon) {
+  static pw.Widget _metricsSectionTitle(String title) {
     return pw.Row(
       children: [
-        pw.Text(icon, style: const pw.TextStyle(fontSize: 14)),
-        pw.SizedBox(width: 6),
-        pw.Text(
-          title.toUpperCase(),
-          style: pw.TextStyle(
-            fontSize: 13,
-            fontWeight: pw.FontWeight.bold,
-            color: _primaryColor,
-            letterSpacing: 0.5,
-          ),
+        pw.Container(
+          width: 6,
+          height: 18,
+          decoration: pw.BoxDecoration(
+             color: _primaryBlue,
+             borderRadius: pw.BorderRadius.circular(3),
+          )
         ),
-      ],
-    );
-  }
-
-  static pw.Widget _miniMetric(String label, String value) {
-    return pw.Column(
-      children: [
+        pw.SizedBox(width: 8),
         pw.Text(
-          value,
+          title,
           style: pw.TextStyle(
             fontSize: 14,
             fontWeight: pw.FontWeight.bold,
-            color: _primaryColor,
+            color: _textPrimary,
+            letterSpacing: 1,
           ),
-        ),
-        pw.SizedBox(height: 2),
-        pw.Text(
-          label,
-          style: pw.TextStyle(fontSize: 9, color: _textSecondary),
         ),
       ],
     );
@@ -1058,17 +1010,8 @@ class PdfGeneratorWidget {
     }
   }
 
-  static String _formatDuration(int minutes) {
-    if (minutes < 60) return '${minutes}m';
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    if (mins == 0) return '${hours}h';
-    return '${hours}h ${mins}m';
-  }
-
   /// Strip emoji and other unsupported Unicode symbols from PDF text.
   static String _stripEmojis(String text) {
-    // Remove emoji and miscellaneous symbols not in Roboto
     return text.replaceAll(
       RegExp(
         r'[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{FE00}-\u{FE0F}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]|[\u{200D}]|[\u{20E3}]|[\u{E0020}-\u{E007F}]',
@@ -1080,6 +1023,8 @@ class PdfGeneratorWidget {
 
   static String _sanitizePdfContent(String content) {
     var result = content
+        .replaceAll('**', '')    // Clean up bold
+        .replaceAll('---', '')   // Clean horizontal lines causing trailing lists
         .replaceAll('<br>', '\n')
         .replaceAll('<br/>', '\n')
         .replaceAll('<br />', '\n')
@@ -1092,7 +1037,6 @@ class PdfGeneratorWidget {
           RegExp(r'([.:!?])([A-Za-zÀ-ỹĐđ])', unicode: true),
           (m) => '${m.group(1)} ${m.group(2)}',
         );
-    // Strip emoji from AI-generated content
     result = _stripEmojis(result);
     return result;
   }

@@ -847,6 +847,13 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           _buildMenuItem(
             context,
+            'Hợp đồng của tôi',
+            Icons.description_outlined,
+            () => context.push('/my-contracts'),
+            isDark,
+          ),
+          _buildMenuItem(
+            context,
             'Cài đặt tài khoản',
             Icons.settings_outlined,
             () => context.push('/profile/settings'),

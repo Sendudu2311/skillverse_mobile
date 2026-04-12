@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../themes/app_theme.dart';
 
-/// Step indicator for AI report generation process.
-/// Shows 4 steps: Thu thập dữ liệu → Phân tích AI → Tạo báo cáo → Hoàn thiện
+/// Step indicator for AI report generation process with pulse glow
+/// on the active step — matches the Prototype's animated step pipeline.
 class GeneratingStepsWidget extends StatelessWidget {
   final int currentStep;
   final bool isDark;
@@ -14,7 +14,7 @@ class GeneratingStepsWidget extends StatelessWidget {
   });
 
   static const _steps = [
-    ('Thu thập dữ liệu', Icons.check_circle_outline),
+    ('Thu thập dữ liệu', Icons.cloud_download_outlined),
     ('Phân tích AI', Icons.psychology_outlined),
     ('Tạo báo cáo', Icons.description_outlined),
     ('Hoàn thiện', Icons.auto_awesome),
@@ -29,33 +29,16 @@ class GeneratingStepsWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: List.generate(_steps.length * 2 - 1, (index) {
           if (index.isOdd) {
-            // Connector
+            // ── Connector line ──
             final stepIndex = index ~/ 2;
             final isCompleted = stepIndex < currentStep;
-            return SizedBox(
-              width: 24,
-              height: 2,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isCompleted
-                        ? [AppTheme.successColor, AppTheme.successColor]
-                        : [
-                            isDark
-                                ? Colors.white.withValues(alpha: 0.2)
-                                : Colors.black.withValues(alpha: 0.1),
-                            isDark
-                                ? Colors.white.withValues(alpha: 0.2)
-                                : Colors.black.withValues(alpha: 0.1),
-                          ],
-                  ),
-                ),
-              ),
+            return _AnimatedConnector(
+              isCompleted: isCompleted,
+              isDark: isDark,
             );
           }
 
-          // Step indicator
+          // ── Step circle ──
           final stepIndex = index ~/ 2;
           final isCompleted = stepIndex < currentStep;
           final isActive = stepIndex == currentStep;
@@ -69,6 +52,44 @@ class GeneratingStepsWidget extends StatelessWidget {
             isDark: isDark,
           );
         }),
+      ),
+    );
+  }
+}
+
+/// Connector line that animates its fill when completed.
+class _AnimatedConnector extends StatelessWidget {
+  final bool isCompleted;
+  final bool isDark;
+
+  const _AnimatedConnector({
+    required this.isCompleted,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 28,
+      height: 2,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isCompleted
+                ? [AppTheme.successColor, const Color(0xFF34D399)]
+                : [
+                    isDark
+                        ? Colors.white.withValues(alpha: 0.15)
+                        : Colors.black.withValues(alpha: 0.08),
+                    isDark
+                        ? Colors.white.withValues(alpha: 0.15)
+                        : Colors.black.withValues(alpha: 0.08),
+                  ],
+          ),
+          borderRadius: BorderRadius.circular(1),
+        ),
       ),
     );
   }
@@ -93,32 +114,34 @@ class _StepIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color activeColor = AppTheme.accentCyan;
     final Color doneColor = AppTheme.successColor;
-    final Color pendingColor =
-        isDark ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.2);
+    final Color pendingColor = isDark
+        ? Colors.white.withValues(alpha: 0.25)
+        : Colors.black.withValues(alpha: 0.15);
 
-    final Color color = isCompleted
-        ? doneColor
-        : (isActive ? activeColor : pendingColor);
+    final Color color =
+        isCompleted ? doneColor : (isActive ? activeColor : pendingColor);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withValues(alpha: 0.15),
-            border: Border.all(color: color, width: isActive ? 2.5 : 1.5),
-          ),
-          child: Center(
-            child: isCompleted
-                ? Icon(Icons.check, color: color, size: 20)
-                : (isActive
-                    ? _AnimatedIcon(icon: icon, color: color)
-                    : Icon(icon, color: color, size: 18)),
-          ),
-        ),
+        // Circle with optional pulse glow
+        isActive
+            ? _PulseGlowCircle(color: color, icon: icon)
+            : Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withValues(alpha: 0.12),
+                  border:
+                      Border.all(color: color, width: isCompleted ? 2 : 1.5),
+                ),
+                child: Center(
+                  child: isCompleted
+                      ? Icon(Icons.check_rounded, color: color, size: 20)
+                      : Icon(icon, color: color, size: 18),
+                ),
+              ),
         const SizedBox(height: 6),
         Text(
           label,
@@ -138,17 +161,18 @@ class _StepIndicator extends StatelessWidget {
   }
 }
 
-class _AnimatedIcon extends StatefulWidget {
-  final IconData icon;
+/// Animated pulsing glow circle for the currently active generation step.
+class _PulseGlowCircle extends StatefulWidget {
   final Color color;
+  final IconData icon;
 
-  const _AnimatedIcon({required this.icon, required this.color});
+  const _PulseGlowCircle({required this.color, required this.icon});
 
   @override
-  State<_AnimatedIcon> createState() => _AnimatedIconState();
+  State<_PulseGlowCircle> createState() => _PulseGlowCircleState();
 }
 
-class _AnimatedIconState extends State<_AnimatedIcon>
+class _PulseGlowCircleState extends State<_PulseGlowCircle>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
@@ -156,9 +180,9 @@ class _AnimatedIconState extends State<_AnimatedIcon>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
-    )..repeat();
+    )..repeat(reverse: true);
   }
 
   @override
@@ -169,9 +193,31 @@ class _AnimatedIconState extends State<_AnimatedIcon>
 
   @override
   Widget build(BuildContext context) {
-    return RotationTransition(
-      turns: _controller,
-      child: Icon(Icons.refresh, color: widget.color, size: 18),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final pulse = _controller.value;
+        return Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: widget.color.withValues(alpha: 0.12 + pulse * 0.1),
+            border:
+                Border.all(color: widget.color, width: 2.0 + pulse * 0.5),
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: 0.2 + pulse * 0.2),
+                blurRadius: 8 + pulse * 8,
+                spreadRadius: pulse * 2,
+              ),
+            ],
+          ),
+          child: Center(
+            child: Icon(widget.icon, color: widget.color, size: 18),
+          ),
+        );
+      },
     );
   }
 }

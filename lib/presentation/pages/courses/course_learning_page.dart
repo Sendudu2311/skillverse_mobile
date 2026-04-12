@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../themes/app_theme.dart';
 import '../../../core/utils/error_handler.dart';
@@ -7,6 +8,7 @@ import '../../../data/models/lesson_models.dart';
 import '../../../data/services/module_service.dart';
 import '../../../data/services/lesson_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../../data/services/group_chat_service.dart';
 import '../../widgets/video_lesson_player.dart';
 import '../../widgets/reading_lesson_content.dart';
 import 'quiz_attempt_page.dart';
@@ -359,6 +361,39 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     _goToNextItem();
   }
 
+  // ── Open Group Chat ──────────────────────────────
+
+  void _openGroupChat(BuildContext context) async {
+    final authProvider = context.read<AuthProvider>();
+    if (authProvider.user == null) return;
+
+    try {
+      final courseId = int.tryParse(widget.courseId);
+      if (courseId == null) return;
+
+      // Fetch the specific group for this course
+      final courseGroup = await GroupChatService().getGroupByCourse(
+        courseId,
+        authProvider.user!.id,
+      );
+
+      if (!mounted) return;
+
+      if (courseGroup != null) {
+        // Automatically join if they aren't a member yet
+        if (!courseGroup.isMember) {
+          await GroupChatService().joinGroup(courseGroup.id, authProvider.user!.id);
+        }
+        context.push('/group-chat/${courseGroup.id}');
+      } else {
+        ErrorHandler.showWarningSnackBar(context, 'Khóa học này chưa có nhóm chat');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ErrorHandler.showErrorSnackBar(context, 'Không thể mở nhóm chat');
+    }
+  }
+
   // ── Module List Bottom Sheet ──────────────────
 
   void _showModuleList() {
@@ -562,27 +597,14 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         : null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              activeItem?.moduleTitle ?? _modules[0].title,
-              style: const TextStyle(fontSize: 16),
-            ),
-            if (activeItem != null)
-              Text(
-                activeItem.title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.normal,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-          ],
-        ),
+      appBar: SkillVerseAppBar(
+        title: activeItem?.moduleTitle ?? _modules[0].title,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.groups_outlined),
+            onPressed: () => _openGroupChat(context),
+            tooltip: 'Nhóm chat khóa học',
+          ),
           IconButton(
             icon: const Icon(Icons.list),
             onPressed: _showModuleList,

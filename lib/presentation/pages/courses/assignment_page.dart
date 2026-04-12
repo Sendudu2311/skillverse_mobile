@@ -9,6 +9,7 @@ import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/error_state_widget.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 /// AssignmentPage — student submits assignments and views grading results
 /// Navigates from: CourseLearningPage → push('/assignment/:assignmentId')
@@ -395,14 +396,9 @@ class _AssignmentPageState extends State<AssignmentPage> {
 
     // Full-screen mode (standalone)
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('Bài tập'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+      appBar: SkillVerseAppBar(
+        title: 'Bài tập',
+        onBack: () => Navigator.of(context).pop(),
         actions: [
           if (_submissions.isNotEmpty)
             IconButton(

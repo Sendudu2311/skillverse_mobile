@@ -4,8 +4,8 @@ import '../../../data/services/streak_service.dart';
 import '../../themes/app_theme.dart';
 import '../glass_card.dart';
 
-/// 2x2 stats grid showing: Progress %, Study Hours, Streak, Tasks Completed.
-/// Animated entrance with staggered fade transitions.
+/// 2×2 stats grid with animated entrance, gradient accent bars,
+/// and animated progress indicator — matches Web Prototype's premium stats.
 class StatsGridWidget extends StatelessWidget {
   final StudentMetrics? metrics;
   final StreakInfo? streakInfo;
@@ -33,15 +33,32 @@ class StatsGridWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'TỔNG QUAN',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.accentCyan,
-                fontFamily: 'monospace',
-                letterSpacing: 1.5,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [AppTheme.accentCyan, AppTheme.primaryBlueDark],
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'TỔNG QUAN',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.accentCyan,
+                    fontFamily: 'monospace',
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Row(
@@ -50,6 +67,10 @@ class StatsGridWidget extends StatelessWidget {
                   child: _StatCard(
                     icon: Icons.speed,
                     iconColor: AppTheme.primaryBlueDark,
+                    gradientColors: [
+                      AppTheme.primaryBlueDark,
+                      AppTheme.accentCyan,
+                    ],
                     value: '$overallProgress%',
                     label: 'Tiến độ',
                     isPrimary: true,
@@ -63,6 +84,10 @@ class StatsGridWidget extends StatelessWidget {
                   child: _StatCard(
                     icon: Icons.schedule,
                     iconColor: AppTheme.accentCyan,
+                    gradientColors: [
+                      AppTheme.accentCyan,
+                      const Color(0xFF06B6D4),
+                    ],
                     value: '${studyHours}h',
                     label: 'Giờ học',
                     isDark: isDark,
@@ -78,6 +103,7 @@ class StatsGridWidget extends StatelessWidget {
                   child: _StatCard(
                     icon: Icons.local_fire_department,
                     iconColor: Colors.orange,
+                    gradientColors: [Colors.orange, Colors.deepOrange],
                     value: '${streakDisplay.emoji} ${streakDisplay.value}',
                     label: streakDisplay.description,
                     isDark: isDark,
@@ -89,6 +115,10 @@ class StatsGridWidget extends StatelessWidget {
                   child: _StatCard(
                     icon: Icons.task_alt,
                     iconColor: AppTheme.successColor,
+                    gradientColors: [
+                      AppTheme.successColor,
+                      const Color(0xFF059669),
+                    ],
                     value: '$tasksCompleted',
                     label: 'Tasks hoàn thành',
                     isDark: isDark,
@@ -151,6 +181,7 @@ class StatsGridWidget extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
+  final List<Color> gradientColors;
   final String value;
   final String label;
   final bool isPrimary;
@@ -161,6 +192,7 @@ class _StatCard extends StatelessWidget {
   const _StatCard({
     required this.icon,
     required this.iconColor,
+    required this.gradientColors,
     required this.value,
     required this.label,
     this.isPrimary = false,
@@ -173,14 +205,17 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 400 + delay * 100),
+      duration: Duration(milliseconds: 500 + delay * 120),
       curve: Curves.easeOutCubic,
       builder: (context, anim, child) {
         return Opacity(
           opacity: anim,
           child: Transform.translate(
-            offset: Offset(0, 10 * (1 - anim)),
-            child: child,
+            offset: Offset(0, 12 * (1 - anim)),
+            child: Transform.scale(
+              scale: 0.95 + 0.05 * anim,
+              child: child,
+            ),
           ),
         );
       },
@@ -188,27 +223,40 @@ class _StatCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: isPrimary
-              ? AppTheme.primaryBlueDark.withValues(alpha: 0.1)
+              ? iconColor.withValues(alpha: 0.08)
               : (isDark
                   ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.black.withValues(alpha: 0.03)),
-          borderRadius: BorderRadius.circular(12),
-          border: isPrimary
-              ? Border.all(
-                  color: AppTheme.primaryBlueDark.withValues(alpha: 0.25),
-                  width: 1,
-                )
-              : null,
+                  : Colors.black.withValues(alpha: 0.025)),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isPrimary
+                ? iconColor.withValues(alpha: 0.2)
+                : (isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.05)),
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 20, color: iconColor),
-            const SizedBox(height: 8),
+            // Icon with gradient background circle
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [
+                  gradientColors.first.withValues(alpha: 0.15),
+                  gradientColors.last.withValues(alpha: 0.08),
+                ]),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 18, color: iconColor),
+            ),
+            const SizedBox(height: 10),
             Text(
               value,
               style: TextStyle(
-                fontSize: isPrimary ? 20 : 18,
+                fontSize: isPrimary ? 22 : 18,
                 fontWeight: FontWeight.bold,
                 color: isDark
                     ? AppTheme.darkTextPrimary
@@ -227,22 +275,68 @@ class _StatCard extends StatelessWidget {
               ),
             ),
             if (isPrimary && progress != null) ...[
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress! / 100.0,
-                  minHeight: 6,
-                  backgroundColor: isDark
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.black.withValues(alpha: 0.08),
-                  valueColor: AlwaysStoppedAnimation<Color>(iconColor),
-                ),
+              const SizedBox(height: 10),
+              _AnimatedGradientProgressBar(
+                value: progress! / 100.0,
+                gradientColors: gradientColors,
+                isDark: isDark,
               ),
             ],
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Animated gradient progress bar replicating the Prototype's colored bar.
+class _AnimatedGradientProgressBar extends StatelessWidget {
+  final double value;
+  final List<Color> gradientColors;
+  final bool isDark;
+
+  const _AnimatedGradientProgressBar({
+    required this.value,
+    required this.gradientColors,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: value),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutCubic,
+      builder: (context, animValue, _) {
+        return Container(
+          height: 6,
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: animValue.clamp(0, 1),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: gradientColors),
+                  borderRadius: BorderRadius.circular(3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: gradientColors.first.withValues(alpha: 0.4),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

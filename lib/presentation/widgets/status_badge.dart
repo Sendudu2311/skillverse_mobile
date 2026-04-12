@@ -71,6 +71,12 @@ class StatusBadge extends StatelessWidget {
       'LOCKED' => ('Đã khoá', Colors.grey),
       'AVAILABLE' => ('Sẵn sàng', Colors.teal),
 
+      // Contract statuses
+      'DRAFT' => ('Bản nháp', Colors.grey),
+      'PENDING_SIGNER' => ('Chờ ứng viên ký', AppTheme.themeBlueStart),
+      'PENDING_EMPLOYER' => ('Chờ NTD ký', AppTheme.themeOrangeStart),
+      'SIGNED' => ('Đã ký', AppTheme.themeGreenStart),
+
       _ => (status, Colors.grey),
     };
   }

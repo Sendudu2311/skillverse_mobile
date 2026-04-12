@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../data/services/group_chat_service.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
@@ -337,6 +338,34 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
     }
   }
 
+  // ── Group Chat Navigation ──────────────────────────────────────────────────
+
+  Future<void> _openGroupChat(BuildContext ctx, int courseId) async {
+    final authProvider = ctx.read<AuthProvider>();
+    if (authProvider.user == null) return;
+
+    try {
+      final courseGroup = await GroupChatService().getGroupByCourse(
+        courseId,
+        authProvider.user!.id,
+      );
+
+      if (!mounted) return;
+
+      if (courseGroup != null) {
+        if (!courseGroup.isMember) {
+          await GroupChatService().joinGroup(courseGroup.id, authProvider.user!.id);
+        }
+        ctx.push('/group-chat/${courseGroup.id}');
+      } else {
+        ErrorHandler.showWarningSnackBar(ctx, 'Khóa học này chưa có nhóm chat');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ErrorHandler.showErrorSnackBar(ctx, 'Không thể mở nhóm chat');
+    }
+  }
+
   // ── Course Card ────────────────────────────────────────────────────────────
 
   Widget _buildEnrolledCourseCard(
@@ -518,55 +547,59 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
                     const SizedBox(height: 6),
 
                     // Bottom row: progress text + action buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          isCompleted
-                              ? 'Đã hoàn thành'
-                              : '$progress% hoàn thành',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: isCompleted ? FontWeight.w600 : FontWeight.w400,
-                            color: isCompleted
-                                ? AppTheme.successColor
-                                : isDark
-                                    ? AppTheme.darkTextSecondary
-                                    : AppTheme.lightTextSecondary,
+                    SizedBox(
+                      width: double.infinity,
+                      child: Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        runSpacing: 8,
+                        children: [
+                          Text(
+                            isCompleted
+                                ? 'Đã hoàn thành'
+                                : '$progress% hoàn thành',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isCompleted ? FontWeight.w600 : FontWeight.w400,
+                              color: isCompleted
+                                  ? AppTheme.successColor
+                                  : isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                            ),
                           ),
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (isCompleted)
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              // Group Chat button
                               GestureDetector(
-                                onTap: () => _viewCertificate(context, enrollment),
+                                onTap: () => _openGroupChat(context, enrollment.courseId),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 8,
                                     vertical: 4,
                                   ),
-                                  margin: const EdgeInsets.only(right: 6),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.successColor.withValues(alpha: 0.15),
+                                    color: AppTheme.primaryBlueDark.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: AppTheme.successColor.withValues(alpha: 0.4),
+                                      color: AppTheme.primaryBlueDark.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
-                                        Icons.workspace_premium,
+                                        Icons.groups_outlined,
                                         size: 12,
-                                        color: AppTheme.successColor,
+                                        color: AppTheme.primaryBlueDark,
                                       ),
                                       const SizedBox(width: 3),
                                       Text(
-                                        'Chứng chỉ',
+                                        'Chat',
                                         style: TextStyle(
-                                          color: AppTheme.successColor,
+                                          color: AppTheme.primaryBlueDark,
                                           fontSize: 10,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -575,34 +608,71 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
                                   ),
                                 ),
                               ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: gradientColors),
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: gradientColors.first.withValues(alpha: 0.3),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
+                              if (isCompleted)
+                                GestureDetector(
+                                  onTap: () => _viewCertificate(context, enrollment),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.successColor.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: AppTheme.successColor.withValues(alpha: 0.4),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.workspace_premium,
+                                          size: 12,
+                                          color: AppTheme.successColor,
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          'Chứng chỉ',
+                                          style: TextStyle(
+                                            color: AppTheme.successColor,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ],
-                              ),
-                              child: Text(
-                                isCompleted ? 'Xem lại' : 'Tiếp tục',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
+                                ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: gradientColors),
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: gradientColors.first.withValues(alpha: 0.3),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  isCompleted ? 'Xem lại' : 'Tiếp tục',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

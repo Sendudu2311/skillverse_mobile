@@ -266,7 +266,7 @@ class _CoursesPageState extends State<CoursesPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
-              (_, __) => const CardSkeleton(imageHeight: 120),
+              (_, __) => const CourseCardV3Skeleton(),
               childCount: 5,
             ),
           ),

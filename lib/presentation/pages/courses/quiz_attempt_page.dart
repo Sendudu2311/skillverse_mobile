@@ -8,6 +8,7 @@ import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/error_state_widget.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 /// QuizAttemptPage — full 3-screen quiz experience (START / TAKING / RESULT)
 /// Navigates from: CourseLearningPage → push('/quiz/:quizId')
@@ -1395,14 +1396,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(title),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+      appBar: SkillVerseAppBar(
+        title: title,
+        onBack: () => Navigator.of(context).pop(),
         actions: [
           // Timer display (only in taking mode)
           if (_viewMode == 'taking' && _secondsRemaining > 0)

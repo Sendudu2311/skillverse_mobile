@@ -79,46 +79,6 @@ class _LearningReportPageState extends State<LearningReportPage>
           );
         },
       ),
-      floatingActionButton: Consumer<LearningReportProvider>(
-        builder: (context, provider, _) {
-          final canGen = provider.canGenerate?.canGenerate ?? true;
-          final cooldownMins =
-              provider.canGenerate?.remainingCooldownMinutes ?? 0;
-          final isDisabled = provider.isGenerating || !canGen;
-
-          return FloatingActionButton.extended(
-                  onPressed: isDisabled
-                ? null
-                : () async {
-                    _tabController.animateTo(0); // Switch tab immediately
-                    await provider.generateReport();
-                    if (!mounted) return;
-                    if (provider.errorMessage == null) {
-                      ErrorHandler.showSuccessSnackBar(context, 'Báo cáo đã được tạo thành công!');
-                    }
-                  },
-            icon: provider.isGenerating
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CommonLoading.button(color: Colors.white),
-                  )
-                : Icon(!canGen ? Icons.timer : Icons.auto_awesome),
-            label: Text(
-              provider.isGenerating
-                  ? (provider.generatingStatus.isNotEmpty
-                      ? provider.generatingStatus
-                      : 'Đang tạo...')
-                  : (!canGen
-                      ? 'Đợi ${_formatCooldown(cooldownMins)}'
-                      : 'Tạo báo cáo'),
-              style: const TextStyle(fontSize: 12),
-            ),
-            backgroundColor:
-                isDisabled ? Colors.grey : AppTheme.primaryBlueDark,
-          );
-        },
-      ),
     );
   }
 
@@ -446,46 +406,138 @@ class _LearningReportPageState extends State<LearningReportPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildReportHeader(report, provider, isDark),
-                  const SizedBox(height: 16),
-                  StatsGridWidget(
-                    metrics: report.metrics,
-                    streakInfo: provider.streakInfo,
-                    overallProgress: report.overallProgress ?? 0,
-                    streakDisplay: provider.getStreakDisplay(),
-                    isDark: isDark,
+                  StaggeredSlideFade(
+                    index: 0,
+                    child: _buildReportHeader(report, provider, isDark),
                   ),
                   const SizedBox(height: 16),
-                  TrendBannerWidget(
-                    learningTrend: report.learningTrend,
-                    isDark: isDark,
+                  StaggeredSlideFade(
+                    index: 1,
+                    child: StatsGridWidget(
+                      metrics: report.metrics,
+                      streakInfo: provider.streakInfo,
+                      overallProgress: report.overallProgress ?? 0,
+                      streakDisplay: provider.getStreakDisplay(),
+                      isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  StaggeredSlideFade(
+                    index: 2,
+                    child: TrendBannerWidget(
+                      learningTrend: report.learningTrend,
+                      isDark: isDark,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   if (report.recommendedFocus != null &&
                       report.recommendedFocus!.isNotEmpty)
-                    _buildFocusCard(report, isDark),
+                    StaggeredSlideFade(
+                      index: 3,
+                      child: _buildFocusCard(report, isDark),
+                    ),
                   if (report.recommendedFocus != null &&
                       report.recommendedFocus!.isNotEmpty)
                     const SizedBox(height: 16),
-                  _buildSummaryCard(report, provider, isDark),
+                  StaggeredSlideFade(
+                    index: 4,
+                    child: _buildSummaryCard(report, provider, isDark),
+                  ),
                   const SizedBox(height: 16),
                   if (sections.isNotEmpty) ...[
-                    Text(
-                      'NỘI DUNG BÁO CÁO',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.accentCyan,
-                        fontFamily: 'monospace',
-                        letterSpacing: 1.5,
+                    StaggeredSlideFade(
+                      index: 5,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      AppTheme.accentCyan,
+                                      AppTheme.primaryBlueDark,
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'NỘI DUNG BÁO CÁO',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.accentCyan,
+                                  fontFamily: 'monospace',
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                              const Spacer(),
+                              PopupMenuButton<String>(
+                                initialValue: activeSection,
+                                onSelected: (s) => provider.setActiveSection(s),
+                                offset: const Offset(0, 40),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                color: isDark ? AppTheme.galaxyMid : Colors.white,
+                                elevation: 8,
+                                itemBuilder: (context) {
+                                  return sections.map((key) {
+                                    final isActive = activeSection == key;
+                                    return PopupMenuItem<String>(
+                                      value: key,
+                                      child: Text(
+                                        kReportSectionTitles[key] ?? key,
+                                        style: TextStyle(
+                                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                                          color: isActive ? AppTheme.primaryBlueDark : (isDark ? Colors.white : Colors.black),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.menu_book, size: 14, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Mục lục',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(Icons.keyboard_arrow_down, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    SectionNavigationWidget(
-                      sections: sections,
-                      activeSection: activeSection,
-                      onChanged: (s) => provider.setActiveSection(s),
-                      isDark: isDark,
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -496,14 +548,21 @@ class _LearningReportPageState extends State<LearningReportPage>
                   ],
                   if (activeSection == 'overview' &&
                       report.sections != null) ...[
-                    ...report.sections!.displaySections.entries.map((entry) {
-                      final key = _getSectionKey(entry.key);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: ReportSectionCardWidget(
-                          sectionKey: key,
-                          content: entry.value,
-                          isDark: isDark,
+                    ...report.sections!.displaySections.entries
+                        .toList()
+                        .asMap()
+                        .entries
+                        .map((indexed) {
+                      final key = _getSectionKey(indexed.value.key);
+                      return StaggeredSlideFade(
+                        index: 6 + indexed.key,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: ReportSectionCardWidget(
+                            sectionKey: key,
+                            content: indexed.value.value,
+                            isDark: isDark,
+                          ),
                         ),
                       );
                     }),
@@ -894,99 +953,145 @@ class _LearningReportPageState extends State<LearningReportPage>
 
   Widget _buildFooterActions(
       LearningReportProvider provider, bool isDark) {
+    final canGen = provider.canGenerate?.canGenerate ?? true;
+    final cooldownMins = provider.canGenerate?.remainingCooldownMinutes ?? 0;
+    final isDisabled = provider.isGenerating || !canGen;
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.galaxyMid.withValues(alpha: 0.95)
-            : Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.black.withValues(alpha: 0.08),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppTheme.galaxyMid.withValues(alpha: 0.95)
+                : Colors.white.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : Colors.black.withValues(alpha: 0.08),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: provider.isDownloadingPDF
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: provider.isDownloadingPDF
+                      ? null
+                      : () async {
+                          await provider.downloadPDF();
+                          if (!mounted) return;
+                          if (provider.lastSavedPdfPath != null) {
+                            ErrorHandler.showSuccessSnackBar(context, 'PDF đã lưu vào Downloads!');
+                          } else {
+                            ErrorHandler.showErrorSnackBar(context, 'Lỗi khi lưu PDF');
+                          }
+                        },
+                  icon: provider.isDownloadingPDF
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CommonLoading.small(color: Colors.white),
+                        )
+                      : const Icon(Icons.download_outlined, size: 18),
+                  label: Text(
+                    provider.isDownloadingPDF ? 'Đang tải...' : 'Tải PDF',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primaryBlueDark,
+                    side: BorderSide(
+                      color: AppTheme.primaryBlueDark.withValues(alpha: 0.4),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: provider.isSharingPDF
+                      ? null
+                      : () async {
+                          await provider.sharePDF();
+                        },
+                  icon: provider.isSharingPDF
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CommonLoading.small(color: Colors.white),
+                        )
+                      : const Icon(Icons.share_outlined, size: 18),
+                  label: Text(
+                    provider.isSharingPDF ? 'Đang xử lý...' : 'Chia sẻ',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlueDark,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: isDisabled
                   ? null
                   : () async {
-                      await provider.downloadPDF();
+                      _tabController.animateTo(0);
+                      await provider.generateReport();
                       if (!mounted) return;
-                      if (provider.lastSavedPdfPath != null) {
-                        ErrorHandler.showSuccessSnackBar(context, 'PDF đã lưu vào Downloads!');
-                      } else {
-                        ErrorHandler.showErrorSnackBar(context, 'Lỗi khi lưu PDF');
+                      if (provider.errorMessage == null) {
+                        ErrorHandler.showSuccessSnackBar(context, 'Báo cáo đã được tạo thành công!');
                       }
                     },
-              icon: provider.isDownloadingPDF
-                  ? SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CommonLoading.small(color: Colors.white),
-                    )
-                  : const Icon(Icons.download_outlined, size: 18),
-              label: Text(
-                provider.isDownloadingPDF ? 'Đang tải...' : 'Tải PDF',
-                style: const TextStyle(fontSize: 13),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.primaryBlueDark,
-                side: BorderSide(
-                  color: AppTheme.primaryBlueDark.withValues(alpha: 0.4),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+            icon: provider.isGenerating
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CommonLoading.button(color: Colors.white),
+                  )
+                : Icon(!canGen ? Icons.timer : Icons.auto_awesome),
+            label: Text(
+              provider.isGenerating
+                  ? (provider.generatingStatus.isNotEmpty
+                      ? provider.generatingStatus
+                      : 'Đang làm phân tích...')
+                  : (!canGen
+                      ? 'Đợi ${_formatCooldown(cooldownMins)} để có báo cáo mới'
+                      : 'Tạo báo cáo học tập mới'),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: isDisabled ? Colors.grey : AppTheme.primaryBlueDark,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: provider.isSharingPDF
-                  ? null
-                  : () async {
-                      await provider.sharePDF();
-                    },
-              icon: provider.isSharingPDF
-                  ? SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CommonLoading.small(color: Colors.white),
-                    )
-                  : const Icon(Icons.share_outlined, size: 18),
-              label: Text(
-                provider.isSharingPDF ? 'Đang xử lý...' : 'Chia sẻ',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlueDark,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
