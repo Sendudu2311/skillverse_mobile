@@ -28,7 +28,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
         );
         return PaginatedResponse(
           data: result.content,
-          currentPage: result.page,
+          currentPage: result.page + 1, // API is 0-based, PaginationHelper is 1-based
           totalPages: result.totalPages,
           totalItems: result.totalElements,
           hasMore: !result.last,

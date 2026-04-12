@@ -57,9 +57,6 @@ class _ExpertChatLandingPageState extends State<ExpertChatLandingPage> {
             _buildStatsRow(context),
             const SizedBox(height: 16),
 
-            // Features Row
-            _buildFeaturesRow(context),
-            const SizedBox(height: 32),
 
             // Mode Selection Cards
             _buildModeCard(
@@ -216,55 +213,6 @@ class _ExpertChatLandingPageState extends State<ExpertChatLandingPage> {
     );
   }
 
-  Widget _buildFeaturesRow(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final features = [
-      (Icons.bolt, 'Cập nhật liên tục'),
-      (Icons.adjust, 'Chuyên môn sâu'),
-      (Icons.public, 'Phù hợp Việt Nam'),
-      (Icons.flash_on, 'Phản hồi tức thì'),
-    ];
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
-      children: features.map((f) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: (isDark ? Colors.white : Colors.black).withValues(
-              alpha: 0.05,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isDark
-                  ? AppTheme.darkBorderColor
-                  : AppTheme.lightBorderColor,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(f.$1, size: 14, color: AppTheme.primaryBlueDark),
-              const SizedBox(width: 6),
-              Text(
-                f.$2,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: isDark
-                      ? AppTheme.darkTextPrimary
-                      : AppTheme.lightTextPrimary,
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
 
   Widget _buildModeCard(
     BuildContext context, {

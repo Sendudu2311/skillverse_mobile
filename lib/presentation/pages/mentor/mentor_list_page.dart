@@ -100,7 +100,7 @@ class _MentorListPageState extends State<MentorListPage> {
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: 4,
-            itemBuilder: (_, __) => const ListItemSkeleton(lineCount: 3),
+            itemBuilder: (_, __) => const MentorCardSkeleton(),
           );
         }
 

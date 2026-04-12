@@ -103,7 +103,13 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
       final updated = await provider.startMeeting(_booking!.id);
       final link = updated?.meetingLink ?? _booking!.meetingLink;
       if (link != null && link.isNotEmpty) {
-        await launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
+        try {
+          await launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
+        } catch (e) {
+          if (mounted) {
+            ErrorHandler.showErrorSnackBar(context, 'Không thể mở phòng học (Jitsi).');
+          }
+        }
       }
       await _loadBooking();
     } catch (e) {
@@ -310,34 +316,46 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
     final booking = _booking!;
     final actions = <Widget>[];
 
-    // Meeting button (Join / Start)
+    // Meeting button (Join for learner / Start for mentor)
     if (_meetingVisible) {
-      actions.add(
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _isBusy ? null : () {
-              if (booking.meetingLink != null) {
-                launchUrl(
-                  Uri.parse(booking.meetingLink!),
-                  mode: LaunchMode.externalApplication,
-                );
-              } else {
-                _handleStartMeeting();
-              }
-            },
-            icon: const Icon(Icons.video_call, size: 18),
-            label: Text(booking.meetingLink != null ? 'Vào phòng' : 'Bắt đầu'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successColor,
+      // Learner can only join if meeting link already exists
+      // Mentor can start meeting (creates Jitsi room) OR join if already created
+      if (booking.meetingLink != null || !_isLearner) {
+        actions.add(
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: _isBusy ? null : () async {
+                if (booking.meetingLink != null) {
+                  try {
+                    await launchUrl(
+                      Uri.parse(booking.meetingLink!),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  } catch (e) {
+                    if (context.mounted) {
+                      ErrorHandler.showErrorSnackBar(context, 'Không thể mở phòng học (Jitsi).');
+                    }
+                  }
+                } else {
+                  _handleStartMeeting();
+                }
+              },
+              icon: const Icon(Icons.video_call, size: 18),
+              label: Text(booking.meetingLink != null ? 'Vào phòng' : 'Bắt đầu'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.successColor,
+              ),
             ),
           ),
-        ),
-      );
-      actions.add(const SizedBox(width: 8));
+        );
+        actions.add(const SizedBox(width: 8));
+      }
     }
 
     // Start Meeting for confirmed bookings near start time (but meetingLink is null)
+    // Only show for Mentor — Learner cannot create a Jitsi room
     if (!_meetingVisible &&
+        !_isLearner &&
         booking.status == BookingStatus.confirmed &&
         booking.meetingLink == null) {
       final minutesToStart =
@@ -523,10 +541,18 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
           if (booking.meetingLink != null) ...[
             const SizedBox(height: 8),
             InkWell(
-              onTap: () => launchUrl(
-                Uri.parse(booking.meetingLink!),
-                mode: LaunchMode.externalApplication,
-              ),
+              onTap: () async {
+                try {
+                  await launchUrl(
+                    Uri.parse(booking.meetingLink!),
+                    mode: LaunchMode.externalApplication,
+                  );
+                } catch (e) {
+                  if (context.mounted) {
+                    ErrorHandler.showErrorSnackBar(context, 'Không thể mở phòng học (Jitsi).');
+                  }
+                }
+              },
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

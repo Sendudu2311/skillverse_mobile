@@ -5,6 +5,7 @@ import '../../widgets/glass_card.dart';
 import '../../../data/services/booking_review_service.dart';
 import '../../../data/models/booking_review_model.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class BookingReviewPage extends StatefulWidget {
   final int bookingId;
@@ -92,10 +93,8 @@ class _BookingReviewPageState extends State<BookingReviewPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _existingReview != null ? 'Đánh giá của bạn' : 'Đánh giá mentor',
-        ),
+      appBar: SkillVerseAppBar(
+        title: _existingReview != null ? 'Đánh giá của bạn' : 'Đánh giá mentor',
       ),
       body: _isCheckingExisting
           ? CommonLoading.center()

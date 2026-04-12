@@ -277,15 +277,18 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                       : AppTheme.lightTextSecondary,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  DateTimeHelper.formatDateWithWeekday(booking.startTime),
-                  style: TextStyle(
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
+                Flexible(
+                  child: Text(
+                    DateTimeHelper.formatDateWithWeekday(booking.startTime),
+                    style: TextStyle(
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Icon(
                   Icons.access_time,
                   size: 16,
@@ -293,7 +296,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                       ? AppTheme.darkTextSecondary
                       : AppTheme.lightTextSecondary,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 Text(
                   '${DateTimeHelper.formatTime(booking.startTime)} - ${DateTimeHelper.formatTime(booking.endTime)}',
                   style: TextStyle(
@@ -356,11 +359,17 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    launchUrl(
-                      Uri.parse(booking.meetingLink!),
-                      mode: LaunchMode.externalApplication,
-                    );
+                  onPressed: () async {
+                    try {
+                      await launchUrl(
+                        Uri.parse(booking.meetingLink!),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    } catch (e) {
+                      if (context.mounted) {
+                        ErrorHandler.showErrorSnackBar(context, 'Không thể mở phòng học (Jitsi).');
+                      }
+                    }
                   },
                   icon: const Icon(Icons.video_call),
                   label: const Text('Tham gia cuộc họp'),
