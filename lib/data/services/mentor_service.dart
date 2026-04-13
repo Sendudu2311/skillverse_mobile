@@ -304,16 +304,16 @@ class MentorService {
 
   // ==================== Pre-Chat ====================
 
-  /// Send pre-chat message
+  /// Send pre-chat message (requires bookingId)
   Future<PreChatMessage> sendPreChatMessage({
-    required int mentorId,
+    required int bookingId,
     required String content,
   }) async {
     try {
       final response = await _apiClient.post(
         '/prechat/send',
         data: PreChatMessageRequest(
-          mentorId: mentorId,
+          bookingId: bookingId,
           content: content,
         ).toJson(),
       );
@@ -323,16 +323,16 @@ class MentorService {
     }
   }
 
-  /// Get chat history with mentor
+  /// Get chat history by booking
   Future<PageResponse<PreChatMessage>> getChatHistory({
-    required int mentorId,
+    required int bookingId,
     int page = 0,
     int size = 50,
   }) async {
     try {
       final response = await _apiClient.get(
-        '/prechat/history',
-        queryParameters: {'mentorId': mentorId, 'page': page, 'size': size},
+        '/prechat/conversation',
+        queryParameters: {'bookingId': bookingId, 'page': page, 'size': size},
       );
       return PageResponse.fromJson(
         response.data,
@@ -343,28 +343,13 @@ class MentorService {
     }
   }
 
-  /// Get conversation with counterpart (2-way)
+  /// Get conversation by booking (alias for getChatHistory)
   Future<PageResponse<PreChatMessage>> getConversation({
-    required int counterpartId,
+    required int bookingId,
     int page = 0,
     int size = 50,
   }) async {
-    try {
-      final response = await _apiClient.get(
-        '/prechat/conversation',
-        queryParameters: {
-          'counterpartId': counterpartId,
-          'page': page,
-          'size': size,
-        },
-      );
-      return PageResponse.fromJson(
-        response.data,
-        (json) => PreChatMessage.fromJson(json as Map<String, dynamic>),
-      );
-    } catch (e) {
-      throw _handleError(e);
-    }
+    return getChatHistory(bookingId: bookingId, page: page, size: size);
   }
 
   /// Get chat threads
@@ -381,12 +366,12 @@ class MentorService {
     }
   }
 
-  /// Get unread count for a mentor conversation
-  Future<int> getUnreadCount(int mentorId) async {
+  /// Get unread count for a booking conversation
+  Future<int> getUnreadCount(int bookingId) async {
     try {
       final response = await _apiClient.get(
         '/prechat/unread-count',
-        queryParameters: {'mentorId': mentorId},
+        queryParameters: {'bookingId': bookingId},
       );
       return response.data as int;
     } catch (e) {
@@ -394,26 +379,19 @@ class MentorService {
     }
   }
 
-  /// Mark conversation as read
-  Future<void> markAsRead(int counterpartId, bool asMentor) async {
+  /// Mark booking conversation as read
+  Future<void> markAsRead(int bookingId) async {
     try {
       await _apiClient.put(
-        '/prechat/threads/$counterpartId/mark-read',
-        queryParameters: {'asMentor': asMentor},
+        '/prechat/mark-read',
+        queryParameters: {'bookingId': bookingId},
       );
     } catch (e) {
       throw _handleError(e);
     }
   }
 
-  /// Hide/delete thread
-  Future<void> hideThread(int counterpartId) async {
-    try {
-      await _apiClient.delete('/prechat/threads/$counterpartId');
-    } catch (e) {
-      throw _handleError(e);
-    }
-  }
+  // hideThread is no longer needed — threads are per-booking
 
   /// Handle errors
   Exception _handleError(dynamic error) {

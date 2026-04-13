@@ -249,9 +249,13 @@ class AppRouter {
               builder: (context, state) {
                 final userId = int.parse(state.pathParameters['userId']!);
                 final conversation = state.extra as MessagingConversation?;
+                final bookingId = conversation?.bookingId ??
+                    int.tryParse(
+                        state.uri.queryParameters['bookingId'] ?? '');
                 return MessagingChatPage(
                   counterpartId: userId,
                   conversation: conversation,
+                  bookingId: bookingId,
                 );
               },
             ),

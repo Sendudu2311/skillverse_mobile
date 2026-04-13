@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import '../../core/utils/number_formatter.dart';
 
 part 'mentor_models.g.dart';
 
@@ -125,7 +126,7 @@ class MentorProfile {
   /// Get formatted hourly rate
   String get formattedHourlyRate {
     if (hourlyRate == null) return 'Liên hệ';
-    return '${hourlyRate!.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} VND/giờ';
+    return '${NumberFormatter.formatAmount(hourlyRate!)} VND/giờ';
   }
 
   factory MentorProfile.fromJson(Map<String, dynamic> json) =>
@@ -206,12 +207,12 @@ class MentorAvailability {
   /// Get duration in minutes
   int get durationMinutes => endTime.difference(startTime).inMinutes;
 
-  /// Get formatted time range
+  /// Get formatted time range (always in device local timezone)
   String get formattedTimeRange {
-    final start =
-        '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}';
-    final end =
-        '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}';
+    final s = startTime.toLocal();
+    final e = endTime.toLocal();
+    final start = '${s.hour.toString().padLeft(2, '0')}:${s.minute.toString().padLeft(2, '0')}';
+    final end = '${e.hour.toString().padLeft(2, '0')}:${e.minute.toString().padLeft(2, '0')}';
     return '$start - $end';
   }
 
@@ -244,6 +245,7 @@ class MentorBooking {
   final DateTime? learnerCompletedAt;
   final DateTime? completionDeadline;
   final int? disputeId;
+  final bool? chatAllowed;
 
   MentorBooking({
     required this.id,
@@ -267,6 +269,7 @@ class MentorBooking {
     this.learnerCompletedAt,
     this.completionDeadline,
     this.disputeId,
+    this.chatAllowed,
   });
 
   /// Get calculated duration
@@ -276,7 +279,7 @@ class MentorBooking {
   /// Get formatted price
   String get formattedPrice {
     if (priceVnd == null) return 'N/A';
-    return '${priceVnd!.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} VND';
+    return NumberFormatter.formatCurrency(priceVnd!);
   }
 
   /// Get status display text
@@ -310,8 +313,24 @@ class MentorBooking {
   /// Check if booking can be rated
   bool get canRate => status == BookingStatus.completed;
 
-  /// Check if learner can confirm session completion
-  bool get canConfirmComplete => status == BookingStatus.pendingCompletion;
+  /// Check if learner can confirm session completion.
+  /// Backend allows confirm-complete from ONGOING, CONFIRMED, or PENDING_COMPLETION
+  /// — for ONGOING/CONFIRMED, the session must have already ended.
+  bool get canConfirmComplete {
+    if (status == BookingStatus.pendingCompletion) return true;
+    if (status == BookingStatus.ongoing || status == BookingStatus.confirmed) {
+      return DateTime.now().isAfter(endTime);
+    }
+    return false;
+  }
+
+  /// Check if chat is allowed. Prefer backend-provided chatAllowed when present.
+  bool get canChat {
+    if (chatAllowed != null) return chatAllowed!;
+    return status == BookingStatus.pending ||
+        status == BookingStatus.confirmed ||
+        status == BookingStatus.ongoing;
+  }
 
   factory MentorBooking.fromJson(Map<String, dynamic> json) =>
       _$MentorBookingFromJson(json);
@@ -339,6 +358,7 @@ class MentorBooking {
     DateTime? learnerCompletedAt,
     DateTime? completionDeadline,
     int? disputeId,
+    bool? chatAllowed,
   }) {
     return MentorBooking(
       id: id ?? this.id,
@@ -362,15 +382,22 @@ class MentorBooking {
       learnerCompletedAt: learnerCompletedAt ?? this.learnerCompletedAt,
       completionDeadline: completionDeadline ?? this.completionDeadline,
       disputeId: disputeId ?? this.disputeId,
+      chatAllowed: chatAllowed ?? this.chatAllowed,
     );
   }
 }
+
+String _dateTimeToUtcIso8601String(DateTime time) =>
+    time.toUtc().toIso8601String();
 
 /// Create booking intent request
 @JsonSerializable()
 class CreateBookingRequest {
   final int mentorId;
+
+  @JsonKey(toJson: _dateTimeToUtcIso8601String)
   final DateTime startTime;
+
   final int durationMinutes;
   final double priceVnd;
   final String paymentMethod; // Only 'WALLET' is supported by backend
@@ -392,19 +419,28 @@ class CreateBookingRequest {
 @JsonSerializable()
 class PreChatMessage {
   final int id;
+  final int? bookingId;
   final int mentorId;
   final int learnerId;
   final int senderId;
+  final String? senderName;
+  final String? senderAvatar;
   final String content;
   final DateTime createdAt;
+  @JsonKey(defaultValue: true)
+  final bool chatEnabled;
 
   PreChatMessage({
     required this.id,
+    this.bookingId,
     required this.mentorId,
     required this.learnerId,
     required this.senderId,
+    this.senderName,
+    this.senderAvatar,
     required this.content,
     required this.createdAt,
+    this.chatEnabled = true,
   });
 
   /// Check if message is from current user
@@ -415,22 +451,23 @@ class PreChatMessage {
   Map<String, dynamic> toJson() => _$PreChatMessageToJson(this);
 }
 
-/// Pre-chat message request
+/// Pre-chat message request — requires bookingId (backend constraint)
 @JsonSerializable()
 class PreChatMessageRequest {
-  final int mentorId;
+  final int bookingId;
   final String content;
 
-  PreChatMessageRequest({required this.mentorId, required this.content});
+  PreChatMessageRequest({required this.bookingId, required this.content});
 
   factory PreChatMessageRequest.fromJson(Map<String, dynamic> json) =>
       _$PreChatMessageRequestFromJson(json);
   Map<String, dynamic> toJson() => _$PreChatMessageRequestToJson(this);
 }
 
-/// Pre-chat thread summary
+/// Pre-chat thread summary — now keyed by bookingId
 @JsonSerializable()
 class PreChatThread {
+  final int? bookingId;
   final int counterpartId;
   final String? counterpartName;
   final String? counterpartAvatar;
@@ -439,8 +476,14 @@ class PreChatThread {
   final int? unreadCount;
   @JsonKey(defaultValue: false)
   final bool myRoleMentor;
+  final DateTime? bookingStartTime;
+  final DateTime? bookingEndTime;
+  final String? bookingStatus;
+  @JsonKey(defaultValue: true)
+  final bool chatEnabled;
 
   PreChatThread({
+    this.bookingId,
     required this.counterpartId,
     this.counterpartName,
     this.counterpartAvatar,
@@ -448,6 +491,10 @@ class PreChatThread {
     this.lastTime,
     this.unreadCount,
     this.myRoleMentor = false,
+    this.bookingStartTime,
+    this.bookingEndTime,
+    this.bookingStatus,
+    this.chatEnabled = true,
   });
 
   /// Get display name

@@ -15,7 +15,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
   // Pre-chat
   List<PreChatThread> _chatThreads = [];
   List<PreChatMessage> _currentChatMessages = [];
-  int _currentChatMentorId = 0;
+  int _currentChatBookingId = 0;
   bool _isLoadingChat = false;
 
   MentorBookingProvider() {
@@ -28,7 +28,8 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
         );
         return PaginatedResponse(
           data: result.content,
-          currentPage: result.page + 1, // API is 0-based, PaginationHelper is 1-based
+          currentPage:
+              result.page + 1, // API is 0-based, PaginationHelper is 1-based
           totalPages: result.totalPages,
           totalItems: result.totalElements,
           hasMore: !result.last,
@@ -47,7 +48,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
 
   List<PreChatThread> get chatThreads => _chatThreads;
   List<PreChatMessage> get currentChatMessages => _currentChatMessages;
-  int get currentChatMentorId => _currentChatMentorId;
+  int get currentChatBookingId => _currentChatBookingId;
   bool get isLoadingChat => _isLoadingChat;
 
   // ==================== Booking ====================
@@ -137,6 +138,10 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
       final index = _bookingsPagination.findIndex((b) => b.id == bookingId);
       if (index != -1) {
         _bookingsPagination.updateItem(index, updated);
+      } else {
+        // Booking not yet in list (e.g. fresh session / deep link) — insert it
+        _bookingsPagination.insertItem(updated);
+        notifyListeners();
       }
     } catch (e) {
       debugPrint('Error refreshing booking detail: $e');
@@ -178,10 +183,10 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
     }
   }
 
-  Future<void> loadChatHistory(int mentorId, {bool refresh = false}) async {
-    if (refresh || _currentChatMentorId != mentorId) {
+  Future<void> loadChatHistory(int bookingId, {bool refresh = false}) async {
+    if (refresh || _currentChatBookingId != bookingId) {
       _currentChatMessages = [];
-      _currentChatMentorId = mentorId;
+      _currentChatBookingId = bookingId;
     }
 
     _isLoadingChat = true;
@@ -189,7 +194,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
 
     try {
       final response = await _mentorService.getConversation(
-        counterpartId: mentorId,
+        bookingId: bookingId,
         page: 0,
         size: 50,
       );
@@ -205,13 +210,13 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
   }
 
   Future<bool> sendPreChatMessage(
-    int mentorId,
+    int bookingId,
     String content, {
     void Function(PreChatMessage message)? onSent,
   }) async {
     try {
       final message = await _mentorService.sendPreChatMessage(
-        mentorId: mentorId,
+        bookingId: bookingId,
         content: content,
       );
       _currentChatMessages.insert(0, message);
@@ -224,9 +229,9 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
     }
   }
 
-  Future<void> markChatAsRead(int counterpartId) async {
+  Future<void> markChatAsRead(int bookingId) async {
     try {
-      await _mentorService.markAsRead(counterpartId, false);
+      await _mentorService.markAsRead(bookingId);
       await loadChatThreads();
     } catch (e) {
       debugPrint('Error marking as read: $e');
@@ -239,7 +244,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
     _bookingsPagination.reset();
     _chatThreads = [];
     _currentChatMessages = [];
-    _currentChatMentorId = 0;
+    _currentChatBookingId = 0;
     _isLoadingChat = false;
     resetState();
     notifyListeners();

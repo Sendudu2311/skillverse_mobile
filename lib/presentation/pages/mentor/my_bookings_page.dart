@@ -145,27 +145,36 @@ class _MyBookingsPageState extends State<MyBookingsPage>
     final filteredBookings = _filterBookings(provider.bookings, tabIndex);
 
     if (filteredBookings.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.calendar_today_outlined,
-              size: 64,
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Chưa có lịch hẹn nào',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
+      return RefreshIndicator(
+        onRefresh: () => provider.loadBookings(refresh: true),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 64,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Chưa có lịch hẹn nào',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       );
     }
@@ -174,6 +183,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
       onRefresh: () => provider.loadBookings(refresh: true),
       child: ListView.builder(
         controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         itemCount: filteredBookings.length + (provider.hasMoreBookings ? 1 : 0),
         itemBuilder: (context, index) {
@@ -310,10 +320,30 @@ class _MyBookingsPageState extends State<MyBookingsPage>
             // Actions
             if (booking.canCancel ||
                 booking.canRate ||
-                booking.canConfirmComplete) ...[
+                booking.canConfirmComplete ||
+                booking.canChat) ...[
               const SizedBox(height: 16),
               Row(
                 children: [
+                  if (booking.canChat)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.push(
+                          '/messaging/chat/${booking.mentorId}?bookingId=${booking.id}',
+                        ),
+                        icon: const Icon(Icons.chat_outlined, size: 16),
+                        label: const Text('Nhắn tin'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.infoColor,
+                          side: const BorderSide(color: AppTheme.infoColor),
+                        ),
+                      ),
+                    ),
+                  if (booking.canChat &&
+                      (booking.canCancel ||
+                          booking.canConfirmComplete ||
+                          booking.canRate))
+                    const SizedBox(width: 8),
                   if (booking.canCancel)
                     Expanded(
                       child: OutlinedButton(
@@ -367,7 +397,10 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                       );
                     } catch (e) {
                       if (context.mounted) {
-                        ErrorHandler.showErrorSnackBar(context, 'Không thể mở phòng học (Jitsi).');
+                        ErrorHandler.showErrorSnackBar(
+                          context,
+                          'Không thể mở phòng học (Jitsi).',
+                        );
                       }
                     }
                   },
@@ -408,9 +441,15 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               await provider.cancelBooking(booking.id);
               if (!mounted) return;
               if (provider.hasError) {
-                ErrorHandler.showErrorSnackBar(this.context, provider.errorMessage ?? 'Có lỗi xảy ra');
+                ErrorHandler.showErrorSnackBar(
+                  this.context,
+                  provider.errorMessage ?? 'Có lỗi xảy ra',
+                );
               } else {
-                ErrorHandler.showSuccessSnackBar(this.context, 'Đã hủy lịch hẹn');
+                ErrorHandler.showSuccessSnackBar(
+                  this.context,
+                  'Đã hủy lịch hẹn',
+                );
               }
             },
             style: ElevatedButton.styleFrom(
@@ -446,9 +485,15 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               await provider.confirmComplete(booking.id);
               if (!mounted) return;
               if (provider.hasError) {
-                ErrorHandler.showErrorSnackBar(this.context, provider.errorMessage ?? 'Có lỗi xảy ra');
+                ErrorHandler.showErrorSnackBar(
+                  this.context,
+                  provider.errorMessage ?? 'Có lỗi xảy ra',
+                );
               } else {
-                ErrorHandler.showSuccessSnackBar(this.context, 'Đã xác nhận hoàn thành! Cảm ơn bạn.');
+                ErrorHandler.showSuccessSnackBar(
+                  this.context,
+                  'Đã xác nhận hoàn thành! Cảm ơn bạn.',
+                );
               }
             },
             style: ElevatedButton.styleFrom(

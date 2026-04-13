@@ -174,6 +174,9 @@ class ApiClient {
 
   Dio get dio => _dio;
 
+  /// Get current authentication token (e.g. for WebSocket headers)
+  String? get authToken => _authToken;
+
   /// Set authentication token
   void setAuthToken(String? token) {
     _authToken = token;

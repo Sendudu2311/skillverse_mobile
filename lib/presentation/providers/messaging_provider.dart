@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/network/api_client.dart';
 import '../../data/models/messaging_models.dart';
 import '../../data/services/messaging_service.dart';
 import 'auth_provider.dart';
@@ -19,11 +20,13 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
   List<MessagingConversation> _conversations = [];
   List<MessagingConversation> get conversations => _conversations;
 
-  // Active chat (with another user)
+  // Active chat (with another user via booking)
   int? _activeOtherUserId;
+  int? _activeBookingId;
   List<MessagingMessage> _messages = [];
   List<MessagingMessage> get messages => _messages;
   int? get activeOtherUserId => _activeOtherUserId;
+  int? get activeBookingId => _activeBookingId;
 
   // Send state
   bool get isSending => isLoading;
@@ -45,7 +48,7 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
     _wsConnected = true;
 
     _service.onMessageReceived = _handleIncomingMessage;
-    _service.connectStomp();
+    _service.connectStomp(authToken: ApiClient().authToken);
   }
 
   /// Disconnect STOMP WebSocket
@@ -69,9 +72,10 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
 
   /// Process conversations to check local read cache and sort.
   Future<List<MessagingConversation>> _processConversations(
-      List<MessagingConversation> raw) async {
+    List<MessagingConversation> raw,
+  ) async {
     await _initPrefs();
-    
+
     // We already filtered out myRoleMentor == true, so counterpartId should be unique
     // but just in case, we can still use a Map to ensure uniqueness.
     final map = <int, MessagingConversation>{};
@@ -80,9 +84,12 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
         map[conv.counterpartId] = conv;
       } else {
         // If there are duplicates despite filtering, keep the newest
-        final existingTime = DateTime.tryParse(map[conv.counterpartId]!.lastTime);
+        final existingTime = DateTime.tryParse(
+          map[conv.counterpartId]!.lastTime,
+        );
         final newTime = DateTime.tryParse(conv.lastTime);
-        if (newTime != null && (existingTime == null || newTime.isAfter(existingTime))) {
+        if (newTime != null &&
+            (existingTime == null || newTime.isAfter(existingTime))) {
           map[conv.counterpartId] = conv;
         }
       }
@@ -98,50 +105,59 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
         final readTime = DateTime.tryParse(readTimeStr);
         final msgTime = DateTime.tryParse(conv.lastTime);
         if (readTime != null && msgTime != null) {
-          if (msgTime.isBefore(readTime) || msgTime.isAtSameMomentAs(readTime)) {
+          if (msgTime.isBefore(readTime) ||
+              msgTime.isAtSameMomentAs(readTime)) {
             finalUnread = 0;
           }
         }
       }
 
-      out.add(MessagingConversation(
-        counterpartId: conv.counterpartId,
-        counterpartName: conv.counterpartName,
-        counterpartAvatar: conv.counterpartAvatar,
-        lastContent: conv.lastContent,
-        lastTime: conv.lastTime,
-        unreadCount: finalUnread,
-        myRoleMentor: conv.myRoleMentor,
-      ));
+      out.add(
+        MessagingConversation(
+          bookingId: conv.bookingId,
+          counterpartId: conv.counterpartId,
+          counterpartName: conv.counterpartName,
+          counterpartAvatar: conv.counterpartAvatar,
+          lastContent: conv.lastContent,
+          lastTime: conv.lastTime,
+          unreadCount: finalUnread,
+          myRoleMentor: conv.myRoleMentor,
+          bookingStartTime: conv.bookingStartTime,
+          bookingEndTime: conv.bookingEndTime,
+          bookingStatus: conv.bookingStatus,
+          chatEnabled: conv.chatEnabled,
+        ),
+      );
     }
     // Sort so newest is on top
-    out.sort((a, b) => (DateTime.tryParse(b.lastTime) ?? DateTime.now())
-        .compareTo(DateTime.tryParse(a.lastTime) ?? DateTime.now()));
+    out.sort(
+      (a, b) => (DateTime.tryParse(b.lastTime) ?? DateTime.now()).compareTo(
+        DateTime.tryParse(a.lastTime) ?? DateTime.now(),
+      ),
+    );
     return out;
   }
 
   // ── Open / close chat ───────────────────────────────────────────────
 
-  /// Open chat with a specific user and load message history
-  Future<void> openChat(int otherUserId) async {
+  /// Open chat with a specific user via a specific booking
+  Future<void> openChat(int otherUserId, {int? bookingId}) async {
     _activeOtherUserId = otherUserId;
+    _activeBookingId = bookingId;
     _messages = [];
     notifyListeners();
 
     // Auto-connect WS if not already
     connectWebSocket();
 
-    await executeAsync(() async {
-      _messages = await _service.getMessages(otherUserId);
-    });
+    if (bookingId != null) {
+      await executeAsync(() async {
+        _messages = await _service.getMessages(bookingId);
+      });
 
-    // Mark as read on backend + clear badge locally
-    final conv = _conversations.where(
-        (c) => c.counterpartId == otherUserId).firstOrNull;
-    final mentorId = (conv?.myRoleMentor == true)
-        ? currentUserId ?? otherUserId
-        : otherUserId;
-    _service.markAsRead(mentorId);
+      // Mark as read on backend + clear badge locally
+      _service.markAsRead(bookingId);
+    }
     _clearLocalUnread(otherUserId);
 
     notifyListeners();
@@ -150,12 +166,14 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
   /// Clear unread count locally so the badge disappears immediately
   Future<void> _clearLocalUnread(int counterpartId) async {
     await _initPrefs();
-    final idx = _conversations
-        .indexWhere((c) => c.counterpartId == counterpartId);
+    final idx = _conversations.indexWhere(
+      (c) => c.counterpartId == counterpartId,
+    );
     if (idx >= 0) {
       final old = _conversations[idx];
       if (old.unreadCount > 0) {
         _conversations[idx] = MessagingConversation(
+          bookingId: old.bookingId,
           counterpartId: old.counterpartId,
           counterpartName: old.counterpartName,
           counterpartAvatar: old.counterpartAvatar,
@@ -163,6 +181,10 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
           lastTime: old.lastTime,
           unreadCount: 0,
           myRoleMentor: old.myRoleMentor,
+          bookingStartTime: old.bookingStartTime,
+          bookingEndTime: old.bookingEndTime,
+          bookingStatus: old.bookingStatus,
+          chatEnabled: old.chatEnabled,
         );
         notifyListeners();
       }
@@ -174,56 +196,34 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
   /// Close active chat
   void closeChat() {
     _activeOtherUserId = null;
+    _activeBookingId = null;
     _messages = [];
     notifyListeners();
   }
 
   // ── Send message ────────────────────────────────────────────────────
 
-  /// Send a message to the active chat partner
+  /// Send a message to the active chat partner via REST API.
+  /// STOMP is used only for receiving incoming messages from the counterpart.
   Future<void> sendMessage(String content) async {
     if (content.trim().isEmpty || _activeOtherUserId == null) return;
 
-    final userId = currentUserId;
-    if (userId == null) return;
-
-    // Optimistically add user message to UI
-    final tempId = DateTime.now().millisecondsSinceEpoch;
-    final userMsg = MessagingMessage(
-      id: tempId,
-      senderId: userId,
-      content: content,
-      createdAt: DateTime.now().toIso8601String(),
-    );
-
-    _messages = [..._messages, userMsg];
-    notifyListeners();
+    if (_activeBookingId == null) {
+      debugPrint('Error sending message: No active booking for this chat');
+      return;
+    }
 
     try {
       setLoading(true);
 
-      // Try STOMP first, fall back to REST
       final request = SendMessageRequest(
-        mentorId: _activeOtherUserId!,
+        bookingId: _activeBookingId!,
         content: content,
       );
 
-      if (_service.isConnected) {
-        _service.sendStomp(request);
-        // STOMP send doesn't return a response; the message will arrive
-        // back through the subscription callback. Remove temp message when
-        // the real one arrives (handled in _handleIncomingMessage).
-      } else {
-        // REST fallback
-        final sentMsg = await _service.sendMessage(request);
-        _messages = [
-          ..._messages.where((m) => m.id != tempId),
-          sentMsg,
-        ];
-      }
+      final sentMsg = await _service.sendMessage(request);
+      _messages = [..._messages, sentMsg];
     } catch (e) {
-      // Remove failed optimistic message
-      _messages = _messages.where((m) => m.id != tempId).toList();
       debugPrint('Error sending message: $e');
     } finally {
       setLoading(false);
@@ -244,37 +244,45 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
 
       if (isFromActivePartner || isSentByMe) {
         // Deduplicate: skip if same content + sender + close timestamp
-        final isDuplicate = _messages.any((m) =>
-            m.senderId == msg.senderId &&
-            m.content == msg.content &&
-            (m.id == msg.id ||
-                (DateTime.tryParse(m.createdAt)
-                            ?.difference(
+        final isDuplicate = _messages.any(
+          (m) =>
+              m.senderId == msg.senderId &&
+              m.content == msg.content &&
+              (m.id == msg.id ||
+                  (DateTime.tryParse(m.createdAt)
+                              ?.difference(
                                 DateTime.tryParse(msg.createdAt) ??
-                                    DateTime.now())
-                            .inSeconds
-                            .abs() ??
-                        999) <
-                    3));
+                                    DateTime.now(),
+                              )
+                              .inSeconds
+                              .abs() ??
+                          999) <
+                      3),
+        );
 
         if (!isDuplicate) {
           _messages = [..._messages, msg];
         } else if (isSentByMe) {
           // Replace optimistic temp message with real server message
           _messages = [
-            ..._messages.where((m) =>
-                !(m.senderId == msg.senderId &&
-                    m.content == msg.content &&
-                    m.id != msg.id)),
+            ..._messages.where(
+              (m) =>
+                  !(m.senderId == msg.senderId &&
+                      m.content == msg.content &&
+                      m.id != msg.id),
+            ),
             msg,
           ];
         }
 
         // Auto mark as read since chat is open
         if (isFromActivePartner) {
-          _service.markAsRead(_activeOtherUserId!); // Broken for mentor on backend, but try anyway
+          if (_activeBookingId != null) {
+            _service.markAsRead(_activeBookingId!);
+          }
           _initPrefs().then((_) {
-            final key = 'prechat_read_time_${currentUserId}_${_activeOtherUserId}';
+            final key =
+                'prechat_read_time_${currentUserId}_$_activeOtherUserId';
             _prefs!.setString(key, msg.createdAt);
           });
         }
@@ -296,12 +304,14 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
         ? (msg.mentorId ?? msg.learnerId ?? msg.senderId)
         : msg.senderId;
 
-    final idx = _conversations
-        .indexWhere((c) => c.counterpartId == counterpartId);
+    final idx = _conversations.indexWhere(
+      (c) => c.counterpartId == counterpartId,
+    );
 
     if (idx >= 0) {
       final old = _conversations[idx];
       _conversations[idx] = MessagingConversation(
+        bookingId: old.bookingId,
         counterpartId: old.counterpartId,
         counterpartName: old.counterpartName,
         counterpartAvatar: old.counterpartAvatar,
@@ -309,6 +319,10 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
         lastTime: msg.createdAt,
         unreadCount: old.unreadCount + 1,
         myRoleMentor: old.myRoleMentor,
+        bookingStartTime: old.bookingStartTime,
+        bookingEndTime: old.bookingEndTime,
+        bookingStatus: old.bookingStatus,
+        chatEnabled: old.chatEnabled,
       );
       // Move to top
       final updated = _conversations.removeAt(idx);
@@ -337,10 +351,10 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
 
   /// Refresh active chat messages
   Future<void> refreshMessages() async {
-    if (_activeOtherUserId == null) return;
+    if (_activeBookingId == null) return;
 
     await executeAsync(() async {
-      _messages = await _service.getMessages(_activeOtherUserId!);
+      _messages = await _service.getMessages(_activeBookingId!);
     });
     notifyListeners();
   }

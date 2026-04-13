@@ -62,7 +62,8 @@ class _MessagingPageState extends State<MessagingPage> {
           }
           if (provider.hasError && provider.conversations.isEmpty) {
             return ErrorStateWidget(
-              message: provider.errorMessage ?? 'Không thể tải danh sách tin nhắn',
+              message:
+                  provider.errorMessage ?? 'Không thể tải danh sách tin nhắn',
               onRetry: () => provider.loadConversations(),
             );
           }
@@ -70,7 +71,8 @@ class _MessagingPageState extends State<MessagingPage> {
             return const EmptyStateWidget(
               icon: Icons.chat_bubble_outline,
               title: 'Chưa có cuộc trò chuyện',
-              subtitle: 'Bắt đầu trò chuyện với người khác từ trang Community hoặc Mentor',
+              subtitle:
+                  'Bắt đầu trò chuyện với người khác từ trang Community hoặc Mentor',
             );
           }
           return RefreshIndicator(
@@ -108,10 +110,7 @@ class _ConversationTile extends StatelessWidget {
   final MessagingConversation conversation;
   final VoidCallback onTap;
 
-  const _ConversationTile({
-    required this.conversation,
-    required this.onTap,
-  });
+  const _ConversationTile({required this.conversation, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +122,10 @@ class _ConversationTile extends StatelessWidget {
           conversation.counterpartName.isNotEmpty
               ? conversation.counterpartName[0].toUpperCase()
               : '?',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       title: Text(
@@ -138,7 +140,9 @@ class _ConversationTile extends StatelessWidget {
           color: conversation.unreadCount > 0
               ? Theme.of(context).colorScheme.onSurface
               : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          fontWeight: conversation.unreadCount > 0 ? FontWeight.w500 : FontWeight.normal,
+          fontWeight: conversation.unreadCount > 0
+              ? FontWeight.w500
+              : FontWeight.normal,
         ),
       ),
       trailing: Column(
@@ -149,7 +153,9 @@ class _ConversationTile extends StatelessWidget {
             DateTimeHelper.formatSmart(DateTime.parse(conversation.lastTime)),
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
           if (conversation.unreadCount > 0) ...[
@@ -180,11 +186,13 @@ class _ConversationTile extends StatelessWidget {
 class MessagingChatPage extends StatefulWidget {
   final int counterpartId;
   final MessagingConversation? conversation;
+  final int? bookingId;
 
   const MessagingChatPage({
     super.key,
     required this.counterpartId,
     this.conversation,
+    this.bookingId,
   });
 
   @override
@@ -201,7 +209,10 @@ class _MessagingChatPageState extends State<MessagingChatPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<MessagingProvider>();
       if (provider.activeOtherUserId != widget.counterpartId) {
-        provider.openChat(widget.counterpartId);
+        provider.openChat(
+          widget.counterpartId,
+          bookingId: widget.bookingId ?? widget.conversation?.bookingId,
+        );
       }
     });
   }
@@ -245,8 +256,13 @@ class _MessagingChatPageState extends State<MessagingChatPage> {
               radius: 18,
               backgroundColor: Theme.of(context).colorScheme.primary,
               child: Text(
-                counterpartName.isNotEmpty ? counterpartName[0].toUpperCase() : '?',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                counterpartName.isNotEmpty
+                    ? counterpartName[0].toUpperCase()
+                    : '?',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -263,7 +279,8 @@ class _MessagingChatPageState extends State<MessagingChatPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => context.read<MessagingProvider>().refreshMessages(),
+            onPressed: () =>
+                context.read<MessagingProvider>().refreshMessages(),
           ),
         ],
       ),
@@ -283,7 +300,9 @@ class _MessagingChatPageState extends State<MessagingChatPage> {
                           'Chưa có tin nhắn nào.\nHãy gửi tin nhắn đầu tiên!',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                       )
@@ -293,11 +312,14 @@ class _MessagingChatPageState extends State<MessagingChatPage> {
                         itemCount: provider.messages.length,
                         itemBuilder: (context, index) {
                           final msg = provider.messages[index];
-                          final isMe = msg.senderId == context.read<AuthProvider>().user?.id;
+                          final isMe =
+                              msg.senderId ==
+                              context.read<AuthProvider>().user?.id;
                           return _MessageBubble(
                             message: msg,
                             isMe: isMe,
-                            counterpartName: widget.conversation?.counterpartName ?? 'User',
+                            counterpartName:
+                                widget.conversation?.counterpartName ?? 'User',
                           );
                         },
                       ),
@@ -342,11 +364,7 @@ class _MessagingChatPageState extends State<MessagingChatPage> {
           FloatingActionButton.small(
             onPressed: provider.isSending ? null : _sendMessage,
             child: provider.isSending
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CommonLoading.small(),
-                  )
+                ? SizedBox(width: 20, height: 20, child: CommonLoading.small())
                 : const Icon(Icons.send),
           ),
         ],
@@ -372,7 +390,9 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!isMe) ...[
             CircleAvatar(
@@ -402,11 +422,16 @@ class _MessageBubble extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    DateTimeHelper.formatSmart(DateTime.parse(message.createdAt)),
+                    DateTimeHelper.formatSmart(
+                      DateTime.parse(message.createdAt),
+                    ),
                     style: TextStyle(
                       fontSize: 10,
-                      color: (isMe ? Colors.white70 : Theme.of(context).colorScheme.onSurface)
-                          .withValues(alpha: 0.6),
+                      color:
+                          (isMe
+                                  ? Colors.white70
+                                  : Theme.of(context).colorScheme.onSurface)
+                              .withValues(alpha: 0.6),
                     ),
                   ),
                 ],

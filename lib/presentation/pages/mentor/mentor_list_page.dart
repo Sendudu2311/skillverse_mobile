@@ -11,7 +11,6 @@ import '../../widgets/selectable_chip_row.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/animated_list_item.dart';
-import 'mentor_chat_dialog.dart';
 
 class MentorListPage extends StatefulWidget {
   const MentorListPage({super.key});
@@ -78,7 +77,9 @@ class _MentorListPageState extends State<MentorListPage> {
                     labels: labels,
                     selectedIndex: selectedIndex.clamp(0, labels.length - 1),
                     onSelected: (i) {
-                      final skill = i == 0 ? null : provider.availableSkills[i - 1];
+                      final skill = i == 0
+                          ? null
+                          : provider.availableSkills[i - 1];
                       setState(() => _selectedSkill = skill);
                       provider.filterBySkill(skill);
                     },
@@ -375,47 +376,8 @@ class _MentorListPageState extends State<MentorListPage> {
                             ],
                           ),
                         ),
+
                         // Chat button
-                        if (mentor.preChatEnabled)
-                          GestureDetector(
-                            onTap: () => showDialog(
-                              context: context,
-                              builder: (_) => MentorChatDialog(mentor: mentor),
-                            ),
-                            behavior: HitTestBehavior.opaque,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.successColor.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppTheme.successColor.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.chat_bubble_outline,
-                                    size: 16,
-                                    color: AppTheme.successColor,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Chat',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.successColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
                         const SizedBox(width: 8),
                         // View profile button
                         Container(

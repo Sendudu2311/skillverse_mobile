@@ -7,7 +7,6 @@ import '../../providers/mentor_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/error_state_widget.dart';
-import 'mentor_chat_dialog.dart';
 import 'mentor_booking_sheet.dart';
 import '../../providers/auth_provider.dart';
 
@@ -553,51 +552,21 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
         ),
       ),
       child: SafeArea(
-        child: Row(
-          children: [
-            // Chat button
-            if (mentor.preChatEnabled)
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _openChatDialog(context, mentor),
-                  icon: const Icon(Icons.chat_bubble_outline),
-                  label: const Text('Chat trước'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: BorderSide(
-                      color: isDark
-                          ? AppTheme.primaryBlueDark
-                          : AppTheme.primaryBlue,
-                    ),
-                  ),
-                ),
-              ),
-            if (mentor.preChatEnabled) const SizedBox(width: 12),
-            // Book button
-            Expanded(
-              flex: mentor.preChatEnabled ? 1 : 2,
-              child: ElevatedButton.icon(
-                onPressed: () => _openBookingSheet(context, mentor, provider),
-                icon: const Icon(Icons.calendar_today),
-                label: const Text('Đặt lịch'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: isDark
-                      ? AppTheme.primaryBlueDark
-                      : AppTheme.primaryBlue,
-                ),
-              ),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => _openBookingSheet(context, mentor, provider),
+            icon: const Icon(Icons.calendar_today),
+            label: const Text('Đặt lịch'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: isDark
+                  ? AppTheme.primaryBlueDark
+                  : AppTheme.primaryBlue,
             ),
-          ],
+          ),
         ),
       ),
-    );
-  }
-
-  void _openChatDialog(BuildContext context, MentorProfile mentor) {
-    showDialog(
-      context: context,
-      builder: (context) => MentorChatDialog(mentor: mentor),
     );
   }
 

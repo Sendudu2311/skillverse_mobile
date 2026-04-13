@@ -5,14 +5,13 @@ import '../../core/network/api_client.dart';
 import '../../core/constants/environment.dart';
 import '../models/messaging_models.dart';
 
-/// Service for user-to-user 1-1 messaging (G3)
+/// Service for user-to-user 1-1 messaging (PreChat by Booking)
 ///
 /// Backend endpoints (PreChatController.java):
-/// - GET  /api/prechat/threads          — list all conversations
-/// - GET  /api/prechat/conversation      — get messages with a user (?counterpartId=X)
-/// - POST /api/prechat/send             — learner send (REST fallback)
-/// - POST /api/prechat/mentor/send      — mentor send (REST)
-/// - PUT  /api/prechat/mark-read        — mark read
+/// - GET  /api/prechat/threads          — list all chat threads (booking-based)
+/// - GET  /api/prechat/conversation      — messages by booking (?bookingId=X)
+/// - POST /api/prechat/send             — send a message (REST)
+/// - PUT  /api/prechat/mark-read        — mark read (?bookingId=X)
 ///
 /// STOMP endpoints:
 /// - Send:      /app/prechat
@@ -22,7 +21,7 @@ class MessagingService {
   final ApiClient _apiClient;
 
   MessagingService({ApiClient? apiClient})
-      : _apiClient = apiClient ?? ApiClient();
+    : _apiClient = apiClient ?? ApiClient();
 
   // ── STOMP WebSocket ─────────────────────────────────────────────────
   StompClient? _stompClient;
@@ -60,8 +59,7 @@ class MessagingService {
         onDisconnect: _onDisconnected,
         onStompError: (frame) =>
             debugPrint('🔴 PreChat STOMP error: ${frame.body}'),
-        onWebSocketError: (error) =>
-            debugPrint('🔴 PreChat WS error: $error'),
+        onWebSocketError: (error) => debugPrint('🔴 PreChat WS error: $error'),
         reconnectDelay: const Duration(seconds: 5),
       ),
     );
@@ -139,16 +137,12 @@ class MessagingService {
     }
   }
 
-  /// GET /api/prechat/conversation?counterpartId={otherUserId}
-  Future<List<MessagingMessage>> getMessages(int otherUserId) async {
+  /// GET /api/prechat/conversation?bookingId={bookingId}
+  Future<List<MessagingMessage>> getMessages(int bookingId) async {
     try {
       final response = await _apiClient.dio.get<Map<String, dynamic>>(
         '/prechat/conversation',
-        queryParameters: {
-          'counterpartId': otherUserId,
-          'page': 0,
-          'size': 100,
-        },
+        queryParameters: {'bookingId': bookingId, 'page': 0, 'size': 100},
       );
 
       if (response.data == null) return [];
@@ -185,12 +179,13 @@ class MessagingService {
     }
   }
 
-  /// PUT /api/prechat/mark-read?mentorId={id} — mark messages as read
-  Future<void> markAsRead(int counterpartId) async {
+  /// PUT /api/prechat/mark-read?bookingId={id} — mark messages as read
+  Future<void> markAsRead(int bookingId) async {
     try {
-      await _apiClient.dio.put('/prechat/mark-read', queryParameters: {
-        'mentorId': counterpartId,
-      });
+      await _apiClient.dio.put(
+        '/prechat/mark-read',
+        queryParameters: {'bookingId': bookingId},
+      );
     } catch (e) {
       debugPrint('Error marking messages as read: $e');
     }

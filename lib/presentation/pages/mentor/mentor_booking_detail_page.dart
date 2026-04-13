@@ -397,14 +397,15 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
       actions.add(const SizedBox(width: 8));
     }
 
-    // Confirm Complete (learner)
+    // Confirm Complete (learner) — shown for PENDING_COMPLETION or ONGOING after endTime
     if (booking.canConfirmComplete && _isLearner) {
+      final isEarlyConfirm = booking.status == BookingStatus.ongoing;
       actions.add(
         Expanded(
           child: ElevatedButton.icon(
             onPressed: _isBusy
                 ? null
-                : () => _showConfirmCompleteDialog(),
+                : () => _showConfirmCompleteDialog(earlyConfirm: isEarlyConfirm),
             icon: const Icon(Icons.check_circle_outline, size: 18),
             label: const Text('Xác nhận hoàn thành'),
             style: ElevatedButton.styleFrom(
@@ -441,7 +442,7 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
             // Navigate to messaging with the counterpart
             final counterpartId =
                 _isLearner ? booking.mentorId : booking.learnerId;
-            context.push('/messaging/chat/$counterpartId');
+            context.push('/messaging/chat/$counterpartId?bookingId=${booking.id}');
           },
           icon: const Icon(Icons.chat_outlined, size: 20),
           tooltip: 'Nhắn tin',
@@ -935,13 +936,15 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
     );
   }
 
-  void _showConfirmCompleteDialog() {
+  void _showConfirmCompleteDialog({bool earlyConfirm = false}) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Xác nhận hoàn thành'),
-        content: const Text(
-          'Bạn xác nhận buổi mentoring đã hoàn thành? Tiền sẽ được chuyển cho mentor.',
+        content: Text(
+          earlyConfirm
+              ? 'Buổi học đã kết thúc. Bạn xác nhận hoàn thành? Tiền sẽ được chuyển cho mentor sau khi cả hai bên xác nhận.'
+              : 'Bạn xác nhận buổi mentoring đã hoàn thành? Tiền sẽ được chuyển cho mentor.',
         ),
         actions: [
           TextButton(
