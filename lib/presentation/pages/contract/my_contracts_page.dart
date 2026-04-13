@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/utils/date_time_helper.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/contract_models.dart';
 import '../../providers/contract_provider.dart';
@@ -20,15 +21,15 @@ class MyContractsPage extends StatefulWidget {
 }
 
 class _MyContractsPageState extends State<MyContractsPage> {
-  static final _currencyFmt =
-      NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+  static final _currencyFmt = NumberFormat.currency(
+    locale: 'vi_VN',
+    symbol: '₫',
+  );
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => context.read<ContractProvider>().loadMyContracts(),
-    );
+    Future.microtask(() => context.read<ContractProvider>().loadMyContracts());
   }
 
   @override
@@ -177,7 +178,11 @@ class _MyContractsPageState extends State<MyContractsPage> {
           // Salary + dates
           Row(
             children: [
-              Icon(Icons.payments_outlined, size: 14, color: AppTheme.successColor),
+              Icon(
+                Icons.payments_outlined,
+                size: 14,
+                color: AppTheme.successColor,
+              ),
               const SizedBox(width: 4),
               Text(
                 salaryFormatted,
@@ -215,7 +220,11 @@ class _MyContractsPageState extends State<MyContractsPage> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.edit_note, size: 16, color: AppTheme.themeBlueStart),
+                  Icon(
+                    Icons.edit_note,
+                    size: 16,
+                    color: AppTheme.themeBlueStart,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Cần xem xét và ký hợp đồng',
@@ -254,27 +263,30 @@ class _MyContractsPageState extends State<MyContractsPage> {
   }
 
   String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      return DateFormat('dd/MM/yyyy').format(date);
-    } catch (_) {
-      return dateStr;
-    }
+    final dt = DateTimeHelper.tryParseIso8601(dateStr);
+    return dt != null ? DateTimeHelper.formatDate(dt) : dateStr;
   }
 
   _ContractStatusDisplay _getStatusDisplay(ContractStatus? status) {
     return switch (status) {
       ContractStatus.draft => _ContractStatusDisplay('Bản nháp', Colors.grey),
-      ContractStatus.pendingSigner =>
-        _ContractStatusDisplay('Chờ ký', AppTheme.themeBlueStart),
-      ContractStatus.pendingEmployer =>
-        _ContractStatusDisplay('Chờ NTD ký', AppTheme.themeOrangeStart),
-      ContractStatus.signed =>
-        _ContractStatusDisplay('Đã ký', AppTheme.successColor),
-      ContractStatus.rejected =>
-        _ContractStatusDisplay('Bị từ chối', AppTheme.errorColor),
-      ContractStatus.cancelled =>
-        _ContractStatusDisplay('Đã hủy', Colors.grey),
+      ContractStatus.pendingSigner => _ContractStatusDisplay(
+        'Chờ ký',
+        AppTheme.themeBlueStart,
+      ),
+      ContractStatus.pendingEmployer => _ContractStatusDisplay(
+        'Chờ NTD ký',
+        AppTheme.themeOrangeStart,
+      ),
+      ContractStatus.signed => _ContractStatusDisplay(
+        'Đã ký',
+        AppTheme.successColor,
+      ),
+      ContractStatus.rejected => _ContractStatusDisplay(
+        'Bị từ chối',
+        AppTheme.errorColor,
+      ),
+      ContractStatus.cancelled => _ContractStatusDisplay('Đã hủy', Colors.grey),
       null => _ContractStatusDisplay('N/A', Colors.grey),
     };
   }

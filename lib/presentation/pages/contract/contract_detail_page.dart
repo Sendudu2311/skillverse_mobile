@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/utils/date_time_helper.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/contract_models.dart';
 import '../../providers/contract_provider.dart';
@@ -21,16 +22,18 @@ class ContractDetailPage extends StatefulWidget {
 }
 
 class _ContractDetailPageState extends State<ContractDetailPage> {
-  static final _currencyFmt =
-      NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+  static final _currencyFmt = NumberFormat.currency(
+    locale: 'vi_VN',
+    symbol: '₫',
+  );
 
   @override
   void initState() {
     super.initState();
     Future.microtask(
-      () => context
-          .read<ContractProvider>()
-          .loadContractDetail(widget.contractId),
+      () => context.read<ContractProvider>().loadContractDetail(
+        widget.contractId,
+      ),
     );
   }
 
@@ -54,8 +57,9 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
           actions: [
             Consumer<ContractProvider>(
               builder: (context, provider, _) {
-                if (provider.selectedContract == null) return const SizedBox.shrink();
-                
+                if (provider.selectedContract == null)
+                  return const SizedBox.shrink();
+
                 return PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert),
                   onSelected: (value) async {
@@ -64,41 +68,78 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
                       await provider.downloadPDF();
                       if (!context.mounted) return;
                       if (provider.lastSavedPdfPath != null) {
-                        ErrorHandler.showSuccessSnackBar(context, 'Đã lưu PDF vào thư mục Downloads!');
+                        ErrorHandler.showSuccessSnackBar(
+                          context,
+                          'Đã lưu PDF vào thư mục Downloads!',
+                        );
                       } else {
-                        ErrorHandler.showErrorSnackBar(context, 'Không thể lưu PDF. Vui lòng thử lại.');
+                        ErrorHandler.showErrorSnackBar(
+                          context,
+                          'Không thể lưu PDF. Vui lòng thử lại.',
+                        );
                       }
                     } else if (value == 'share') {
                       if (provider.isSharingPDF) return;
                       await provider.sharePDF();
                     }
                   },
-                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                    PopupMenuItem<String>(
-                      value: 'download',
-                      child: Row(
-                        children: [
-                          provider.isDownloadingPDF 
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.download_rounded, color: AppTheme.primaryBlueDark, size: 20),
-                          const SizedBox(width: 12),
-                          Text(provider.isDownloadingPDF ? 'Đang tải...' : 'Tải PDF', style: const TextStyle(fontSize: 14)),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'share',
-                      child: Row(
-                        children: [
-                          provider.isSharingPDF
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.share_rounded, color: AppTheme.primaryBlueDark, size: 20),
-                          const SizedBox(width: 12),
-                          Text(provider.isSharingPDF ? 'Đang xử lý...' : 'Chia sẻ HĐ', style: const TextStyle(fontSize: 14)),
-                        ],
-                      ),
-                    ),
-                  ],
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                        PopupMenuItem<String>(
+                          value: 'download',
+                          child: Row(
+                            children: [
+                              provider.isDownloadingPDF
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.download_rounded,
+                                      color: AppTheme.primaryBlueDark,
+                                      size: 20,
+                                    ),
+                              const SizedBox(width: 12),
+                              Text(
+                                provider.isDownloadingPDF
+                                    ? 'Đang tải...'
+                                    : 'Tải PDF',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'share',
+                          child: Row(
+                            children: [
+                              provider.isSharingPDF
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.share_rounded,
+                                      color: AppTheme.primaryBlueDark,
+                                      size: 20,
+                                    ),
+                              const SizedBox(width: 12),
+                              Text(
+                                provider.isSharingPDF
+                                    ? 'Đang xử lý...'
+                                    : 'Chia sẻ HĐ',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                 );
               },
             ),
@@ -113,15 +154,13 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
             if (provider.errorMessage != null) {
               return ErrorStateWidget(
                 message: provider.errorMessage!,
-                onRetry: () =>
-                    provider.loadContractDetail(widget.contractId),
+                onRetry: () => provider.loadContractDetail(widget.contractId),
               );
             }
 
             final contract = provider.selectedContract;
             if (contract == null) {
-              return const Center(
-                  child: Text('Không tìm thấy hợp đồng'));
+              return const Center(child: Text('Không tìm thấy hợp đồng'));
             }
 
             return _buildBody(contract, isDark, provider);
@@ -142,8 +181,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
       children: [
         Expanded(
           child: RefreshIndicator(
-            onRefresh: () =>
-                provider.loadContractDetail(widget.contractId),
+            onRefresh: () => provider.loadContractDetail(widget.contractId),
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -198,8 +236,11 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
                   gradient: AppTheme.blueGradient,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.description,
-                    color: Colors.white, size: 24),
+                child: const Icon(
+                  Icons.description,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -207,8 +248,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      contract.contractNumber ??
-                          'HĐ #${contract.id}',
+                      contract.contractNumber ?? 'HĐ #${contract.id}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -232,12 +272,13 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: statusColor.withValues(alpha: 0.4)),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.4)),
                 ),
                 child: Text(
                   contract.status?.label ?? 'N/A',
@@ -280,14 +321,19 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
             spacing: 12,
             runSpacing: 6,
             children: [
-              _infoChip(Icons.calendar_today,
-                  _formatDate(contract.startDate), isDark),
+              _infoChip(
+                Icons.calendar_today,
+                _formatDate(contract.startDate),
+                isDark,
+              ),
               if (contract.endDate != null)
-                _infoChip(Icons.event,
-                    _formatDate(contract.endDate), isDark),
+                _infoChip(Icons.event, _formatDate(contract.endDate), isDark),
               if (contract.workingLocation != null)
-                _infoChip(Icons.location_on_outlined,
-                    contract.workingLocation!, isDark),
+                _infoChip(
+                  Icons.location_on_outlined,
+                  contract.workingLocation!,
+                  isDark,
+                ),
             ],
           ),
         ],
@@ -297,8 +343,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
 
   // ==================== PARTIES ====================
 
-  Widget _buildPartiesCard(
-      ContractResponse contract, bool isDark) {
+  Widget _buildPartiesCard(ContractResponse contract, bool isDark) {
     return _buildSectionCard(
       'Các bên hợp đồng',
       Icons.people_outline,
@@ -315,8 +360,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
         _infoRow('Tên', contract.candidateName, isDark),
         _infoRow('Email', contract.candidateEmail, isDark),
         if (contract.candidatePhone != null)
-          _infoRow(
-              'Điện thoại', contract.candidatePhone, isDark),
+          _infoRow('Điện thoại', contract.candidatePhone, isDark),
         if (contract.candidateAddress != null)
           _infoRow('Địa chỉ', contract.candidateAddress, isDark),
       ],
@@ -325,8 +369,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
 
   // ==================== COMPENSATION ====================
 
-  Widget _buildCompensationCard(
-      ContractResponse contract, bool isDark) {
+  Widget _buildCompensationCard(ContractResponse contract, bool isDark) {
     return _buildSectionCard(
       'Chế độ lương thưởng',
       Icons.payments_outlined,
@@ -334,9 +377,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
       children: [
         _infoRow(
           'Lương chính',
-          contract.salary != null
-              ? _currencyFmt.format(contract.salary)
-              : null,
+          contract.salary != null ? _currencyFmt.format(contract.salary) : null,
           isDark,
           valueColor: AppTheme.successColor,
         ),
@@ -359,8 +400,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
             isDark,
           ),
           if (contract.probationMonths != null)
-            _infoRow('Thời gian',
-                '${contract.probationMonths} tháng', isDark),
+            _infoRow('Thời gian', '${contract.probationMonths} tháng', isDark),
         ],
         if (contract.mealAllowance != null ||
             contract.transportAllowance != null ||
@@ -368,24 +408,26 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
           const SizedBox(height: 8),
           _sectionLabel('Phụ cấp', isDark),
           if (contract.mealAllowance != null)
-            _infoRow('Ăn trưa',
-                _currencyFmt.format(contract.mealAllowance), isDark),
+            _infoRow(
+              'Ăn trưa',
+              _currencyFmt.format(contract.mealAllowance),
+              isDark,
+            ),
           if (contract.transportAllowance != null)
             _infoRow(
-                'Đi lại',
-                _currencyFmt
-                    .format(contract.transportAllowance),
-                isDark),
+              'Đi lại',
+              _currencyFmt.format(contract.transportAllowance),
+              isDark,
+            ),
           if (contract.housingAllowance != null)
             _infoRow(
-                'Nhà ở',
-                _currencyFmt
-                    .format(contract.housingAllowance),
-                isDark),
+              'Nhà ở',
+              _currencyFmt.format(contract.housingAllowance),
+              isDark,
+            ),
         ],
         if (contract.otherAllowances != null)
-          _infoRow(
-              'Phụ cấp khác', contract.otherAllowances, isDark),
+          _infoRow('Phụ cấp khác', contract.otherAllowances, isDark),
         if (contract.bonusPolicy != null)
           _infoRow('Thưởng', contract.bonusPolicy, isDark),
       ],
@@ -399,28 +441,22 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
       c.workingSchedule != null ||
       c.annualLeaveDays != null;
 
-  Widget _buildWorkingConditionsCard(
-      ContractResponse contract, bool isDark) {
+  Widget _buildWorkingConditionsCard(ContractResponse contract, bool isDark) {
     return _buildSectionCard(
       'Thời gian làm việc',
       Icons.schedule,
       isDark,
       children: [
         if (contract.workingHoursPerDay != null)
-          _infoRow('Giờ/ngày',
-              '${contract.workingHoursPerDay} giờ', isDark),
+          _infoRow('Giờ/ngày', '${contract.workingHoursPerDay} giờ', isDark),
         if (contract.workingHoursPerWeek != null)
-          _infoRow('Giờ/tuần',
-              '${contract.workingHoursPerWeek} giờ', isDark),
+          _infoRow('Giờ/tuần', '${contract.workingHoursPerWeek} giờ', isDark),
         if (contract.workingSchedule != null)
-          _infoRow(
-              'Lịch làm việc', contract.workingSchedule, isDark),
+          _infoRow('Lịch làm việc', contract.workingSchedule, isDark),
         if (contract.remoteWorkPolicy != null)
-          _infoRow(
-              'Remote', contract.remoteWorkPolicy, isDark),
+          _infoRow('Remote', contract.remoteWorkPolicy, isDark),
         if (contract.annualLeaveDays != null)
-          _infoRow('Ngày phép',
-              '${contract.annualLeaveDays} ngày/năm', isDark),
+          _infoRow('Ngày phép', '${contract.annualLeaveDays} ngày/năm', isDark),
         if (contract.leavePolicy != null)
           _infoRow('Chính sách nghỉ', contract.leavePolicy, isDark),
       ],
@@ -434,8 +470,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
       c.trainingPolicy != null ||
       c.otherBenefits != null;
 
-  Widget _buildBenefitsCard(
-      ContractResponse contract, bool isDark) {
+  Widget _buildBenefitsCard(ContractResponse contract, bool isDark) {
     return _buildSectionCard(
       'Phúc lợi & Bảo hiểm',
       Icons.health_and_safety,
@@ -444,13 +479,11 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
         if (contract.insurancePolicy != null)
           _infoRow('Bảo hiểm', contract.insurancePolicy, isDark),
         if (contract.healthCheckupAnnual == true)
-          _infoRow(
-              'Khám sức khỏe', 'Định kỳ hàng năm', isDark),
+          _infoRow('Khám sức khỏe', 'Định kỳ hàng năm', isDark),
         if (contract.trainingPolicy != null)
           _infoRow('Đào tạo', contract.trainingPolicy, isDark),
         if (contract.otherBenefits != null)
-          _infoRow(
-              'Phúc lợi khác', contract.otherBenefits, isDark),
+          _infoRow('Phúc lợi khác', contract.otherBenefits, isDark),
       ],
     );
   }
@@ -463,27 +496,24 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
       c.terminationClause != null ||
       c.legalText != null;
 
-  Widget _buildLegalCard(
-      ContractResponse contract, bool isDark) {
+  Widget _buildLegalCard(ContractResponse contract, bool isDark) {
     return _buildSectionCard(
       'Điều khoản pháp lý',
       Icons.gavel,
       isDark,
       children: [
         if (contract.confidentialityClause != null)
-          _infoRow(
-              'Bảo mật', contract.confidentialityClause, isDark),
+          _infoRow('Bảo mật', contract.confidentialityClause, isDark),
         if (contract.ipClause != null)
-          _infoRow(
-              'Sở hữu trí tuệ', contract.ipClause, isDark),
+          _infoRow('Sở hữu trí tuệ', contract.ipClause, isDark),
         if (contract.nonCompeteClause != null) ...[
-          _infoRow('Không cạnh tranh',
-              contract.nonCompeteClause, isDark),
+          _infoRow('Không cạnh tranh', contract.nonCompeteClause, isDark),
           if (contract.nonCompeteDurationMonths != null)
             _infoRow(
-                'Thời hạn',
-                '${contract.nonCompeteDurationMonths} tháng',
-                isDark),
+              'Thời hạn',
+              '${contract.nonCompeteDurationMonths} tháng',
+              isDark,
+            ),
         ],
         if (contract.terminationNoticeDays != null)
           _infoRow(
@@ -492,8 +522,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
             isDark,
           ),
         if (contract.terminationClause != null)
-          _infoRow('Chấm dứt HĐ',
-              contract.terminationClause, isDark),
+          _infoRow('Chấm dứt HĐ', contract.terminationClause, isDark),
         if (contract.legalText != null) ...[
           const SizedBox(height: 8),
           _sectionLabel('Điều khoản chung', isDark),
@@ -514,8 +543,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
 
   // ==================== SIGNATURES ====================
 
-  Widget _buildSignaturesCard(
-      ContractResponse contract, bool isDark) {
+  Widget _buildSignaturesCard(ContractResponse contract, bool isDark) {
     return _buildSectionCard(
       'Chữ ký',
       Icons.draw,
@@ -547,15 +575,12 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: (isDark ? Colors.white : Colors.black)
-            .withValues(alpha: 0.04),
+        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isSigned
               ? AppTheme.successColor.withValues(alpha: 0.3)
-              : (isDark
-                  ? AppTheme.darkBorderColor
-                  : AppTheme.lightBorderColor),
+              : (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
         ),
       ),
       child: Column(
@@ -564,13 +589,9 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
           Row(
             children: [
               Icon(
-                isSigned
-                    ? Icons.check_circle
-                    : Icons.radio_button_unchecked,
+                isSigned ? Icons.check_circle : Icons.radio_button_unchecked,
                 size: 16,
-                color: isSigned
-                    ? AppTheme.successColor
-                    : Colors.grey,
+                color: isSigned ? AppTheme.successColor : Colors.grey,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -613,9 +634,8 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
                   sig!.signatureImageUrl!,
                   height: 70,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(
-                      Icons.broken_image,
-                      color: Colors.grey),
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.broken_image, color: Colors.grey),
                 ),
               ),
             ),
@@ -647,8 +667,9 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF1E293B) : Colors.white)
-            .withValues(alpha: 0.95),
+        color: (isDark ? const Color(0xFF1E293B) : Colors.white).withValues(
+          alpha: 0.95,
+        ),
         border: Border(
           top: BorderSide(
             color: isDark
@@ -664,17 +685,15 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
               child: OutlinedButton.icon(
                 onPressed: provider.isSubmitting
                     ? null
-                    : () =>
-                        _showRejectDialog(contract, provider),
+                    : () => _showRejectDialog(contract, provider),
                 icon: const Icon(Icons.close, size: 18),
                 label: const Text('Từ chối'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.errorColor,
                   side: BorderSide(
-                      color: AppTheme.errorColor
-                          .withValues(alpha: 0.5)),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 14),
+                    color: AppTheme.errorColor.withValues(alpha: 0.5),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
             ),
@@ -684,15 +703,13 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
               child: ElevatedButton.icon(
                 onPressed: provider.isSubmitting
                     ? null
-                    : () => context.push(
-                        '/contracts/${contract.id}/sign'),
+                    : () => context.push('/contracts/${contract.id}/sign'),
                 icon: const Icon(Icons.draw, size: 18),
                 label: const Text('Ký hợp đồng'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.successColor,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
             ),
@@ -716,8 +733,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-                'Bạn có chắc muốn từ chối hợp đồng này không?'),
+            const Text('Bạn có chắc muốn từ chối hợp đồng này không?'),
             const SizedBox(height: 16),
             TextField(
               controller: reasonController,
@@ -752,16 +768,13 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
         reason: reason.isNotEmpty ? reason : null,
       );
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Đã từ chối hợp đồng')),
-        );
-      } else if (!success &&
-          mounted &&
-          provider.errorMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(provider.errorMessage!)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã từ chối hợp đồng')));
+      } else if (!success && mounted && provider.errorMessage != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(provider.errorMessage!)));
       }
     }
     reasonController.dispose();
@@ -782,8 +795,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
         children: [
           Row(
             children: [
-              Icon(icon,
-                  size: 18, color: AppTheme.accentCyan),
+              Icon(icon, size: 18, color: AppTheme.accentCyan),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -820,8 +832,12 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
   }
 
   /// Responsive info row: Column layout for long labels on small screens.
-  Widget _infoRow(String label, String? value, bool isDark,
-      {Color? valueColor}) {
+  Widget _infoRow(
+    String label,
+    String? value,
+    bool isDark, {
+    Color? valueColor,
+  }) {
     if (value == null || value.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -850,7 +866,8 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: valueColor ??
+                color:
+                    valueColor ??
                     (isDark
                         ? AppTheme.darkTextPrimary
                         : AppTheme.lightTextPrimary),
@@ -867,10 +884,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: 80,
-              maxWidth: 110,
-            ),
+            constraints: const BoxConstraints(minWidth: 80, maxWidth: 110),
             child: Text(
               label,
               style: TextStyle(
@@ -888,7 +902,8 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: valueColor ??
+                color:
+                    valueColor ??
                     (isDark
                         ? AppTheme.darkTextPrimary
                         : AppTheme.lightTextPrimary),
@@ -900,16 +915,17 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
     );
   }
 
-  Widget _infoChip(
-      IconData icon, String text, bool isDark) {
+  Widget _infoChip(IconData icon, String text, bool isDark) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon,
-            size: 14,
-            color: isDark
-                ? AppTheme.darkTextSecondary
-                : AppTheme.lightTextSecondary),
+        Icon(
+          icon,
+          size: 14,
+          color: isDark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
+        ),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
@@ -929,21 +945,15 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
 
   String _formatDate(String? dateStr) {
     if (dateStr == null) return 'N/A';
-    try {
-      final date = DateTime.parse(dateStr);
-      return DateFormat('dd/MM/yyyy').format(date);
-    } catch (_) {
-      return dateStr;
-    }
+    final dt = DateTimeHelper.tryParseIso8601(dateStr);
+    return dt != null ? DateTimeHelper.formatDate(dt) : dateStr;
   }
 
   Color _statusColor(ContractStatus? status) {
     return switch (status) {
       ContractStatus.draft => Colors.grey,
-      ContractStatus.pendingSigner =>
-        AppTheme.themeBlueStart,
-      ContractStatus.pendingEmployer =>
-        AppTheme.themeOrangeStart,
+      ContractStatus.pendingSigner => AppTheme.themeBlueStart,
+      ContractStatus.pendingEmployer => AppTheme.themeOrangeStart,
       ContractStatus.signed => AppTheme.successColor,
       ContractStatus.rejected => AppTheme.errorColor,
       ContractStatus.cancelled => Colors.grey,
