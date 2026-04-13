@@ -114,8 +114,7 @@ class CommentProvider with ChangeNotifier, LoadingStateProviderMixin {
           isHidden: true,
           createdAt: _pagination.items[index].createdAt,
         );
-        _pagination.items[index] = updatedComment;
-        notifyListeners();
+        _pagination.updateItem(index, updatedComment);
       }
     }, errorMessageBuilder: (e) => 'Lỗi ẩn bình luận: ${e.toString()}');
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/learning_report_model.dart';
 import '../../themes/app_theme.dart';
+import '../../../core/utils/date_time_helper.dart';
 import '../glass_card.dart';
 
 /// History list item card with report info and actions.
@@ -43,7 +44,8 @@ class ReportHistoryItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final typeKey = (report.reportType ?? 'COMPREHENSIVE').toUpperCase();
-    final (typeLabel, typeColor) = _typeBadges[typeKey] ?? (typeKey, Color(0xFF6B7280));
+    final (typeLabel, typeColor) =
+        _typeBadges[typeKey] ?? (typeKey, Color(0xFF6B7280));
     final trend = (report.learningTrend ?? '').toLowerCase();
     final trendColor = _trendColors[trend] ?? AppTheme.darkTextSecondary;
     final trendLabel = _trendLabels[trend] ?? '';
@@ -216,11 +218,7 @@ class ReportHistoryItemWidget extends StatelessWidget {
 
   String _formatDateTime(String isoString) {
     if (isoString.isEmpty) return 'N/A';
-    try {
-      final dt = DateTime.parse(isoString);
-      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
-    } catch (_) {
-      return isoString;
-    }
+    final dt = DateTimeHelper.tryParseIso8601(isoString);
+    return dt != null ? DateTimeHelper.formatDate(dt) : isoString;
   }
 }

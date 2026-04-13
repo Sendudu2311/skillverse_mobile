@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/skeleton_loaders.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/payment_models.dart';
+import '../../../core/utils/number_formatter.dart';
 import '../../providers/payment_provider.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/error_state_widget.dart';
@@ -130,7 +131,7 @@ class _PaymentHistoryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${transaction.amount.toStringAsFixed(0)} ${transaction.currency}',
+                        '${NumberFormatter.formatAmount(transaction.amount)} ${transaction.currency}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -360,7 +361,7 @@ class _PaymentHistoryCard extends StatelessWidget {
                 _DetailRow(
                   label: 'Số tiền',
                   value:
-                      '${transaction.amount.toStringAsFixed(0)} ${transaction.currency}',
+                      '${NumberFormatter.formatAmount(transaction.amount)} ${transaction.currency}',
                 ),
                 _DetailRow(
                   label: 'Mã giao dịch',

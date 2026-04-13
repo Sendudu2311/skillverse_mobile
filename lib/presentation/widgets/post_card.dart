@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/models/post_models.dart';
 import '../themes/app_theme.dart';
 import '../../core/utils/date_time_helper.dart';
+import '../../core/utils/number_formatter.dart';
 import '../../core/utils/html_helper.dart';
 
 class PostCard extends StatelessWidget {
@@ -286,8 +287,6 @@ class PostCard extends StatelessWidget {
 
   String _formatCount(int count) {
     if (count == 0) return '';
-    if (count < 1000) return count.toString();
-    if (count < 1000000) return '${(count / 1000).toStringAsFixed(1)}K';
-    return '${(count / 1000000).toStringAsFixed(1)}M';
+    return NumberFormatter.formatCompact(count);
   }
 }

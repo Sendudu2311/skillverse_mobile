@@ -6,6 +6,7 @@ import '../../../data/models/recruitment_chat_models.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/common_loading.dart';
 import '../../themes/app_theme.dart';
+import '../../../core/utils/date_time_helper.dart';
 
 /// Full-screen recruitment chat window between Learner (candidate) and Recruiter.
 class RecruitmentChatWindow extends StatefulWidget {
@@ -50,7 +51,8 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    final atBottom = _scrollController.position.pixels >=
+    final atBottom =
+        _scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 100;
     if (atBottom != !_showScrollDown) {
       setState(() => _showScrollDown = !atBottom);
@@ -75,8 +77,7 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
     if (content.isEmpty) return;
     _messageController.clear();
     context.read<RecruitmentChatProvider>().sendMessage(content);
-    Future.delayed(
-        const Duration(milliseconds: 100), () => _scrollToBottom());
+    Future.delayed(const Duration(milliseconds: 100), () => _scrollToBottom());
   }
 
   @override
@@ -104,8 +105,7 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
               Expanded(
                 child: Stack(
                   children: [
-                    _buildMessageList(
-                        context, isDark, provider, currentUserId),
+                    _buildMessageList(context, isDark, provider, currentUserId),
                     if (_showScrollDown)
                       Positioned(
                         bottom: 12,
@@ -113,8 +113,10 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
                         child: FloatingActionButton.small(
                           onPressed: () => _scrollToBottom(),
                           backgroundColor: AppTheme.primaryBlueDark,
-                          child: const Icon(Icons.keyboard_arrow_down,
-                              color: Colors.white),
+                          child: const Icon(
+                            Icons.keyboard_arrow_down,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                   ],
@@ -131,8 +133,11 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
   }
 
   // ── Header ────────────────────────────────────────────────────────────
-  Widget _buildHeader(BuildContext context, bool isDark,
-      RecruitmentChatProvider provider) {
+  Widget _buildHeader(
+    BuildContext context,
+    bool isDark,
+    RecruitmentChatProvider provider,
+  ) {
     final session = provider.activeSession;
 
     return Container(
@@ -143,12 +148,14 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
         right: 16,
       ),
       decoration: BoxDecoration(
-        color:
-            isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
         border: Border(
           bottom: BorderSide(
-            color:
-                isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
           ),
         ),
       ),
@@ -172,8 +179,11 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
                 ? NetworkImage(session!.recruiterAvatar!)
                 : null,
             child: session?.recruiterAvatar == null
-                ? const Icon(Icons.business,
-                    color: AppTheme.primaryBlueDark, size: 22)
+                ? const Icon(
+                    Icons.business,
+                    color: AppTheme.primaryBlueDark,
+                    size: 22,
+                  )
                 : null,
           ),
           const SizedBox(width: 12),
@@ -212,8 +222,7 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
           // Status badge
           if (session != null)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: AppTheme.primaryBlueDark.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -233,8 +242,7 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
   }
 
   // ── Job Context Bar ───────────────────────────────────────────────────
-  Widget _buildJobContextBar(
-      bool isDark, RecruitmentSessionResponse session) {
+  Widget _buildJobContextBar(bool isDark, RecruitmentSessionResponse session) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -242,18 +250,15 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
         color: AppTheme.primaryBlueDark.withOpacity(isDark ? 0.15 : 0.06),
         border: Border(
           bottom: BorderSide(
-            color:
-                isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
           ),
         ),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.work_outline,
-            size: 14,
-            color: AppTheme.primaryBlueDark,
-          ),
+          Icon(Icons.work_outline, size: 14, color: AppTheme.primaryBlueDark),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
@@ -269,8 +274,7 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
           ),
           if (session.isRemote == true)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               margin: const EdgeInsets.only(left: 6),
               decoration: BoxDecoration(
                 color: const Color(0xFF22C55E).withOpacity(0.15),
@@ -287,8 +291,7 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
             ),
           if (session.matchScore != null)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               margin: const EdgeInsets.only(left: 6),
               decoration: BoxDecoration(
                 color: const Color(0xFFF59E0B).withOpacity(0.15),
@@ -309,23 +312,23 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
   }
 
   // ── Disabled Banner ───────────────────────────────────────────────────
-  Widget _buildDisabledBanner(
-      bool isDark, RecruitmentSessionResponse session) {
+  Widget _buildDisabledBanner(bool isDark, RecruitmentSessionResponse session) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: AppTheme.errorColor.withOpacity(isDark ? 0.15 : 0.08),
         border: Border(
-          bottom: BorderSide(
-            color: AppTheme.errorColor.withOpacity(0.3),
-          ),
+          bottom: BorderSide(color: AppTheme.errorColor.withOpacity(0.3)),
         ),
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded,
-              size: 16, color: AppTheme.errorColor),
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 16,
+            color: AppTheme.errorColor,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -344,8 +347,12 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
   }
 
   // ── Message List ──────────────────────────────────────────────────────
-  Widget _buildMessageList(BuildContext context, bool isDark,
-      RecruitmentChatProvider provider, int currentUserId) {
+  Widget _buildMessageList(
+    BuildContext context,
+    bool isDark,
+    RecruitmentChatProvider provider,
+    int currentUserId,
+  ) {
     if (provider.isLoadingMessages) {
       return ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -395,7 +402,8 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
     // Auto-scroll when new messages arrive
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        final isAtBottom = _scrollController.position.pixels >=
+        final isAtBottom =
+            _scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 150;
         if (isAtBottom) {
           _scrollToBottom(animated: false);
@@ -410,7 +418,8 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
       itemBuilder: (context, index) {
         final message = provider.messages[index];
         final isMe = message.isMine(currentUserId);
-        final showName = !isMe &&
+        final showName =
+            !isMe &&
             (index == 0 ||
                 provider.messages[index - 1].senderId != message.senderId);
 
@@ -425,8 +434,11 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
   }
 
   // ── Input Area ────────────────────────────────────────────────────────
-  Widget _buildInputArea(BuildContext context, bool isDark,
-      RecruitmentChatProvider provider) {
+  Widget _buildInputArea(
+    BuildContext context,
+    bool isDark,
+    RecruitmentChatProvider provider,
+  ) {
     final chatDisabled = provider.activeSession?.isChatAvailable == false;
 
     return Container(
@@ -437,12 +449,14 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
         bottom: MediaQuery.of(context).padding.bottom + 8,
       ),
       decoration: BoxDecoration(
-        color:
-            isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
         border: Border(
           top: BorderSide(
-            color:
-                isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
           ),
         ),
       ),
@@ -509,7 +523,8 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: const BorderSide(
-                              color: AppTheme.primaryBlueDark),
+                            color: AppTheme.primaryBlueDark,
+                          ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -526,12 +541,10 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
                     radius: 24,
                     backgroundColor: AppTheme.primaryBlueDark,
                     child: IconButton(
-                      onPressed:
-                          provider.isSending ? null : _sendMessage,
+                      onPressed: provider.isSending ? null : _sendMessage,
                       icon: provider.isSending
                           ? CommonLoading.small()
-                          : const Icon(Icons.send,
-                              color: Colors.white),
+                          : const Icon(Icons.send, color: Colors.white),
                     ),
                   ),
                 ],
@@ -563,8 +576,9 @@ class _RecruitmentMessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Column(
-        crossAxisAlignment:
-            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isMe
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           if (showSenderName)
             Padding(
@@ -580,16 +594,16 @@ class _RecruitmentMessageBubble extends StatelessWidget {
             ),
 
           Row(
-            mainAxisAlignment:
-                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: isMe
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               // Other's avatar
               if (!isMe) ...[
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor:
-                      AppTheme.primaryBlueDark.withOpacity(0.2),
+                  backgroundColor: AppTheme.primaryBlueDark.withOpacity(0.2),
                   backgroundImage: message.senderAvatar != null
                       ? NetworkImage(message.senderAvatar!)
                       : null,
@@ -611,13 +625,15 @@ class _RecruitmentMessageBubble extends StatelessWidget {
               Flexible(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: isMe
                         ? AppTheme.primaryBlueDark
                         : (isDark
-                            ? AppTheme.darkCardBackground
-                            : AppTheme.lightCardBackground),
+                              ? AppTheme.darkCardBackground
+                              : AppTheme.lightCardBackground),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
@@ -645,8 +661,8 @@ class _RecruitmentMessageBubble extends StatelessWidget {
                           color: isMe
                               ? Colors.white
                               : (isDark
-                                  ? AppTheme.darkTextPrimary
-                                  : AppTheme.lightTextPrimary),
+                                    ? AppTheme.darkTextPrimary
+                                    : AppTheme.lightTextPrimary),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -660,8 +676,8 @@ class _RecruitmentMessageBubble extends StatelessWidget {
                               color: isMe
                                   ? Colors.white.withOpacity(0.7)
                                   : (isDark
-                                      ? AppTheme.darkTextSecondary
-                                      : AppTheme.lightTextSecondary),
+                                        ? AppTheme.darkTextSecondary
+                                        : AppTheme.lightTextSecondary),
                             ),
                           ),
                           if (isMe) ...[
@@ -693,19 +709,8 @@ class _RecruitmentMessageBubble extends StatelessWidget {
 
   String _formatTime(String? timestamp) {
     if (timestamp == null) return '';
-    try {
-      final date = DateTime.parse(timestamp);
-      final now = DateTime.now();
-      final diff = now.difference(date);
-
-      if (diff.inMinutes < 1) return 'Vừa xong';
-      if (diff.inHours < 1) return '${diff.inMinutes} phút trước';
-      if (diff.inDays < 1) {
-        return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-      }
-      return '${date.day}/${date.month} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return '';
-    }
+    final dt = DateTimeHelper.tryParseIso8601(timestamp);
+    if (dt == null) return '';
+    return DateTimeHelper.formatSmart(dt);
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import '../../../core/utils/date_time_helper.dart';
 import '../../providers/notification_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/selectable_chip_row.dart';
@@ -57,10 +57,7 @@ class _NotificationPageState extends State<NotificationPage> {
               return TextButton.icon(
                 onPressed: provider.markAllAsRead,
                 icon: const Icon(Icons.done_all, size: 16),
-                label: const Text(
-                  'Đọc tất cả',
-                  style: TextStyle(fontSize: 12),
-                ),
+                label: const Text('Đọc tất cả', style: TextStyle(fontSize: 12)),
               );
             },
           ),
@@ -70,7 +67,9 @@ class _NotificationPageState extends State<NotificationPage> {
         children: [
           Consumer<NotificationProvider>(
             builder: (_, provider, __) {
-              final selected = NotificationFilter.values.indexOf(provider.filter);
+              final selected = NotificationFilter.values.indexOf(
+                provider.filter,
+              );
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: SelectableChipRow(
@@ -102,8 +101,7 @@ class _NotificationPageState extends State<NotificationPage> {
           return ListView.separated(
             padding: const EdgeInsets.only(bottom: 24),
             itemCount: 8,
-            separatorBuilder: (_, __) =>
-                const Divider(height: 1, indent: 72),
+            separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
             itemBuilder: (_, __) => const NotificationSkeleton(),
           );
         }
@@ -129,9 +127,9 @@ class _NotificationPageState extends State<NotificationPage> {
             controller: _scrollController,
             padding: const EdgeInsets.only(bottom: 24),
             itemCount:
-                provider.notifications.length + (provider.hasMore && provider.isLoadingMore ? 1 : 0),
-            separatorBuilder: (_, __) =>
-                const Divider(height: 1, indent: 72),
+                provider.notifications.length +
+                (provider.hasMore && provider.isLoadingMore ? 1 : 0),
+            separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
             itemBuilder: (context, index) {
               if (index >= provider.notifications.length) {
                 return Padding(
@@ -154,10 +152,7 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  void _handleTap(
-    NotificationProvider provider,
-    AppNotification notification,
-  ) {
+  void _handleTap(NotificationProvider provider, AppNotification notification) {
     if (!notification.isRead) {
       provider.markAsRead(notification.id);
     }
@@ -230,10 +225,7 @@ class _NotificationTile extends StatelessWidget {
   final AppNotification notification;
   final VoidCallback onTap;
 
-  const _NotificationTile({
-    required this.notification,
-    required this.onTap,
-  });
+  const _NotificationTile({required this.notification, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -263,8 +255,7 @@ class _NotificationTile extends StatelessWidget {
                     notification.title,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight:
-                          unread ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: unread ? FontWeight.bold : FontWeight.normal,
                       color: isDark
                           ? AppTheme.darkTextPrimary
                           : AppTheme.lightTextPrimary,
@@ -289,10 +280,11 @@ class _NotificationTile extends StatelessWidget {
                     _formatTime(notification.createdAt),
                     style: TextStyle(
                       fontSize: 11,
-                      color: (isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary)
-                          .withValues(alpha: 0.7),
+                      color:
+                          (isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary)
+                              .withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -436,12 +428,6 @@ class _NotificationTile extends StatelessWidget {
   }
 
   String _formatTime(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'Vừa xong';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
-    if (diff.inHours < 24) return '${diff.inHours} giờ trước';
-    if (diff.inDays < 7) return '${diff.inDays} ngày trước';
-    return DateFormat('dd/MM/yyyy').format(dt);
+    return DateTimeHelper.formatSmart(dt);
   }
 }

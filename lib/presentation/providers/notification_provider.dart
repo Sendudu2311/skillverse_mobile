@@ -24,7 +24,7 @@ class NotificationProvider extends ChangeNotifier {
         );
         return PaginatedResponse(
           data: result.content,
-          currentPage: page - 1,
+          currentPage: page,
           totalPages: result.totalPages,
           totalItems: result.totalElements.toInt(),
           hasMore: !result.last,

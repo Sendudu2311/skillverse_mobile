@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/utils/date_time_helper.dart';
 import '../../../providers/task_board_provider.dart';
 import '../../../themes/app_theme.dart';
 import '../../../../data/models/task_board_models.dart';
@@ -23,7 +24,15 @@ class _TimelineViewState extends State<TimelineView> {
     _selectedDay = DateTime(now.year, now.month, now.day);
   }
 
-  static const _vnDays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
+  static const _vnDays = [
+    'Thứ 2',
+    'Thứ 3',
+    'Thứ 4',
+    'Thứ 5',
+    'Thứ 6',
+    'Thứ 7',
+    'Chủ nhật',
+  ];
 
   String _formatSelectedDay(DateTime d) {
     final dayName = _vnDays[d.weekday - 1];
@@ -90,16 +99,21 @@ class _TimelineViewState extends State<TimelineView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final weekStart = _weekStart(_selectedDay);
     final weekEnd = weekStart.add(const Duration(days: 6));
-    final label =
-        weekStart.month == weekEnd.month
-            ? DateFormat('MMMM yyyy').format(weekStart).toUpperCase()
-            : '${DateFormat('MMM').format(weekStart)} – ${DateFormat('MMM yyyy').format(weekEnd)}'.toUpperCase();
+    final label = weekStart.month == weekEnd.month
+        ? DateFormat('MMMM yyyy').format(weekStart).toUpperCase()
+        : '${DateFormat('MMM').format(weekStart)} – ${DateFormat('MMM yyyy').format(weekEnd)}'
+              .toUpperCase();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          _buildNavButton(context, Icons.chevron_left, isDark, () => _goToPreviousWeek(provider)),
+          _buildNavButton(
+            context,
+            Icons.chevron_left,
+            isDark,
+            () => _goToPreviousWeek(provider),
+          ),
           Expanded(
             child: GestureDetector(
               onTap: () => _goToCurrentWeek(provider),
@@ -116,20 +130,32 @@ class _TimelineViewState extends State<TimelineView> {
               ),
             ),
           ),
-          _buildNavButton(context, Icons.chevron_right, isDark, () => _goToNextWeek(provider)),
+          _buildNavButton(
+            context,
+            Icons.chevron_right,
+            isDark,
+            () => _goToNextWeek(provider),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildNavButton(BuildContext context, IconData icon, bool isDark, VoidCallback onTap) {
+  Widget _buildNavButton(
+    BuildContext context,
+    IconData icon,
+    bool isDark,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: AppTheme.primaryBlueDark),
         ),
@@ -157,10 +183,12 @@ class _TimelineViewState extends State<TimelineView> {
           final textColor = isSelected
               ? Colors.white
               : isSunday
-                  ? Colors.red
-                  : isToday
-                      ? AppTheme.primaryBlueDark
-                      : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary);
+              ? Colors.red
+              : isToday
+              ? AppTheme.primaryBlueDark
+              : (isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary);
 
           return Expanded(
             child: GestureDetector(
@@ -172,12 +200,14 @@ class _TimelineViewState extends State<TimelineView> {
                   color: isSelected
                       ? AppTheme.primaryBlueDark
                       : isToday
-                          ? AppTheme.primaryBlueDark.withValues(alpha: 0.12)
-                          : Colors.transparent,
+                      ? AppTheme.primaryBlueDark.withValues(alpha: 0.12)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                   border: isToday && !isSelected
                       ? Border.all(
-                          color: AppTheme.primaryBlueDark.withValues(alpha: 0.4),
+                          color: AppTheme.primaryBlueDark.withValues(
+                            alpha: 0.4,
+                          ),
                         )
                       : null,
                 ),
@@ -246,7 +276,9 @@ class _TimelineViewState extends State<TimelineView> {
             Icon(
               Icons.event_available_outlined,
               size: 48,
-              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
             ),
             const SizedBox(height: 12),
             Text(
@@ -254,7 +286,9 @@ class _TimelineViewState extends State<TimelineView> {
               style: TextStyle(
                 fontSize: 13,
                 fontFamily: 'monospace',
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
               ),
             ),
             const SizedBox(height: 4),
@@ -263,8 +297,11 @@ class _TimelineViewState extends State<TimelineView> {
               style: TextStyle(
                 fontSize: 11,
                 fontFamily: 'monospace',
-                color: (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)
-                    .withValues(alpha: 0.6),
+                color:
+                    (isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary)
+                        .withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -283,11 +320,15 @@ class _TimelineViewState extends State<TimelineView> {
 
   Widget _buildTaskRow(BuildContext context, Task task, bool isDark) {
     final time = task.startDate ?? task.deadline;
-    final timeLabel = time != null ? DateFormat('HH:mm').format(time) : '--:--';
+    final timeLabel = time != null ? DateTimeHelper.formatTime(time) : '--:--';
     final color = _priorityColor(task.priority);
 
     return GestureDetector(
-      onTap: () => TaskDetailSheet.show(context, task: task, columnId: task.columnId ?? ''),
+      onTap: () => TaskDetailSheet.show(
+        context,
+        task: task,
+        columnId: task.columnId ?? '',
+      ),
       child: Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Row(
@@ -306,7 +347,9 @@ class _TimelineViewState extends State<TimelineView> {
                     fontWeight: FontWeight.w600,
                     color: task.isOverdue
                         ? Colors.red
-                        : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                        : (isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary),
                   ),
                   textAlign: TextAlign.right,
                 ),
@@ -346,9 +389,7 @@ class _TimelineViewState extends State<TimelineView> {
                       ? AppTheme.darkCardBackground
                       : AppTheme.lightCardBackground,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: color.withValues(alpha: 0.3),
-                  ),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.05),
@@ -389,7 +430,8 @@ class _TimelineViewState extends State<TimelineView> {
                       ],
                     ),
 
-                    if (task.description != null && task.description!.isNotEmpty) ...[
+                    if (task.description != null &&
+                        task.description!.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
                         task.description!,
@@ -429,7 +471,8 @@ class _TimelineViewState extends State<TimelineView> {
                             ),
                           ),
                         const Spacer(),
-                        if (task.userProgress != null && task.userProgress! > 0) ...[
+                        if (task.userProgress != null &&
+                            task.userProgress! > 0) ...[
                           SizedBox(
                             width: 60,
                             child: ClipRRect(

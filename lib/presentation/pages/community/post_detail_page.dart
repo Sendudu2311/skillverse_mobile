@@ -10,6 +10,7 @@ import '../../../data/models/post_models.dart';
 import '../../../core/utils/date_time_helper.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/html_helper.dart';
+import '../../../core/utils/number_formatter.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
@@ -564,10 +565,5 @@ class _PostDetailPageState extends State<PostDetailPage> {
     );
   }
 
-  String _formatCount(int count) {
-    if (count == 0) return '0';
-    if (count < 1000) return count.toString();
-    if (count < 1000000) return '${(count / 1000).toStringAsFixed(1)}K';
-    return '${(count / 1000000).toStringAsFixed(1)}M';
-  }
+  String _formatCount(int count) => NumberFormatter.formatCompact(count);
 }

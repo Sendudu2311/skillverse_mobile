@@ -6,6 +6,7 @@ import '../../../data/models/group_chat_models.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/common_loading.dart';
 import '../../themes/app_theme.dart';
+import '../../../core/utils/date_time_helper.dart';
 
 /// Full-screen group chat window with real-time messaging.
 class GroupChatWindow extends StatefulWidget {
@@ -54,7 +55,8 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    final atBottom = _scrollController.position.pixels >=
+    final atBottom =
+        _scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 100;
     if (atBottom != !_showScrollDown) {
       setState(() => _showScrollDown = !atBottom);
@@ -99,8 +101,7 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
               Expanded(
                 child: Stack(
                   children: [
-                    _buildMessageList(
-                        context, isDark, provider, currentUserId),
+                    _buildMessageList(context, isDark, provider, currentUserId),
 
                     // Scroll to bottom button
                     if (_showScrollDown)
@@ -110,8 +111,10 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
                         child: FloatingActionButton.small(
                           onPressed: () => _scrollToBottom(),
                           backgroundColor: AppTheme.primaryBlueDark,
-                          child: const Icon(Icons.keyboard_arrow_down,
-                              color: Colors.white),
+                          child: const Icon(
+                            Icons.keyboard_arrow_down,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                   ],
@@ -129,7 +132,10 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
 
   // ── Header ────────────────────────────────────────────────────────────
   Widget _buildHeader(
-      BuildContext context, bool isDark, GroupChatProvider provider) {
+    BuildContext context,
+    bool isDark,
+    GroupChatProvider provider,
+  ) {
     final group = provider.currentGroup;
 
     return Container(
@@ -140,10 +146,14 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
         right: 16,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
         border: Border(
           bottom: BorderSide(
-            color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
           ),
         ),
       ),
@@ -154,7 +164,9 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
             onPressed: () => Navigator.of(context).pop(),
             icon: Icon(
               Icons.arrow_back,
-              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              color: isDark
+                  ? AppTheme.darkTextPrimary
+                  : AppTheme.lightTextPrimary,
             ),
           ),
 
@@ -166,7 +178,11 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
                 ? NetworkImage(group!.avatarUrl!)
                 : null,
             child: group?.avatarUrl == null
-                ? const Icon(Icons.groups, color: AppTheme.primaryBlueDark, size: 22)
+                ? const Icon(
+                    Icons.groups,
+                    color: AppTheme.primaryBlueDark,
+                    size: 22,
+                  )
                 : null,
           ),
           const SizedBox(width: 12),
@@ -207,8 +223,12 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
   }
 
   // ── Message list ──────────────────────────────────────────────────────
-  Widget _buildMessageList(BuildContext context, bool isDark,
-      GroupChatProvider provider, int currentUserId) {
+  Widget _buildMessageList(
+    BuildContext context,
+    bool isDark,
+    GroupChatProvider provider,
+    int currentUserId,
+  ) {
     if (provider.isLoadingMessages) {
       return ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -258,7 +278,8 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
     // Auto-scroll to bottom when new messages arrive
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        final isAtBottom = _scrollController.position.pixels >=
+        final isAtBottom =
+            _scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 150;
         if (isAtBottom) {
           _scrollToBottom(animated: false);
@@ -275,7 +296,8 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
         final isMe = message.isMine(currentUserId);
 
         // Show sender name when it changes
-        final showName = !isMe &&
+        final showName =
+            !isMe &&
             (index == 0 ||
                 provider.messages[index - 1].senderId != message.senderId);
 
@@ -291,7 +313,10 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
 
   // ── Input area ────────────────────────────────────────────────────────
   Widget _buildInputArea(
-      BuildContext context, bool isDark, GroupChatProvider provider) {
+    BuildContext context,
+    bool isDark,
+    GroupChatProvider provider,
+  ) {
     return Container(
       padding: EdgeInsets.only(
         left: 12,
@@ -300,10 +325,14 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
         bottom: MediaQuery.of(context).padding.bottom + 8,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
         border: Border(
           top: BorderSide(
-            color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
           ),
         ),
       ),
@@ -349,8 +378,9 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide:
-                        const BorderSide(color: AppTheme.primaryBlueDark),
+                    borderSide: const BorderSide(
+                      color: AppTheme.primaryBlueDark,
+                    ),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -404,8 +434,9 @@ class _GroupMessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Column(
-        crossAxisAlignment:
-            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isMe
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           // Sender name (for other's messages)
           if (showSenderName)
@@ -422,16 +453,16 @@ class _GroupMessageBubble extends StatelessWidget {
             ),
 
           Row(
-            mainAxisAlignment:
-                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: isMe
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               // Other's avatar
               if (!isMe) ...[
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor:
-                      AppTheme.primaryBlueDark.withOpacity(0.2),
+                  backgroundColor: AppTheme.primaryBlueDark.withOpacity(0.2),
                   backgroundImage: message.senderAvatarUrl != null
                       ? NetworkImage(message.senderAvatarUrl!)
                       : null,
@@ -453,13 +484,15 @@ class _GroupMessageBubble extends StatelessWidget {
               Flexible(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: isMe
                         ? AppTheme.primaryBlueDark
                         : (isDark
-                            ? AppTheme.darkCardBackground
-                            : AppTheme.lightCardBackground),
+                              ? AppTheme.darkCardBackground
+                              : AppTheme.lightCardBackground),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
@@ -492,8 +525,8 @@ class _GroupMessageBubble extends StatelessWidget {
                           color: isMe
                               ? Colors.white.withOpacity(0.7)
                               : (isDark
-                                  ? AppTheme.darkTextSecondary
-                                  : AppTheme.lightTextSecondary),
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary),
                         ),
                       ),
                     ],
@@ -521,9 +554,7 @@ class _GroupMessageBubble extends StatelessWidget {
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Text(
                 '[GIF] ${message.content}',
-                style: TextStyle(
-                  color: isMe ? Colors.white : null,
-                ),
+                style: TextStyle(color: isMe ? Colors.white : null),
               ),
             ),
           );
@@ -563,8 +594,8 @@ class _GroupMessageBubble extends StatelessWidget {
             color: isMe
                 ? Colors.white
                 : (isDark
-                    ? AppTheme.darkTextPrimary
-                    : AppTheme.lightTextPrimary),
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary),
           ),
         );
     }
@@ -572,19 +603,8 @@ class _GroupMessageBubble extends StatelessWidget {
 
   String _formatTime(String? timestamp) {
     if (timestamp == null) return '';
-    try {
-      final date = DateTime.parse(timestamp);
-      final now = DateTime.now();
-      final diff = now.difference(date);
-
-      if (diff.inMinutes < 1) return 'Vừa xong';
-      if (diff.inHours < 1) return '${diff.inMinutes} phút trước';
-      if (diff.inDays < 1) {
-        return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-      }
-      return '${date.day}/${date.month} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return '';
-    }
+    final dt = DateTimeHelper.tryParseIso8601(timestamp);
+    if (dt == null) return '';
+    return DateTimeHelper.formatSmart(dt);
   }
 }

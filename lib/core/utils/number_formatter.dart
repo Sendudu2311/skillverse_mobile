@@ -26,6 +26,19 @@ class NumberFormatter {
     return formatter.format(number);
   }
 
+  /// Compact format for floating-point prices (course cards, job budgets, etc.)
+  /// Example: 1200000.0 → "1.2M", 299000.0 → "299K", 500.0 → "500"
+  static String formatCompactPrice(double price) {
+    if (price >= 1000000) {
+      final m = price / 1000000;
+      return m % 1 == 0 ? '${m.toInt()}M' : '${m.toStringAsFixed(1)}M';
+    } else if (price >= 1000) {
+      final k = price / 1000;
+      return k % 1 == 0 ? '${k.toInt()}K' : '${k.toStringAsFixed(0)}K';
+    }
+    return price.toStringAsFixed(0);
+  }
+
   /// Format number to compact form (K, M, B)
   /// Example: 1000 -> "1K", 1000000 -> "1M"
   static String formatCompact(int number) {

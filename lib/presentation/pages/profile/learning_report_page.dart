@@ -4,6 +4,7 @@ import '../../providers/learning_report_provider.dart';
 import '../../../data/models/learning_report_model.dart';
 import '../../themes/app_theme.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../../core/utils/date_time_helper.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
@@ -60,8 +61,9 @@ class _LearningReportPageState extends State<LearningReportPage>
           controller: _tabController,
           indicatorColor: AppTheme.accentCyan,
           labelColor: AppTheme.accentCyan,
-          unselectedLabelColor:
-              isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+          unselectedLabelColor: isDark
+              ? AppTheme.darkTextSecondary
+              : AppTheme.lightTextSecondary,
           tabs: const [
             Tab(text: 'Báo cáo'),
             Tab(text: 'Lịch sử'),
@@ -118,7 +120,10 @@ class _LearningReportPageState extends State<LearningReportPage>
       transitionBuilder: (child, animation) {
         return FadeTransition(opacity: animation, child: child);
       },
-      child: KeyedSubtree(key: ValueKey(_getStateKey(provider)), child: buildTab()),
+      child: KeyedSubtree(
+        key: ValueKey(_getStateKey(provider)),
+        child: buildTab(),
+      ),
     );
   }
 
@@ -271,8 +276,7 @@ class _LearningReportPageState extends State<LearningReportPage>
   // ----- No Report State -----
   Widget _buildNoReportState(LearningReportProvider provider, bool isDark) {
     final canGen = provider.canGenerate?.canGenerate ?? true;
-    final cooldownMins =
-        provider.canGenerate?.remainingCooldownMinutes ?? 0;
+    final cooldownMins = provider.canGenerate?.remainingCooldownMinutes ?? 0;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -342,14 +346,14 @@ class _LearningReportPageState extends State<LearningReportPage>
                           await provider.generateReport();
                           if (!mounted) return;
                           if (provider.errorMessage == null) {
-                            ErrorHandler.showSuccessSnackBar(context, 'Báo cáo đã được tạo thành công!');
+                            ErrorHandler.showSuccessSnackBar(
+                              context,
+                              'Báo cáo đã được tạo thành công!',
+                            );
                           }
                         }
                       : null,
-                  icon: Icon(
-                    canGen ? Icons.bolt : Icons.timer,
-                    size: 20,
-                  ),
+                  icon: Icon(canGen ? Icons.bolt : Icons.timer, size: 20),
                   label: Text(
                     canGen
                         ? 'KÍCH HOẠT PHÂN TÍCH'
@@ -361,8 +365,9 @@ class _LearningReportPageState extends State<LearningReportPage>
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        canGen ? AppTheme.primaryBlueDark : Colors.grey,
+                    backgroundColor: canGen
+                        ? AppTheme.primaryBlueDark
+                        : Colors.grey,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -486,7 +491,9 @@ class _LearningReportPageState extends State<LearningReportPage>
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                color: isDark ? AppTheme.galaxyMid : Colors.white,
+                                color: isDark
+                                    ? AppTheme.galaxyMid
+                                    : Colors.white,
                                 elevation: 8,
                                 itemBuilder: (context) {
                                   return sections.map((key) {
@@ -496,8 +503,14 @@ class _LearningReportPageState extends State<LearningReportPage>
                                       child: Text(
                                         kReportSectionTitles[key] ?? key,
                                         style: TextStyle(
-                                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                                          color: isActive ? AppTheme.primaryBlueDark : (isDark ? Colors.white : Colors.black),
+                                          fontWeight: isActive
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          color: isActive
+                                              ? AppTheme.primaryBlueDark
+                                              : (isDark
+                                                    ? Colors.white
+                                                    : Colors.black),
                                         ),
                                       ),
                                     );
@@ -509,27 +522,45 @@ class _LearningReportPageState extends State<LearningReportPage>
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                                    color: isDark
+                                        ? Colors.white.withValues(alpha: 0.05)
+                                        : Colors.black.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1),
+                                      color: isDark
+                                          ? Colors.white.withValues(alpha: 0.1)
+                                          : Colors.black.withValues(alpha: 0.1),
                                     ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.menu_book, size: 14, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                                      Icon(
+                                        Icons.menu_book,
+                                        size: 14,
+                                        color: isDark
+                                            ? AppTheme.darkTextSecondary
+                                            : AppTheme.lightTextSecondary,
+                                      ),
                                       const SizedBox(width: 6),
                                       Text(
                                         'Mục lục',
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
-                                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                          color: isDark
+                                              ? AppTheme.darkTextSecondary
+                                              : AppTheme.lightTextSecondary,
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      Icon(Icons.keyboard_arrow_down, size: 16, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                                      Icon(
+                                        Icons.keyboard_arrow_down,
+                                        size: 16,
+                                        color: isDark
+                                            ? AppTheme.darkTextSecondary
+                                            : AppTheme.lightTextSecondary,
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -553,19 +584,19 @@ class _LearningReportPageState extends State<LearningReportPage>
                         .asMap()
                         .entries
                         .map((indexed) {
-                      final key = _getSectionKey(indexed.value.key);
-                      return StaggeredSlideFade(
-                        index: 6 + indexed.key,
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: ReportSectionCardWidget(
-                            sectionKey: key,
-                            content: indexed.value.value,
-                            isDark: isDark,
-                          ),
-                        ),
-                      );
-                    }),
+                          final key = _getSectionKey(indexed.value.key);
+                          return StaggeredSlideFade(
+                            index: 6 + indexed.key,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: ReportSectionCardWidget(
+                                sectionKey: key,
+                                content: indexed.value.value,
+                                isDark: isDark,
+                              ),
+                            ),
+                          );
+                        }),
                   ],
                   if (provider.errorMessage != null)
                     _buildInlineError(provider, isDark),
@@ -679,11 +710,7 @@ class _LearningReportPageState extends State<LearningReportPage>
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.track_changes,
-                  size: 16,
-                  color: AppTheme.accentGold,
-                ),
+                Icon(Icons.track_changes, size: 16, color: AppTheme.accentGold),
                 const SizedBox(width: 8),
                 Text(
                   'ĐỀ XUẤT TẬP TRUNG',
@@ -885,18 +912,11 @@ class _LearningReportPageState extends State<LearningReportPage>
           padding: const EdgeInsets.all(32),
           child: Column(
             children: [
-              Icon(
-                Icons.article_outlined,
-                size: 40,
-                color: Colors.grey,
-              ),
+              Icon(Icons.article_outlined, size: 40, color: Colors.grey),
               const SizedBox(height: 8),
               Text(
                 'Không có dữ liệu cho phần này',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: Colors.grey, fontSize: 13),
               ),
             ],
           ),
@@ -911,8 +931,7 @@ class _LearningReportPageState extends State<LearningReportPage>
     );
   }
 
-  Widget _buildInlineError(
-      LearningReportProvider provider, bool isDark) {
+  Widget _buildInlineError(LearningReportProvider provider, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
@@ -920,9 +939,7 @@ class _LearningReportPageState extends State<LearningReportPage>
         decoration: BoxDecoration(
           color: AppTheme.errorColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: AppTheme.errorColor.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -935,10 +952,7 @@ class _LearningReportPageState extends State<LearningReportPage>
             Expanded(
               child: Text(
                 provider.errorMessage!,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.errorColor,
-                ),
+                style: TextStyle(fontSize: 12, color: AppTheme.errorColor),
               ),
             ),
             TextButton(
@@ -951,8 +965,7 @@ class _LearningReportPageState extends State<LearningReportPage>
     );
   }
 
-  Widget _buildFooterActions(
-      LearningReportProvider provider, bool isDark) {
+  Widget _buildFooterActions(LearningReportProvider provider, bool isDark) {
     final canGen = provider.canGenerate?.canGenerate ?? true;
     final cooldownMins = provider.canGenerate?.remainingCooldownMinutes ?? 0;
     final isDisabled = provider.isGenerating || !canGen;
@@ -989,9 +1002,15 @@ class _LearningReportPageState extends State<LearningReportPage>
                           await provider.downloadPDF();
                           if (!mounted) return;
                           if (provider.lastSavedPdfPath != null) {
-                            ErrorHandler.showSuccessSnackBar(context, 'PDF đã lưu vào Downloads!');
+                            ErrorHandler.showSuccessSnackBar(
+                              context,
+                              'PDF đã lưu vào Downloads!',
+                            );
                           } else {
-                            ErrorHandler.showErrorSnackBar(context, 'Lỗi khi lưu PDF');
+                            ErrorHandler.showErrorSnackBar(
+                              context,
+                              'Lỗi khi lưu PDF',
+                            );
                           }
                         },
                   icon: provider.isDownloadingPDF
@@ -1057,15 +1076,18 @@ class _LearningReportPageState extends State<LearningReportPage>
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: isDisabled
-                  ? null
-                  : () async {
-                      _tabController.animateTo(0);
-                      await provider.generateReport();
-                      if (!mounted) return;
-                      if (provider.errorMessage == null) {
-                        ErrorHandler.showSuccessSnackBar(context, 'Báo cáo đã được tạo thành công!');
-                      }
-                    },
+                ? null
+                : () async {
+                    _tabController.animateTo(0);
+                    await provider.generateReport();
+                    if (!mounted) return;
+                    if (provider.errorMessage == null) {
+                      ErrorHandler.showSuccessSnackBar(
+                        context,
+                        'Báo cáo đã được tạo thành công!',
+                      );
+                    }
+                  },
             icon: provider.isGenerating
                 ? SizedBox(
                     width: 20,
@@ -1076,18 +1098,22 @@ class _LearningReportPageState extends State<LearningReportPage>
             label: Text(
               provider.isGenerating
                   ? (provider.generatingStatus.isNotEmpty
-                      ? provider.generatingStatus
-                      : 'Đang làm phân tích...')
+                        ? provider.generatingStatus
+                        : 'Đang làm phân tích...')
                   : (!canGen
-                      ? 'Đợi ${_formatCooldown(cooldownMins)} để có báo cáo mới'
-                      : 'Tạo báo cáo học tập mới'),
+                        ? 'Đợi ${_formatCooldown(cooldownMins)} để có báo cáo mới'
+                        : 'Tạo báo cáo học tập mới'),
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: isDisabled ? Colors.grey : AppTheme.primaryBlueDark,
+              backgroundColor: isDisabled
+                  ? Colors.grey
+                  : AppTheme.primaryBlueDark,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ),
@@ -1166,7 +1192,10 @@ class _LearningReportPageState extends State<LearningReportPage>
               }
             },
             onDownload: () {
-              ErrorHandler.showSuccessSnackBar(context, 'Xem báo cáo và tải PDF từ tab Báo cáo');
+              ErrorHandler.showSuccessSnackBar(
+                context,
+                'Xem báo cáo và tải PDF từ tab Báo cáo',
+              );
             },
           );
         },
@@ -1193,13 +1222,8 @@ class _LearningReportPageState extends State<LearningReportPage>
 
   String _formatDateTime(String isoString) {
     if (isoString.isEmpty) return 'N/A';
-    try {
-      final dt = DateTime.parse(isoString);
-      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} '
-          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return isoString;
-    }
+    final dt = DateTimeHelper.tryParseIso8601(isoString);
+    return dt != null ? DateTimeHelper.formatDateTime(dt) : isoString;
   }
 
   String _formatCooldown(int minutes) {

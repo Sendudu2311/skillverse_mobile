@@ -59,37 +59,37 @@ class DateTimeHelper {
 
   /// Format date: dd/MM/yyyy
   static String formatDate(DateTime date) {
-    return _dateFormat.format(date);
+    return _dateFormat.format(date.toLocal());
   }
 
   /// Format date with weekday: EEEE, dd/MM/yyyy
   static String formatDateWithWeekday(DateTime date) {
-    return _dateWithWeekday.format(date);
+    return _dateWithWeekday.format(date.toLocal());
   }
 
   /// Format short date: 15/12
   static String formatShortDate(DateTime date) {
-    return _shortDate.format(date);
+    return _shortDate.format(date.toLocal());
   }
 
   /// Format time: 14:30
   static String formatTime(DateTime date) {
-    return _timeFormat.format(date);
+    return _timeFormat.format(date.toLocal());
   }
 
   /// Format datetime: dd/MM/yyyy HH:mm
   static String formatDateTime(DateTime date) {
-    return _dateTimeFormat.format(date);
+    return _dateTimeFormat.format(date.toLocal());
   }
 
   /// Format month and year: MMMM yyyy
   static String formatMonthYear(DateTime date) {
-    return _monthYear.format(date);
+    return _monthYear.format(date.toLocal());
   }
 
   /// Format time with seconds: 14:30:45
   static String formatTimeWithSeconds(DateTime date) {
-    return _timeWithSeconds.format(date);
+    return _timeWithSeconds.format(date.toLocal());
   }
 
   /// Format to ISO 8601 for API: yyyy-MM-ddTHH:mm:ssZ
@@ -121,10 +121,12 @@ class DateTimeHelper {
 
   /// Smart relative time: Shows "Hôm nay 14:30" or "Hôm qua 09:15" or relative
   static String formatSmart(DateTime dateTime) {
+    final local = dateTime.toLocal(); // Ensure local timezone before comparison
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
-    final dateOnly = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final dateOnly = DateTime(local.year, local.month, local.day);
+    dateTime = local; // use local for all subsequent formatting
 
     if (dateOnly == today) {
       return 'Hôm nay ${formatTime(dateTime)}';

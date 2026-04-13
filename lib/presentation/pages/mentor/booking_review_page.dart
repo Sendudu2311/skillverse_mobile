@@ -6,6 +6,7 @@ import '../../../data/services/booking_review_service.dart';
 import '../../../data/models/booking_review_model.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../../core/utils/date_time_helper.dart';
 
 class BookingReviewPage extends StatefulWidget {
   final int bookingId;
@@ -395,9 +396,7 @@ class _BookingReviewPageState extends State<BookingReviewPage> {
                   ? SizedBox(
                       width: 20,
                       height: 20,
-                      child: CommonLoading.button(
-                        color: Colors.white,
-                      ),
+                      child: CommonLoading.button(color: Colors.white),
                     )
                   : const Text(
                       'Gửi đánh giá',
@@ -433,12 +432,7 @@ class _BookingReviewPageState extends State<BookingReviewPage> {
   }
 
   String _formatDateTime(String isoString) {
-    try {
-      final dt = DateTime.parse(isoString);
-      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} '
-          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return isoString;
-    }
+    final dt = DateTimeHelper.tryParseIso8601(isoString);
+    return dt != null ? DateTimeHelper.formatDateTime(dt) : isoString;
   }
 }
