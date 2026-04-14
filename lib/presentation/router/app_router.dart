@@ -36,6 +36,7 @@ import '../pages/mentor/mentor_detail_page.dart';
 import '../pages/mentor/my_bookings_page.dart';
 import '../pages/mentor/mentor_booking_detail_page.dart';
 import '../pages/mentor/booking_review_page.dart';
+import '../pages/mentor/booking_dispute_detail_page.dart';
 import '../pages/profile/learning_report_page.dart';
 import '../pages/skin/skin_shop_page.dart';
 import '../pages/task_board/task_board_page.dart';
@@ -77,7 +78,6 @@ class AppRouter {
       // via its route matching system. Incoming Android/iOS intents with URIs
       // (e.g. from FCM notifications) are automatically matched against defined routes.
       // The `redirect` callback below handles auth guard for all routes including deep links.
-
       redirect: (context, state) {
         final authProvider = context.read<AuthProvider>();
         final isAuthenticated = authProvider.isAuthenticated;
@@ -249,9 +249,9 @@ class AppRouter {
               builder: (context, state) {
                 final userId = int.parse(state.pathParameters['userId']!);
                 final conversation = state.extra as MessagingConversation?;
-                final bookingId = conversation?.bookingId ??
-                    int.tryParse(
-                        state.uri.queryParameters['bookingId'] ?? '');
+                final bookingId =
+                    conversation?.bookingId ??
+                    int.tryParse(state.uri.queryParameters['bookingId'] ?? '');
                 return MessagingChatPage(
                   counterpartId: userId,
                   conversation: conversation,
@@ -451,6 +451,15 @@ class AppRouter {
           },
         ),
 
+        // Booking Dispute Route
+        GoRoute(
+          path: '/booking-dispute/:id',
+          name: 'booking-dispute',
+          builder: (context, state) => BookingDisputeDetailPage(
+            disputeId: int.parse(state.pathParameters['id']!),
+          ),
+        ),
+
         // Skin Shop Route
         GoRoute(
           path: '/skins',
@@ -578,10 +587,7 @@ class AppRouter {
         GoRoute(
           path: '/portfolio',
           name: 'portfolio',
-          builder: (context, state) => MainLayout(
-            currentPath: state.matchedLocation,
-            child: const PortfolioPage(),
-          ),
+          builder: (context, state) => const PortfolioPage(),
         ),
       ],
 

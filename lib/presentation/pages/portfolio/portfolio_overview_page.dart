@@ -7,13 +7,21 @@ import '../../../data/models/portfolio_models.dart';
 import '../../widgets/glass_card.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../../core/utils/html_helper.dart';
+import '../../../core/utils/number_formatter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:printing/printing.dart';
+import '../../widgets/portfolio/cv_pdf_generator_widget.dart';
+import '../../../data/models/cv_structured_data.dart';
 import 'edit_extended_profile_page.dart';
 import 'edit_project_page.dart';
 import 'add_certificate_page.dart';
 import 'cv_builder_page.dart';
+import 'edit_cv_page.dart';
 import 'public_portfolio_page.dart';
 
 class PortfolioOverviewPage extends StatefulWidget {
@@ -115,6 +123,36 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
     }
   }
 
+  Future<void> _openActiveCVPdf(CVDto cv) async {
+    final cvData = CVStructuredData.tryParse(cv.cvJson);
+    if (cvData == null) {
+      if (mounted)
+        ErrorHandler.showErrorSnackBar(context, 'Dữ liệu CV không hợp lệ.');
+      return;
+    }
+    try {
+      final pdfBytes = await CVPdfGeneratorWidget.generateCvPdf(cvData);
+      await Printing.sharePdf(
+        bytes: pdfBytes,
+        filename:
+            'CV_SkillVerse_${cvData.personalInfo.fullName.replaceAll(' ', '_')}.pdf',
+      );
+    } catch (e) {
+      if (mounted) ErrorHandler.showErrorSnackBar(context, 'Lỗi tạo PDF: $e');
+    }
+  }
+
+  void _navigateToEditActiveCV(CVDto cv) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => EditCVPage(cv: cv)),
+    ).then((result) {
+      if (result == true && mounted) {
+        context.read<PortfolioProvider>().loadActiveCV();
+      }
+    });
+  }
+
   void _navigateToCVBuilder() {
     Navigator.push(
       context,
@@ -147,6 +185,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
         Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      appBar: SkillVerseAppBar(title: 'Portfolio', icon: Icons.folder_special),
       body: Stack(
         children: [
           // Galaxy Background
@@ -163,104 +202,103 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
           ),
 
           // Content
-          SafeArea(
-            child: Consumer<PortfolioProvider>(
-              builder: (context, portfolioProvider, child) {
-                if (portfolioProvider.isLoading) {
-                  return CommonLoading.center();
-                }
+          Consumer<PortfolioProvider>(
+            builder: (context, portfolioProvider, child) {
+              if (portfolioProvider.isLoading) {
+                return CommonLoading.center();
+              }
 
-                if (portfolioProvider.errorMessage != null) {
-                  return ErrorStateWidget(
-                    message: portfolioProvider.errorMessage!,
-                    onRetry: _loadPortfolio,
-                  );
-                }
-
-                if (!portfolioProvider.hasExtendedProfile) {
-                  return _buildNoProfileView(context);
-                }
-
-                return RefreshIndicator(
-                  onRefresh: _loadPortfolio,
-                  color: AppTheme.themePurpleStart,
-                  backgroundColor: isDark
-                      ? AppTheme.darkCardBackground
-                      : AppTheme.lightCardBackground,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header with user info
-                        _buildHeader(
-                          context,
-                          user,
-                          portfolioProvider.extendedProfile,
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Extended Profile Section
-                        if (portfolioProvider.extendedProfile != null)
-                          _buildExtendedProfileSection(
-                            context,
-                            portfolioProvider.extendedProfile!,
-                          ),
-
-                        const SizedBox(height: 24),
-
-                        // Quick Stats
-                        _buildQuickStats(
-                          portfolioProvider.projects.length,
-                          portfolioProvider.certificates.length,
-                          portfolioProvider.reviews.length,
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Projects Section
-                        _buildProjectsSection(
-                          context,
-                          portfolioProvider.projects,
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Completed Missions Section
-                        _buildCompletedMissionsSection(
-                          context,
-                          portfolioProvider.completedMissions,
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Certificates Section
-                        _buildCertificatesSection(
-                          context,
-                          portfolioProvider.certificates,
-                          isSyncing: portfolioProvider.isSyncing,
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // CV Section
-                        _buildCVSection(context, portfolioProvider.activeCV),
-
-                        const SizedBox(height: 24),
-
-                        // Reviews Section
-                        if (portfolioProvider.reviews.isNotEmpty)
-                          _buildReviewsSection(portfolioProvider.reviews),
-
-                        const SizedBox(height: 100),
-                      ],
-                    ),
-                  ),
+              if (portfolioProvider.errorMessage != null) {
+                return ErrorStateWidget(
+                  message: portfolioProvider.errorMessage!,
+                  onRetry: _loadPortfolio,
                 );
-              },
-            ),
+              }
+
+              if (!portfolioProvider.hasExtendedProfile) {
+                return _buildNoProfileView(context);
+              }
+
+              return RefreshIndicator(
+                onRefresh: _loadPortfolio,
+                color: AppTheme.themePurpleStart,
+                backgroundColor: isDark
+                    ? AppTheme.darkCardBackground
+                    : AppTheme.lightCardBackground,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with user info
+                      _buildHeader(
+                        context,
+                        user,
+                        portfolioProvider.extendedProfile,
+                        portfolioProvider.activeCV,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Extended Profile Section
+                      if (portfolioProvider.extendedProfile != null)
+                        _buildExtendedProfileSection(
+                          context,
+                          portfolioProvider.extendedProfile!,
+                        ),
+
+                      const SizedBox(height: 24),
+
+                      // Quick Stats
+                      _buildQuickStats(
+                        portfolioProvider.projects.length,
+                        portfolioProvider.certificates.length,
+                        portfolioProvider.reviews.length,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Projects Section
+                      _buildProjectsSection(
+                        context,
+                        portfolioProvider.projects,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Completed Missions Section
+                      _buildCompletedMissionsSection(
+                        context,
+                        portfolioProvider.completedMissions,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Certificates Section
+                      _buildCertificatesSection(
+                        context,
+                        portfolioProvider.certificates,
+                        isSyncing: portfolioProvider.isSyncing,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // CV Section
+                      _buildCVSection(context, portfolioProvider.activeCV),
+
+                      const SizedBox(height: 24),
+
+                      // Reviews Section
+                      if (portfolioProvider.reviews.isNotEmpty)
+                        _buildReviewsSection(portfolioProvider.reviews),
+
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -272,6 +310,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
     BuildContext context,
     dynamic user,
     ExtendedProfileDto? profile,
+    CVDto? activeCV,
   ) {
     return GradientGlassCard(
       gradientColors: const [
@@ -335,8 +374,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                 if (profile?.slug != null) ...[
                   const SizedBox(height: 8),
                   GestureDetector(
-                    onTap: () =>
-                        _navigateToPublicPortfolio(profile!.slug ?? ''),
+                    onTap: () => _navigateToPublicPortfolio(profile.slug ?? ''),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -376,7 +414,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
             children: [
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.white),
-                tooltip: 'Chỉnh sửa',
+                tooltip: 'Chỉnh sửa hồ sơ',
                 onPressed: () {
                   if (profile != null) _navigateToEditProfile(profile);
                 },
@@ -387,6 +425,23 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                   tooltip: 'Chia sẻ',
                   onPressed: () => _sharePortfolioLink(profile!.slug!),
                 ),
+              if (activeCV != null) ...[
+                IconButton(
+                  icon: const Icon(
+                    Icons.picture_as_pdf_outlined,
+                    color: Colors.white,
+                  ),
+                  tooltip: 'Mở PDF CV',
+                  onPressed: () {
+                    _openActiveCVPdf(activeCV);
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_note, color: Colors.white),
+                  tooltip: 'Sửa CV',
+                  onPressed: () => _navigateToEditActiveCV(activeCV),
+                ),
+              ],
             ],
           ),
         ],
@@ -413,7 +468,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
           const SizedBox(height: 12),
           if (profile.bio != null)
             Text(
-              profile.bio!,
+              HtmlHelper.cleanHtml(profile.bio!),
               style: TextStyle(
                 fontSize: 14,
                 color: isDark ? Colors.white70 : AppTheme.lightTextSecondary,
@@ -451,15 +506,27 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
               runSpacing: 8,
               children: [
                 if (profile.website != null)
-                  _buildSocialChip(Icons.language, 'Website'),
+                  _buildSocialChip(Icons.language, 'Website', profile.website!),
                 if (profile.githubUrl != null)
-                  _buildSocialChip(Icons.code, 'GitHub'),
+                  _buildSocialChip(Icons.code, 'GitHub', profile.githubUrl!),
                 if (profile.linkedinUrl != null)
-                  _buildSocialChip(Icons.business, 'LinkedIn'),
+                  _buildSocialChip(
+                    Icons.business,
+                    'LinkedIn',
+                    profile.linkedinUrl!,
+                  ),
                 if (profile.behanceUrl != null)
-                  _buildSocialChip(Icons.palette, 'Behance'),
+                  _buildSocialChip(
+                    Icons.palette,
+                    'Behance',
+                    profile.behanceUrl!,
+                  ),
                 if (profile.dribbbleUrl != null)
-                  _buildSocialChip(Icons.sports_basketball, 'Dribbble'),
+                  _buildSocialChip(
+                    Icons.sports_basketball,
+                    'Dribbble',
+                    profile.dribbbleUrl!,
+                  ),
               ],
             ),
           ],
@@ -509,31 +576,42 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
     );
   }
 
-  Widget _buildSocialChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppTheme.darkCardBackground
-            : AppTheme.lightCardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: AppTheme.themePurpleStart),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-            ),
+  Widget _buildSocialChip(IconData icon, String label, String url) {
+    return InkWell(
+      onTap: () async {
+        final uri = Uri.tryParse(url);
+        if (uri != null && await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: AppTheme.themePurpleStart),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -736,7 +814,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                 if (project.description != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    project.description!,
+                    HtmlHelper.cleanHtml(project.description!),
                     style: TextStyle(
                       fontSize: 13,
                       color: isDark
@@ -898,7 +976,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                   const Icon(Icons.star, size: 16, color: Colors.amber),
                   const SizedBox(width: 4),
                   Text(
-                    mission.rating!.toStringAsFixed(1),
+                    NumberFormatter.formatRating(mission.rating!),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -957,9 +1035,15 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
     final count = await portfolioProvider.importSystemCertificates();
     if (!mounted) return;
     if (count >= 0) {
-      ErrorHandler.showSuccessSnackBar(context, 'Đã đồng bộ $count chứng chỉ từ hệ thống!');
+      ErrorHandler.showSuccessSnackBar(
+        context,
+        'Đã đồng bộ $count chứng chỉ từ hệ thống!',
+      );
     } else {
-      ErrorHandler.showErrorSnackBar(context, 'Không thể đồng bộ chứng chỉ. Vui lòng thử lại.');
+      ErrorHandler.showErrorSnackBar(
+        context,
+        'Không thể đồng bộ chứng chỉ. Vui lòng thử lại.',
+      );
     }
   }
 
@@ -992,7 +1076,9 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                         child: SizedBox(
                           width: 20,
                           height: 20,
-                          child: CommonLoading.small(color: AppTheme.themeGreenStart),
+                          child: CommonLoading.small(
+                            color: AppTheme.themeGreenStart,
+                          ),
                         ),
                       )
                     : IconButton(

@@ -194,10 +194,7 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
     isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: SkillVerseAppBar(
-        title: '',
-        onBack: () => Navigator.pop(context),
-      ),
+      appBar: SkillVerseAppBar(title: '', onBack: () => Navigator.pop(context)),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Stack(
@@ -254,19 +251,15 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
 
                     // Save Button
                     _buildSaveButton(),
-                    const SizedBox(height: 80),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
 
-
             // Loading Overlay
             if (_isLoading)
-              Container(
-                color: Colors.black54,
-                child: CommonLoading.center(),
-              ),
+              Container(color: Colors.black54, child: CommonLoading.center()),
           ],
         ),
       ),

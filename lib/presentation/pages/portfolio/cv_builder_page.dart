@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+
+import 'package:printing/printing.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
@@ -9,7 +11,10 @@ import '../../../core/utils/error_handler.dart';
 import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../../data/models/portfolio_models.dart';
+import '../../../data/models/cv_structured_data.dart';
+import '../../widgets/portfolio/cv_pdf_generator_widget.dart';
 import 'cv_preview_page.dart';
+import 'edit_cv_page.dart';
 
 class CVBuilderPage extends StatefulWidget {
   const CVBuilderPage({super.key});
@@ -90,8 +95,8 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
           : null,
       additionalInstructions:
           _additionalInstructionsController.text.trim().isNotEmpty
-              ? _additionalInstructionsController.text.trim()
-              : null,
+          ? _additionalInstructionsController.text.trim()
+          : null,
       includeProjects: _includeProjects,
       includeCertificates: _includeCertificates,
       includeReviews: _includeReviews,
@@ -106,7 +111,9 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
       ErrorHandler.showSuccessSnackBar(context, 'Tạo CV thành công!');
     } else {
       ErrorHandler.showErrorSnackBar(
-          context, portfolioProvider.errorMessage ?? 'Có lỗi xảy ra');
+        context,
+        portfolioProvider.errorMessage ?? 'Có lỗi xảy ra',
+      );
     }
   }
 
@@ -121,7 +128,9 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
   void _openCVPreview(CVDto cv) {
     if (cv.cvJson == null || cv.cvJson!.isEmpty) {
       ErrorHandler.showWarningSnackBar(
-          context, 'CV chưa có dữ liệu. Hãy tạo lại CV.');
+        context,
+        'CV chưa có dữ liệu. Hãy tạo lại CV.',
+      );
       return;
     }
     Navigator.push(
@@ -138,6 +147,36 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
     }
     final summary = cv.cvJson ?? cv.cvContent ?? 'CV SkillVerse';
     await Share.share('CV SkillVerse - ${cv.templateName ?? ""}: $summary');
+  }
+
+  Future<void> _openCVPdf(CVDto cv) async {
+    final cvData = CVStructuredData.tryParse(cv.cvJson);
+    if (cvData == null) {
+      if (mounted)
+        ErrorHandler.showErrorSnackBar(context, 'Dữ liệu CV không hợp lệ.');
+      return;
+    }
+    try {
+      final pdfBytes = await CVPdfGeneratorWidget.generateCvPdf(cvData);
+      await Printing.layoutPdf(
+        onLayout: (_) => pdfBytes,
+        name:
+            'CV_SkillVerse_${cvData.personalInfo.fullName.replaceAll(' ', '_')}.pdf',
+      );
+    } catch (e) {
+      if (mounted) ErrorHandler.showErrorSnackBar(context, 'Lỗi tạo PDF: $e');
+    }
+  }
+
+  void _navigateToEditCV(CVDto cv) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => EditCVPage(cv: cv)),
+    ).then((result) {
+      if (result == true && mounted) {
+        context.read<PortfolioProvider>().loadCVs();
+      }
+    });
   }
 
   Future<void> _deleteCV(int cvId) async {
@@ -190,7 +229,7 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -204,7 +243,10 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [AppTheme.accentCyan, AppTheme.primaryBlueDark],
+                          colors: [
+                            AppTheme.accentCyan,
+                            AppTheme.primaryBlueDark,
+                          ],
                         ),
                         borderRadius: BorderRadius.circular(2),
                       ),
@@ -227,7 +269,7 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                   crossAxisCount: 2,
                   mainAxisSpacing: 10,
                   crossAxisSpacing: 10,
-                  childAspectRatio: 1.55,
+                  childAspectRatio: 1.35,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   children: _templates.map((t) {
@@ -236,7 +278,7 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                   }).toList(),
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
 
                 // ═══ AI CUSTOMIZATION ═══
                 Row(
@@ -248,7 +290,10 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [AppTheme.accentCyan, AppTheme.primaryBlueDark],
+                          colors: [
+                            AppTheme.accentCyan,
+                            AppTheme.primaryBlueDark,
+                          ],
                         ),
                         borderRadius: BorderRadius.circular(2),
                       ),
@@ -330,33 +375,44 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                     child: Column(
                       children: [
                         SwitchListTile(
-                          title: const Text('Bao gồm Dự án',
-                              style: TextStyle(fontSize: 13)),
+                          title: const Text(
+                            'Bao gồm Dự án',
+                            style: TextStyle(fontSize: 13),
+                          ),
                           value: _includeProjects,
                           onChanged: (v) =>
                               setState(() => _includeProjects = v),
-                          secondary:
-                              const Icon(Icons.folder_outlined, size: 20),
+                          secondary: const Icon(
+                            Icons.folder_outlined,
+                            size: 20,
+                          ),
                           dense: true,
                         ),
                         SwitchListTile(
-                          title: const Text('Bao gồm Chứng chỉ',
-                              style: TextStyle(fontSize: 13)),
+                          title: const Text(
+                            'Bao gồm Chứng chỉ',
+                            style: TextStyle(fontSize: 13),
+                          ),
                           value: _includeCertificates,
                           onChanged: (v) =>
                               setState(() => _includeCertificates = v),
-                          secondary:
-                              const Icon(Icons.verified_outlined, size: 20),
+                          secondary: const Icon(
+                            Icons.verified_outlined,
+                            size: 20,
+                          ),
                           dense: true,
                         ),
                         SwitchListTile(
-                          title: const Text('Bao gồm Đánh giá',
-                              style: TextStyle(fontSize: 13)),
+                          title: const Text(
+                            'Bao gồm Đánh giá',
+                            style: TextStyle(fontSize: 13),
+                          ),
                           value: _includeReviews,
-                          onChanged: (v) =>
-                              setState(() => _includeReviews = v),
-                          secondary:
-                              const Icon(Icons.rate_review_outlined, size: 20),
+                          onChanged: (v) => setState(() => _includeReviews = v),
+                          secondary: const Icon(
+                            Icons.rate_review_outlined,
+                            size: 20,
+                          ),
                           dense: true,
                         ),
                       ],
@@ -404,7 +460,10 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [AppTheme.accentCyan, AppTheme.primaryBlueDark],
+                          colors: [
+                            AppTheme.accentCyan,
+                            AppTheme.primaryBlueDark,
+                          ],
                         ),
                         borderRadius: BorderRadius.circular(2),
                       ),
@@ -441,11 +500,13 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                       child: Center(
                         child: Column(
                           children: [
-                            Icon(Icons.description_outlined,
-                                size: 48,
-                                color: isDark
-                                    ? AppTheme.darkTextSecondary
-                                    : Colors.grey.shade400),
+                            Icon(
+                              Icons.description_outlined,
+                              size: 48,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : Colors.grey.shade400,
+                            ),
                             const SizedBox(height: 12),
                             Text(
                               'Chưa có CV nào',
@@ -481,8 +542,7 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
   }
 
   // ─── Template Card (horizontal carousel item) ───
-  Widget _buildTemplateCard(
-      _TemplateInfo t, bool selected, bool isDark) {
+  Widget _buildTemplateCard(_TemplateInfo t, bool selected, bool isDark) {
     return GestureDetector(
       onTap: () => setState(() => _selectedTemplate = t.id),
       child: AnimatedContainer(
@@ -498,16 +558,14 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
               : null,
           color: selected
               ? null
-              : (isDark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : Colors.white),
+              : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected
                 ? Colors.transparent
                 : (isDark
-                    ? Colors.white.withValues(alpha: 0.12)
-                    : Colors.black.withValues(alpha: 0.08)),
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.08)),
             width: selected ? 0 : 1,
           ),
           boxShadow: selected
@@ -539,8 +597,8 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                 color: selected
                     ? Colors.white
                     : (isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary),
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary),
               ),
               textAlign: TextAlign.center,
             ),
@@ -552,8 +610,8 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                 color: selected
                     ? Colors.white.withValues(alpha: 0.8)
                     : (isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary),
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary),
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
@@ -627,10 +685,13 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color:
-                                  AppTheme.successColor.withValues(alpha: 0.15),
+                              color: AppTheme.successColor.withValues(
+                                alpha: 0.15,
+                              ),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -689,12 +750,32 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                     ),
                   ),
                   const PopupMenuItem(
-                    value: 'download',
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_note, size: 20),
+                        SizedBox(width: 12),
+                        Text('Chỉnh sửa'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'open_pdf',
+                    child: Row(
+                      children: [
+                        Icon(Icons.picture_as_pdf_outlined, size: 20),
+                        SizedBox(width: 12),
+                        Text('Mở file PDF'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'share_link',
                     child: Row(
                       children: [
                         Icon(Icons.share, size: 20),
                         SizedBox(width: 12),
-                        Text('Chia sẻ'),
+                        Text('Chia sẻ link'),
                       ],
                     ),
                   ),
@@ -717,7 +798,13 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                     case 'preview':
                       _openCVPreview(cv);
                       break;
-                    case 'download':
+                    case 'edit':
+                      _navigateToEditCV(cv);
+                      break;
+                    case 'open_pdf':
+                      _openCVPdf(cv);
+                      break;
+                    case 'share_link':
                       _shareCV(cv);
                       break;
                     case 'delete':

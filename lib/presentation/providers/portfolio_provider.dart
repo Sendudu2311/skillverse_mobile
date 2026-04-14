@@ -267,8 +267,9 @@ class PortfolioProvider with ChangeNotifier, LoadingStateProviderMixin {
   Future<bool> generateCV({GenerateCVRequest? request}) async {
     final result = await executeAsync<bool>(() async {
       final newCV = await _portfolioService.generateCV(request: request);
-      _cvs.add(newCV);
       _activeCV = newCV;
+      // Reload full list from server to sync isActive flags
+      _cvs = await _portfolioService.getAllCVs();
       notifyListeners();
       return true;
     }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
