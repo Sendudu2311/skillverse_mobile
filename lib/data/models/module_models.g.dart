@@ -9,9 +9,9 @@ part of 'module_models.dart';
 ModuleSummaryDto _$ModuleSummaryDtoFromJson(Map<String, dynamic> json) =>
     ModuleSummaryDto(
       id: (json['id'] as num).toInt(),
-      title: json['title'] as String,
+      title: json['title'] as String?,
       description: json['description'] as String?,
-      orderIndex: (json['orderIndex'] as num).toInt(),
+      orderIndex: (json['orderIndex'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$ModuleSummaryDtoToJson(ModuleSummaryDto instance) =>

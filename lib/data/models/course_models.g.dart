@@ -201,6 +201,9 @@ CourseDetailDto _$CourseDetailDtoFromJson(Map<String, dynamic> json) =>
       suspendedAt: json['suspendedAt'] as String?,
       upgradePolicy: json['upgradePolicy'] as String?,
       upgradePolicyStatusMessage: json['upgradePolicyStatusMessage'] as String?,
+      modules: (json['modules'] as List<dynamic>?)
+          ?.map((e) => ModuleSummaryDto.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$CourseDetailDtoToJson(CourseDetailDto instance) =>
@@ -237,4 +240,5 @@ Map<String, dynamic> _$CourseDetailDtoToJson(CourseDetailDto instance) =>
       'suspendedAt': instance.suspendedAt,
       'upgradePolicy': instance.upgradePolicy,
       'upgradePolicyStatusMessage': instance.upgradePolicyStatusMessage,
+      'modules': instance.modules,
     };

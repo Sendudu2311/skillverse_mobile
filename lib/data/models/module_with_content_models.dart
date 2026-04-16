@@ -58,18 +58,18 @@ class AssignmentBriefDto {
 @JsonSerializable()
 class ModuleWithContentDto {
   final int id;
-  final String title;
+  final String? title;
   final String? description;
-  final int orderIndex;
+  final int? orderIndex;
   final List<LessonBriefDto> lessons;
   final List<QuizBriefDto> quizzes;
   final List<AssignmentBriefDto> assignments;
 
   const ModuleWithContentDto({
     required this.id,
-    required this.title,
+    this.title,
     this.description,
-    required this.orderIndex,
+    this.orderIndex,
     this.lessons = const [],
     this.quizzes = const [],
     this.assignments = const [],

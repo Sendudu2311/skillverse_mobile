@@ -7,15 +7,15 @@ part 'module_models.g.dart';
 @JsonSerializable()
 class ModuleSummaryDto {
   final int id;
-  final String title;
+  final String? title;
   final String? description;
-  final int orderIndex;
+  final int? orderIndex;
 
   const ModuleSummaryDto({
     required this.id,
-    required this.title,
+    this.title,
     this.description,
-    required this.orderIndex,
+    this.orderIndex,
   });
 
   factory ModuleSummaryDto.fromJson(Map<String, dynamic> json) =>

@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'module_models.dart';
 
 part 'course_models.g.dart';
 
@@ -237,6 +238,7 @@ class CourseDetailDto {
   final String? suspendedAt;
   final String? upgradePolicy;
   final String? upgradePolicyStatusMessage;
+  final List<ModuleSummaryDto>? modules;
 
   CourseDetailDto({
     required this.id,
@@ -271,6 +273,7 @@ class CourseDetailDto {
     this.suspendedAt,
     this.upgradePolicy,
     this.upgradePolicyStatusMessage,
+    this.modules,
   });
 
   factory CourseDetailDto.fromJson(Map<String, dynamic> json) =>
