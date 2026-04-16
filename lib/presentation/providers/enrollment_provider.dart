@@ -29,13 +29,11 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
   /// Enroll user in a course
   Future<bool> enrollInCourse({
     required int courseId,
-    required int userId,
   }) async {
     final result = await executeAsync(
       () async {
         final enrollment = await _enrollmentService.enrollUser(
           courseId: courseId,
-          userId: userId,
         );
 
         // Add to enrollments list
@@ -55,13 +53,11 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
   /// Unenroll user from a course
   Future<bool> unenrollFromCourse({
     required int courseId,
-    required int userId,
   }) async {
     final result = await executeAsync(
       () async {
         await _enrollmentService.unenrollUser(
           courseId: courseId,
-          userId: userId,
         );
 
         // Remove from enrollments list
@@ -81,12 +77,10 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
   /// Check enrollment status for a course
   Future<bool> checkEnrollmentStatus({
     required int courseId,
-    required int userId,
   }) async {
     try {
       final enrolled = await _enrollmentService.checkEnrollmentStatus(
         courseId: courseId,
-        userId: userId,
       );
 
       _enrollmentStatusCache[courseId] = enrolled;
@@ -100,14 +94,12 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
 
   /// Fetch user's enrollments
   Future<void> fetchUserEnrollments({
-    required int userId,
     int page = 0,
     int size = 20,
   }) async {
     await executeAsync(
       () async {
         final response = await _enrollmentService.getUserEnrollments(
-          userId: userId,
           page: page,
           size: size,
         );
@@ -143,7 +135,7 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
       );
 
       // Re-fetch from server to keep all fields in sync
-      await _refreshEnrollment(courseId, userId);
+      await _refreshEnrollment(courseId);
       return true;
     } catch (e) {
       debugPrint('Error updating progress: $e');
@@ -164,7 +156,7 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
       );
 
       // Re-fetch from server to keep all fields in sync
-      await _refreshEnrollment(courseId, userId);
+      await _refreshEnrollment(courseId);
       return true;
     } catch (e) {
       debugPrint('Error marking as completed: $e');
@@ -182,11 +174,10 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
   }
 
   // Helper: refresh a single enrollment from the server
-  Future<void> _refreshEnrollment(int courseId, int userId) async {
+  Future<void> _refreshEnrollment(int courseId) async {
     try {
       final fresh = await _enrollmentService.getEnrollment(
         courseId: courseId,
-        userId: userId,
       );
       final idx = _enrollments.indexWhere((e) => e.courseId == courseId);
       if (idx != -1) {

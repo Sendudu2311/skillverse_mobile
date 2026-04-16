@@ -27,7 +27,10 @@ class ModuleService {
                 ModuleWithContentDto.fromJson(json as Map<String, dynamic>),
           )
           .toList();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('=== ERROR IN listModulesWithContent ===');
+      print(e);
+      print(stackTrace);
       rethrow;
     }
   }

@@ -107,6 +107,32 @@ class LessonService {
     }
   }
 
+  /// Get revision info for a learner on a course
+  /// GET /api/course-learning/courses/{courseId}/revision-info
+  Future<CourseLearningRevisionInfoDto> getCourseLearningRevisionInfo({
+    required int courseId,
+  }) async {
+    final response = await _apiClient.dio.get(
+      '/course-learning/courses/$courseId/revision-info',
+    );
+    return CourseLearningRevisionInfoDto.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  /// Upgrade learner to the active revision of a course
+  /// POST /api/course-learning/courses/{courseId}/upgrade-to-active
+  Future<CourseLearningRevisionInfoDto> upgradeToActiveRevision({
+    required int courseId,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/course-learning/courses/$courseId/upgrade-to-active',
+    );
+    return CourseLearningRevisionInfoDto.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
   /// Get aggregated course learning status (progress, certificate, completed IDs)
   /// GET /api/course-learning/courses/{courseId}/status
   Future<CourseLearningStatusDto> getCourseLearningStatus({

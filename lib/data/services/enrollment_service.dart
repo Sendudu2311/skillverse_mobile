@@ -9,17 +9,15 @@ class EnrollmentService {
 
   final ApiClient _apiClient = ApiClient();
 
-  /// Enroll a user in a course
-  /// POST /enrollments?userId={userId}
+  /// Enroll current user (via JWT) in a course
+  /// POST /enrollments
   /// Body: {courseId: xxx}
   Future<EnrollmentDetailDto> enrollUser({
     required int courseId,
-    required int userId,
   }) async {
     try {
       final response = await _apiClient.dio.post(
         '/enrollments',
-        queryParameters: {'userId': userId},
         data: EnrollRequestDto(courseId: courseId).toJson(),
       );
       return EnrollmentDetailDto.fromJson(response.data);
@@ -28,28 +26,26 @@ class EnrollmentService {
     }
   }
 
-  /// Unenroll a user from a course
-  /// DELETE /enrollments/course/{courseId}/user/{userId}
+  /// Unenroll current user (via JWT) from a course
+  /// DELETE /enrollments/course/{courseId}
   Future<void> unenrollUser({
     required int courseId,
-    required int userId,
   }) async {
     try {
-      await _apiClient.dio.delete('/enrollments/course/$courseId/user/$userId');
+      await _apiClient.dio.delete('/enrollments/course/$courseId');
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Get enrollment details
-  /// GET /enrollments/course/{courseId}/user/{userId}
+  /// Get enrollment details for current user
+  /// GET /enrollments/me/course/{courseId}
   Future<EnrollmentDetailDto> getEnrollment({
     required int courseId,
-    required int userId,
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/enrollments/course/$courseId/user/$userId',
+        '/enrollments/me/course/$courseId',
       );
       return EnrollmentDetailDto.fromJson(response.data);
     } catch (e) {
@@ -57,16 +53,15 @@ class EnrollmentService {
     }
   }
 
-  /// Check if user is enrolled in course
-  /// GET /enrollments/course/{courseId}/user/{userId}/status
+  /// Check if current user is enrolled in a course
+  /// GET /enrollments/me/course/{courseId}/status
   /// Returns: {enrolled: true/false}
   Future<bool> checkEnrollmentStatus({
     required int courseId,
-    required int userId,
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/enrollments/course/$courseId/user/$userId/status',
+        '/enrollments/me/course/$courseId/status',
       );
       final statusDto = EnrollmentStatusDto.fromJson(response.data);
       return statusDto.enrolled;
@@ -76,16 +71,15 @@ class EnrollmentService {
     }
   }
 
-  /// List enrollments for a user
-  /// GET /enrollments/user/{userId}?page=0&size=20
+  /// List enrollments for current user (via JWT)
+  /// GET /enrollments/me?page=0&size=20
   Future<PageResponse<EnrollmentDetailDto>> getUserEnrollments({
-    required int userId,
     int page = 0,
     int size = 20,
   }) async {
     try {
       final response = await _apiClient.dio.get(
-        '/enrollments/user/$userId',
+        '/enrollments/me',
         queryParameters: {'page': page, 'size': size},
       );
 
@@ -133,15 +127,13 @@ class EnrollmentService {
   }
 
   /// Get enrollment statistics for a course (instructor/admin only)
-  /// GET /enrollments/course/{courseId}/stats?actorId={actorId}
+  /// GET /enrollments/course/{courseId}/stats
   Future<EnrollmentStatsDto> getEnrollmentStats({
     required int courseId,
-    required int actorId,
   }) async {
     try {
       final response = await _apiClient.dio.get(
         '/enrollments/course/$courseId/stats',
-        queryParameters: {'actorId': actorId},
       );
       return EnrollmentStatsDto.fromJson(response.data);
     } catch (e) {
@@ -150,16 +142,15 @@ class EnrollmentService {
   }
 
   /// Get recent enrollments (admin only)
-  /// GET /enrollments/recent?actorId={actorId}&page=0&size=20
+  /// GET /enrollments/recent?page=0&size=20
   Future<PageResponse<EnrollmentDetailDto>> getRecentEnrollments({
-    required int actorId,
     int page = 0,
     int size = 20,
   }) async {
     try {
       final response = await _apiClient.dio.get(
         '/enrollments/recent',
-        queryParameters: {'actorId': actorId, 'page': page, 'size': size},
+        queryParameters: {'page': page, 'size': size},
       );
 
       return PageResponse<EnrollmentDetailDto>.fromJson(
