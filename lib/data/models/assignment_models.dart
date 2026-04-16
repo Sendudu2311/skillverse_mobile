@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import '../../core/utils/date_time_helper.dart';
 
 part 'assignment_models.g.dart';
 
@@ -22,6 +23,9 @@ enum SubmissionStatus {
   pending,
   @JsonValue('LATE_PENDING')
   latePending,
+  /// AI has graded; awaiting mentor confirmation (trustAi=false path)
+  @JsonValue('AI_PENDING')
+  aiPending,
   @JsonValue('GRADED')
   graded,
   @JsonValue('LATE_GRADED')
@@ -39,13 +43,22 @@ class AssignmentDetailDto {
   final int? maxScore;
   final int? passingScore;
   final SubmissionType? submissionType;
+  @JsonKey(fromJson: DateTimeHelper.tryParseIso8601)
   final DateTime? dueAt;
   final int? moduleId;
   final String? instructions;
   final List<AssignmentCriteriaDto>? criteria;
   final bool? allowLateSubmission;
+  @JsonKey(fromJson: DateTimeHelper.tryParseIso8601)
   final DateTime? createdAt;
+  @JsonKey(fromJson: DateTimeHelper.tryParseIso8601)
   final DateTime? updatedAt;
+
+  /// Whether AI grading is enabled for this assignment (maps to backend aiGradingEnabled).
+  final bool? aiGradingEnabled;
+
+  /// Whether AI grade is trusted and auto-confirmed without mentor review (maps to backend trustAiEnabled).
+  final bool? trustAiEnabled;
 
   const AssignmentDetailDto({
     required this.id,
@@ -61,6 +74,8 @@ class AssignmentDetailDto {
     this.allowLateSubmission,
     this.createdAt,
     this.updatedAt,
+    this.aiGradingEnabled,
+    this.trustAiEnabled,
   });
 
   factory AssignmentDetailDto.fromJson(Map<String, dynamic> json) =>
@@ -126,8 +141,10 @@ class CriteriaScoreDto {
 class AssignmentSubmissionCreateDto {
   /// Media ID if submitting a file
   final int? fileMediaId;
+
   /// Text content for TEXT submission type
   final String? submissionText;
+
   /// URL for LINK submission type
   final String? linkUrl;
 
@@ -153,7 +170,7 @@ class AssignmentSubmissionDetailDto {
   final int attemptNumber;
   final bool isNewest;
   final bool isPrevious;
-  final int? score;
+  final double? score;
   final bool? isPassed;
   final SubmissionStatus? status;
   final String? fileMediaUrl;
@@ -162,11 +179,30 @@ class AssignmentSubmissionDetailDto {
   final String? feedback;
   final List<CriteriaScoreDto>? criteriaScores;
   final bool? isLate;
+  @JsonKey(name: 'gradedByName')
   final String? graderName;
+  @JsonKey(name: 'gradedBy')
   final int? graderId;
+  @JsonKey(fromJson: DateTimeHelper.tryParseIso8601)
   final DateTime? submittedAt;
+  @JsonKey(fromJson: DateTimeHelper.tryParseIso8601)
   final DateTime? gradedAt;
+  @JsonKey(fromJson: DateTimeHelper.tryParseIso8601)
   final DateTime? createdAt;
+
+  // AI Grading fields (matches backend AssignmentSubmissionDetailDTO)
+  final bool? isAiGraded;
+  @JsonKey(fromJson: DateTimeHelper.tryParseIso8601)
+  final DateTime? aiGradedAt;
+  final double? aiScore;
+  final String? aiFeedback;
+  final double? aiConfidence;
+  final bool? mentorConfirmed;
+  final int? aiGradeAttemptCount;
+  final bool? disputeFlag;
+  @JsonKey(fromJson: DateTimeHelper.tryParseIso8601)
+  final DateTime? disputeAt;
+  final String? disputeReason;
 
   const AssignmentSubmissionDetailDto({
     required this.id,
@@ -190,6 +226,16 @@ class AssignmentSubmissionDetailDto {
     this.submittedAt,
     this.gradedAt,
     this.createdAt,
+    this.isAiGraded,
+    this.aiGradedAt,
+    this.aiScore,
+    this.aiFeedback,
+    this.aiConfidence,
+    this.mentorConfirmed,
+    this.aiGradeAttemptCount,
+    this.disputeFlag,
+    this.disputeAt,
+    this.disputeReason,
   });
 
   factory AssignmentSubmissionDetailDto.fromJson(Map<String, dynamic> json) =>

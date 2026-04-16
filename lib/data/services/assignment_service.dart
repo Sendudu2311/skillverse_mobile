@@ -14,15 +14,11 @@ class AssignmentService {
   /// GET /api/assignments/{assignmentId}
   Future<AssignmentDetailDto> getAssignmentById(int assignmentId) async {
     try {
-      final response = await _apiClient.dio.get(
-        '/assignments/$assignmentId',
-      );
+      final response = await _apiClient.dio.get('/assignments/$assignmentId');
       return AssignmentDetailDto.fromJson(response.data);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException(
-        'Lấy thông tin bài tập thất bại: ${e.toString()}',
-      );
+      throw ApiException('Lấy thông tin bài tập thất bại: ${e.toString()}');
     }
   }
 
@@ -38,14 +34,15 @@ class AssignmentService {
 
       final List<dynamic> data = response.data as List<dynamic>;
       return data
-          .map((json) => AssignmentSubmissionDetailDto.fromJson(
-              json as Map<String, dynamic>))
+          .map(
+            (json) => AssignmentSubmissionDetailDto.fromJson(
+              json as Map<String, dynamic>,
+            ),
+          )
           .toList();
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException(
-        'Lấy lịch sử nộp bài thất bại: ${e.toString()}',
-      );
+      throw ApiException('Lấy lịch sử nộp bài thất bại: ${e.toString()}');
     }
   }
 
@@ -70,18 +67,22 @@ class AssignmentService {
   /// Upload a media file and return its mediaId
   /// POST /api/media/upload
   /// Returns: mediaId (Long from backend)
-  Future<int> uploadMediaFile(String filePath, String fileName) async {
+  /// [actorId] is required by backend to identify the uploader.
+  Future<int> uploadMediaFile(
+    String filePath,
+    String fileName, {
+    required int actorId,
+  }) async {
     try {
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(filePath, filename: fileName),
+        'actorId': actorId,
       });
 
       final response = await _apiClient.dio.post(
         '/media/upload',
         data: formData,
-        options: Options(
-          headers: {'Content-Type': 'multipart/form-data'},
-        ),
+        options: Options(headers: {'Content-Type': 'multipart/form-data'}),
       );
 
       final data = response.data as Map<String, dynamic>;
