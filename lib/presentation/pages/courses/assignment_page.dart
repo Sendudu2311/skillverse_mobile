@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:dio/dio.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/number_formatter.dart';
 import '../../../data/models/assignment_models.dart';
 import '../../../data/services/assignment_service.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/date_time_helper.dart';
+import '../../../core/utils/html_helper.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import 'package:provider/provider.dart';
+import '../../providers/ai_grading_provider.dart';
+import '../../providers/auth_provider.dart';
 
 /// AssignmentPage — student submits assignments and views grading results
 /// Navigates from: CourseLearningPage → push('/assignment/:assignmentId')
@@ -87,41 +92,93 @@ class _AssignmentPageState extends State<AssignmentPage> {
     }
   }
 
+  // ── Grading Mode Helpers ──────────────────────────────────────────────────
+
+  /// True when this assignment uses AI auto-grading.
+  bool get _isAiGrading => _assignment?.aiGradingEnabled == true;
+
   // ── Submission Gate Logic ─────────────────────────────────────────────────
 
-  /// Check if student can submit
-  /// Blocked if: latest submission is PENDING/LATE_PENDING OR already PASSED
+  /// Check if student can submit.
+  /// Blocked only while the current attempt is still being processed by AI/mentor,
+  /// or when the latest attempt has already passed.
+  ///
+  /// Legacy `AI_PENDING` submissions are treated as an AI-reviewed result for the
+  /// current attempt: learner may submit a new attempt if not passed, or request
+  /// mentor review if they disagree with the AI result.
   bool get _canSubmit {
     if (_submissions.isEmpty) return true;
     final latest = _submissions.first;
-    final isPending = latest.status == SubmissionStatus.pending ||
+    final isBlocked =
+        latest.status == SubmissionStatus.pending ||
         latest.status == SubmissionStatus.latePending;
     final isPassed = latest.isPassed == true;
-    return !isPending && !isPassed;
+    return !isBlocked && !isPassed;
   }
 
   AssignmentSubmissionDetailDto? get _latestSubmission {
     return _submissions.isNotEmpty ? _submissions.first : null;
   }
 
+  /// True when the latest submission is waiting for mentor grading (PENDING or LATE_PENDING).
   bool get _isPendingSubmission {
     if (_submissions.isEmpty) return false;
-    final latest = _submissions.first;
-    return latest.status == SubmissionStatus.pending ||
-        latest.status == SubmissionStatus.latePending;
+    final s = _submissions.first.status;
+    return s == SubmissionStatus.pending || s == SubmissionStatus.latePending;
+  }
+
+  /// Legacy state where AI result exists but backend still labels the attempt as AI_PENDING.
+  bool get _isAiPendingSubmission {
+    if (_submissions.isEmpty) return false;
+    return _submissions.first.status == SubmissionStatus.aiPending;
   }
 
   // ── File Picking ──────────────────────────────────────────────────────────
 
+  /// Max upload size allowed by backend (10 MB)
+  static const int _maxFileSizeBytes = 10 * 1024 * 1024;
+
+  /// Extensions accepted by backend MediaServiceImpl
+  static const List<String> _allowedExtensions = [
+    'pdf',
+    'doc',
+    'docx',
+    'xls',
+    'xlsx',
+    'ppt',
+    'pptx',
+    'txt',
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'zip',
+    'rar',
+  ];
+
   Future<void> _pickFile() async {
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
+        type: FileType.custom,
+        allowedExtensions: _allowedExtensions,
         allowMultiple: false,
       );
 
       if (result != null && result.files.isNotEmpty) {
-        setState(() => _selectedFile = result.files.first);
+        final file = result.files.first;
+
+        // Validate file size against backend 10MB limit
+        if (file.size > _maxFileSizeBytes) {
+          if (mounted) {
+            ErrorHandler.showWarningSnackBar(
+              context,
+              'File vượt quá 10MB. Vui lòng chọn file nhỏ hơn.',
+            );
+          }
+          return;
+        }
+
+        setState(() => _selectedFile = file);
       }
     } catch (e) {
       if (mounted) {
@@ -153,10 +210,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
     if (subType == SubmissionType.link ||
         subType == SubmissionType.linkAndFile) {
       if (_linkController.text.trim().isEmpty) {
-        ErrorHandler.showWarningSnackBar(
-          context,
-          'Vui lòng nhập đường dẫn',
-        );
+        ErrorHandler.showWarningSnackBar(context, 'Vui lòng nhập đường dẫn');
         return;
       }
       final url = _linkController.text.trim();
@@ -173,10 +227,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
         subType == SubmissionType.textAndFile ||
         subType == SubmissionType.linkAndFile) {
       if (_selectedFile == null) {
-        ErrorHandler.showWarningSnackBar(
-          context,
-          'Vui lòng chọn file để nộp',
-        );
+        ErrorHandler.showWarningSnackBar(context, 'Vui lòng chọn file để nộp');
         return;
       }
     }
@@ -210,10 +261,12 @@ class _AssignmentPageState extends State<AssignmentPage> {
 
       // Build submission DTO
       final submission = AssignmentSubmissionCreateDto(
-        submissionText:
-            _textController.text.trim().isNotEmpty ? _textController.text.trim() : null,
-        linkUrl:
-            _linkController.text.trim().isNotEmpty ? _linkController.text.trim() : null,
+        submissionText: _textController.text.trim().isNotEmpty
+            ? _textController.text.trim()
+            : null,
+        linkUrl: _linkController.text.trim().isNotEmpty
+            ? _linkController.text.trim()
+            : null,
         fileMediaId: fileMediaId,
       );
 
@@ -231,7 +284,10 @@ class _AssignmentPageState extends State<AssignmentPage> {
       });
 
       if (mounted) {
-        ErrorHandler.showSuccessSnackBar(context, '✅ Nộp bài thành công!');
+        final msg = _isAiGrading
+            ? '✅ Đã nộp bài! AI sẽ chấm tự động.'
+            : '✅ Nộp bài thành công! Bài đang chờ Mentor chấm.';
+        ErrorHandler.showSuccessSnackBar(context, msg);
       }
 
       // Reload data
@@ -259,25 +315,18 @@ class _AssignmentPageState extends State<AssignmentPage> {
       throw Exception('File không có đường dẫn');
     }
 
-    final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(file.path!, filename: file.name),
-    });
+    final userId = context.read<AuthProvider>().user?.id;
+    if (userId == null) {
+      throw Exception(
+        'Không xác định được người dùng. Vui lòng đăng nhập lại.',
+      );
+    }
 
-    final response = await Dio().post(
-      'https://skillverse.vn/api/media/upload',
-      data: formData,
-      options: Options(
-        headers: {'Content-Type': 'multipart/form-data'},
-      ),
-      onSendProgress: (sent, total) {
-        if (total > 0) {
-          setState(() => _uploadProgress = sent / total);
-        }
-      },
+    return _assignmentService.uploadMediaFile(
+      file.path!,
+      file.name,
+      actorId: userId,
     );
-
-    final data = response.data as Map<String, dynamic>;
-    return data['id'] as int;
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -341,6 +390,8 @@ class _AssignmentPageState extends State<AssignmentPage> {
       case SubmissionStatus.pending:
       case SubmissionStatus.latePending:
         return Icons.hourglass_empty;
+      case SubmissionStatus.aiPending:
+        return Icons.smart_toy_outlined;
       case SubmissionStatus.graded:
       case SubmissionStatus.lateGraded:
         return Icons.check_circle;
@@ -357,8 +408,9 @@ class _AssignmentPageState extends State<AssignmentPage> {
         return AppTheme.warningColor;
       case SubmissionStatus.latePending:
         return Colors.orange;
+      case SubmissionStatus.aiPending:
+        return Colors.deepPurple;
       case SubmissionStatus.graded:
-        return AppTheme.successColor;
       case SubmissionStatus.lateGraded:
         return AppTheme.successColor;
       case SubmissionStatus.rejected:
@@ -374,6 +426,8 @@ class _AssignmentPageState extends State<AssignmentPage> {
         return 'Đang chờ chấm';
       case SubmissionStatus.latePending:
         return 'Nộp muộn - Đang chờ';
+      case SubmissionStatus.aiPending:
+        return 'AI đã chấm, chờ Mentor xác nhận';
       case SubmissionStatus.graded:
         return 'Đã chấm';
       case SubmissionStatus.lateGraded:
@@ -416,10 +470,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
     if (_isLoading) return CommonLoading.center();
 
     if (_errorMessage != null) {
-      return ErrorStateWidget(
-        message: _errorMessage!,
-        onRetry: _loadData,
-      );
+      return ErrorStateWidget(message: _errorMessage!, onRetry: _loadData);
     }
 
     if (_assignment == null) {
@@ -450,13 +501,13 @@ class _AssignmentPageState extends State<AssignmentPage> {
               children: [
                 Text(
                   assignment.title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 if (assignment.description != null) ...[
                   const SizedBox(height: 8),
-                  Text(assignment.description!),
+                  Text(HtmlHelper.cleanHtml(assignment.description!)),
                 ],
                 const SizedBox(height: 12),
 
@@ -482,6 +533,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
                       Icons.upload_file,
                       _getSubmissionTypeLabel(subType),
                     ),
+                    _buildGradingModeChip(),
                   ],
                 ),
               ],
@@ -490,7 +542,8 @@ class _AssignmentPageState extends State<AssignmentPage> {
           const SizedBox(height: 16),
 
           // Rubric criteria (shown before submission)
-          if (assignment.criteria != null && assignment.criteria!.isNotEmpty) ...[
+          if (assignment.criteria != null &&
+              assignment.criteria!.isNotEmpty) ...[
             GlassCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -505,69 +558,73 @@ class _AssignmentPageState extends State<AssignmentPage> {
                       const SizedBox(width: 8),
                       Text(
                         'Tiêu chí chấm điểm',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  ...assignment.criteria!.map((c) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '${c.maxPoints}đ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
+                  ...assignment.criteria!.map(
+                    (c) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${c.maxPoints}đ',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                c.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              if (c.description != null)
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  c.description!,
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                  c.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
                                 ),
-                            ],
+                                if (c.description != null)
+                                  Text(
+                                    c.description!,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
           ],
 
-          // Latest submission result (if exists and is graded)
-          if (latest != null && latest.status == SubmissionStatus.graded) ...[
+          // Latest submission result (if exists and is graded or late-graded)
+          if (latest != null &&
+              (latest.status == SubmissionStatus.graded ||
+                  latest.status == SubmissionStatus.lateGraded)) ...[
             GlassCard(
               padding: const EdgeInsets.all(16),
               borderColor: AppTheme.successColor.withValues(alpha: 0.3),
@@ -576,16 +633,32 @@ class _AssignmentPageState extends State<AssignmentPage> {
                 children: [
                   Row(
                     children: [
-                      const Icon(
-                        Icons.assignment_turned_in,
-                        color: AppTheme.successColor,
+                      Icon(
+                        _hasMentorReviewed(latest)
+                            ? Icons.verified_outlined
+                            : _isAiAutoConfirmed(latest)
+                            ? Icons.smart_toy_outlined
+                            : latest.isAiGraded == true
+                            ? Icons.smart_toy_outlined
+                            : Icons.assignment_turned_in,
+                        color: _hasMentorReviewed(latest)
+                            ? AppTheme.successColor
+                            : (latest.isAiGraded == true ||
+                                  _isAiAutoConfirmed(latest))
+                            ? Colors.deepPurple
+                            : AppTheme.successColor,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Kết quả chấm gần nhất',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        _hasMentorReviewed(latest)
+                            ? 'Kết quả Mentor chấm'
+                            : _isAiAutoConfirmed(latest)
+                            ? 'Kết quả AI chấm tự động'
+                            : latest.isAiGraded == true
+                            ? 'Đã được AI chấm'
+                            : 'Kết quả chấm gần nhất',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -595,7 +668,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
                   Row(
                     children: [
                       Text(
-                        '${latest.score ?? 0}',
+                        NumberFormatter.formatScore(latest.score),
                         style: TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
@@ -605,11 +678,8 @@ class _AssignmentPageState extends State<AssignmentPage> {
                         ),
                       ),
                       Text(
-                        ' / ${assignment.maxScore ?? 100}',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.grey,
-                        ),
+                        ' / ${NumberFormatter.formatScore(assignment.maxScore?.toDouble())}',
+                        style: TextStyle(fontSize: 20, color: Colors.grey),
                       ),
                       const SizedBox(width: 8),
                       if (latest.isLate == true)
@@ -658,36 +728,38 @@ class _AssignmentPageState extends State<AssignmentPage> {
                     const SizedBox(height: 12),
                     const Divider(),
                     const SizedBox(height: 8),
-                    ...latest.criteriaScores!.map((cs) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Icon(
-                            cs.passed == true
-                                ? Icons.check_circle
-                                : Icons.cancel,
-                            size: 16,
-                            color: cs.passed == true
-                                ? AppTheme.successColor
-                                : AppTheme.errorColor,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              cs.criteriaName ?? '',
-                              style: const TextStyle(fontSize: 13),
+                    ...latest.criteriaScores!.map(
+                      (cs) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Icon(
+                              cs.passed == true
+                                  ? Icons.check_circle
+                                  : Icons.cancel,
+                              size: 16,
+                              color: cs.passed == true
+                                  ? AppTheme.successColor
+                                  : AppTheme.errorColor,
                             ),
-                          ),
-                          Text(
-                            '${cs.score ?? 0}/${cs.maxPoints ?? 0}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                cs.criteriaName ?? '',
+                                style: const TextStyle(fontSize: 13),
+                              ),
                             ),
-                          ),
-                        ],
+                            Text(
+                              '${cs.score ?? 0}/${cs.maxPoints ?? 0}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    )),
+                    ),
                   ],
 
                   // Feedback
@@ -705,7 +777,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Phản hồi từ Mentor',
+                          _getSubmissionFeedbackLabel(latest),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -717,11 +789,11 @@ class _AssignmentPageState extends State<AssignmentPage> {
                     ),
                   ],
 
-                  // Grader + time
-                  if (latest.graderName != null) ...[
+                  // Review source + time
+                  if (_getSubmissionReviewMeta(latest) != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Chấm bởi ${latest.graderName} · ${latest.gradedAt != null ? DateTimeHelper.formatSmart(latest.gradedAt!) : ''}',
+                      _getSubmissionReviewMeta(latest)!,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -742,7 +814,9 @@ class _AssignmentPageState extends State<AssignmentPage> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                          color: Theme.of(
+                            context,
+                          ).dividerColor.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -754,38 +828,66 @@ class _AssignmentPageState extends State<AssignmentPage> {
                       ),
                     if (latest.linkUrl != null) ...[
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.link, size: 14),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              latest.linkUrl!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                      InkWell(
+                        onTap: () => _openUrl(latest.linkUrl!),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.link,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                latest.linkUrl!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.open_in_new,
+                              size: 12,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                     if (latest.fileMediaUrl != null) ...[
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.attachment, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            'File đính kèm',
-                            style: TextStyle(
-                              fontSize: 12,
+                      InkWell(
+                        onTap: () => _openUrl(latest.fileMediaUrl!),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.attachment,
+                              size: 14,
                               color: Theme.of(context).colorScheme.primary,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Text(
+                              'File đính kèm — Nhấn để mở',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.primary,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.open_in_new,
+                              size: 12,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ],
@@ -795,21 +897,81 @@ class _AssignmentPageState extends State<AssignmentPage> {
             const SizedBox(height: 16),
           ],
 
-          // Pending submission blocker
+          // ── AI Grading Result ────────────────────────────────────
+          if (latest != null) _buildAiGradingSection(latest),
+
+          // Pending submission blockers
           if (_isPendingSubmission)
-            _buildWarningBanner(
-              Icons.hourglass_empty,
-              'Bài nộp của bạn đang được xử lý. Vui lòng chờ mentor chấm điểm.',
-              Colors.orange,
+            Container(
+              margin: const EdgeInsets.only(top: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isAiGrading
+                        ? Icons.smart_toy_outlined
+                        : Icons.info_outline,
+                    color: Colors.amber,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _isAiGrading
+                          ? 'AI đang xử lý bài nộp của bạn. Bạn không thể nộp lại lúc này.'
+                          : 'Bài của bạn đang chờ Mentor chấm. Bạn không thể nộp lại lúc này.',
+                      style: const TextStyle(color: Colors.amber, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (_isAiPendingSubmission)
+            Container(
+              margin: const EdgeInsets.only(top: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.deepPurple.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.smart_toy_outlined,
+                    color: Colors.deepPurple,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      latest?.isPassed == true
+                          ? 'AI đã chấm xong bài này và đây là kết quả hiện tại của bạn. Nếu chưa đồng ý, bạn có thể yêu cầu Mentor chấm tay.'
+                          : 'AI đã chấm xong lần nộp này. Bạn có thể nộp lại bài mới để cải thiện kết quả, hoặc yêu cầu Mentor chấm tay nếu không đồng ý.',
+                      style: const TextStyle(
+                        color: Colors.deepPurple,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
 
           // Submission form (if can submit)
           if (_canSubmit) ...[
             Text(
               'Nộp bài',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
@@ -875,10 +1037,14 @@ class _AssignmentPageState extends State<AssignmentPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -901,7 +1067,9 @@ class _AssignmentPageState extends State<AssignmentPage> {
                                   if (_selectedFile!.size > 0)
                                     Text(
                                       _formatFileSize(_selectedFile!.size),
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
                                     ),
                                 ],
                               ),
@@ -992,9 +1160,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
             TextButton.icon(
               onPressed: () => setState(() => _showHistory = true),
               icon: const Icon(Icons.history),
-              label: Text(
-                'Xem lịch sử nộp bài (${_submissions.length})',
-              ),
+              label: Text('Xem lịch sử nộp bài (${_submissions.length})'),
             ),
         ],
       ),
@@ -1117,7 +1283,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
                       ),
                       if (sub.score != null)
                         Text(
-                          '${sub.score}/${_assignment?.maxScore ?? 100}',
+                          '${NumberFormatter.formatScore(sub.score)}/${NumberFormatter.formatScore(_assignment?.maxScore?.toDouble())}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: (sub.isPassed ?? false)
@@ -1167,11 +1333,11 @@ class _AssignmentPageState extends State<AssignmentPage> {
                     ],
                   ),
 
-                  // Grader info
-                  if (sub.graderName != null) ...[
+                  // Review source
+                  if (_getSubmissionReviewLabel(sub) != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      'Chấm bởi ${sub.graderName}',
+                      _getSubmissionReviewLabel(sub)!,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -1180,36 +1346,38 @@ class _AssignmentPageState extends State<AssignmentPage> {
                   if (sub.criteriaScores != null &&
                       sub.criteriaScores!.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    ...sub.criteriaScores!.map((cs) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        children: [
-                          Icon(
-                            cs.passed == true
-                                ? Icons.check_circle_outline
-                                : Icons.cancel_outlined,
-                            size: 14,
-                            color: cs.passed == true
-                                ? AppTheme.successColor
-                                : AppTheme.errorColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              cs.criteriaName ?? '',
-                              style: const TextStyle(fontSize: 12),
+                    ...sub.criteriaScores!.map(
+                      (cs) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              cs.passed == true
+                                  ? Icons.check_circle_outline
+                                  : Icons.cancel_outlined,
+                              size: 14,
+                              color: cs.passed == true
+                                  ? AppTheme.successColor
+                                  : AppTheme.errorColor,
                             ),
-                          ),
-                          Text(
-                            '${cs.score ?? 0}/${cs.maxPoints ?? 0}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                cs.criteriaName ?? '',
+                                style: const TextStyle(fontSize: 12),
+                              ),
                             ),
-                          ),
-                        ],
+                            Text(
+                              '${cs.score ?? 0}/${cs.maxPoints ?? 0}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    )),
+                    ),
                   ],
 
                   // Feedback preview
@@ -1218,7 +1386,9 @@ class _AssignmentPageState extends State<AssignmentPage> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                        color: Theme.of(
+                          context,
+                        ).dividerColor.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
@@ -1231,14 +1401,24 @@ class _AssignmentPageState extends State<AssignmentPage> {
                           ),
                           const SizedBox(width: 4),
                           Expanded(
-                            child: Text(
-                              sub.feedback!,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                              ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _getSubmissionFeedbackLabel(sub),
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  sub.feedback!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -1255,6 +1435,97 @@ class _AssignmentPageState extends State<AssignmentPage> {
   }
 
   // ── Shared Widgets ───────────────────────────────────────────────────────
+
+  Widget _buildGradingModeChip() {
+    final isAi = _isAiGrading;
+    final icon = isAi ? Icons.smart_toy_outlined : Icons.person_outline;
+    final label = isAi ? 'AI chấm tự động' : 'Mentor chấm thủ công';
+    final color = isAi ? Colors.deepPurple : AppTheme.accentCyan;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _getSubmissionReviewLabel(AssignmentSubmissionDetailDto sub) {
+    if (sub.disputeFlag == true) {
+      return 'Đã gửi yêu cầu Mentor xem xét lại';
+    }
+
+    final graderName = sub.graderName?.trim();
+    if (_hasMentorReviewed(sub)) {
+      if (graderName != null && graderName.isNotEmpty) {
+        return 'Mentor đã chấm: $graderName';
+      }
+      return 'Mentor đã chấm';
+    }
+
+    if (_isAiAutoConfirmed(sub)) {
+      return 'AI chấm tự động (đã xác nhận)';
+    }
+
+    if (sub.isAiGraded == true) {
+      if (sub.status == SubmissionStatus.aiPending) {
+        return 'AI đã chấm, chờ Mentor xác nhận';
+      }
+      return 'Đã được AI chấm';
+    }
+
+    if (graderName != null && graderName.isNotEmpty) {
+      return 'Chấm bởi $graderName';
+    }
+
+    return null;
+  }
+
+  String? _getSubmissionReviewMeta(AssignmentSubmissionDetailDto sub) {
+    final label = _getSubmissionReviewLabel(sub);
+    if (label == null) return null;
+
+    final timestamp = sub.disputeFlag == true ? sub.disputeAt : sub.gradedAt;
+    if (timestamp == null) return label;
+
+    return '$label · ${DateTimeHelper.formatSmart(timestamp)}';
+  }
+
+  String _getSubmissionFeedbackLabel(AssignmentSubmissionDetailDto sub) {
+    if (_hasMentorReviewed(sub)) return 'Phản hồi từ Mentor';
+    if (_isAiAutoConfirmed(sub)) return 'Nhận xét từ AI (tự động)';
+    return sub.isAiGraded == true ? 'Nhận xét từ AI' : 'Phản hồi từ giảng viên';
+  }
+
+  bool _hasMentorReviewed(AssignmentSubmissionDetailDto sub) {
+    final graderName = sub.graderName?.trim();
+    return sub.graderId != null ||
+        (graderName != null && graderName.isNotEmpty);
+  }
+
+  /// True when AI graded AND auto-confirmed (trustAi=true path).
+  /// Backend sets: isAiGraded=true, mentorConfirmed=true, gradedBy=null, score=aiScore.
+  bool _isAiAutoConfirmed(AssignmentSubmissionDetailDto sub) {
+    return sub.isAiGraded == true &&
+        sub.mentorConfirmed == true &&
+        sub.graderId == null;
+  }
 
   Widget _buildMetaChip(IconData icon, String label, {Color? color}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -1283,27 +1554,6 @@ class _AssignmentPageState extends State<AssignmentPage> {
     );
   }
 
-  Widget _buildWarningBanner(IconData icon, String message, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(message, style: TextStyle(color: color)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSuccessBanner(String title, String subtitle) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1311,13 +1561,15 @@ class _AssignmentPageState extends State<AssignmentPage> {
       decoration: BoxDecoration(
         color: AppTheme.successColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppTheme.successColor.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: AppTheme.successColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.check_circle, color: AppTheme.successColor, size: 24),
+          const Icon(
+            Icons.check_circle,
+            color: AppTheme.successColor,
+            size: 24,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1339,6 +1591,409 @@ class _AssignmentPageState extends State<AssignmentPage> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── AI Grading Section ────────────────────────────────────────────────
+
+  Widget _buildAiGradingSection(AssignmentSubmissionDetailDto submission) {
+    // Hide when not AI-graded.
+    // Hide when a REAL mentor has overridden (graderId is set by human grader).
+    // NOTE: Do NOT use _hasMentorReviewed() here because graderName may be
+    // populated by the backend even for AI-only submissions.
+    if (submission.isAiGraded != true || submission.graderId != null) {
+      return const SizedBox.shrink();
+    }
+
+    return Consumer<AiGradingProvider>(
+      builder: (context, provider, _) {
+        return Column(
+          children: [
+            GlassCard(
+              padding: const EdgeInsets.all(16),
+              borderColor: Colors.deepPurple.withValues(alpha: 0.3),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.smart_toy_outlined,
+                        color: Colors.deepPurple,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _isAiAutoConfirmed(submission)
+                              ? 'Kết quả AI chấm tự động'
+                              : 'Đánh giá sơ bộ bằng AI',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.deepPurple,
+                              ),
+                        ),
+                      ),
+                      if (submission.aiConfidence != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getConfidenceColor(
+                              submission.aiConfidence!,
+                            ).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _getConfidenceColor(
+                                submission.aiConfidence!,
+                              ).withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Text(
+                            'Tin cậy: ${(submission.aiConfidence! * 100).toStringAsFixed(0)}%',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: _getConfidenceColor(
+                                submission.aiConfidence!,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (submission.aiScore != null) ...[
+                    Row(
+                      children: [
+                        Text(
+                          NumberFormatter.formatScore(submission.aiScore),
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepPurple,
+                          ),
+                        ),
+                        Text(
+                          ' / ${_assignment?.maxScore ?? 100}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurple.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'AI',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.deepPurple,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  if (submission.criteriaScores != null &&
+                      submission.criteriaScores!.isNotEmpty) ...[
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    ...submission.criteriaScores!.map(
+                      (cs) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Icon(
+                              cs.passed == true
+                                  ? Icons.check_circle
+                                  : Icons.cancel,
+                              size: 16,
+                              color: cs.passed == true
+                                  ? AppTheme.successColor
+                                  : AppTheme.errorColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    cs.criteriaName ?? '',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  if (cs.feedback != null &&
+                                      cs.feedback!.isNotEmpty)
+                                    Text(
+                                      cs.feedback!,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            fontSize: 11,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '${NumberFormatter.formatScore(cs.score?.toDouble())}/${NumberFormatter.formatScore(cs.maxPoints?.toDouble())}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  if (submission.aiFeedback != null &&
+                      submission.aiFeedback!.isNotEmpty) ...[
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.rate_review_outlined,
+                          size: 16,
+                          color: Colors.deepPurple.withValues(alpha: 0.7),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Nhận xét từ AI',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      submission.aiFeedback!,
+                      style: const TextStyle(fontSize: 13, height: 1.5),
+                    ),
+                  ],
+
+                  if (submission.disputeFlag == true) ...[
+                    const SizedBox(height: 12),
+                    _buildDisputeStatusBanner(submission),
+                  ] else if (!_isAiAutoConfirmed(submission)) ...[
+                    // Show dispute button only when AI graded but
+                    // mentor hasn't confirmed yet (AI pending review).
+                    // When auto-confirmed (trustAi), student already passed.
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: provider.isDisputing
+                            ? null
+                            : () => _showDisputeDialog(submission.id),
+                        icon: provider.isDisputing
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.gavel_outlined, size: 16),
+                        label: Text(
+                          provider.isDisputing
+                              ? 'Đang gửi...'
+                              : 'Yêu cầu Mentor chấm lại',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.deepPurple,
+                          side: BorderSide(
+                            color: Colors.deepPurple.withValues(alpha: 0.4),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Open a URL with error handling
+  Future<void> _openUrl(String url) async {
+    try {
+      final uri = Uri.tryParse(url);
+      if (uri != null && await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ErrorHandler.showWarningSnackBar(context, 'Không thể mở liên kết');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, 'Lỗi khi mở liên kết: $e');
+      }
+    }
+  }
+
+  Color _getConfidenceColor(double confidence) {
+    if (confidence >= 0.8) return AppTheme.successColor;
+    if (confidence >= 0.5) return Colors.orange;
+    return AppTheme.errorColor;
+  }
+
+  Widget _buildDisputeStatusBanner(AssignmentSubmissionDetailDto submission) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.teal.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.teal.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.mark_email_read_outlined,
+                color: Colors.teal,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Đã gửi yêu cầu Mentor xem xét lại',
+                  style: TextStyle(
+                    color: Colors.teal,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (submission.disputeAt != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Gửi lúc: ${DateTimeHelper.formatSmart(submission.disputeAt!)}',
+              style: const TextStyle(color: Colors.teal, fontSize: 11),
+            ),
+          ],
+          if (submission.disputeReason != null &&
+              submission.disputeReason!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Lý do: ${submission.disputeReason!}',
+              style: const TextStyle(
+                color: Colors.teal,
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 6),
+          const Text(
+            'Mentor sẽ xem xét và chấm lại bài của bạn.',
+            style: TextStyle(color: Colors.teal, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDisputeDialog(int submissionId) {
+    final reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Yêu cầu Mentor chấm lại'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Nếu bạn không đồng ý với kết quả AI, bạn có thể yêu cầu Mentor trực tiếp chấm lại bài.',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'Lý do (không bắt buộc)...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final provider = context.read<AiGradingProvider>();
+              final success = await provider.disputeAiGrade(
+                submissionId,
+                reason: reasonController.text.trim().isNotEmpty
+                    ? reasonController.text.trim()
+                    : null,
+              );
+              if (mounted) {
+                if (success) {
+                  ErrorHandler.showSuccessSnackBar(
+                    context,
+                    'Đã gửi yêu cầu cho Mentor!',
+                  );
+                  // Refresh submission state so disputeFlag/disputeAt reflect immediately.
+                  await _loadData();
+                } else {
+                  ErrorHandler.showErrorSnackBar(
+                    context,
+                    'Không thể gửi yêu cầu. Vui lòng thử lại.',
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Gửi yêu cầu'),
           ),
         ],
       ),
