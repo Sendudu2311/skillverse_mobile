@@ -53,9 +53,7 @@ class _CoursesPageState extends State<CoursesPage> {
       final authProvider = context.read<AuthProvider>();
       if (authProvider.user != null &&
           enrollmentProvider.enrollments.isEmpty) {
-        await enrollmentProvider.fetchUserEnrollments(
-          userId: authProvider.user!.id,
-        );
+        await enrollmentProvider.fetchUserEnrollments();
       }
 
       _scrollController.addPaginationListener(
@@ -79,7 +77,7 @@ class _CoursesPageState extends State<CoursesPage> {
 
     await courseProvider.refresh();
     if (authProvider.user != null) {
-      await enrollmentProvider.fetchUserEnrollments(userId: authProvider.user!.id);
+      await enrollmentProvider.fetchUserEnrollments();
     }
   }
 

@@ -93,10 +93,29 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
   bool _isLoadingLesson = false;
   bool _isMarkingComplete = false;
 
+  // Revision upgrade state
+  CourseLearningRevisionInfoDto? _revisionInfo;
+  bool _isUpgradingRevision = false;
+  bool _hideRevisionBannerForSession = false;
+
+  // ── Getters ───────────────────────────────────
+
+  _CurriculumItem? get _activeItemOrNull =>
+      _activeCurriculumIndex >= 0 &&
+          _activeCurriculumIndex < _curriculumItems.length
+      ? _curriculumItems[_activeCurriculumIndex]
+      : null;
+
+  bool get _shouldShowRevisionBanner =>
+      !_hideRevisionBannerForSession && _revisionInfo?.hasNewerRevision == true;
+
   @override
   void initState() {
     super.initState();
-    _loadModulesWithContent();
+    _reloadLearningState(
+      showFullScreenLoader: true,
+      preserveCurrentItem: false,
+    );
   }
 
   Future<void> _executeAsync(
@@ -112,7 +131,10 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         if (onError != null) {
           onError(ErrorHandler.getErrorMessage(e));
         } else {
-          ErrorHandler.showErrorSnackBar(context, ErrorHandler.getErrorMessage(e));
+          ErrorHandler.showErrorSnackBar(
+            context,
+            ErrorHandler.getErrorMessage(e),
+          );
         }
       }
     } finally {
@@ -122,28 +144,138 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
 
   // ── Data Loading ──────────────────────────────
 
-  Future<void> _loadModulesWithContent() async {
-    await _executeAsync(() async {
-      final courseId = int.parse(widget.courseId);
-      final modules = await _moduleService.listModulesWithContent(courseId: courseId);
-      
-      modules.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+  /// Fetch + sort modules only (no state mutation).
+  Future<List<ModuleWithContentDto>> _fetchModules(int courseId) async {
+    final modules = await _moduleService.listModulesWithContent(
+      courseId: courseId,
+    );
+    modules.sort((a, b) => (a.orderIndex ?? 0).compareTo(b.orderIndex ?? 0));
+    return modules;
+  }
 
+  /// Master reload: fetches modules, status and revision info in parallel,
+  /// then resolves which curriculum item to show next.
+  Future<void> _reloadLearningState({
+    bool showFullScreenLoader = false,
+    bool preserveCurrentItem = true,
+    bool showMissingItemNotice = false,
+  }) async {
+    if (showFullScreenLoader) setState(() => _isLoadingModules = true);
+
+    try {
+      final courseId = int.parse(widget.courseId);
+      final previousItem = _activeItemOrNull;
+
+      // Start modules + status concurrently; both can fail independently.
+      final modulesFuture = _fetchModules(courseId);
+      final statusFuture = _lessonService.getCourseLearningStatus(
+        courseId: courseId,
+      );
+
+      // Modules are required — propagate failure to outer catch.
+      final modules = await modulesFuture;
+
+      // Status: try aggregated endpoint, degrade to legacy completed-IDs if it fails.
+      CourseLearningStatusDto status;
+      try {
+        status = await statusFuture;
+      } catch (_) {
+        if (!mounted) return;
+        final userId = context.read<AuthProvider>().user?.id ?? 0;
+        final completedIds = await _lessonService.getCompletedLessonIds(
+          courseId: courseId,
+          userId: userId,
+        );
+        status = CourseLearningStatusDto(
+          courseId: courseId,
+          userId: userId,
+          completedLessonIds: completedIds,
+          completedQuizIds: const [],
+          completedAssignmentIds: const [],
+          completedItemCount: completedIds.length,
+          totalItemCount: 0,
+          percent: 0,
+        );
+      }
+
+      // Revision info is optional — failure silently suppresses the banner.
+      CourseLearningRevisionInfoDto? revisionInfo;
+      try {
+        revisionInfo = await _lessonService.getCourseLearningRevisionInfo(
+          courseId: courseId,
+        );
+      } catch (_) {
+        // Non-critical — banner simply won't appear if this fails.
+      }
+
+      if (!mounted) return;
+      final newItems = _buildCurriculumItems(modules);
+
+      setState(() {
+        _modules = modules;
+        _curriculumItems = newItems;
+        _coursePercent = status.percent;
+        _certificateId = status.certificateId;
+        _revisionInfo = revisionInfo;
+        _completedLessonIds
+          ..clear()
+          ..addAll(status.completedLessonIds);
+        _completedQuizIds
+          ..clear()
+          ..addAll(status.completedQuizIds);
+        _completedAssignmentIds
+          ..clear()
+          ..addAll(status.completedAssignmentIds);
+        if (showFullScreenLoader) _isLoadingModules = false;
+      });
+
+      // Resolve which item to open.
+      bool itemWasMissed = false;
+      int resolvedIndex;
+
+      if (preserveCurrentItem && previousItem != null) {
+        final foundIdx = _curriculumItems.indexWhere(
+          (it) =>
+              it.itemType == previousItem.itemType &&
+              it.itemId == previousItem.itemId,
+        );
+        if (foundIdx >= 0) {
+          resolvedIndex = foundIdx;
+        } else {
+          itemWasMissed = true;
+          resolvedIndex = _curriculumItems.isNotEmpty
+              ? _findFirstUncompletedIndex()
+              : -1;
+        }
+      } else {
+        resolvedIndex = _curriculumItems.isNotEmpty
+            ? _findFirstUncompletedIndex()
+            : -1;
+      }
+
+      if (showMissingItemNotice && itemWasMissed && mounted) {
+        ErrorHandler.showWarningSnackBar(
+          context,
+          'Nội dung bạn đang xem không còn trong phiên bản mới, hệ thống đã chuyển bạn tới nội dung khả dụng gần nhất.',
+        );
+      }
+
+      if (resolvedIndex >= 0) {
+        await _selectCurriculumItem(resolvedIndex);
+      } else if (mounted) {
+        setState(() => _activeCurriculumIndex = -1);
+      }
+    } catch (e) {
       if (mounted) {
         setState(() {
-          _modules = modules;
-          _curriculumItems = _buildCurriculumItems(modules);
+          if (showFullScreenLoader) _isLoadingModules = false;
         });
+        ErrorHandler.showErrorSnackBar(
+          context,
+          ErrorHandler.getErrorMessage(e),
+        );
       }
-
-      await _loadCompletedLessonIds();
-
-      // Auto-select first uncompleted item
-      if (_curriculumItems.isNotEmpty) {
-        final targetIndex = _findFirstUncompletedIndex();
-        await _selectCurriculumItem(targetIndex);
-      }
-    }, setLoading: (val) => setState(() => _isLoadingModules = val));
+    }
   }
 
   /// Build a flat list of curriculum items from modules
@@ -161,11 +293,11 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         moduleItems.add(
           _CurriculumItem(
             moduleId: module.id,
-            moduleTitle: module.title,
+            moduleTitle: module.title ?? '',
             itemId: lesson.id,
             itemType: 'lesson',
-            title: lesson.title,
-            orderIndex: lesson.orderIndex,
+            title: lesson.title ?? '',
+            orderIndex: lesson.orderIndex ?? 0,
             lessonType: lesson.type,
             durationSec: lesson.durationSec,
             resourceUrl: lesson.resourceUrl,
@@ -178,7 +310,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         moduleItems.add(
           _CurriculumItem(
             moduleId: module.id,
-            moduleTitle: module.title,
+            moduleTitle: module.title ?? '',
             itemId: quiz.id,
             itemType: 'quiz',
             title: quiz.title ?? 'Bài kiểm tra',
@@ -193,7 +325,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         moduleItems.add(
           _CurriculumItem(
             moduleId: module.id,
-            moduleTitle: module.title,
+            moduleTitle: module.title ?? '',
             itemId: assignment.id,
             itemType: 'assignment',
             title: assignment.title ?? 'Bài tập',
@@ -230,62 +362,50 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     }
   }
 
-  /// Load course learning status (completed IDs, progress, certificate) from backend
-  Future<void> _loadCompletedLessonIds() async {
-    await _executeAsync(() async {
-      final courseId = int.parse(widget.courseId);
-
-      try {
-        // Single API call replaces separate lesson + N quiz calls
-        final status = await _lessonService.getCourseLearningStatus(
-          courseId: courseId,
-        );
-
-        if (mounted) {
-          setState(() {
-            _completedLessonIds.addAll(status.completedLessonIds);
-            _completedQuizIds.addAll(status.completedQuizIds);
-            _completedAssignmentIds.addAll(status.completedAssignmentIds);
-            _coursePercent = status.percent;
-            _certificateId = status.certificateId;
-          });
-        }
-      } catch (_) {
-        // Fallback: use old API if course-learning/status is not available
-        if (!mounted) return;
-        final authProvider = context.read<AuthProvider>();
-        if (authProvider.user == null) return;
-        final completedIds = await _lessonService.getCompletedLessonIds(
-          courseId: courseId,
-          userId: authProvider.user!.id,
-        );
-        if (mounted) {
-          setState(() {
-            _completedLessonIds.addAll(completedIds);
-          });
-        }
-      }
-    }, onError: (msg) => debugPrint('Error loading completion status: $msg'));
-  }
-
   /// Find the first curriculum item that is NOT completed
   int _findFirstUncompletedIndex() {
     for (int i = 0; i < _curriculumItems.length; i++) {
       final item = _curriculumItems[i];
-      switch (item.itemType) {
-        case 'lesson':
-          if (!_completedLessonIds.contains(item.itemId)) return i;
-          break;
-        case 'quiz':
-          if (!_completedQuizIds.contains(item.itemId)) return i;
-          break;
-        case 'assignment':
-          if (!_completedAssignmentIds.contains(item.itemId)) return i;
-          break;
-      }
+      if (!_isItemCompleted(item)) return i;
     }
     // All completed — default to first item
     return 0;
+  }
+
+  bool _isItemCompleted(_CurriculumItem item) {
+    switch (item.itemType) {
+      case 'lesson':
+        return _completedLessonIds.contains(item.itemId);
+      case 'quiz':
+        return _completedQuizIds.contains(item.itemId);
+      case 'assignment':
+        return _completedAssignmentIds.contains(item.itemId);
+      default:
+        return false;
+    }
+  }
+
+  bool _canAccessCurriculumIndex(int targetIndex) {
+    if (targetIndex < 0 || targetIndex >= _curriculumItems.length) return false;
+
+    // Always allow staying on or going back to earlier items for review.
+    if (_activeCurriculumIndex >= 0 && targetIndex <= _activeCurriculumIndex) {
+      return true;
+    }
+
+    // Moving forward requires every prior item to be completed.
+    for (int i = 0; i < targetIndex; i++) {
+      if (!_isItemCompleted(_curriculumItems[i])) return false;
+    }
+    return true;
+  }
+
+  bool _canGoToNextFromActive() {
+    if (_activeCurriculumIndex < 0 ||
+        _activeCurriculumIndex >= _curriculumItems.length - 1) {
+      return false;
+    }
+    return _isItemCompleted(_curriculumItems[_activeCurriculumIndex]);
   }
 
   // ── Item Selection ────────────────────────────
@@ -303,7 +423,9 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
 
     if (item.itemType == 'lesson') {
       await _executeAsync(() async {
-        final lessonDetail = await _lessonService.getLesson(lessonId: item.itemId);
+        final lessonDetail = await _lessonService.getLesson(
+          lessonId: item.itemId,
+        );
         if (mounted) setState(() => _currentLessonDetail = lessonDetail);
       }, setLoading: (val) => setState(() => _isLoadingLesson = val));
     } else {
@@ -314,9 +436,14 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
   // ── Navigation ────────────────────────────────
 
   void _goToNextItem() {
-    if (_activeCurriculumIndex >= 0 &&
-        _activeCurriculumIndex < _curriculumItems.length - 1) {
+    if (_canGoToNextFromActive()) {
       _selectCurriculumItem(_activeCurriculumIndex + 1);
+    } else if (_activeCurriculumIndex >= 0 &&
+        _activeCurriculumIndex < _curriculumItems.length - 1) {
+      ErrorHandler.showWarningSnackBar(
+        context,
+        'Bạn cần hoàn thành nội dung hiện tại trước khi sang bài tiếp theo.',
+      );
     } else {
       if (mounted) {
         ErrorHandler.showSuccessSnackBar(context, '🎉 Đã hoàn thành khóa học!');
@@ -382,11 +509,17 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       if (courseGroup != null) {
         // Automatically join if they aren't a member yet
         if (!courseGroup.isMember) {
-          await GroupChatService().joinGroup(courseGroup.id, authProvider.user!.id);
+          await GroupChatService().joinGroup(
+            courseGroup.id,
+            authProvider.user!.id,
+          );
         }
         context.push('/group-chat/${courseGroup.id}');
       } else {
-        ErrorHandler.showWarningSnackBar(context, 'Khóa học này chưa có nhóm chat');
+        ErrorHandler.showWarningSnackBar(
+          context,
+          'Khóa học này chưa có nhóm chat',
+        );
       }
     } catch (e) {
       if (!mounted) return;
@@ -468,7 +601,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                       child: ExpansionTile(
                         initiallyExpanded: isExpanded,
                         title: Text(
-                          module.title,
+                          module.title ?? '',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
@@ -499,7 +632,13 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                                         item.itemId,
                                       )) ||
                                   (item.itemType == 'quiz' &&
-                                      _completedQuizIds.contains(item.itemId));
+                                      _completedQuizIds.contains(
+                                        item.itemId,
+                                      )) ||
+                                  (item.itemType == 'assignment' &&
+                                      _completedAssignmentIds.contains(
+                                        item.itemId,
+                                      ));
 
                               return ListTile(
                                 leading: Icon(
@@ -521,7 +660,9 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                                     decoration: isCompleted
                                         ? TextDecoration.lineThrough
                                         : null,
-                                    color: isCompleted ? AppTheme.lightTextSecondary : null,
+                                    color: isCompleted
+                                        ? AppTheme.lightTextSecondary
+                                        : null,
                                   ),
                                 ),
                                 subtitle: Text(
@@ -545,10 +686,18 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                                       )
                                     : null,
                                 selected: isActive,
-                                selectedTileColor: Theme.of(
-                                  context,
-                                ).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                                selectedTileColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer
+                                    .withValues(alpha: 0.3),
                                 onTap: () {
+                                  if (!_canAccessCurriculumIndex(globalIndex)) {
+                                    ErrorHandler.showWarningSnackBar(
+                                      context,
+                                      'Bạn cần hoàn thành nội dung hiện tại trước khi mở bài tiếp theo.',
+                                    );
+                                    return;
+                                  }
                                   _selectCurriculumItem(globalIndex);
                                   Navigator.pop(context);
                                 },
@@ -598,7 +747,11 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
 
     return Scaffold(
       appBar: SkillVerseAppBar(
-        title: activeItem?.moduleTitle ?? _modules[0].title,
+        title:
+            activeItem?.title ??
+            activeItem?.moduleTitle ??
+            _modules[0].title ??
+            '',
         actions: [
           IconButton(
             icon: const Icon(Icons.groups_outlined),
@@ -621,17 +774,14 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       return const Center(child: Text('Chọn một bài học để bắt đầu'));
     }
 
-    // Show certificate banner if course is 100% complete
-    if (_coursePercent >= 100 && _certificateId != null) {
-      return Column(
-        children: [
+    return Column(
+      children: [
+        if (_shouldShowRevisionBanner) _buildRevisionUpgradeBanner(),
+        if (_coursePercent >= 100 && _certificateId != null)
           _buildCertificateBanner(),
-          Expanded(child: _buildLearningContent()),
-        ],
-      );
-    }
-
-    return _buildLearningContent();
+        Expanded(child: _buildLearningContent()),
+      ],
+    );
   }
 
   Widget _buildCertificateBanner() {
@@ -641,9 +791,8 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => CertificateViewPage(
-                certificateId: _certificateId!,
-              ),
+              builder: (_) =>
+                  CertificateViewPage(certificateId: _certificateId!),
             ),
           );
         }
@@ -682,10 +831,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                   const SizedBox(height: 2),
                   const Text(
                     'Nhấn để xem chứng chỉ',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
@@ -697,11 +843,342 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     );
   }
 
-  Widget _buildLearningContent() {
+  // ── Revision Upgrade ──────────────────────────
 
+  Widget _buildRevisionUpgradeBanner() {
+    final hasImpacted = _revisionInfo?.impactedItems.isNotEmpty == true;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.teal.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.teal.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.system_update_alt_rounded,
+                color: Colors.teal,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Khóa học có phiên bản mới',
+                  style: TextStyle(
+                    color: Colors.teal,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Mentor đã cập nhật nội dung khóa học. Bạn có thể nâng cấp để học phiên bản mới nhất.',
+            style: TextStyle(fontSize: 13),
+          ),
+          if (hasImpacted) ...[
+            const SizedBox(height: 4),
+            const Text(
+              'Một số bài học hoặc kết quả trước đó có thể bị ảnh hưởng sau khi nâng cấp.',
+              style: TextStyle(fontSize: 12, color: Colors.orange),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _showRevisionUpgradeSheet,
+                  icon: const Icon(Icons.upgrade, size: 16),
+                  label: const Text(
+                    'Nâng cấp ngay',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              TextButton(
+                onPressed: () =>
+                    setState(() => _hideRevisionBannerForSession = true),
+                child: const Text(
+                  'Để sau',
+                  style: TextStyle(color: Colors.teal, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showRevisionUpgradeSheet() async {
+    final revisionInfo = _revisionInfo;
+    final impactedItems = revisionInfo?.impactedItems ?? [];
+    final previewItems = impactedItems.take(3).toList();
+    final extraCount = impactedItems.length - previewItems.length;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        // Declared outside StatefulBuilder so it persists across rebuilds.
+        bool isUpgrading = false;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(ctx).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Handle bar
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.lightBackgroundSecondary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: Text(
+                    'Nâng cấp lên phiên bản mới?',
+                    style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bạn đang học ở phiên bản cũ của khóa học. Khi nâng cấp, hệ thống sẽ chuyển bạn sang nội dung mới nhất.',
+                        style: Theme.of(ctx).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Một số tiến độ hoặc kết quả cũ có thể cần xem lại tùy thay đổi của Mentor.',
+                        style: Theme.of(ctx).textTheme.bodySmall,
+                      ),
+                      if (previewItems.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        const Divider(height: 1),
+                        const SizedBox(height: 10),
+                        ...previewItems.map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  _getImpactedItemIcon(item.itemType),
+                                  size: 16,
+                                  color: Colors.orange,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.title ??
+                                            _getImpactedItemTypeLabel(
+                                              item.itemType,
+                                            ),
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      Text(
+                                        _getImpactedReason(item),
+                                        style: Theme.of(ctx).textTheme.bodySmall
+                                            ?.copyWith(color: Colors.orange),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (extraCount > 0)
+                          Text(
+                            'và $extraCount nội dung khác',
+                            style: Theme.of(ctx).textTheme.bodySmall,
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: isUpgrading
+                              ? null
+                              : () => Navigator.pop(ctx),
+                          child: const Text('Hủy'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          onPressed: isUpgrading
+                              ? null
+                              : () async {
+                                  setSheetState(() => isUpgrading = true);
+                                  await _upgradeToLatestRevision();
+                                  if (ctx.mounted) {
+                                    setSheetState(() => isUpgrading = false);
+                                  }
+                                },
+                          icon: isUpgrading
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.system_update_alt_rounded,
+                                  size: 18,
+                                ),
+                          label: Text(
+                            isUpgrading
+                                ? 'Đang nâng cấp...'
+                                : 'Xác nhận nâng cấp',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ), // closes Container — end of => arrow expression / builder: arg
+        ); // closes StatefulBuilder + return statement
+      }, // closes outer builder: (ctx) {}
+    );
+  }
+
+  Future<void> _upgradeToLatestRevision() async {
+    if (_isUpgradingRevision) return;
+    setState(() => _isUpgradingRevision = true);
+    try {
+      final courseId = int.parse(widget.courseId);
+      await _lessonService.upgradeToActiveRevision(courseId: courseId);
+      setState(() => _hideRevisionBannerForSession = false);
+      await _reloadLearningState(
+        showFullScreenLoader: false,
+        preserveCurrentItem: true,
+        showMissingItemNotice: true,
+      );
+      if (mounted) {
+        Navigator.of(context).pop(); // close bottom sheet
+        ErrorHandler.showSuccessSnackBar(
+          context,
+          'Đã chuyển sang phiên bản mới nhất của khóa học',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Chưa thể nâng cấp phiên bản lúc này. Vui lòng thử lại.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpgradingRevision = false);
+    }
+  }
+
+  // ── Impacted item helpers ─────────────────────
+
+  String _getImpactedItemTypeLabel(String? type) {
+    switch (type) {
+      case 'lesson':
+        return 'Bài học';
+      case 'quiz':
+        return 'Bài kiểm tra';
+      case 'assignment':
+        return 'Bài tập';
+      default:
+        return 'Nội dung';
+    }
+  }
+
+  IconData _getImpactedItemIcon(String? type) {
+    switch (type) {
+      case 'quiz':
+        return Icons.quiz_outlined;
+      case 'assignment':
+        return Icons.assignment_outlined;
+      default:
+        return Icons.article_outlined;
+    }
+  }
+
+  String _getImpactedReason(ImpactedLearningItemDto item) {
+    if (item.reasonCode == 'ITEM_NOT_IN_ACTIVE_REVISION') {
+      return 'Nội dung này không còn trong phiên bản mới';
+    }
+    if (item.requiresRetake == true) {
+      return 'Bạn có thể cần xem lại hoặc hoàn thành lại nội dung này';
+    }
+    if (item.reason != null && item.reason!.isNotEmpty) return item.reason!;
+    if (item.breakingReason != null && item.breakingReason!.isNotEmpty) {
+      return item.breakingReason!;
+    }
+    return 'Đã có thay đổi ở nội dung này trong phiên bản mới';
+  }
+
+  Widget _buildLearningContent() {
     final item = _curriculumItems[_activeCurriculumIndex];
 
-    final isVideoLesson = item.itemType == 'lesson' &&
+    final isVideoLesson =
+        item.itemType == 'lesson' &&
         !_isLoadingLesson &&
         _currentLessonDetail != null &&
         _currentLessonDetail!.lessonType == LessonType.video;
@@ -731,9 +1208,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _buildVideoLessonInfo(),
-                          ],
+                          children: [_buildVideoLessonInfo()],
                         ),
                       ),
                     ),
@@ -746,7 +1221,8 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         }
 
         // Quiz or Assignment items need Expanded layout (they manage own scrolling)
-        final isExpandedItem = item.itemType == 'quiz' || item.itemType == 'assignment';
+        final isExpandedItem =
+            item.itemType == 'quiz' || item.itemType == 'assignment';
 
         if (isExpandedItem) {
           return Column(
@@ -763,17 +1239,20 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
             if (videoWidget != null) videoWidget,
 
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (isVideoLesson)
-                      _buildVideoLessonInfo()
-                    else ...[
-                      _buildInfoHeader(item),
-                      _buildItemContent(item),
+              child: RefreshIndicator(
+                onRefresh: () => _reloadLearningState(),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (isVideoLesson)
+                        _buildVideoLessonInfo()
+                      else ...[
+                        _buildInfoHeader(item),
+                        _buildItemContent(item),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -837,16 +1316,21 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
           // Tiêu đề bài học
           Text(
             lesson.title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           // Thời lượng nếu có
-          if (activeItem?.durationSec != null && activeItem!.durationSec! > 0) ...[
+          if (activeItem?.durationSec != null &&
+              activeItem!.durationSec! > 0) ...[
             const SizedBox(height: 6),
             Row(
               children: [
-                Icon(Icons.schedule, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                Icon(
+                  Icons.schedule,
+                  size: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   _formatDuration(activeItem.durationSec!),
@@ -912,6 +1396,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
         return ReadingLessonContent(
           content: lesson.contentText,
           resourceUrl: lesson.resourceUrl,
+          attachments: lesson.attachments,
         );
       case LessonType.quiz:
         // Inline quiz within a lesson — use QuizAttemptPage (replaces old QuizLessonWidget)
@@ -982,12 +1467,16 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       // Quiz: only allow navigating to next if passed
       final quizPassed = _completedQuizIds.contains(item.itemId);
       completeLabel = quizPassed ? 'Tiếp theo' : 'Làm bài kiểm tra';
-      canComplete = quizPassed && _activeCurriculumIndex < _curriculumItems.length - 1;
+      canComplete =
+          quizPassed && _activeCurriculumIndex < _curriculumItems.length - 1;
       onCompletePressed = quizPassed ? _goToNextItem : null;
     } else if (isAssignment) {
-      completeLabel = 'Tiếp theo';
-      canComplete = _activeCurriculumIndex < _curriculumItems.length - 1;
-      onCompletePressed = _goToNextItem;
+      final assignmentPassed = _completedAssignmentIds.contains(item.itemId);
+      completeLabel = assignmentPassed ? 'Tiếp theo' : 'Nộp bài tập';
+      canComplete =
+          assignmentPassed &&
+          _activeCurriculumIndex < _curriculumItems.length - 1;
+      onCompletePressed = assignmentPassed ? _goToNextItem : null;
     } else {
       completeLabel = 'Hoàn thành';
       canComplete = false;
@@ -1023,8 +1512,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
               ),
             ),
             // Complete/Action button (Hidden for inline Quiz/Assignment to avoid redundancy)
-            if (!isInlineItem)
-              const SizedBox(width: 12),
+            if (!isInlineItem) const SizedBox(width: 12),
             if (!isInlineItem)
               Expanded(
                 flex: 2,
@@ -1033,9 +1521,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
                   icon: _isMarkingComplete
                       ? CommonLoading.button()
                       : Icon(
-                          isLesson
-                              ? Icons.check
-                              : Icons.laptop_mac_outlined,
+                          isLesson ? Icons.check : Icons.laptop_mac_outlined,
                           size: 20,
                         ),
                   label: Text(
@@ -1051,10 +1537,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
             // Next button
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: (_activeCurriculumIndex < _curriculumItems.length - 1
-                    && !(isQuiz && !_completedQuizIds.contains(item.itemId)))
-                    ? _goToNextItem
-                    : null,
+                onPressed: _canGoToNextFromActive() ? _goToNextItem : null,
                 icon: const Icon(Icons.chevron_right, size: 20),
                 label: const Text('Sau'),
                 style: OutlinedButton.styleFrom(
@@ -1140,5 +1623,3 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 }
-
-

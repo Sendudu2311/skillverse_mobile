@@ -39,9 +39,7 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
     final enrollmentProvider = context.read<EnrollmentProvider>();
 
     if (authProvider.user != null) {
-      await enrollmentProvider.fetchUserEnrollments(
-        userId: authProvider.user!.id,
-      );
+      await enrollmentProvider.fetchUserEnrollments();
     }
   }
 
@@ -577,8 +575,8 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
                                 onTap: () => _openGroupChat(context, enrollment.courseId),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
+                                    horizontal: 12,
+                                    vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
                                     color: AppTheme.primaryBlueDark.withValues(alpha: 0.12),
@@ -613,8 +611,8 @@ class _MyCoursesPageState extends State<MyCoursesPage> {
                                   onTap: () => _viewCertificate(context, enrollment),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
+                                      horizontal: 12,
+                                      vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
                                       color: AppTheme.successColor.withValues(alpha: 0.15),

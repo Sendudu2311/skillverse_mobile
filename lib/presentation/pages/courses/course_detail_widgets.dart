@@ -193,7 +193,7 @@ class CourseModuleItem extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        '${module.orderIndex + 1}',
+                        '${(module.orderIndex ?? 0) + 1}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -209,7 +209,7 @@ class CourseModuleItem extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          module.title,
+                          module.title ?? '',
                           style: TextStyle(
                             color: isDark
                                 ? Colors.white
@@ -304,7 +304,7 @@ class CourseModuleItem extends StatelessWidget {
                   ? Icons.menu_book_outlined
                   : Icons.play_circle_outline,
               typeLabel: 'BÀI HỌC ${entry.key + 1}',
-              title: lesson.title,
+              title: lesson.title ?? '',
               meta: isReading ? 'Bài đọc' : null,
               color: gradientColors[0],
             );

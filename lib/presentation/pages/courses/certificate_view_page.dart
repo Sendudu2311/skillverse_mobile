@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
+import '../../../core/utils/date_time_helper.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -42,7 +42,11 @@ class _CertificateViewPageState extends State<CertificateViewPage> {
       final cert = await _service.getCertificate(
         certificateId: widget.certificateId,
       );
-      if (mounted) setState(() { _cert = cert; _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _cert = cert;
+          _isLoading = false;
+        });
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -55,14 +59,13 @@ class _CertificateViewPageState extends State<CertificateViewPage> {
 
   Future<Uint8List?> _captureImage() async {
     try {
-      final boundary = _repaintKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _repaintKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) return null;
 
       final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return null;
 
       return byteData.buffer.asUint8List();
@@ -75,7 +78,11 @@ class _CertificateViewPageState extends State<CertificateViewPage> {
     try {
       final bytes = await _captureImage();
       if (bytes == null) {
-        if (mounted) ErrorHandler.showErrorSnackBar(context, 'Không thể chụp ảnh chứng chỉ.');
+        if (mounted)
+          ErrorHandler.showErrorSnackBar(
+            context,
+            'Không thể chụp ảnh chứng chỉ.',
+          );
         return;
       }
 
@@ -89,16 +96,21 @@ class _CertificateViewPageState extends State<CertificateViewPage> {
         dir = await getDownloadsDirectory();
       }
       dir ??= await getApplicationDocumentsDirectory();
-      
-      final filename = 'skillverse_certificate_${_cert?.serial ?? widget.certificateId}.png';
+
+      final filename =
+          'skillverse_certificate_${_cert?.serial ?? widget.certificateId}.png';
       final file = File('${dir.path}/$filename');
       await file.writeAsBytes(bytes);
 
       if (mounted) {
-        ErrorHandler.showSuccessSnackBar(context, 'Đã lưu chứng chỉ vào Downloads!');
+        ErrorHandler.showSuccessSnackBar(
+          context,
+          'Đã lưu chứng chỉ vào Downloads!',
+        );
       }
     } catch (e) {
-      if (mounted) ErrorHandler.showErrorSnackBar(context, 'Lỗi khi lưu ảnh: $e');
+      if (mounted)
+        ErrorHandler.showErrorSnackBar(context, 'Lỗi khi lưu ảnh: $e');
     }
   }
 
@@ -106,28 +118,35 @@ class _CertificateViewPageState extends State<CertificateViewPage> {
     try {
       final bytes = await _captureImage();
       if (bytes == null) {
-        if (mounted) ErrorHandler.showErrorSnackBar(context, 'Không thể chụp ảnh chứng chỉ.');
+        if (mounted)
+          ErrorHandler.showErrorSnackBar(
+            context,
+            'Không thể chụp ảnh chứng chỉ.',
+          );
         return;
       }
 
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/skillverse_certificate_${_cert?.serial ?? widget.certificateId}.png');
+      final file = File(
+        '${tempDir.path}/skillverse_certificate_${_cert?.serial ?? widget.certificateId}.png',
+      );
       await file.writeAsBytes(bytes);
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Chứng chỉ khóa học từ Skillverse!',
-      );
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: 'Chứng chỉ khóa học từ Skillverse!');
     } catch (e) {
-      if (mounted) ErrorHandler.showErrorSnackBar(context, 'Lỗi khi chia sẻ ảnh: $e');
+      if (mounted)
+        ErrorHandler.showErrorSnackBar(context, 'Lỗi khi chia sẻ ảnh: $e');
     }
   }
 
   /// Build the public verification URL matching the web prototype.
   String _buildVerificationUrl(String serial) {
     // Use the web app's base URL from env, fallback to skillverse.vn
-    final baseUrl = dotenv.env['WEB_APP_URL']?.replaceAll(RegExp(r'/$'), '')
-        ?? 'https://skillverse.vn';
+    final baseUrl =
+        dotenv.env['WEB_APP_URL']?.replaceAll(RegExp(r'/$'), '') ??
+        'https://skillverse.vn';
     return '$baseUrl/certificate/verify/${Uri.encodeComponent(serial)}';
   }
 
@@ -155,12 +174,8 @@ class _CertificateViewPageState extends State<CertificateViewPage> {
 
   String _formatDate(String? isoDate) {
     if (isoDate == null || isoDate.isEmpty) return '';
-    try {
-      final date = DateTime.parse(isoDate);
-      return DateFormat('dd/MM/yyyy').format(date);
-    } catch (_) {
-      return isoDate;
-    }
+    final dt = DateTimeHelper.tryParseIso8601(isoDate);
+    return dt != null ? DateTimeHelper.formatDate(dt) : isoDate;
   }
 
   @override
@@ -281,10 +296,7 @@ class _CertificateCard extends StatelessWidget {
   final CertificateDto cert;
   final String formattedDate;
 
-  const _CertificateCard({
-    required this.cert,
-    required this.formattedDate,
-  });
+  const _CertificateCard({required this.cert, required this.formattedDate});
 
   @override
   Widget build(BuildContext context) {
@@ -410,9 +422,7 @@ class _CertificateCard extends StatelessWidget {
               child: Container(
                 decoration: const BoxDecoration(
                   color: Color(0xFFF5F7F8),
-                  border: Border(
-                    left: BorderSide(color: Color(0xFFE1E1E1)),
-                  ),
+                  border: Border(left: BorderSide(color: Color(0xFFE1E1E1))),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -443,7 +453,8 @@ class _CertificateCard extends StatelessWidget {
   }
 
   Widget _buildFooter() {
-    final hasSignature = cert.instructorSignatureUrl != null &&
+    final hasSignature =
+        cert.instructorSignatureUrl != null &&
         cert.instructorSignatureUrl!.isNotEmpty;
 
     return Row(
@@ -497,10 +508,7 @@ class _CertificateCard extends StatelessWidget {
                 hasSignature
                     ? 'Chữ ký của người hướng dẫn'
                     : 'Xác thực nền tảng',
-                style: const TextStyle(
-                  fontSize: 8,
-                  color: Color(0xFF787878),
-                ),
+                style: const TextStyle(fontSize: 8, color: Color(0xFF787878)),
               ),
             ],
           ),
@@ -513,18 +521,12 @@ class _CertificateCard extends StatelessWidget {
           children: [
             Text(
               'Đơn vị cấp: ${cert.issuerName}',
-              style: const TextStyle(
-                fontSize: 8,
-                color: Color(0xFF787878),
-              ),
+              style: const TextStyle(fontSize: 8, color: Color(0xFF787878)),
             ),
             const SizedBox(height: 2),
             Text(
               'Mã xác thực: ${cert.serial}',
-              style: const TextStyle(
-                fontSize: 8,
-                color: Color(0xFF787878),
-              ),
+              style: const TextStyle(fontSize: 8, color: Color(0xFF787878)),
             ),
             const SizedBox(height: 2),
             const Text(
@@ -564,18 +566,31 @@ class _CertificateCard extends StatelessWidget {
                 height: 52,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFDDDDDD),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xFFDDDDDD), width: 1),
                 ),
                 child: Center(
                   child: ColorFiltered(
                     colorFilter: const ColorFilter.matrix([
-                      0.2126, 0.7152, 0.0722, 0, 0,
-                      0.2126, 0.7152, 0.0722, 0, 0,
-                      0.2126, 0.7152, 0.0722, 0, 0,
-                      0, 0, 0, 0.6, 0,
+                      0.2126,
+                      0.7152,
+                      0.0722,
+                      0,
+                      0,
+                      0.2126,
+                      0.7152,
+                      0.0722,
+                      0,
+                      0,
+                      0.2126,
+                      0.7152,
+                      0.0722,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0.6,
+                      0,
                     ]),
                     child: Image.asset(
                       'assets/skillverse.png',

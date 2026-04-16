@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../data/models/lesson_models.dart';
+import '../../core/utils/error_handler.dart';
 
 class ReadingLessonContent extends StatelessWidget {
   final String? content;
   final String? resourceUrl;
+  final List<LessonAttachmentDto>? attachments;
 
   const ReadingLessonContent({
     super.key,
     required this.content,
     this.resourceUrl,
+    this.attachments,
   });
 
   @override
   Widget build(BuildContext context) {
     final hasContent = content != null && content!.isNotEmpty;
     final hasResource = resourceUrl != null && resourceUrl!.isNotEmpty;
+    final hasAttachments = attachments != null && attachments!.isNotEmpty;
 
-    if (!hasContent && !hasResource) {
+    if (!hasContent && !hasResource && !hasAttachments) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -113,22 +118,37 @@ class ReadingLessonContent extends StatelessWidget {
                 },
                 onLinkTap: (url, attributes, element) async {
                   if (url != null) {
-                    final uri = Uri.tryParse(url);
-                    if (uri != null && await canLaunchUrl(uri)) {
-                      await launchUrl(
-                        uri,
-                        mode: LaunchMode.externalApplication,
-                      );
-                    } else {
-                      debugPrint('Could not launch URL: $url');
+                    try {
+                      final uri = Uri.tryParse(url);
+                      if (uri != null && await canLaunchUrl(uri)) {
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      } else {
+                        if (context.mounted) {
+                          ErrorHandler.showWarningSnackBar(
+                            context,
+                            'Không thể mở liên kết',
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ErrorHandler.showErrorSnackBar(
+                          context,
+                          'Lỗi khi mở liên kết: $e',
+                        );
+                      }
                     }
                   }
                 },
               ),
             ),
           ),
-        // Resource document link
-        if (resourceUrl != null && resourceUrl!.isNotEmpty)
+
+        // Legacy single resource URL (fallback if no structured attachments)
+        if (hasResource && !hasAttachments)
           Card(
             elevation: 1,
             margin: const EdgeInsets.only(top: 12),
@@ -153,14 +173,174 @@ class ReadingLessonContent extends StatelessWidget {
                 color: Theme.of(context).colorScheme.primary,
               ),
               onTap: () async {
-                final uri = Uri.tryParse(resourceUrl!);
-                if (uri != null && await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                try {
+                  final uri = Uri.tryParse(resourceUrl!);
+                  if (uri != null && await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } else {
+                    if (context.mounted) {
+                      ErrorHandler.showWarningSnackBar(
+                        context,
+                        'Không thể mở tài liệu',
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ErrorHandler.showErrorSnackBar(
+                      context,
+                      'Lỗi khi mở tài liệu: $e',
+                    );
+                  }
                 }
               },
             ),
           ),
+
+        // Structured attachments list from LessonAttachmentDTO
+        if (hasAttachments) ...[
+          const SizedBox(height: 12),
+          Card(
+            elevation: 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.attach_file,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Tài liệu đính kèm (${attachments!.length})',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                ...attachments!.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final att = entry.value;
+                  return Column(
+                    children: [
+                      _AttachmentTile(attachment: att),
+                      if (i < attachments!.length - 1)
+                        const Divider(height: 1, indent: 56),
+                    ],
+                  );
+                }),
+                const SizedBox(height: 4),
+              ],
+            ),
+          ),
+        ],
       ],
     );
+  }
+}
+
+class _AttachmentTile extends StatelessWidget {
+  final LessonAttachmentDto attachment;
+
+  const _AttachmentTile({required this.attachment});
+
+  @override
+  Widget build(BuildContext context) {
+    final isLink =
+        attachment.type == AttachmentType.externalLink ||
+        attachment.type == AttachmentType.googleDrive ||
+        attachment.type == AttachmentType.github ||
+        attachment.type == AttachmentType.youtube ||
+        attachment.type == AttachmentType.website;
+
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: Theme.of(
+          context,
+        ).colorScheme.primary.withValues(alpha: 0.1),
+        radius: 20,
+        child: Icon(
+          _iconFor(attachment.type),
+          size: 18,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
+      title: Text(
+        attachment.title,
+        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle:
+          attachment.description != null && attachment.description!.isNotEmpty
+          ? Text(
+              attachment.description!,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )
+          : attachment.fileSizeFormatted != null
+          ? Text(
+              attachment.fileSizeFormatted!,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            )
+          : null,
+      trailing: Icon(
+        isLink ? Icons.open_in_new : Icons.download_outlined,
+        size: 18,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      onTap: () => _openAttachment(context, attachment),
+    );
+  }
+
+  Future<void> _openAttachment(
+    BuildContext context,
+    LessonAttachmentDto attachment,
+  ) async {
+    final url = attachment.downloadUrl;
+    if (url == null || url.isEmpty) {
+      ErrorHandler.showWarningSnackBar(
+        context,
+        'Đường dẫn tài liệu không có sẵn',
+      );
+      return;
+    }
+    try {
+      final uri = Uri.tryParse(url);
+      if (uri != null && await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          ErrorHandler.showWarningSnackBar(context, 'Không thể mở tài liệu');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ErrorHandler.showErrorSnackBar(context, 'Lỗi khi mở tài liệu: $e');
+      }
+    }
+  }
+
+  IconData _iconFor(AttachmentType? type) {
+    return switch (type) {
+      AttachmentType.pdf => Icons.picture_as_pdf_outlined,
+      AttachmentType.docx => Icons.description_outlined,
+      AttachmentType.pptx => Icons.slideshow_outlined,
+      AttachmentType.xlsx => Icons.table_chart_outlined,
+      AttachmentType.googleDrive => Icons.add_to_drive_outlined,
+      AttachmentType.github => Icons.code_outlined,
+      AttachmentType.youtube => Icons.play_circle_outline,
+      AttachmentType.externalLink ||
+      AttachmentType.website ||
+      null => Icons.link_outlined,
+    };
   }
 }

@@ -36,7 +36,7 @@ class _CoursePurchaseBottomSheetState
 
   bool _isLoadingWallet = true;
   bool _isPurchasing = false;
-  int _walletBalance = 0;
+  double _walletBalance = 0;
   String? _error;
 
   @override
@@ -91,8 +91,8 @@ class _CoursePurchaseBottomSheetState
 
   @override
   Widget build(BuildContext context) {
-    final canAfford = _walletBalance >= widget.price.toInt();
-    final remaining = _walletBalance - widget.price.toInt();
+    final canAfford = _walletBalance >= widget.price;
+    final remaining = _walletBalance - widget.price;
 
     return Container(
       decoration: BoxDecoration(
@@ -359,7 +359,7 @@ class _CoursePurchaseBottomSheetState
         child: const Icon(Icons.school, color: Colors.white54, size: 20),
       );
 
-  Widget _buildWalletSection(bool canAfford, int remaining) {
+  Widget _buildWalletSection(bool canAfford, double remaining) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -407,7 +407,7 @@ class _CoursePurchaseBottomSheetState
               alignment: Alignment.centerLeft,
               child: Text(
                 NumberFormatter.formatCurrency(
-                  _walletBalance.toDouble(),
+                  _walletBalance,
                   currency: 'đ',
                 ),
                 style: TextStyle(

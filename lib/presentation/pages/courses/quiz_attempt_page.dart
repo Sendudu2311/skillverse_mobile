@@ -98,7 +98,6 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
         _attemptStatus = status;
         _isLoading = false;
       });
-
     } catch (e) {
       setState(() {
         _errorMessage = ErrorHandler.getErrorMessage(e);
@@ -106,7 +105,6 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
       });
     }
   }
-
 
   Future<void> _loadReview() async {
     try {
@@ -121,8 +119,6 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
     }
   }
 
-
-
   String _formatTimerDisplay() {
     final mins = _secondsRemaining ~/ 60;
     final secs = _secondsRemaining % 60;
@@ -132,8 +128,6 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
   bool get _isTimerUrgent => _secondsRemaining > 0 && _secondsRemaining < 300;
 
   // ── Session Management ───────────────────────────────────────────────────
-
-
 
   void _startHeartbeat() {
     _heartbeatTimer?.cancel();
@@ -160,7 +154,7 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
 
   Future<void> _beginQuiz() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final session = await _quizService.startAttemptSession(
         quizId: widget.quizId,
@@ -175,21 +169,21 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
       if (session.status == 'IN_PROGRESS' && session.expiresAt != null) {
         final expiresAt = session.expiresAt!.toUtc();
         final actualRemaining = expiresAt.difference(now).inSeconds;
-        
+
         // If the session was already created before (startedAt earlier than now by > 10 seconds),
         // we consider it a resumed session and cap the remaining time.
         if (session.startedAt != null) {
-           final startedAt = session.startedAt!.toUtc();
-           if (now.difference(startedAt).inSeconds > 10) {
-              remainingSeconds = actualRemaining.clamp(0, remainingSeconds);
-              isResumed = true;
-           }
+          final startedAt = session.startedAt!.toUtc();
+          if (now.difference(startedAt).inSeconds > 10) {
+            remainingSeconds = actualRemaining.clamp(0, remainingSeconds);
+            isResumed = true;
+          }
         }
       }
 
       setState(() {
-         _viewMode = 'taking';
-         _isLoading = false;
+        _viewMode = 'taking';
+        _isLoading = false;
       });
 
       _countdownTimer?.cancel();
@@ -202,7 +196,7 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
           if (_viewMode == 'taking') _submitQuiz();
         }
       });
-      
+
       _startHeartbeat();
 
       if (isResumed && mounted) {
@@ -211,30 +205,39 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
           'Tiếp tục phiên làm bài. Thời gian còn lại được giữ nguyên.',
         );
       }
-
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-         ErrorHandler.showErrorSnackBar(context, 'Không thể bắt đầu phiên làm bài: $e');
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Không thể bắt đầu phiên làm bài: $e',
+        );
       }
     }
   }
 
-  void _toggleOption(int questionId, int optionId, QuestionType type) {
+  void _toggleOption(
+    int questionId,
+    int optionId,
+    QuestionType type, {
+    bool allowMultiple = false,
+  }) {
     if (_result != null) return;
 
-    if (type == QuestionType.multipleChoice) {
+    if (type == QuestionType.multipleChoice && allowMultiple) {
       // Multiple choice: toggle selection
       setState(() {
         if (!_selectedOptions.containsKey(questionId)) {
           _selectedOptions[questionId] = [];
         }
         if (_selectedOptions[questionId]!.contains(optionId)) {
-          _selectedOptions[questionId] = List.from(_selectedOptions[questionId]!)
-            ..remove(optionId);
+          _selectedOptions[questionId] = List.from(
+            _selectedOptions[questionId]!,
+          )..remove(optionId);
         } else {
-          _selectedOptions[questionId] = List.from(_selectedOptions[questionId]!)
-            ..add(optionId);
+          _selectedOptions[questionId] = List.from(
+            _selectedOptions[questionId]!,
+          )..add(optionId);
         }
       });
     } else {
@@ -321,15 +324,16 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
 
     for (final q in _quiz!.questions!) {
       if (_textAnswers.containsKey(q.id)) {
-        answers.add(QuizAnswerDto(
-          questionId: q.id,
-          textAnswer: _textAnswers[q.id],
-        ));
+        answers.add(
+          QuizAnswerDto(questionId: q.id, textAnswer: _textAnswers[q.id]),
+        );
       } else if (_selectedOptions.containsKey(q.id)) {
-        answers.add(QuizAnswerDto(
-          questionId: q.id,
-          selectedOptionIds: _selectedOptions[q.id],
-        ));
+        answers.add(
+          QuizAnswerDto(
+            questionId: q.id,
+            selectedOptionIds: _selectedOptions[q.id],
+          ),
+        );
       }
     }
 
@@ -344,7 +348,6 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
   }
 
   void _retry() {
-
     _selectedOptions.clear();
     _textAnswers.clear();
     for (var controller in _textControllers.values) {
@@ -356,8 +359,6 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
     _viewMode = 'start';
     _loadQuizData();
   }
-
-
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -418,9 +419,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
               children: [
                 Text(
                   quiz.title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 if (quiz.description != null) ...[
                   const SizedBox(height: 8),
@@ -470,26 +471,35 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
               decoration: BoxDecoration(
                 color: AppTheme.errorColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppTheme.errorColor.withValues(alpha: 0.3),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.block, color: AppTheme.errorColor, size: 24),
+                      const Icon(
+                        Icons.block,
+                        color: AppTheme.errorColor,
+                        size: 24,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Hết lượt làm bài',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppTheme.errorColor,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppTheme.errorColor,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text('Bạn đã sử dụng hết lượt làm bài. Hệ thống sẽ cấp lại lượt làm bài sau 8 giờ kể từ lần làm đầu tiên.'),
+                  const Text(
+                    'Bạn đã sử dụng hết lượt làm bài. Hệ thống sẽ cấp lại lượt làm bài sau 8 giờ kể từ lần làm đầu tiên.',
+                  ),
                   const SizedBox(height: 8),
                   if (status.secondsUntilRetry > 0)
                     Text(
@@ -498,21 +508,25 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
                     ),
                   if (status.nextRetryAt != null)
                     Text(
-                      '• Có thể làm lại vào: ${DateTimeHelper.formatSmart(DateTime.parse(status.nextRetryAt!))}',
+                      '• Có thể làm lại vào: ${DateTimeHelper.tryParseIso8601(status.nextRetryAt!) != null ? DateTimeHelper.formatSmart(DateTimeHelper.tryParseIso8601(status.nextRetryAt!)!) : status.nextRetryAt}',
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.arrow_back),
-                      label: const Text('Quay lại khóa học'),
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.errorColor,
-                        side: const BorderSide(color: AppTheme.errorColor),
-                      ),
-                    ),
+                    child: widget.isInline
+                        ? const SizedBox.shrink() // No exit button in inline mode — prevents popping course flow
+                        : OutlinedButton.icon(
+                            icon: const Icon(Icons.arrow_back),
+                            label: const Text('Quay lại khóa học'),
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.errorColor,
+                              side: const BorderSide(
+                                color: AppTheme.errorColor,
+                              ),
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -526,9 +540,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
               status.recentAttempts!.isNotEmpty) ...[
             Text(
               'Lịch sử làm bài',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             ...status.recentAttempts!.take(5).map(_buildAttemptItem),
@@ -550,7 +564,11 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
     );
   }
 
-  Widget _buildStartButton(String label, VoidCallback? onPressed, {bool isDisabled = false}) {
+  Widget _buildStartButton(
+    String label,
+    VoidCallback? onPressed, {
+    bool isDisabled = false,
+  }) {
     return SizedBox(
       height: 52,
       child: ElevatedButton(
@@ -559,7 +577,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
           backgroundColor: AppTheme.themeBlueStart,
           foregroundColor: Colors.white,
           disabledBackgroundColor: Colors.grey,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         child: Text(
           label,
@@ -602,9 +622,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
           ),
           Text(
             '${attempt.correctAnswers ?? 0}/${attempt.totalQuestions ?? 0}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -664,7 +684,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
                 ),
                 Text(
                   'Điểm cao nhất: ${status.bestScore}%',
-                  style: TextStyle(color: AppTheme.successColor.withValues(alpha: 0.8)),
+                  style: TextStyle(
+                    color: AppTheme.successColor.withValues(alpha: 0.8),
+                  ),
                 ),
               ],
             ),
@@ -673,8 +695,6 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
       ),
     );
   }
-
-
 
   // ── Screen: Taking ──────────────────────────────────────────────────────
 
@@ -766,7 +786,10 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
                     ? CommonLoading.button()
                     : const Text(
                         'Nộp bài',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
               ),
             ),
@@ -794,7 +817,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -822,8 +847,6 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
             _buildTextAnswerField(q)
           else
             _buildOptionList(q),
-
-
         ],
       ),
     );
@@ -836,13 +859,11 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
       children: q.options!.asMap().entries.map((entry) {
         final idx = entry.key;
         final option = entry.value;
-        final label = idx < 26
-            ? String.fromCharCode(65 + idx)
-            : '${idx + 1}';
-        final isSelected =
-            _selectedOptions[q.id]?.contains(option.id) ?? false;
+        final label = idx < 26 ? String.fromCharCode(65 + idx) : '${idx + 1}';
+        final isSelected = _selectedOptions[q.id]?.contains(option.id) ?? false;
 
-        final isMulti = q.questionType == QuestionType.multipleChoice &&
+        final isMulti =
+            q.questionType == QuestionType.multipleChoice &&
             (q.correctOptionCount ?? 0) > 1;
 
         return Container(
@@ -865,6 +886,7 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
                     q.id,
                     option.id,
                     q.questionType,
+                    allowMultiple: true,
                   ),
                   title: Text('$label. ${option.optionText}'),
                   controlAffinity: ListTileControlAffinity.leading,
@@ -874,11 +896,8 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
               : RadioListTile<int>(
                   value: option.id,
                   groupValue: _selectedOptions[q.id]?.firstOrNull,
-                  onChanged: (_) => _toggleOption(
-                    q.id,
-                    option.id,
-                    q.questionType,
-                  ),
+                  onChanged: (_) =>
+                      _toggleOption(q.id, option.id, q.questionType),
                   title: Text('$label. ${option.optionText}'),
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 8),
@@ -891,7 +910,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
 
   Widget _buildTextAnswerField(QuizQuestionDetailDto q) {
     if (!_textControllers.containsKey(q.id)) {
-      _textControllers[q.id] = TextEditingController(text: _textAnswers[q.id] ?? '');
+      _textControllers[q.id] = TextEditingController(
+        text: _textAnswers[q.id] ?? '',
+      );
     }
     final controller = _textControllers[q.id]!;
 
@@ -900,14 +921,12 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
       maxLines: 4,
       decoration: InputDecoration(
         hintText: 'Nhập câu trả lời...',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         contentPadding: const EdgeInsets.all(12),
       ),
       onChanged: (val) {
-         // setState is called inside _setTextAnswer, but we don't recreate the controller
-         _setTextAnswer(q.id, val);
+        // setState is called inside _setTextAnswer, but we don't recreate the controller
+        _setTextAnswer(q.id, val);
       },
     );
   }
@@ -934,7 +953,7 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: widget.isInline
-                      ? _retry  // Stay inline, go back to start view
+                      ? _retry // Stay inline, go back to start view
                       : () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.arrow_back),
                   label: const Text('Quay lại'),
@@ -965,9 +984,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
           if (review != null && review.answers != null && quiz != null) ...[
             Text(
               'Đáp án chi tiết',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             ...review.answers!.asMap().entries.map((entry) {
@@ -1117,10 +1136,7 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
               if (answer.scoreEarned != null && question != null)
                 Text(
                   '${answer.scoreEarned}/${question.score}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: color),
                 ),
             ],
           ),
@@ -1128,20 +1144,15 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
 
           // Question text
           if (question != null)
-            Text(
-              question.questionText,
-              style: const TextStyle(fontSize: 15),
-            )
+            Text(question.questionText, style: const TextStyle(fontSize: 15))
           else if (answer.questionText != null)
-            Text(
-              answer.questionText!,
-              style: const TextStyle(fontSize: 15),
-            ),
+            Text(answer.questionText!, style: const TextStyle(fontSize: 15)),
 
           const SizedBox(height: 12),
 
           // MC/TF: Show options with tags + feedback
-          if (answer.optionsSnapshot != null && answer.optionsSnapshot!.isNotEmpty)
+          if (answer.optionsSnapshot != null &&
+              answer.optionsSnapshot!.isNotEmpty)
             ...answer.optionsSnapshot!.asMap().entries.map((entry) {
               final idx = entry.key;
               final opt = entry.value;
@@ -1187,9 +1198,7 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(opt.optionText ?? ''),
-                        ),
+                        Expanded(child: Text(opt.optionText ?? '')),
                         const SizedBox(width: 6),
                         // Tags
                         Wrap(
@@ -1202,7 +1211,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.accentCyan.withValues(alpha: 0.2),
+                                  color: AppTheme.accentCyan.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Text(
@@ -1221,7 +1232,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.successColor.withValues(alpha: 0.2),
+                                  color: AppTheme.successColor.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Text(
@@ -1408,7 +1421,9 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
               decoration: BoxDecoration(
                 color: _isTimerUrgent
                     ? AppTheme.errorColor.withValues(alpha: 0.15)
-                    : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    : Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -1447,10 +1462,7 @@ class _QuizAttemptPageState extends State<QuizAttemptPage> {
     }
 
     if (_errorMessage != null) {
-      return ErrorStateWidget(
-        message: _errorMessage!,
-        onRetry: _loadQuizData,
-      );
+      return ErrorStateWidget(message: _errorMessage!, onRetry: _loadQuizData);
     }
 
     if (_quiz == null) {

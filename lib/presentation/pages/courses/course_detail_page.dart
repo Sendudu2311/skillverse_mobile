@@ -21,6 +21,7 @@ import '../../../data/services/enrollment_service.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../../core/utils/date_time_helper.dart';
+import '../../../core/utils/html_helper.dart';
 
 class CourseDetailPage extends StatefulWidget {
   final String courseId;
@@ -111,14 +112,34 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     // Load modules with full content
     await _executeAsync(() async {
       final fullModules = await _moduleService.listModulesWithContent(courseId: courseId);
-      if (mounted) setState(() => _fullModules = fullModules);
+      if (mounted) {
+        if (fullModules.isNotEmpty) {
+          setState(() => _fullModules = fullModules);
+        } else {
+          // Fallback: backend returned empty (e.g. revisioningEnabled but no pinned revision yet).
+          // Use summary modules from course DTO so the curriculum section is not blank.
+          final summaryModules = _course?.modules ?? [];
+          setState(() => _fullModules = summaryModules.asMap().entries.map((e) {
+            final i = e.key;
+            final m = e.value;
+            return ModuleWithContentDto(
+              id: m.id,
+              title: m.title ?? 'Chương ${i + 1}',
+              description: m.description,
+              orderIndex: m.orderIndex ?? i,
+              lessons: const [],
+              quizzes: const [],
+              assignments: const [],
+            );
+          }).toList());
+        }
+      }
     }, setLoading: (val) => setState(() => _isLoadingModules = val));
 
     // Check enrollment status and load progress
     if (authProvider.user != null) {
       await enrollmentProvider.checkEnrollmentStatus(
         courseId: courseId,
-        userId: authProvider.user!.id,
       );
 
       // Load enrollment progress if enrolled
@@ -126,7 +147,6 @@ class _CourseDetailPageState extends State<CourseDetailPage>
         try {
           final enrollment = await EnrollmentService().getEnrollment(
             courseId: courseId,
-            userId: authProvider.user!.id,
           );
           if (mounted) {
             setState(() => _enrollmentProgress = enrollment.progressPercent);
@@ -212,7 +232,6 @@ class _CourseDetailPageState extends State<CourseDetailPage>
 
       final enrolled = await enrollmentProvider.enrollInCourse(
         courseId: courseId,
-        userId: authProvider.user!.id,
       );
 
       if (!mounted) return;
@@ -258,14 +277,23 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     if (!mounted) return;
     final enrollmentProvider = context.read<EnrollmentProvider>();
     final courseId = int.parse(widget.courseId);
-
-    // Refresh enrollment status (backend auto-enrolled)
     final authProvider = context.read<AuthProvider>();
-    if (authProvider.user != null) {
-      await enrollmentProvider.checkEnrollmentStatus(
-        courseId: courseId,
-        userId: authProvider.user!.id,
-      );
+    final userId = authProvider.user?.id;
+
+    // Poll until backend webhook is processed (max 5 attempts × 1.5s = 7.5s)
+    if (userId != null) {
+      bool confirmed = false;
+      for (int attempt = 0; attempt < 5 && !confirmed; attempt++) {
+        if (attempt > 0) await Future.delayed(const Duration(milliseconds: 1500));
+        if (!mounted) return;
+        confirmed = await enrollmentProvider.checkEnrollmentStatus(
+          courseId: courseId,
+        );
+      }
+      // Refresh full enrollment list so Home screen reflects the new course
+      if (mounted) {
+        enrollmentProvider.fetchUserEnrollments();
+      }
     }
     if (!mounted) return;
 
@@ -844,8 +872,8 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                   context,
                                   icon: Icons.update_outlined,
                                   label: 'Cập nhật',
-                                  value: DateTime.tryParse(_course!.updatedAt!) != null 
-                                      ? DateTimeHelper.formatDate(DateTime.parse(_course!.updatedAt!)) 
+                                  value: DateTimeHelper.tryParseIso8601(_course!.updatedAt!) != null
+                                      ? DateTimeHelper.formatDate(DateTimeHelper.tryParseIso8601(_course!.updatedAt!)!)
                                       : _course!.updatedAt!,
                                   isDark: isDark,
                                   color: gradientColors[0],
@@ -990,8 +1018,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                _course!.description ??
-                                    'Chưa có mô tả chi tiết cho khóa học này.',
+                                HtmlHelper.cleanHtml(_course!.description ?? 'Chưa có mô tả chi tiết cho khóa học này.'),
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(
                                       color: isDark
