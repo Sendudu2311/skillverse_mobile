@@ -28,6 +28,7 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
   MentorAvailability? _selectedSlot;
   final int _durationMinutes = 60;
   bool _isLoading = false;
+  int _weekOffset = 0;
 
   @override
   void initState() {
@@ -37,7 +38,7 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
 
   List<DateTime> get _weekDates {
     final now = DateTime.now();
-    return List.generate(7, (i) => now.add(Duration(days: i)));
+    return List.generate(7, (i) => now.add(Duration(days: i + _weekOffset * 7)));
   }
 
   List<MentorAvailability> get _slotsForSelectedDate {
@@ -46,13 +47,12 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
       _selectedDate.month,
       _selectedDate.day,
     );
+    final now = DateTime.now();
     return widget.availability.where((a) {
-      final slotDate = DateTime(
-        a.startTime.year,
-        a.startTime.month,
-        a.startTime.day,
-      );
-      return slotDate == dateOnly;
+      final localStart = a.startTime.toLocal();
+      final slotDate = DateTime(localStart.year, localStart.month, localStart.day);
+      // Only show slots for the selected date that haven't started yet
+      return slotDate == dateOnly && localStart.isAfter(now);
     }).toList();
   }
 
@@ -157,14 +157,32 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
             Row(
               children: [
                 IconButton(
-                  onPressed: () {
-                    // Navigate to previous week
-                  },
+                  onPressed: _weekOffset == 0
+                      ? null
+                      : () {
+                          setState(() {
+                            _weekOffset--;
+                            _selectedSlot = null;
+                            _selectedDate = DateTime.now()
+                                .add(Duration(days: _weekOffset * 7));
+                          });
+                          context.read<MentorProvider>().loadAvailability(
+                            widget.mentor.id,
+                            from: DateTime.now()
+                                .add(Duration(days: _weekOffset * 7)),
+                            to: DateTime.now()
+                                .add(Duration(days: _weekOffset * 7 + 7)),
+                          );
+                        },
                   icon: Icon(
                     Icons.chevron_left,
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
+                    color: _weekOffset == 0
+                        ? (isDark
+                            ? AppTheme.darkTextSecondary.withValues(alpha: 0.3)
+                            : AppTheme.lightTextSecondary.withValues(alpha: 0.3))
+                        : (isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary),
                   ),
                   constraints: const BoxConstraints(
                     minWidth: 32,
@@ -174,7 +192,19 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
                 ),
                 IconButton(
                   onPressed: () {
-                    // Navigate to next week
+                    setState(() {
+                      _weekOffset++;
+                      _selectedSlot = null;
+                      _selectedDate = DateTime.now()
+                          .add(Duration(days: _weekOffset * 7));
+                    });
+                    context.read<MentorProvider>().loadAvailability(
+                      widget.mentor.id,
+                      from: DateTime.now()
+                          .add(Duration(days: _weekOffset * 7)),
+                      to: DateTime.now()
+                          .add(Duration(days: _weekOffset * 7 + 7)),
+                    );
                   },
                   icon: Icon(
                     Icons.chevron_right,

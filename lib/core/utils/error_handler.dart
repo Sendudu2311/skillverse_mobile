@@ -64,6 +64,13 @@ class ErrorHandler {
         return 'Nhận dữ liệu quá lâu. Vui lòng thử lại.';
 
       case DioExceptionType.badResponse:
+        final data = error.response?.data;
+        if (data is Map<String, dynamic> && data['message'] is String) {
+          final msg = data['message'] as String;
+          if (msg.isNotEmpty && !_looksLikeHtmlErrorPage(msg)) {
+            return msg;
+          }
+        }
         return _handleStatusCode(error.response?.statusCode);
 
       case DioExceptionType.cancel:

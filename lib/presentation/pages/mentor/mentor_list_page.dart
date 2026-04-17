@@ -11,6 +11,7 @@ import '../../widgets/selectable_chip_row.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/animated_list_item.dart';
+import '../../../core/utils/number_formatter.dart';
 
 class MentorListPage extends StatefulWidget {
   const MentorListPage({super.key});
@@ -239,7 +240,7 @@ class _MentorListPageState extends State<MentorListPage> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  mentor.ratingAverage!.toStringAsFixed(1),
+                                  NumberFormatter.formatRating(mentor.ratingAverage!),
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,

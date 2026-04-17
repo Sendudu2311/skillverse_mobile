@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../models/booking_dispute_models.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/error_handler.dart';
@@ -112,6 +113,30 @@ class BookingDisputeService {
         queryParameters: {'evidenceId': evidenceId, 'content': content},
       );
       return BookingDisputeResponseDto.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Upload an image/file for evidence and return its public URL.
+  /// POST /api/media/upload
+  Future<String> uploadEvidenceFile(
+    String filePath,
+    String fileName, {
+    required int actorId,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+        'actorId': actorId,
+      });
+      final response = await _apiClient.dio.post(
+        '/media/upload',
+        data: formData,
+        options: Options(headers: {'Content-Type': 'multipart/form-data'}),
+      );
+      final data = response.data as Map<String, dynamic>;
+      return data['url'] as String;
     } catch (e) {
       throw _handleError(e);
     }

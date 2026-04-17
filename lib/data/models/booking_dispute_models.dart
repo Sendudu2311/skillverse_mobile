@@ -1,6 +1,8 @@
 // Booking Dispute models — no build_runner needed (manual fromJson).
 // Mirrors backend BookingDispute, BookingDisputeEvidence, BookingDisputeResponse.
 
+import '../../core/utils/date_time_helper.dart';
+
 // ── Dispute Status ──────────────────────────────────────────────────────────
 
 enum DisputeStatus {
@@ -199,10 +201,13 @@ class BookingDisputeDto {
       adminCommissionAmount: (json['adminCommissionAmount'] as num?)
           ?.toDouble(),
       resolvedBy: json['resolvedBy'] as int?,
-      resolvedAt: json['resolvedAt'] != null
-          ? DateTime.parse(json['resolvedAt'] as String).toLocal()
-          : null,
-      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
+      resolvedAt: DateTimeHelper.tryParseIso8601(
+        json['resolvedAt'] as String?,
+      )?.toLocal(),
+      createdAt:
+          (DateTimeHelper.tryParseIso8601(json['createdAt'] as String?) ??
+                  DateTime.now())
+              .toLocal(),
     );
   }
 }
@@ -261,10 +266,13 @@ class BookingDisputeEvidenceDto {
       ),
       reviewNotes: json['reviewNotes'] as String?,
       reviewedBy: json['reviewedBy'] as int?,
-      reviewedAt: json['reviewedAt'] != null
-          ? DateTime.parse(json['reviewedAt'] as String).toLocal()
-          : null,
-      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
+      reviewedAt: DateTimeHelper.tryParseIso8601(
+        json['reviewedAt'] as String?,
+      )?.toLocal(),
+      createdAt:
+          (DateTimeHelper.tryParseIso8601(json['createdAt'] as String?) ??
+                  DateTime.now())
+              .toLocal(),
       responses: rawResponses
           .map(
             (e) =>
@@ -304,7 +312,10 @@ class BookingDisputeResponseDto {
       respondedByName: json['respondedByName'] as String? ?? '',
       content: json['content'] as String? ?? '',
       isAdminResponse: json['isAdminResponse'] as bool? ?? false,
-      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
+      createdAt:
+          (DateTimeHelper.tryParseIso8601(json['createdAt'] as String?) ??
+                  DateTime.now())
+              .toLocal(),
     );
   }
 }

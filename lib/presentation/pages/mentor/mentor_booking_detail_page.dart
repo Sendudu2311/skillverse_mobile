@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'open_dispute_sheet.dart';
 
 import '../../../data/models/mentor_models.dart';
 import '../../../core/utils/date_time_helper.dart';
@@ -162,6 +163,12 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
                         _buildFinanceCard(isDark),
                         const SizedBox(height: 16),
                         _buildTimelineCard(isDark),
+                        if (_isLearner &&
+                            _booking!.status == BookingStatus.pendingCompletion &&
+                            _booking!.disputeId == null) ...[
+                          const SizedBox(height: 16),
+                          _buildPendingCompletionBanner(isDark),
+                        ],
                         const SizedBox(height: 32),
                       ],
                     ),
@@ -193,6 +200,39 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
                       ? AppTheme.darkTextSecondary
                       : AppTheme.lightTextSecondary,
                 ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Pending Completion Banner ───────────────────────────────────────────
+
+  Widget _buildPendingCompletionBanner(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, color: AppTheme.warningColor, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Mentor đã đánh dấu hoàn tất. Bạn có thể:\n'
+              '• "Xác nhận hoàn thành" → tiền sẽ được giải phóng cho Mentor.\n'
+              '• "Khiếu nại" → chuyển sang Admin xem xét, tiền vẫn được giữ.\n'
+              'Nếu không thao tác, hệ thống sẽ tự xác nhận sau 24h.',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white70 : AppTheme.lightTextPrimary,
+                height: 1.5,
+              ),
+            ),
           ),
         ],
       ),
@@ -433,22 +473,62 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
       actions.add(const SizedBox(width: 8));
     }
 
-    // Chat
-    actions.add(
-      SizedBox(
-        width: 48,
-        child: IconButton.outlined(
-          onPressed: () {
-            // Navigate to messaging with the counterpart
-            final counterpartId =
-                _isLearner ? booking.mentorId : booking.learnerId;
-            context.push('/messaging/chat/$counterpartId?bookingId=${booking.id}');
-          },
-          icon: const Icon(Icons.chat_outlined, size: 20),
-          tooltip: 'Nhắn tin',
+    // Open Dispute — Learner only, no existing dispute, session must have ended for ONGOING/CONFIRMED
+    if (_isLearner &&
+        booking.disputeId == null &&
+        booking.canOpenDispute) {
+      actions.add(
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _isBusy ? null : _showOpenDisputeSheet,
+            icon: const Icon(Icons.gavel, size: 18),
+            label: const Text('Khiếu nại'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.warningColor,
+              side: const BorderSide(color: AppTheme.warningColor),
+            ),
+          ),
         ),
-      ),
-    );
+      );
+      actions.add(const SizedBox(width: 8));
+    }
+
+    // View existing dispute
+    if (booking.disputeId != null) {
+      actions.add(
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () =>
+                context.push('/booking-dispute/${booking.disputeId}'),
+            icon: const Icon(Icons.gavel, size: 18),
+            label: const Text('Xem khiếu nại'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.warningColor,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+      );
+      actions.add(const SizedBox(width: 8));
+    }
+
+    // Chat — only shown when chatAllowed
+    if (booking.canChat) {
+      actions.add(
+        SizedBox(
+          width: 48,
+          child: IconButton.outlined(
+            onPressed: () {
+              final counterpartId =
+                  _isLearner ? booking.mentorId : booking.learnerId;
+              context.push('/messaging/chat/$counterpartId?bookingId=${booking.id}');
+            },
+            icon: const Icon(Icons.chat_outlined, size: 20),
+            tooltip: 'Nhắn tin',
+          ),
+        ),
+      );
+    }
 
     if (actions.isEmpty) return const SizedBox.shrink();
 
@@ -476,7 +556,12 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(children: actions),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: actions,
+          ),
+        ),
       ),
     );
   }
@@ -538,6 +623,17 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
                 ? AppTheme.accentCyan
                 : AppTheme.darkTextSecondary,
           ),
+          // Completion deadline (shown when PENDING_COMPLETION)
+          if (booking.completionDeadline != null) ...[
+            _buildInfoRow(
+              isDark,
+              icon: Icons.hourglass_bottom,
+              label: 'Hạn xác nhận',
+              value: DateTimeHelper.formatDateTime(booking.completionDeadline!),
+              valueColor: AppTheme.warningColor,
+            ),
+          ],
+
           // Show meeting link if available
           if (booking.meetingLink != null) ...[
             const SizedBox(height: 8),
@@ -897,6 +993,23 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ─── Dispute ───────────────────────────────────────────────────────────
+
+  void _showOpenDisputeSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => OpenDisputeSheet(
+        bookingId: _booking!.id,
+        onSuccess: (dispute) {
+          _loadBooking();
+          context.push('/booking-dispute/${dispute.id}');
+        },
       ),
     );
   }

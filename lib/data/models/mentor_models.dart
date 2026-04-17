@@ -324,6 +324,17 @@ class MentorBooking {
     return false;
   }
 
+  /// Check if a dispute can be opened.
+  /// PENDING_COMPLETION: always allowed.
+  /// ONGOING/CONFIRMED: only after endTime.
+  bool get canOpenDispute {
+    if (status == BookingStatus.pendingCompletion) return true;
+    if (status == BookingStatus.ongoing || status == BookingStatus.confirmed) {
+      return DateTime.now().isAfter(endTime);
+    }
+    return false;
+  }
+
   /// Check if chat is allowed. Prefer backend-provided chatAllowed when present.
   bool get canChat {
     if (chatAllowed != null) return chatAllowed!;

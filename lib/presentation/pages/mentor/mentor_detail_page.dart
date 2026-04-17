@@ -9,6 +9,7 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/error_state_widget.dart';
 import 'mentor_booking_sheet.dart';
 import '../../providers/auth_provider.dart';
+import '../../../core/utils/number_formatter.dart';
 
 class MentorDetailPage extends StatefulWidget {
   final int mentorId;
@@ -263,7 +264,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
             context,
             icon: Icons.star,
             label: 'Đánh giá',
-            value: mentor.ratingAverage?.toStringAsFixed(1) ?? '0.0',
+            value: mentor.ratingAverage != null ? NumberFormatter.formatRating(mentor.ratingAverage!) : '0,0',
             subValue: '(${mentor.ratingCount ?? 0})',
             iconColor: AppTheme.warningColor,
             isDark: isDark,

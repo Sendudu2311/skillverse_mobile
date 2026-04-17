@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/mentor_models.dart';
 import '../../data/services/mentor_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/string_helper.dart';
 
 /// Manages mentor discovery, detail, availability, and favorites.
 ///
@@ -114,20 +115,20 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
     var filtered = List<MentorProfile>.from(_mentors);
 
     if (_searchQuery != null && _searchQuery!.isNotEmpty) {
+      final q = StringHelper.removeDiacritics(_searchQuery!.toLowerCase());
       filtered = filtered.where((m) {
-        final name = m.fullName.toLowerCase();
-        final spec = (m.specialization ?? '').toLowerCase();
-        final skills = m.skills?.join(' ').toLowerCase() ?? '';
-        return name.contains(_searchQuery!) ||
-            spec.contains(_searchQuery!) ||
-            skills.contains(_searchQuery!);
+        normalize(String s) => StringHelper.removeDiacritics(s.toLowerCase());
+        return normalize(m.fullName).contains(q) ||
+            normalize(m.specialization ?? '').contains(q) ||
+            normalize(m.skills?.join(' ') ?? '').contains(q);
       }).toList();
     }
 
     if (_skillFilter != null && _skillFilter!.isNotEmpty) {
+      final f = StringHelper.removeDiacritics(_skillFilter!.toLowerCase());
       filtered = filtered.where((m) {
         return m.skills?.any(
-              (s) => s.toLowerCase().contains(_skillFilter!.toLowerCase()),
+              (s) => StringHelper.removeDiacritics(s.toLowerCase()).contains(f),
             ) ??
             false;
       }).toList();
@@ -164,11 +165,32 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
     try {
       final startDate = from ?? DateTime.now();
       final endDate = to ?? startDate.add(const Duration(days: 7));
-      _availability = await _mentorService.getAvailability(
-        mentorId,
-        from: startDate,
-        to: endDate,
-      );
+
+      final results = await Future.wait([
+        _mentorService.getAvailability(mentorId, from: startDate, to: endDate),
+        _mentorService.getMentorActiveBookings(
+          mentorId,
+          from: startDate,
+          to: endDate,
+        ),
+      ]);
+
+      final rawAvailability = results[0] as List<MentorAvailability>;
+      final activeBookings = results[1] as List<MentorBooking>;
+
+      final now = DateTime.now();
+      _availability = rawAvailability.where((slot) {
+        // Exclude slots that are already in the past
+        if (slot.startTime.isBefore(now)) return false;
+
+        // Exclude slots that overlap with any active booking
+        final hasOverlap = activeBookings.any((booking) {
+          return slot.startTime.isBefore(booking.endTime) &&
+              slot.endTime.isAfter(booking.startTime);
+        });
+
+        return !hasOverlap;
+      }).toList();
     } catch (e) {
       debugPrint('Error loading availability: $e');
       _availability = [];

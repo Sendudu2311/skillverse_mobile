@@ -27,7 +27,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MentorBookingProvider>().loadBookings(refresh: true);
@@ -81,6 +81,10 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                   b.status == BookingStatus.refunded,
             )
             .toList();
+      case 3: // Tranh chấp
+        return bookings
+            .where((b) => b.status == BookingStatus.disputed)
+            .toList();
       default:
         return bookings;
     }
@@ -98,10 +102,13 @@ class _MyBookingsPageState extends State<MyBookingsPage>
         onBack: () => context.pop(),
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.center,
           tabs: const [
             Tab(text: 'Sắp tới'),
             Tab(text: 'Hoàn thành'),
             Tab(text: 'Đã hủy'),
+            Tab(text: 'Tranh chấp'),
           ],
           labelColor: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
           unselectedLabelColor: isDark
@@ -129,6 +136,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               _buildBookingList(context, provider, 0, isDark),
               _buildBookingList(context, provider, 1, isDark),
               _buildBookingList(context, provider, 2, isDark),
+              _buildBookingList(context, provider, 3, isDark),
             ],
           );
         },
@@ -380,6 +388,24 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                       ),
                     ),
                 ],
+              ),
+            ],
+            // Dispute shortcut
+            if (booking.status == BookingStatus.disputed &&
+                booking.disputeId != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () =>
+                      context.push('/booking-dispute/${booking.disputeId}'),
+                  icon: const Icon(Icons.gavel, size: 16),
+                  label: const Text('Xem khiếu nại'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.warningColor,
+                    side: const BorderSide(color: AppTheme.warningColor),
+                  ),
+                ),
               ),
             ],
             // Meeting link
