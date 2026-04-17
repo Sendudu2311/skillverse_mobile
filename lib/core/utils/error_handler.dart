@@ -13,6 +13,11 @@ class ErrorHandler {
 
     // Handle AppException first (from ApiClient)
     if (error is AppException) {
+      if (error is ServerException &&
+          _looksLikeHtmlErrorPage(error.message) &&
+          error.statusCode != null) {
+        return _handleStatusCode(error.statusCode);
+      }
       return error.message;
     }
 
@@ -34,6 +39,16 @@ class ErrorHandler {
 
     // Default error message
     return error.toString().replaceFirst('Exception: ', '');
+  }
+
+  static bool _looksLikeHtmlErrorPage(String message) {
+    final normalized = message.trim().toLowerCase();
+    return normalized.startsWith('<!doctype html') ||
+        normalized.startsWith('<html') ||
+        normalized.contains('<body') ||
+        normalized.contains('</html>') ||
+        normalized.contains('nginx/') ||
+        normalized.contains('<title>');
   }
 
   /// Handle Dio-specific errors (network, API errors)

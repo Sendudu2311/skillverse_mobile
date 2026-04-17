@@ -8,7 +8,7 @@ import '../../data/services/auth_service.dart';
 
 /// Callback type for triggering force logout from the interceptor.
 /// Set by AuthProvider during app initialization.
-typedef ForceLogoutCallback = Future<void> Function();
+typedef ForceLogoutCallback = Future<void> Function([String? reason]);
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
@@ -26,7 +26,9 @@ class ApiClient {
   /// Lock to prevent concurrent refresh attempts.
   /// When a 401 occurs, the first request starts the refresh.
   /// Subsequent 401s wait for the same refresh to complete.
-  Completer<bool>? _refreshLock;
+  /// Lock to prevent concurrent refresh attempts.
+  /// Returns `null` on success, or an error message string on failure.
+  Completer<String?>? _refreshLock;
 
   /// Auth endpoints that should NOT trigger token refresh on 401
   static const _authPaths = [
@@ -86,9 +88,9 @@ class ApiClient {
             );
 
             if (!isAuthEndpoint) {
-              final refreshed = await _attemptTokenRefresh();
-              if (refreshed) {
-                // Retry original request with new token
+              final failureReason = await _attemptTokenRefresh();
+              if (failureReason == null) {
+                // Refresh succeeded — retry original request with new token
                 try {
                   final retryResponse = await _retryRequest(
                     error.requestOptions,
@@ -99,10 +101,12 @@ class ApiClient {
                   debugPrint('🔄 Retry after refresh failed: $retryError');
                 }
               } else {
-                // Refresh failed — force logout
-                debugPrint('🚪 Token refresh failed — forcing logout');
+                // Refresh failed — force logout with reason
+                debugPrint(
+                  '🚪 Token refresh failed — forcing logout: $failureReason',
+                );
                 if (onForceLogout != null) {
-                  await onForceLogout!();
+                  await onForceLogout!(failureReason);
                 }
               }
             }
@@ -123,7 +127,8 @@ class ApiClient {
 
   /// Attempt to refresh the access token.
   /// Uses a lock so concurrent 401s share a single refresh attempt.
-  Future<bool> _attemptTokenRefresh() async {
+  /// Returns `null` on success, or a user-facing error message on failure.
+  Future<String?> _attemptTokenRefresh() async {
     // If a refresh is already in progress, wait for it
     if (_refreshLock != null) {
       debugPrint('🔄 Refresh already in progress, waiting...');
@@ -131,7 +136,7 @@ class ApiClient {
     }
 
     // Start a new refresh
-    _refreshLock = Completer<bool>();
+    _refreshLock = Completer<String?>();
     debugPrint('🔄 Starting token refresh...');
 
     try {
@@ -141,17 +146,22 @@ class ApiClient {
       if (newToken != null) {
         _authToken = newToken;
         debugPrint('✅ Token refreshed successfully');
-        _refreshLock!.complete(true);
-        return true;
+        _refreshLock!.complete(null); // null = success
+        return null;
       } else {
         debugPrint('❌ Token refresh returned null');
-        _refreshLock!.complete(false);
-        return false;
+        const reason = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        _refreshLock!.complete(reason);
+        return reason;
       }
     } catch (e) {
       debugPrint('❌ Token refresh error: $e');
-      _refreshLock!.complete(false);
-      return false;
+      // Preserve the user-facing message from AuthService/ApiException
+      final reason = (e is AppException)
+          ? e.message
+          : 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+      _refreshLock!.complete(reason);
+      return reason;
     } finally {
       _refreshLock = null;
     }

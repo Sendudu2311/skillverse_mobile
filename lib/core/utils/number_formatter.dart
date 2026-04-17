@@ -75,6 +75,14 @@ class NumberFormatter {
     }
   }
 
+  /// Format score: show integer if whole number, else 1 decimal place
+  /// Example: 85.0 -> "85", 76.5 -> "76.5", null -> "0"
+  static String formatScore(double? score) {
+    if (score == null) return '0';
+    if (score == score.truncateToDouble()) return score.toInt().toString();
+    return score.toStringAsFixed(1);
+  }
+
   /// Format rating
   /// Example: 4.5 -> "4,5", 4.0 -> "4,0"
   static String formatRating(double rating) {
