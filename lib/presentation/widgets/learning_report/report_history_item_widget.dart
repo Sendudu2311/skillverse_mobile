@@ -59,10 +59,10 @@ class ReportHistoryItemWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // Icon
-                Container(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 380;
+                final leading = Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: typeColor.withValues(alpha: 0.12),
@@ -73,108 +73,81 @@ class ReportHistoryItemWidget extends StatelessWidget {
                     color: typeColor,
                     size: 22,
                   ),
-                ),
-                const SizedBox(width: 12),
-                // Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                );
+
+                final details = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (isCompact) ...[
+                      Text(
+                        'Báo cáo #${report.id ?? 'N/A'}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _buildTypeBadge(typeLabel, typeColor),
+                    ] else
                       Row(
                         children: [
-                          Text(
-                            'Báo cáo #${report.id ?? 'N/A'}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: isDark
-                                  ? AppTheme.darkTextPrimary
-                                  : AppTheme.lightTextPrimary,
+                          Expanded(
+                            child: Text(
+                              'Báo cáo #${report.id ?? 'N/A'}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: isDark
+                                    ? AppTheme.darkTextPrimary
+                                    : AppTheme.lightTextPrimary,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: typeColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              typeLabel,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: typeColor,
-                              ),
-                            ),
+                          Flexible(
+                            child: _buildTypeBadge(typeLabel, typeColor),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 11,
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.lightTextSecondary,
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 6,
+                      children: [
+                        _buildMetaItem(
+                          icon: Icons.calendar_today_outlined,
+                          text: _formatDateTime(report.generatedAt ?? ''),
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                        _buildMetaItem(
+                          icon: Icons.speed,
+                          text: '${report.overallProgress ?? 0}%',
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                        if (trendLabel.isNotEmpty)
+                          _buildMetaItem(
+                            icon: Icons.trending_up,
+                            text: trendLabel,
+                            color: trendColor,
+                            isHighlighted: true,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _formatDateTime(report.generatedAt ?? ''),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark
-                                  ? AppTheme.darkTextSecondary
-                                  : AppTheme.lightTextSecondary,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Icon(
-                            Icons.speed,
-                            size: 11,
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.lightTextSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${report.overallProgress ?? 0}%',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark
-                                  ? AppTheme.darkTextSecondary
-                                  : AppTheme.lightTextSecondary,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          if (trendLabel.isNotEmpty) ...[
-                            Icon(
-                              Icons.trending_up,
-                              size: 11,
-                              color: trendColor,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              trendLabel,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: trendColor,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // Actions
-                Row(
+                      ],
+                    ),
+                  ],
+                );
+
+                final actions = Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
@@ -207,12 +180,86 @@ class ReportHistoryItemWidget extends StatelessWidget {
                           : AppTheme.lightTextSecondary,
                     ),
                   ],
-                ),
-              ],
+                );
+
+                if (isCompact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          leading,
+                          const SizedBox(width: 12),
+                          Expanded(child: details),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Align(alignment: Alignment.centerRight, child: actions),
+                    ],
+                  );
+                }
+
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    leading,
+                    const SizedBox(width: 12),
+                    Expanded(child: details),
+                    const SizedBox(width: 8),
+                    actions,
+                  ],
+                );
+              },
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTypeBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetaItem({
+    required IconData icon,
+    required String text,
+    required Color color,
+    bool isHighlighted = false,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 11, color: color),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isHighlighted ? FontWeight.w500 : FontWeight.w400,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 

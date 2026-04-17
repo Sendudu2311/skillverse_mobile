@@ -49,26 +49,30 @@ class SkillVerseAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget _buildTitle(BuildContext context) {
     if (useGradientTitle) {
       return Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           if (icon != null) ...[
             Icon(icon, color: AppTheme.primaryBlueDark, size: 28),
             const SizedBox(width: 8),
           ],
-          ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              colors:
-                  gradientColors ??
-                  const [AppTheme.primaryBlueDark, AppTheme.accentCyan],
-            ).createShader(bounds),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
-                color: Colors.white,
-                letterSpacing: 2,
+          Expanded(
+            child: ShaderMask(
+              shaderCallback: (bounds) => LinearGradient(
+                colors:
+                    gradientColors ??
+                    const [AppTheme.primaryBlueDark, AppTheme.accentCyan],
+              ).createShader(bounds),
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  color: Colors.white,
+                  letterSpacing: 2,
+                ),
               ),
             ),
           ),
@@ -77,6 +81,6 @@ class SkillVerseAppBar extends StatelessWidget implements PreferredSizeWidget {
     }
 
     // Simple title
-    return Text(title);
+    return Text(title, maxLines: 1, overflow: TextOverflow.ellipsis);
   }
 }

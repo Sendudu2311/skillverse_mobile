@@ -8,7 +8,7 @@ import '../../../data/services/wallet_service.dart';
 
 /// Bottom sheet for creating a withdrawal request
 class WithdrawSheet extends StatefulWidget {
-  final int currentCashBalance;
+  final double currentCashBalance;
   final bool hasBankAccount;
   final VoidCallback onSuccess;
 
@@ -162,7 +162,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
                             ),
                           ),
                           Text(
-                            'Số dư: ${NumberFormatter.formatCurrency(widget.currentCashBalance.toDouble(), currency: 'đ')}',
+                            'Số dư: ${NumberFormatter.formatCurrency(widget.currentCashBalance, currency: 'đ')}',
                             style: TextStyle(
                               fontSize: 13,
                               fontFamily: 'monospace',

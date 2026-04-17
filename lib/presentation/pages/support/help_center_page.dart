@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/string_helper.dart';
 import '../../widgets/skillverse_app_bar.dart';
 
 class HelpCenterPage extends StatefulWidget {
@@ -16,26 +17,47 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
     {
       'title': 'Tài Khoản & Bảo Mật',
       'faqs': [
-        {'q': 'Làm thế nào để thay đổi mật khẩu?', 'a': 'Vào Cài đặt > Bảo mật > Đổi mật khẩu.'},
-        {'q': 'Quên mật khẩu thì sao?', 'a': 'Sử dụng tính năng Quên mật khẩu để đặt lại.'}
-      ]
+        {
+          'q': 'Làm thế nào để thay đổi mật khẩu?',
+          'a': 'Vào Cài đặt > Bảo mật > Đổi mật khẩu.',
+        },
+        {
+          'q': 'Quên mật khẩu thì sao?',
+          'a': 'Sử dụng tính năng Quên mật khẩu để đặt lại.',
+        },
+      ],
     },
     {
       'title': 'Khóa Học & Học Tập',
       'faqs': [
-        {'q': 'Làm sao để tìm khóa học phù hợp?', 'a': 'Dùng bộ lọc hoặc tìm kiếm theo chủ đề.'},
-      ]
-    }
+        {
+          'q': 'Làm sao để tìm khóa học phù hợp?',
+          'a': 'Dùng bộ lọc hoặc tìm kiếm theo chủ đề.',
+        },
+      ],
+    },
   ];
 
   List<Map<String, dynamic>> get _filtered => _search.isEmpty
       ? _categories
       : _categories
-          .map((c) => {
+            .map(
+              (c) => {
                 'title': c['title'],
-                'faqs': (c['faqs'] as List).where((f) => (f['q'] as String).toLowerCase().contains(_search.toLowerCase()) || (f['a'] as String).toLowerCase().contains(_search.toLowerCase())).toList()
-              })
-          .toList();
+                'faqs': (c['faqs'] as List)
+                    .where(
+                      (f) =>
+                          StringHelper.removeDiacritics(
+                            f['q'] as String,
+                          ).contains(StringHelper.removeDiacritics(_search)) ||
+                          StringHelper.removeDiacritics(
+                            f['a'] as String,
+                          ).contains(StringHelper.removeDiacritics(_search)),
+                    )
+                    .toList(),
+              },
+            )
+            .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +68,10 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
         child: Column(
           children: [
             TextField(
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Tìm kiếm câu hỏi...'),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'Tìm kiếm câu hỏi...',
+              ),
               onChanged: (v) => setState(() => _search = v),
             ),
             const SizedBox(height: 12),
@@ -60,7 +85,14 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     child: ExpansionTile(
                       title: Text(cat['title']),
-                      children: faqs.map<Widget>((f) => ListTile(title: Text(f['q']), subtitle: Text(f['a']))).toList(),
+                      children: faqs
+                          .map<Widget>(
+                            (f) => ListTile(
+                              title: Text(f['q']),
+                              subtitle: Text(f['a']),
+                            ),
+                          )
+                          .toList(),
                     ),
                   );
                 },
@@ -70,9 +102,21 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: const [
-                _SupportCard(icon: Icons.mail, title: 'Email', detail: 'support@skillverse.com'),
-                _SupportCard(icon: Icons.phone, title: 'Hotline', detail: '1800 1234'),
-                _SupportCard(icon: Icons.chat_bubble_outline, title: 'Live Chat', detail: '8:00 - 22:00'),
+                _SupportCard(
+                  icon: Icons.mail,
+                  title: 'Email',
+                  detail: 'support@skillverse.com',
+                ),
+                _SupportCard(
+                  icon: Icons.phone,
+                  title: 'Hotline',
+                  detail: '1800 1234',
+                ),
+                _SupportCard(
+                  icon: Icons.chat_bubble_outline,
+                  title: 'Live Chat',
+                  detail: '8:00 - 22:00',
+                ),
               ],
             ),
           ],
@@ -86,7 +130,11 @@ class _SupportCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String detail;
-  const _SupportCard({required this.icon, required this.title, required this.detail});
+  const _SupportCard({
+    required this.icon,
+    required this.title,
+    required this.detail,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +146,12 @@ class _SupportCard extends StatelessWidget {
           padding: const EdgeInsets.all(8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: [Icon(icon), const SizedBox(height: 8), Text(title, style: const TextStyle(fontWeight: FontWeight.bold)), Text(detail, textAlign: TextAlign.center)],
+            children: [
+              Icon(icon),
+              const SizedBox(height: 8),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(detail, textAlign: TextAlign.center),
+            ],
           ),
         ),
       ),

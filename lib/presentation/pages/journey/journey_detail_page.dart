@@ -6,6 +6,7 @@ import '../../providers/journey_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/journey_models.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../widgets/ai_generation_loading_view.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/skeleton_loaders.dart';
@@ -432,16 +433,23 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
         child: Column(
           children: [
             const SizedBox(height: 8),
-            CommonLoading(size: 56, color: AppTheme.primaryBlueDark),
-            const SizedBox(height: 16),
-            Text(
-              'AI đang phân tích lĩnh vực và tạo bài đánh giá phù hợp.\nVui lòng chờ trong giây lát...',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
-              ),
+            const AiGenerationLoadingView(
+              speech: 'Meowl đang soạn bài đánh giá mở màn cho bạn nè! 🧪',
+              title: 'Đang tạo bài test đầu vào',
+              description:
+                  'AI đang phân tích lĩnh vực để tạo bộ câu hỏi phù hợp với hành trình của bạn.',
+              etaText: 'Thường mất khoảng 20-40 giây',
+              steps: [
+                ('Đọc lĩnh vực', Icons.travel_explore_outlined),
+                ('Phân tích AI', Icons.psychology_outlined),
+                ('Soạn câu hỏi', Icons.quiz_outlined),
+                ('Sẵn sàng', Icons.check_circle_outline),
+              ],
+              avatarSize: 96,
+              topSpacing: 8,
+              padding: EdgeInsets.zero,
+              useSafeArea: false,
+              scrollable: false,
             ),
             if (provider.hasError) ...[
               const SizedBox(height: 16),
@@ -486,6 +494,32 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
               ),
             ],
           ],
+        ),
+      );
+    }
+
+    if (isGenerating) {
+      return _sectionCard(
+        isDark: isDark,
+        icon: Icons.auto_awesome,
+        title: 'AI đang tạo bài test...',
+        child: const AiGenerationLoadingView(
+          speech: 'Meowl đang dựng bài test cho bạn ngay đây! ✨',
+          title: 'Đang tạo bài test AI',
+          description:
+              'AI đang chọn độ khó và biên soạn câu hỏi đánh giá phù hợp với năng lực hiện tại.',
+          etaText: 'Thường mất khoảng 20-40 giây',
+          steps: [
+            ('Đọc mục tiêu', Icons.flag_outlined),
+            ('Phân tích mức độ', Icons.insights_outlined),
+            ('Tạo câu hỏi', Icons.quiz_outlined),
+            ('Hoàn thiện', Icons.check_circle_outline),
+          ],
+          avatarSize: 96,
+          topSpacing: 8,
+          padding: EdgeInsets.zero,
+          useSafeArea: false,
+          scrollable: false,
         ),
       );
     }
@@ -933,16 +967,34 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
           isDark: isDark,
           icon: Icons.map,
           title: 'Tiếp theo',
-          child: Column(
-            children: [
-              const Text(
-                'AI sẽ tạo lộ trình học tập dựa trên kết quả đánh giá.',
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: isGenerating
-                    ? null
-                    : () async {
+          child: isGenerating
+              ? const AiGenerationLoadingView(
+                  speech:
+                      'Meowl đang ghép lộ trình học tiếp theo cho bạn đó! 🚀',
+                  title: 'Đang tạo lộ trình AI',
+                  description:
+                      'AI đang dựa trên kết quả đánh giá để đề xuất các bước học phù hợp tiếp theo.',
+                  etaText: 'Thường mất khoảng 30-60 giây',
+                  steps: [
+                    ('Đọc kết quả', Icons.analytics_outlined),
+                    ('Phân tích khoảng trống', Icons.psychology_outlined),
+                    ('Xếp mốc học', Icons.route_outlined),
+                    ('Hoàn thiện', Icons.check_circle_outline),
+                  ],
+                  avatarSize: 96,
+                  topSpacing: 8,
+                  padding: EdgeInsets.zero,
+                  useSafeArea: false,
+                  scrollable: false,
+                )
+              : Column(
+                  children: [
+                    const Text(
+                      'AI sẽ tạo lộ trình học tập dựa trên kết quả đánh giá.',
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () async {
                         try {
                           await provider.generateRoadmap(journey.id);
                         } catch (e) {
@@ -954,17 +1006,15 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                           }
                         }
                       },
-                icon: isGenerating
-                    ? CommonLoading.button()
-                    : const Icon(Icons.auto_awesome),
-                label: Text(isGenerating ? 'Đang tạo...' : 'Tạo lộ trình AI'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlueDark,
-                  foregroundColor: Colors.white,
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('Tạo lộ trình AI'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlueDark,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ],
     );

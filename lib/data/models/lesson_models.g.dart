@@ -143,10 +143,10 @@ CourseLearningRevisionInfoDto _$CourseLearningRevisionInfoDtoFromJson(
   latestRevisionId: (json['latestRevisionId'] as num?)?.toInt(),
   upgradePolicy: json['upgradePolicy'] as String?,
   hasNewerRevision: json['hasNewerRevision'] as bool? ?? false,
-  impactedItems: (json['impactedItems'] as List<dynamic>?)
+  impactedItems:
+      (json['impactedItems'] as List<dynamic>?)
           ?.map(
-            (e) =>
-                ImpactedLearningItemDto.fromJson(e as Map<String, dynamic>),
+            (e) => ImpactedLearningItemDto.fromJson(e as Map<String, dynamic>),
           )
           .toList() ??
       const [],
@@ -162,7 +162,7 @@ Map<String, dynamic> _$CourseLearningRevisionInfoDtoToJson(
   'latestRevisionId': instance.latestRevisionId,
   'upgradePolicy': instance.upgradePolicy,
   'hasNewerRevision': instance.hasNewerRevision,
-  'impactedItems': instance.impactedItems.map((e) => e.toJson()).toList(),
+  'impactedItems': instance.impactedItems,
 };
 
 LessonProgressDto _$LessonProgressDtoFromJson(Map<String, dynamic> json) =>

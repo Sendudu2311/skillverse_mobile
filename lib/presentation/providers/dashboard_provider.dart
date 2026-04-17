@@ -32,7 +32,7 @@ class DashboardProvider extends ChangeNotifier with LoadingStateProviderMixin {
 
   // Computed getters for UI
   int get coinBalance => wallet?.coinBalance ?? 0;
-  int get cashBalance => wallet?.cashBalance ?? 0;
+  double get cashBalance => wallet?.cashBalance ?? 0;
 
   int get currentStreak => usageStats?.currentStreak ?? 0;
   int get longestStreak => usageStats?.longestStreak ?? 0;

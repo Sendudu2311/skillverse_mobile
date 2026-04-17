@@ -4,8 +4,8 @@ import '../../providers/roadmap_generate_provider.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/ai_generation_loading_view.dart';
 import '../../widgets/skillverse_app_bar.dart';
-import '../../widgets/common_loading.dart';
 import '../../widgets/selectable_chip_row.dart';
 import '../../../data/models/roadmap_models.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +20,7 @@ class RoadmapGeneratePage extends StatefulWidget {
 class _RoadmapGeneratePageState extends State<RoadmapGeneratePage> {
   int _selectedModeIndex = 0;
   final _formKey = GlobalKey<FormState>();
+  RoadmapGenerateProvider? _providerRef;
 
   // Form fields
   final _goalController = TextEditingController();
@@ -59,9 +60,31 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _providerRef = context.read<RoadmapGenerateProvider>();
+      _providerRef!.addListener(_onProviderChanged);
+      // Handle case where generation completed while user was away
+      _onProviderChanged();
+    });
+  }
+
+  @override
   void dispose() {
+    _providerRef?.removeListener(_onProviderChanged);
     _goalController.dispose();
     super.dispose();
+  }
+
+  void _onProviderChanged() {
+    if (!mounted) return;
+    final result = _providerRef?.lastResult;
+    if (result != null) {
+      _providerRef?.clearLastResult();
+      context.go('/roadmap/${result.sessionId}');
+    }
   }
 
   @override
@@ -77,8 +100,8 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage> {
       body: SafeArea(
         child: Consumer<RoadmapGenerateProvider>(
           builder: (context, provider, child) {
-            if (provider.isGenerating) {
-              return _buildGeneratingState(context, isDark);
+            if (provider.isBusy) {
+              return _buildLoadingState(context, provider.phase, isDark);
             }
 
             return SingleChildScrollView(
@@ -630,62 +653,41 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage> {
     );
   }
 
-  Widget _buildGeneratingState(BuildContext context, bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppTheme.primaryBlue.withValues(alpha: 0.1),
-                  AppTheme.secondaryPurple.withValues(alpha: 0.1),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(100),
-            ),
-            child: const CommonLoading(),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Đang tạo lộ trình...',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isDark
-                  ? AppTheme.darkTextPrimary
-                  : AppTheme.lightTextPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Gemini AI đang phân tích và tạo lộ trình cá nhân hóa cho bạn',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Quá trình này có thể mất 30-60 giây',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: isDark
-                  ? AppTheme.darkTextSecondary.withValues(alpha: 0.6)
-                  : AppTheme.lightTextSecondary.withValues(alpha: 0.6),
-            ),
-          ),
+  Widget _buildLoadingState(
+    BuildContext context,
+    GenerationPhase phase,
+    bool isDark,
+  ) {
+    if (phase == GenerationPhase.validating) {
+      return const AiGenerationLoadingView(
+        speech: 'Meowl đang kiểm tra mục tiêu của bạn... 🔍',
+        title: 'Đang kiểm tra yêu cầu',
+        description: 'Xác thực mục tiêu học tập trước khi AI bắt đầu tạo lộ trình.',
+        etaText: 'Chỉ mất vài giây',
+        steps: [
+          ('Phân tích mục tiêu', Icons.flag_outlined),
+          ('Kiểm tra tính khả thi', Icons.verified_outlined),
         ],
-      ),
+      );
+    }
+    return const AiGenerationLoadingView(
+      speech: 'Meowl đang vẽ lộ trình học tập cho bạn nè! 🗺️',
+      title: 'Đang tạo lộ trình học tập',
+      description:
+          'Gemini AI đang phân tích mục tiêu và ghép các mốc học phù hợp với bạn.',
+      etaText: 'Quá trình này có thể mất 30-60 giây',
+      steps: [
+        ('Đọc mục tiêu', Icons.flag_outlined),
+        ('Phân tích AI', Icons.psychology_outlined),
+        ('Xây lộ trình', Icons.route_outlined),
+        ('Hoàn thiện', Icons.auto_awesome),
+      ],
     );
   }
 
-  Future<void> _onGenerate() async {
+  void _onGenerate() {
     if (!_formKey.currentState!.validate()) return;
 
-    // Check authentication
     final authProvider = context.read<AuthProvider>();
     if (!authProvider.isAuthenticated) {
       ErrorHandler.showErrorSnackBar(
@@ -698,11 +700,6 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage> {
 
     final provider = context.read<RoadmapGenerateProvider>();
 
-    // Clear previous results
-    provider.clearValidationResults();
-    provider.clearGenerationError();
-
-    // Create request
     final request = GenerateRoadmapRequest(
       goal: _goalController.text.trim(),
       duration: _selectedDuration,
@@ -712,26 +709,13 @@ class _RoadmapGeneratePageState extends State<RoadmapGeneratePage> {
       dailyTime: _dailyTime,
       background: _background,
       targetEnvironment: _targetEnvironment,
-      // Map goal to specific fields based on mode
       skillName: _selectedModeIndex == 0 ? _goalController.text.trim() : null,
       targetRole: _selectedModeIndex == 1 ? _goalController.text.trim() : null,
     );
 
-    // Pre-validate
-    final validationResults = await provider.preValidate(request);
-
-    // Check for blocking errors
-    final hasErrors = validationResults.any((r) => r.isError);
-    if (hasErrors) {
-      return; // Don't proceed if there are errors
-    }
-
-    // Generate roadmap
-    final roadmap = await provider.generateRoadmap(request);
-
-    if (roadmap != null && mounted) {
-      // Navigate to the new roadmap detail
-      context.go('/roadmap/${roadmap.sessionId}');
-    }
+    // Single pipeline: validate → generate, loading screen appears immediately.
+    // Navigation on success is handled by _onProviderChanged listener,
+    // so Back + re-enter works correctly.
+    provider.startFullGeneration(request);
   }
 }

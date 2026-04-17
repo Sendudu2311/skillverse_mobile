@@ -2,18 +2,24 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'wallet_models.g.dart';
 
+double _toDouble(dynamic v) => (v as num).toDouble();
+double? _toDoubleOrNull(dynamic v) => v == null ? null : (v as num).toDouble();
+
 // ============================================================================
 // WALLET STATISTICS
 // ============================================================================
 
 @JsonSerializable()
 class WalletStatistics {
-  final int totalDeposited;
-  final int totalWithdrawn;
+  @JsonKey(fromJson: _toDouble)
+  final double totalDeposited;
+  @JsonKey(fromJson: _toDouble)
+  final double totalWithdrawn;
   final int totalCoinsEarned;
   final int totalCoinsSpent;
   final int transactionCount;
   final int withdrawalCount;
+  @JsonKey(fromJson: _toDouble)
   final double avgTransactionAmount;
   final String? lastTransactionDate;
   final String? lastWithdrawalDate;
@@ -35,7 +41,7 @@ class WalletStatistics {
   Map<String, dynamic> toJson() => _$WalletStatisticsToJson(this);
 
   /// Net cash flow = totalDeposited - totalWithdrawn
-  int get netCashFlow => totalDeposited - totalWithdrawn;
+  double get netCashFlow => totalDeposited - totalWithdrawn;
 }
 
 // ============================================================================
@@ -49,16 +55,19 @@ class WalletTransaction {
   final String transactionType;
   final String? transactionTypeName;
   final String currencyType;
-  final int? cashAmount;
+  @JsonKey(fromJson: _toDoubleOrNull)
+  final double? cashAmount;
   final int? coinAmount;
-  final int? cashBalanceAfter;
+  @JsonKey(fromJson: _toDoubleOrNull)
+  final double? cashBalanceAfter;
   final int? coinBalanceAfter;
   final String description;
   final String? notes;
   final String? referenceType;
   final String? referenceId;
   final String status;
-  final int? fee;
+  @JsonKey(fromJson: _toDoubleOrNull)
+  final double? fee;
   final String createdAt;
   final String? processedAt;
   final bool? isCredit;
@@ -70,16 +79,16 @@ class WalletTransaction {
     required this.transactionType,
     this.transactionTypeName,
     required this.currencyType,
-    this.cashAmount,
+    this.cashAmount,     // double?
     this.coinAmount,
-    this.cashBalanceAfter,
+    this.cashBalanceAfter,   // double?
     this.coinBalanceAfter,
     required this.description,
     this.notes,
     this.referenceType,
     this.referenceId,
     required this.status,
-    this.fee,
+    this.fee,            // double?
     required this.createdAt,
     this.processedAt,
     this.isCredit,
@@ -91,7 +100,7 @@ class WalletTransaction {
   Map<String, dynamic> toJson() => _$WalletTransactionToJson(this);
 
   /// Display amount: prefer cashAmount, fallback to coinAmount
-  int get displayAmount => cashAmount ?? coinAmount ?? 0;
+  double get displayAmount => cashAmount ?? (coinAmount ?? 0).toDouble();
 
   /// Whether this transaction is a credit (money in)
   bool get isCreditTransaction {

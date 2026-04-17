@@ -26,6 +26,46 @@ class StatsGridWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final studyHours = metrics?.studyHours ?? 0;
     final tasksCompleted = metrics?.tasksCompleted ?? 0;
+    final statCards = [
+      _StatCard(
+        icon: Icons.speed,
+        iconColor: AppTheme.primaryBlueDark,
+        gradientColors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
+        value: '$overallProgress%',
+        label: 'Tiến độ',
+        isPrimary: true,
+        progress: overallProgress,
+        isDark: isDark,
+        delay: 0,
+      ),
+      _StatCard(
+        icon: Icons.schedule,
+        iconColor: AppTheme.accentCyan,
+        gradientColors: [AppTheme.accentCyan, const Color(0xFF06B6D4)],
+        value: '${studyHours}h',
+        label: 'Giờ học',
+        isDark: isDark,
+        delay: 1,
+      ),
+      _StatCard(
+        icon: Icons.local_fire_department,
+        iconColor: Colors.orange,
+        gradientColors: [Colors.orange, Colors.deepOrange],
+        value: '${streakDisplay.emoji} ${streakDisplay.value}',
+        label: streakDisplay.description,
+        isDark: isDark,
+        delay: 2,
+      ),
+      _StatCard(
+        icon: Icons.task_alt,
+        iconColor: AppTheme.successColor,
+        gradientColors: [AppTheme.successColor, const Color(0xFF059669)],
+        value: '$tasksCompleted',
+        label: 'Tasks hoàn thành',
+        isDark: isDark,
+        delay: 3,
+      ),
+    ];
 
     return GlassCard(
       child: Padding(
@@ -61,71 +101,23 @@ class StatsGridWidget extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.speed,
-                    iconColor: AppTheme.primaryBlueDark,
-                    gradientColors: [
-                      AppTheme.primaryBlueDark,
-                      AppTheme.accentCyan,
-                    ],
-                    value: '$overallProgress%',
-                    label: 'Tiến độ',
-                    isPrimary: true,
-                    progress: overallProgress,
-                    isDark: isDark,
-                    delay: 0,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.schedule,
-                    iconColor: AppTheme.accentCyan,
-                    gradientColors: [
-                      AppTheme.accentCyan,
-                      const Color(0xFF06B6D4),
-                    ],
-                    value: '${studyHours}h',
-                    label: 'Giờ học',
-                    isDark: isDark,
-                    delay: 1,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.local_fire_department,
-                    iconColor: Colors.orange,
-                    gradientColors: [Colors.orange, Colors.deepOrange],
-                    value: '${streakDisplay.emoji} ${streakDisplay.value}',
-                    label: streakDisplay.description,
-                    isDark: isDark,
-                    delay: 2,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _StatCard(
-                    icon: Icons.task_alt,
-                    iconColor: AppTheme.successColor,
-                    gradientColors: [
-                      AppTheme.successColor,
-                      const Color(0xFF059669),
-                    ],
-                    value: '$tasksCompleted',
-                    label: 'Tasks hoàn thành',
-                    isDark: isDark,
-                    delay: 3,
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 420;
+                final spacing = 12.0;
+                final cardWidth = isCompact
+                    ? constraints.maxWidth
+                    : (constraints.maxWidth - spacing) / 2;
+
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: 12,
+                  children: [
+                    for (final card in statCards)
+                      SizedBox(width: cardWidth, child: card),
+                  ],
+                );
+              },
             ),
             // Additional mini stats row
             if (metrics?.averageSessionDuration != null ||
@@ -139,28 +131,48 @@ class StatsGridWidget extends StatelessWidget {
                     : Colors.black.withValues(alpha: 0.06),
               ),
               const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  if (metrics?.averageSessionDuration != null)
-                    _MiniStat(
-                      label: 'Phiên TB',
-                      value: _formatDuration(metrics!.averageSessionDuration!),
-                      isDark: isDark,
-                    ),
-                  if (metrics?.totalStudySessions != null)
-                    _MiniStat(
-                      label: 'Tổng phiên',
-                      value: '${metrics!.totalStudySessions}',
-                      isDark: isDark,
-                    ),
-                  if ((streakInfo?.longestStreak ?? 0) > 0)
-                    _MiniStat(
-                      label: 'Streak dài nhất',
-                      value: '${streakInfo!.longestStreak} ngày',
-                      isDark: isDark,
-                    ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final miniStats = <Widget>[
+                    if (metrics?.averageSessionDuration != null)
+                      _MiniStat(
+                        label: 'Phiên TB',
+                        value: _formatDuration(
+                          metrics!.averageSessionDuration!,
+                        ),
+                        isDark: isDark,
+                      ),
+                    if (metrics?.totalStudySessions != null)
+                      _MiniStat(
+                        label: 'Tổng phiên',
+                        value: '${metrics!.totalStudySessions}',
+                        isDark: isDark,
+                      ),
+                    if ((streakInfo?.longestStreak ?? 0) > 0)
+                      _MiniStat(
+                        label: 'Streak dài nhất',
+                        value: '${streakInfo!.longestStreak} ngày',
+                        isDark: isDark,
+                      ),
+                  ];
+
+                  if (constraints.maxWidth < 420) {
+                    return Column(
+                      children: [
+                        for (var i = 0; i < miniStats.length; i++) ...[
+                          miniStats[i],
+                          if (i < miniStats.length - 1)
+                            const SizedBox(height: 10),
+                        ],
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: miniStats,
+                  );
+                },
               ),
             ],
           ],
@@ -212,10 +224,7 @@ class _StatCard extends StatelessWidget {
           opacity: anim,
           child: Transform.translate(
             offset: Offset(0, 12 * (1 - anim)),
-            child: Transform.scale(
-              scale: 0.95 + 0.05 * anim,
-              child: child,
-            ),
+            child: Transform.scale(scale: 0.95 + 0.05 * anim, child: child),
           ),
         );
       },
@@ -225,15 +234,15 @@ class _StatCard extends StatelessWidget {
           color: isPrimary
               ? iconColor.withValues(alpha: 0.08)
               : (isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.black.withValues(alpha: 0.025)),
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.025)),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isPrimary
                 ? iconColor.withValues(alpha: 0.2)
                 : (isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.05)),
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.black.withValues(alpha: 0.05)),
             width: 1,
           ),
         ),
@@ -244,10 +253,12 @@ class _StatCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  gradientColors.first.withValues(alpha: 0.15),
-                  gradientColors.last.withValues(alpha: 0.08),
-                ]),
+                gradient: LinearGradient(
+                  colors: [
+                    gradientColors.first.withValues(alpha: 0.15),
+                    gradientColors.last.withValues(alpha: 0.08),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, size: 18, color: iconColor),
@@ -255,6 +266,8 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: isPrimary ? 22 : 18,
                 fontWeight: FontWeight.bold,
@@ -267,6 +280,8 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 11,
                 color: isDark
@@ -355,9 +370,12 @@ class _MiniStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
@@ -369,6 +387,9 @@ class _MiniStat extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 10,
             color: isDark

@@ -198,6 +198,7 @@ class JourneySummaryDto {
   final int id;
   final String? type;
   final String domain;
+  final String? industry;
   final String? subCategory;
   final String? jobRole;
   final String goal;
@@ -231,6 +232,7 @@ class JourneySummaryDto {
     required this.id,
     this.type,
     required this.domain,
+    this.industry,
     this.subCategory,
     this.jobRole,
     required this.goal,

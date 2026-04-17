@@ -131,7 +131,8 @@ class AiRoadmapCard extends StatelessWidget {
                     const Spacer(),
                     Text(
                       DateTimeHelper.formatRelativeTime(
-                        DateTime.parse(roadmap.createdAt),
+                        DateTimeHelper.tryParseIso8601(roadmap.createdAt) ??
+                            DateTime.now(),
                       ),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: isDark
@@ -219,7 +220,7 @@ class AiRoadmapCard extends StatelessWidget {
               ),
             ),
             Text(
-              '${progress.toStringAsFixed(0)}%',
+              '${progress.round()}%',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: progressColor,
                 fontWeight: FontWeight.w600,

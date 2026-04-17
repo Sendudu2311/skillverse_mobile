@@ -82,7 +82,6 @@ class DashboardService {
   Future<EnrollmentDetailDto?> fetchContinueLearning(int userId) async {
     try {
       final page = await EnrollmentService().getUserEnrollments(
-        userId: userId,
         page: 0,
         size: 10,
       );

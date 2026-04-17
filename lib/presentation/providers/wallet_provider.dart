@@ -27,17 +27,17 @@ class WalletProvider extends ChangeNotifier {
   bool get showBalance => _showBalance;
 
   // Computed getters
-  int get cashBalance => _wallet?.cashBalance ?? 0;
+  double get cashBalance => _wallet?.cashBalance ?? 0;
   int get coinBalance => _wallet?.coinBalance ?? 0;
-  int get totalDeposited => _wallet?.totalDeposited ?? 0;
-  int get totalWithdrawn => _wallet?.totalWithdrawn ?? 0;
+  double get totalDeposited => _wallet?.totalDeposited ?? 0;
+  double get totalWithdrawn => _wallet?.totalWithdrawn ?? 0;
   int get totalCoinsEarned => _wallet?.totalCoinsEarned ?? 0;
   int get totalCoinsSpent => _wallet?.totalCoinsSpent ?? 0;
   String get walletStatus => _wallet?.status ?? 'UNKNOWN';
   bool get hasBankAccount => _wallet?.hasBankAccount ?? false;
 
   /// Total assets in VND (cash + coin value)
-  int get totalAssets => cashBalance + (coinBalance * coinToVndRate);
+  double get totalAssets => cashBalance + (coinBalance * coinToVndRate);
 
   /// Cash percentage of total assets
   double get cashPercent =>
@@ -53,11 +53,11 @@ class WalletProvider extends ChangeNotifier {
   int get coinValueInVnd => coinBalance * coinToVndRate;
 
   /// Net cash flow
-  int get netCashFlow => totalDeposited - totalWithdrawn;
+  double get netCashFlow => totalDeposited - totalWithdrawn;
 
   // Stats getters (from statistics API)
-  int get statsTotalDeposited => _statistics?.totalDeposited ?? totalDeposited;
-  int get statsTotalWithdrawn => _statistics?.totalWithdrawn ?? totalWithdrawn;
+  double get statsTotalDeposited => _statistics?.totalDeposited ?? totalDeposited;
+  double get statsTotalWithdrawn => _statistics?.totalWithdrawn ?? totalWithdrawn;
   int get statsTotalCoinsEarned =>
       _statistics?.totalCoinsEarned ?? totalCoinsEarned;
   int get statsTotalCoinsSpent =>

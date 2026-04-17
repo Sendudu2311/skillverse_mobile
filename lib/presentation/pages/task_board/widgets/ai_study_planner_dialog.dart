@@ -130,26 +130,6 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
                     ),
                   ),
                 ),
-                Container(
-                  margin: const EdgeInsets.only(top: 4),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentOrange.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    '⚡ MISTRAL LARGE (PREMIUM)',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontFamily: 'monospace',
-                      color: AppTheme.accentOrange,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -397,16 +377,25 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
             child: const Text('Hủy'),
           ),
           const SizedBox(width: 12),
-          ElevatedButton.icon(
-            onPressed: _isLoading ? null : _generateProposal,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentOrange,
-              foregroundColor: Colors.black,
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: _isLoading ? null : _generateProposal,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentOrange,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              icon: _isLoading
+                  ? CommonLoading.small()
+                  : const Icon(Icons.auto_awesome, size: 18),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Tạo Đề Xuất Lịch Trình', maxLines: 1),
+              ),
             ),
-            icon: _isLoading
-                ? CommonLoading.small()
-                : const Icon(Icons.auto_awesome, size: 18),
-            label: const Text('Tạo Đề Xuất Lịch Trình'),
           ),
         ],
       ),
@@ -657,7 +646,10 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
 
       if (mounted) {
         navigator.pop();
-        ErrorHandler.showSuccessSnackBar(context, 'Đã tạo ${sessions.length} phiên học! 🎉');
+        ErrorHandler.showSuccessSnackBar(
+          context,
+          'Đã tạo ${sessions.length} phiên học! 🎉',
+        );
         taskProvider.setSelectedTab(1);
       }
     } catch (e) {

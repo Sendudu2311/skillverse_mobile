@@ -103,7 +103,7 @@ const List<CoinPackage> _defaultPackages = [
 
 /// Bottom sheet for purchasing SkillCoins with wallet cash
 class BuyCoinSheet extends StatefulWidget {
-  final int currentCashBalance;
+  final double currentCashBalance;
   final VoidCallback onSuccess;
 
   const BuyCoinSheet({
@@ -203,7 +203,7 @@ class _BuyCoinSheetState extends State<BuyCoinSheet> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Số dư: ${NumberFormatter.formatCurrency(widget.currentCashBalance.toDouble(), currency: 'đ')}',
+                            'Số dư: ${NumberFormatter.formatCurrency(widget.currentCashBalance, currency: 'đ')}',
                             style: TextStyle(
                               fontSize: 13,
                               fontFamily: 'monospace',
@@ -292,7 +292,7 @@ class _BuyCoinSheetState extends State<BuyCoinSheet> {
                     children: [
                       Text('Số dư sau mua:', style: TextStyle(fontSize: 13, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
                       Text(
-                        NumberFormatter.formatCurrency((widget.currentCashBalance - _selectedPackage!.price).toDouble(), currency: 'đ'),
+                        NumberFormatter.formatCurrency(widget.currentCashBalance - _selectedPackage!.price, currency: 'đ'),
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'monospace', color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
                       ),
                     ],

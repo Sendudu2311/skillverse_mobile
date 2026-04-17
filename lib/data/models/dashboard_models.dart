@@ -3,17 +3,24 @@ import 'enrollment_models.dart';
 
 part 'dashboard_models.g.dart';
 
+double _toDouble(dynamic v) => (v as num).toDouble();
+
 /// Wallet response from /wallet/my-wallet
 @JsonSerializable()
 class WalletResponse {
   final int walletId;
   final int userId;
-  final int cashBalance;
+  @JsonKey(fromJson: _toDouble)
+  final double cashBalance;
   final int coinBalance;
-  final int frozenCashBalance;
-  final int availableCashBalance;
-  final int totalDeposited;
-  final int totalWithdrawn;
+  @JsonKey(fromJson: _toDouble)
+  final double frozenCashBalance;
+  @JsonKey(fromJson: _toDouble)
+  final double availableCashBalance;
+  @JsonKey(fromJson: _toDouble)
+  final double totalDeposited;
+  @JsonKey(fromJson: _toDouble)
+  final double totalWithdrawn;
   final int totalCoinsEarned;
   final int totalCoinsSpent;
   final String status;

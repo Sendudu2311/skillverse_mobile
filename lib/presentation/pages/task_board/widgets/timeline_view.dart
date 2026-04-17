@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../../../../core/utils/date_time_helper.dart';
 import '../../../providers/task_board_provider.dart';
 import '../../../themes/app_theme.dart';
@@ -100,8 +99,8 @@ class _TimelineViewState extends State<TimelineView> {
     final weekStart = _weekStart(_selectedDay);
     final weekEnd = weekStart.add(const Duration(days: 6));
     final label = weekStart.month == weekEnd.month
-        ? DateFormat('MMMM yyyy').format(weekStart).toUpperCase()
-        : '${DateFormat('MMM').format(weekStart)} – ${DateFormat('MMM yyyy').format(weekEnd)}'
+        ? DateTimeHelper.formatCustom(weekStart, 'MMMM yyyy').toUpperCase()
+        : '${DateTimeHelper.formatCustom(weekStart, 'MMM')} – ${DateTimeHelper.formatCustom(weekEnd, 'MMM yyyy')}'
               .toUpperCase();
 
     return Padding(

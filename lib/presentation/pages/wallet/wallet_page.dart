@@ -6,6 +6,7 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/status_badge.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../../core/utils/number_formatter.dart';
 import 'deposit_sheet.dart';
@@ -239,7 +240,7 @@ class _WalletPageState extends State<WalletPage> {
                 ? '${NumberFormatter.formatNumber(provider.coinBalance)} xu'
                 : '••••••',
             percentText: provider.showBalance
-                ? '${provider.coinPercent.toStringAsFixed(1)}% tổng tài sản  ≈ ${_formatVnd(provider.coinValueInVnd)}'
+                ? '${provider.coinPercent.toStringAsFixed(1)}% tổng tài sản  ≈ ${_formatVnd(provider.coinValueInVnd.toDouble())}'
                 : null,
             color: AppTheme.accentGold,
             isDark: isDark,
@@ -644,10 +645,15 @@ class _WalletPageState extends State<WalletPage> {
 
   Widget _buildTransactionItem(dynamic tx, bool isDark) {
     final isCredit = tx.isCreditTransaction;
-    final amount = tx.cashAmount ?? tx.coinAmount ?? 0;
+    final double cashAmt = (tx.cashAmount as double?) ?? 0.0;
+    final int coinAmt = (tx.coinAmount as int?) ?? 0;
+    final isCash = cashAmt != 0;
     final sign = isCredit ? '+' : '-';
     final color = isCredit ? AppTheme.themeGreenStart : Colors.redAccent;
-    final isCash = tx.cashAmount != null && tx.cashAmount != 0;
+    // Prefer transactionTypeName for the label; fall back to description
+    final label = (tx.transactionTypeName as String?)?.isNotEmpty == true
+        ? tx.transactionTypeName as String
+        : tx.description as String;
 
     return GlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -661,7 +667,7 @@ class _WalletPageState extends State<WalletPage> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              _getTransactionIcon(tx.transactionType),
+              _getTransactionIcon(tx.transactionType as String),
               color: color,
               size: 18,
             ),
@@ -672,7 +678,7 @@ class _WalletPageState extends State<WalletPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  tx.description,
+                  label,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -685,7 +691,7 @@ class _WalletPageState extends State<WalletPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  tx.createdAt.toString().substring(0, 10),
+                  (tx.createdAt as String).substring(0, 10),
                   style: TextStyle(
                     fontSize: 11,
                     color: isDark
@@ -700,7 +706,7 @@ class _WalletPageState extends State<WalletPage> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '$sign${isCash ? _formatVnd(amount.abs()) : '${NumberFormatter.formatNumber(amount.abs())} xu'}',
+                '$sign${isCash ? _formatVnd(cashAmt.abs()) : '${NumberFormatter.formatNumber(coinAmt.abs())} xu'}',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -709,7 +715,7 @@ class _WalletPageState extends State<WalletPage> {
                 ),
               ),
               const SizedBox(height: 2),
-              _buildStatusChip(tx.status),
+              StatusBadge(status: tx.status),
             ],
           ),
         ],
@@ -717,48 +723,10 @@ class _WalletPageState extends State<WalletPage> {
     );
   }
 
-  Widget _buildStatusChip(String status) {
-    Color color;
-    String label;
-    switch (status.toUpperCase()) {
-      case 'COMPLETED':
-        color = AppTheme.themeGreenStart;
-        label = 'Hoàn thành';
-        break;
-      case 'PENDING':
-        color = AppTheme.accentGold;
-        label = 'Đang xử lý';
-        break;
-      case 'FAILED':
-        color = Colors.redAccent;
-        label = 'Thất bại';
-        break;
-      default:
-        color = AppTheme.darkTextSecondary;
-        label = status;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
-
   // ==================== HELPERS ====================
 
-  String _formatVnd(int amount) {
-    return NumberFormatter.formatCurrency(amount.toDouble(), currency: 'đ');
+  String _formatVnd(double amount) {
+    return NumberFormatter.formatCurrency(amount, currency: 'đ');
   }
 
   IconData _getTransactionIcon(String type) {
@@ -767,6 +735,7 @@ class _WalletPageState extends State<WalletPage> {
       case 'DEPOSIT_CASH':
         return Icons.arrow_downward;
       case 'WITHDRAWAL':
+      case 'WITHDRAWAL_CASH':
         return Icons.arrow_upward;
       case 'COIN_PURCHASE':
       case 'PURCHASE_COINS':
@@ -778,7 +747,20 @@ class _WalletPageState extends State<WalletPage> {
       case 'SPEND_COINS':
         return Icons.flash_on;
       case 'REFUND':
-        return Icons.refresh;
+      case 'REFUND_CASH':
+        return Icons.replay;
+      case 'MENTOR_BOOKING':
+        return Icons.school_outlined;
+      case 'JOB_POSTING_FEE':
+        return Icons.work_outline;
+      case 'ESCROW_HOLD':
+        return Icons.lock_outline;
+      case 'ESCROW_RELEASE':
+        return Icons.lock_open_outlined;
+      case 'JOB_PAYOUT':
+        return Icons.payments_outlined;
+      case 'ADMIN_ADJUSTMENT':
+        return Icons.admin_panel_settings_outlined;
       default:
         return Icons.swap_horiz;
     }

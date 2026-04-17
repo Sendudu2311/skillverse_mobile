@@ -12,9 +12,15 @@ class TaskBoardService {
   // ==================== BOARD ====================
 
   /// Get board with all columns and tasks
-  Future<List<TaskColumnResponse>> getBoard() async {
+  /// Optional [roadmapSessionId] filters tasks by a specific roadmap session.
+  Future<List<TaskColumnResponse>> getBoard({int? roadmapSessionId}) async {
     try {
-      final response = await _apiClient.dio.get('/task-board');
+      final response = await _apiClient.dio.get(
+        '/task-board',
+        queryParameters: {
+          if (roadmapSessionId != null) 'roadmapSessionId': roadmapSessionId,
+        },
+      );
       final List<dynamic> data = response.data;
       return data.map((json) => TaskColumnResponse.fromJson(json)).toList();
     } catch (e) {

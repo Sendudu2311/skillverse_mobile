@@ -95,23 +95,28 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     final authProvider = context.read<AuthProvider>();
 
     // Load course details
-    await _executeAsync(() async {
-      final courseService = CourseService();
-      final course = await courseService.getCourseDetail(courseId);
-      if (mounted) {
-        setState(() => _course = course);
-        _animationController.forward();
-      }
-    }, setLoading: (val) => setState(() {
-      _isLoadingCourse = val;
-      if (val) _errorMessage = null;
-    }));
+    await _executeAsync(
+      () async {
+        final courseService = CourseService();
+        final course = await courseService.getCourseDetail(courseId);
+        if (mounted) {
+          setState(() => _course = course);
+          _animationController.forward();
+        }
+      },
+      setLoading: (val) => setState(() {
+        _isLoadingCourse = val;
+        if (val) _errorMessage = null;
+      }),
+    );
 
     if (_course == null) return;
 
     // Load modules with full content
     await _executeAsync(() async {
-      final fullModules = await _moduleService.listModulesWithContent(courseId: courseId);
+      final fullModules = await _moduleService.listModulesWithContent(
+        courseId: courseId,
+      );
       if (mounted) {
         if (fullModules.isNotEmpty) {
           setState(() => _fullModules = fullModules);
@@ -119,28 +124,28 @@ class _CourseDetailPageState extends State<CourseDetailPage>
           // Fallback: backend returned empty (e.g. revisioningEnabled but no pinned revision yet).
           // Use summary modules from course DTO so the curriculum section is not blank.
           final summaryModules = _course?.modules ?? [];
-          setState(() => _fullModules = summaryModules.asMap().entries.map((e) {
-            final i = e.key;
-            final m = e.value;
-            return ModuleWithContentDto(
-              id: m.id,
-              title: m.title ?? 'Chương ${i + 1}',
-              description: m.description,
-              orderIndex: m.orderIndex ?? i,
-              lessons: const [],
-              quizzes: const [],
-              assignments: const [],
-            );
-          }).toList());
+          setState(
+            () => _fullModules = summaryModules.asMap().entries.map((e) {
+              final i = e.key;
+              final m = e.value;
+              return ModuleWithContentDto(
+                id: m.id,
+                title: m.title ?? 'Chương ${i + 1}',
+                description: m.description,
+                orderIndex: m.orderIndex ?? i,
+                lessons: const [],
+                quizzes: const [],
+                assignments: const [],
+              );
+            }).toList(),
+          );
         }
       }
     }, setLoading: (val) => setState(() => _isLoadingModules = val));
 
     // Check enrollment status and load progress
     if (authProvider.user != null) {
-      await enrollmentProvider.checkEnrollmentStatus(
-        courseId: courseId,
-      );
+      await enrollmentProvider.checkEnrollmentStatus(courseId: courseId);
 
       // Load enrollment progress if enrolled
       if (enrollmentProvider.isEnrolled(courseId)) {
@@ -174,35 +179,149 @@ class _CourseDetailPageState extends State<CourseDetailPage>
         border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                  letterSpacing: 0.3,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                    letterSpacing: 0.3,
+                  ),
                 ),
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required bool isDark,
+    required Color color,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickInfoGrid(
+    BuildContext context, {
+    required bool isDark,
+    required Color color,
+  }) {
+    final infoCards = [
+      _buildQuickInfoChip(
+        context,
+        icon: Icons.category_outlined,
+        label: 'Danh mục',
+        value: _course!.category ?? 'Chưa cập nhật',
+        isDark: isDark,
+        color: color,
+      ),
+      _buildQuickInfoChip(
+        context,
+        icon: Icons.language_outlined,
+        label: 'Ngôn ngữ',
+        value: _course!.language ?? 'Chưa cập nhật',
+        isDark: isDark,
+        color: color,
+      ),
+      _buildQuickInfoChip(
+        context,
+        icon: Icons.timer_outlined,
+        label: 'Thời lượng',
+        value: _course!.estimatedDurationHours != null
+            ? '${_course!.estimatedDurationHours} giờ'
+            : 'Chưa cập nhật',
+        isDark: isDark,
+        color: color,
+      ),
+      _buildQuickInfoChip(
+        context,
+        icon: Icons.book_outlined,
+        label: 'Bài học',
+        value:
+            '${_fullModules.fold<int>(0, (sum, m) => sum + m.lessons.length)}',
+        isDark: isDark,
+        color: color,
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 520;
+
+        if (isCompact) {
+          return Column(
+            children: [
+              for (var i = 0; i < infoCards.length; i++) ...[
+                infoCards[i],
+                if (i < infoCards.length - 1) const SizedBox(height: 12),
+              ],
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(child: infoCards[0]),
+                const SizedBox(width: 12),
+                Expanded(child: infoCards[1]),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: infoCards[2]),
+                const SizedBox(width: 12),
+                Expanded(child: infoCards[3]),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -284,7 +403,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     if (userId != null) {
       bool confirmed = false;
       for (int attempt = 0; attempt < 5 && !confirmed; attempt++) {
-        if (attempt > 0) await Future.delayed(const Duration(milliseconds: 1500));
+        if (attempt > 0) {
+          await Future.delayed(const Duration(milliseconds: 1500));
+        }
         if (!mounted) return;
         confirmed = await enrollmentProvider.checkEnrollmentStatus(
           courseId: courseId,
@@ -585,7 +706,6 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           ),
                         ),
                       ),
-
                     ],
                   ),
 
@@ -595,7 +715,9 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Level Badge and Price Badge
-                        Row(
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -639,10 +761,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 ],
                               ),
                             ),
-                            // Only show MIỄN PHÍ badge for free courses
-                            if (_course!.price == null ||
-                                _course!.price == 0) ...[
-                              const SizedBox(width: 12),
+                            if (_course!.price == null || _course!.price == 0)
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -686,7 +805,6 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                   ],
                                 ),
                               ),
-                            ],
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -717,14 +835,18 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              _course!.authorName ?? 'Unknown',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: isDark
-                                        ? AppTheme.darkTextSecondary
-                                        : AppTheme.lightTextSecondary,
-                                  ),
+                            Expanded(
+                              child: Text(
+                                _course!.authorName ?? 'Unknown',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: isDark
+                                          ? AppTheme.darkTextSecondary
+                                          : AppTheme.lightTextSecondary,
+                                    ),
+                              ),
                             ),
                           ],
                         ),
@@ -736,12 +858,14 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              CourseStatItem(
-                                icon: Icons.people_outline,
-                                label: 'Học viên',
-                                value: '${_course!.enrollmentCount}',
-                                color: AppTheme.themeBlueStart,
-                                isDark: isDark,
+                              Expanded(
+                                child: CourseStatItem(
+                                  icon: Icons.people_outline,
+                                  label: 'Học viên',
+                                  value: '${_course!.enrollmentCount}',
+                                  color: AppTheme.themeBlueStart,
+                                  isDark: isDark,
+                                ),
                               ),
                               Container(
                                 width: 1,
@@ -750,12 +874,15 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                     ? AppTheme.darkBorderColor
                                     : AppTheme.lightBorderColor,
                               ),
-                              CourseStatItem(
-                                icon: Icons.auto_stories_outlined,
-                                label: 'Modules',
-                                value: '${(_course!.moduleCount != null && _course!.moduleCount! > 0) ? _course!.moduleCount : _fullModules.length}',
-                                color: AppTheme.themePurpleStart,
-                                isDark: isDark,
+                              Expanded(
+                                child: CourseStatItem(
+                                  icon: Icons.auto_stories_outlined,
+                                  label: 'Modules',
+                                  value:
+                                      '${(_course!.moduleCount != null && _course!.moduleCount! > 0) ? _course!.moduleCount : _fullModules.length}',
+                                  color: AppTheme.themePurpleStart,
+                                  isDark: isDark,
+                                ),
                               ),
                               if (_course!.rating != null) ...[
                                 Container(
@@ -765,14 +892,16 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                       ? AppTheme.darkBorderColor
                                       : AppTheme.lightBorderColor,
                                 ),
-                                CourseStatItem(
-                                  icon: Icons.star_outline,
-                                  label: 'Đánh giá',
-                                  value: NumberFormatter.formatRating(
-                                    _course!.rating!,
+                                Expanded(
+                                  child: CourseStatItem(
+                                    icon: Icons.star_outline,
+                                    label: 'Đánh giá',
+                                    value: NumberFormatter.formatRating(
+                                      _course!.rating!,
+                                    ),
+                                    color: Colors.amber,
+                                    isDark: isDark,
                                   ),
-                                  color: Colors.amber,
-                                  isDark: isDark,
                                 ),
                               ],
                             ],
@@ -786,85 +915,18 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    color: gradientColors[0],
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Thông tin chung',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge
-                                        ?.copyWith(
-                                          color: isDark
-                                              ? Colors.white
-                                              : AppTheme.lightTextPrimary,
-                                        ),
-                                  ),
-                                ],
+                              _buildSectionHeader(
+                                context,
+                                icon: Icons.info_outline,
+                                title: 'Thông tin chung',
+                                isDark: isDark,
+                                color: gradientColors[0],
                               ),
                               const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildQuickInfoChip(
-                                      context,
-                                      icon: Icons.category_outlined,
-                                      label: 'Danh mục',
-                                      value:
-                                          _course!.category ?? 'Chưa cập nhật',
-                                      isDark: isDark,
-                                      color: gradientColors[0],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildQuickInfoChip(
-                                      context,
-                                      icon: Icons.language_outlined,
-                                      label: 'Ngôn ngữ',
-                                      value:
-                                          _course!.language ?? 'Chưa cập nhật',
-                                      isDark: isDark,
-                                      color: gradientColors[0],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildQuickInfoChip(
-                                      context,
-                                      icon: Icons.timer_outlined,
-                                      label: 'Thời lượng',
-                                      value:
-                                          _course!.estimatedDurationHours !=
-                                              null
-                                          ? '${_course!.estimatedDurationHours} giờ'
-                                          : 'Chưa cập nhật',
-                                      isDark: isDark,
-                                      color: gradientColors[0],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildQuickInfoChip(
-                                      context,
-                                      icon: Icons.book_outlined,
-                                      label: 'Bài học',
-                                      value:
-                                          '${_fullModules.fold<int>(0, (sum, m) => sum + m.lessons.length)}',
-                                      isDark: isDark,
-                                      color: gradientColors[0],
-                                    ),
-                                  ),
-                                ],
+                              _buildQuickInfoGrid(
+                                context,
+                                isDark: isDark,
+                                color: gradientColors[0],
                               ),
                               if (_course!.updatedAt != null) ...[
                                 const SizedBox(height: 12),
@@ -872,8 +934,16 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                   context,
                                   icon: Icons.update_outlined,
                                   label: 'Cập nhật',
-                                  value: DateTimeHelper.tryParseIso8601(_course!.updatedAt!) != null
-                                      ? DateTimeHelper.formatDate(DateTimeHelper.tryParseIso8601(_course!.updatedAt!)!)
+                                  value:
+                                      DateTimeHelper.tryParseIso8601(
+                                            _course!.updatedAt!,
+                                          ) !=
+                                          null
+                                      ? DateTimeHelper.formatDate(
+                                          DateTimeHelper.tryParseIso8601(
+                                            _course!.updatedAt!,
+                                          )!,
+                                        )
                                       : _course!.updatedAt!,
                                   isDark: isDark,
                                   color: gradientColors[0],
@@ -893,24 +963,15 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               children: [
                                 Row(
                                   children: [
-                                    Icon(
-                                      Icons.trending_up,
-                                      color: AppTheme.themeGreenStart,
-                                      size: 20,
+                                    Expanded(
+                                      child: _buildSectionHeader(
+                                        context,
+                                        icon: Icons.trending_up,
+                                        title: 'Tiến độ học tập',
+                                        isDark: isDark,
+                                        color: AppTheme.themeGreenStart,
+                                      ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Tiến độ học tập',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            color: isDark
-                                                ? Colors.white
-                                                : AppTheme.lightTextPrimary,
-                                          ),
-                                    ),
-                                    const Spacer(),
                                     Text(
                                       '$_enrollmentProgress%',
                                       style: TextStyle(
@@ -995,30 +1056,19 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.description_outlined,
-                                    color: gradientColors[0],
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Mô tả',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge
-                                        ?.copyWith(
-                                          color: isDark
-                                              ? Colors.white
-                                              : AppTheme.lightTextPrimary,
-                                        ),
-                                  ),
-                                ],
+                              _buildSectionHeader(
+                                context,
+                                icon: Icons.description_outlined,
+                                title: 'Mô tả',
+                                isDark: isDark,
+                                color: gradientColors[0],
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                HtmlHelper.cleanHtml(_course!.description ?? 'Chưa có mô tả chi tiết cho khóa học này.'),
+                                HtmlHelper.cleanHtml(
+                                  _course!.description ??
+                                      'Chưa có mô tả chi tiết cho khóa học này.',
+                                ),
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(
                                       color: isDark
@@ -1040,26 +1090,12 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.lightbulb_outline,
-                                      color: gradientColors[0],
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Bạn sẽ học được',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            color: isDark
-                                                ? Colors.white
-                                                : AppTheme.lightTextPrimary,
-                                          ),
-                                    ),
-                                  ],
+                                _buildSectionHeader(
+                                  context,
+                                  icon: Icons.lightbulb_outline,
+                                  title: 'Bạn sẽ học được',
+                                  isDark: isDark,
+                                  color: gradientColors[0],
                                 ),
                                 const SizedBox(height: 16),
                                 ..._course!.learningObjectives!.map(
@@ -1110,26 +1146,12 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.rule_outlined,
-                                      color: gradientColors[0],
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Yêu cầu',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            color: isDark
-                                                ? Colors.white
-                                                : AppTheme.lightTextPrimary,
-                                          ),
-                                    ),
-                                  ],
+                                _buildSectionHeader(
+                                  context,
+                                  icon: Icons.rule_outlined,
+                                  title: 'Yêu cầu',
+                                  isDark: isDark,
+                                  color: gradientColors[0],
                                 ),
                                 const SizedBox(height: 16),
                                 ..._course!.requirements!.map(
@@ -1178,26 +1200,12 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.verified_outlined,
-                                    color: gradientColors[0],
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Khóa học bao gồm:',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge
-                                        ?.copyWith(
-                                          color: isDark
-                                              ? Colors.white
-                                              : AppTheme.lightTextPrimary,
-                                        ),
-                                  ),
-                                ],
+                              _buildSectionHeader(
+                                context,
+                                icon: Icons.verified_outlined,
+                                title: 'Khóa học bao gồm:',
+                                isDark: isDark,
+                                color: gradientColors[0],
                               ),
                               const SizedBox(height: 16),
                               CourseBenefitItem(
@@ -1231,26 +1239,12 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.list_alt,
-                                    color: gradientColors[0],
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Nội dung khóa học',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge
-                                        ?.copyWith(
-                                          color: isDark
-                                              ? Colors.white
-                                              : AppTheme.lightTextPrimary,
-                                        ),
-                                  ),
-                                ],
+                              _buildSectionHeader(
+                                context,
+                                icon: Icons.list_alt,
+                                title: 'Nội dung khóa học',
+                                isDark: isDark,
+                                color: gradientColors[0],
                               ),
                               const SizedBox(height: 16),
                               if (_isLoadingModules)

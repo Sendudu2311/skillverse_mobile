@@ -43,9 +43,12 @@ class ReportTypeSelectorWidget extends StatelessWidget {
         child: DropdownButton<ReportType>(
           value: value,
           isExpanded: true,
+          isDense: true,
           icon: Icon(
             Icons.keyboard_arrow_down_rounded,
-            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+            color: isDark
+                ? AppTheme.darkTextSecondary
+                : AppTheme.lightTextSecondary,
           ),
           dropdownColor: isDark ? AppTheme.galaxyMid : Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -56,6 +59,30 @@ class ReportTypeSelectorWidget extends StatelessWidget {
                 ? AppTheme.darkTextPrimary
                 : AppTheme.lightTextPrimary,
           ),
+          selectedItemBuilder: (context) {
+            return _types.map((type) {
+              return Row(
+                children: [
+                  Text(type.$2, style: const TextStyle(fontSize: 16)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      type.$3,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList();
+          },
           items: _types.map((type) {
             return DropdownMenuItem(
               value: type.$1,
@@ -63,21 +90,25 @@ class ReportTypeSelectorWidget extends StatelessWidget {
                 children: [
                   Text(type.$2, style: const TextStyle(fontSize: 16)),
                   const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: type.$4.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      type.$3,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: type.$4,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: type.$4.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        type.$3,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: type.$4,
+                        ),
                       ),
                     ),
                   ),

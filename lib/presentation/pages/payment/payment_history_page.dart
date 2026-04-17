@@ -9,6 +9,7 @@ import '../../widgets/error_state_widget.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/animated_list_item.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/status_badge.dart';
 
 class PaymentHistoryPage extends StatefulWidget {
   const PaymentHistoryPage({super.key});
@@ -139,7 +140,9 @@ class _PaymentHistoryCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      _buildStatusChip(),
+                      StatusBadge(
+                        status: transaction.status.name.toUpperCase(),
+                      ),
                     ],
                   ),
                 ],
@@ -205,61 +208,6 @@ class _PaymentHistoryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Icon(icon, color: color, size: 24),
-    );
-  }
-
-  Widget _buildStatusChip() {
-    Color backgroundColor;
-    Color textColor;
-    String statusText;
-
-    switch (transaction.status) {
-      case PaymentStatus.completed:
-        backgroundColor = Colors.green[100]!;
-        textColor = Colors.green[800]!;
-        statusText = 'Thành công';
-        break;
-      case PaymentStatus.pending:
-        backgroundColor = Colors.orange[100]!;
-        textColor = Colors.orange[800]!;
-        statusText = 'Đang chờ';
-        break;
-      case PaymentStatus.processing:
-        backgroundColor = Colors.blue[100]!;
-        textColor = Colors.blue[800]!;
-        statusText = 'Đang xử lý';
-        break;
-      case PaymentStatus.failed:
-        backgroundColor = Colors.red[100]!;
-        textColor = Colors.red[800]!;
-        statusText = 'Thất bại';
-        break;
-      case PaymentStatus.cancelled:
-        backgroundColor = Colors.grey[200]!;
-        textColor = Colors.grey[800]!;
-        statusText = 'Đã hủy';
-        break;
-      case PaymentStatus.refunded:
-        backgroundColor = Colors.purple[100]!;
-        textColor = Colors.purple[800]!;
-        statusText = 'Hoàn tiền';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        statusText,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
     );
   }
 
@@ -356,7 +304,11 @@ class _PaymentHistoryCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Center(child: _buildStatusChip()),
+                Center(
+                  child: StatusBadge(
+                    status: transaction.status.name.toUpperCase(),
+                  ),
+                ),
                 const SizedBox(height: 24),
                 _DetailRow(
                   label: 'Số tiền',
