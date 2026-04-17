@@ -73,7 +73,10 @@ class _ProfilePageState extends State<ProfilePage> {
       // Reload profile to get the new avatar URL
       if (mounted) {
         await userProvider.loadUserProfile();
-        ErrorHandler.showSuccessSnackBar(context, 'Cập nhật ảnh đại diện thành công!');
+        ErrorHandler.showSuccessSnackBar(
+          context,
+          'Cập nhật ảnh đại diện thành công!',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -331,10 +334,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: _buildStatItem2(
                     Icons.account_balance_wallet_outlined,
                     'Ví',
-                    NumberFormatter.formatCompact(cashBalance),
+                    '${NumberFormatter.formatCompact(cashBalance.toInt())} đ',
                   ),
                 ),
-                Container(width: 1, height: 36, color: Colors.white.withValues(alpha: 0.24)),
+                Container(
+                  width: 1,
+                  height: 36,
+                  color: Colors.white.withValues(alpha: 0.24),
+                ),
                 Expanded(
                   child: _buildStatItem2(
                     Icons.monetization_on_outlined,
@@ -342,7 +349,11 @@ class _ProfilePageState extends State<ProfilePage> {
                     NumberFormatter.formatCompact(coinBalance),
                   ),
                 ),
-                Container(width: 1, height: 36, color: Colors.white.withValues(alpha: 0.24)),
+                Container(
+                  width: 1,
+                  height: 36,
+                  color: Colors.white.withValues(alpha: 0.24),
+                ),
                 Expanded(
                   child: _buildStatItem2(
                     Icons.verified_outlined,
@@ -372,13 +383,17 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         Icon(icon, size: 16, color: Colors.white54),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: valueColor ?? Colors.white,
-            fontFamily: 'monospace',
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: valueColor ?? Colors.white,
+              fontFamily: 'monospace',
+            ),
+            maxLines: 1,
           ),
         ),
         const SizedBox(height: 2),

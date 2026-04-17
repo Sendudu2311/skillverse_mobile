@@ -6,14 +6,16 @@ import '../../themes/app_theme.dart';
 class GeneratingStepsWidget extends StatelessWidget {
   final int currentStep;
   final bool isDark;
+  final List<(String, IconData)> steps;
 
   const GeneratingStepsWidget({
     super.key,
     required this.currentStep,
     required this.isDark,
+    this.steps = _defaultSteps,
   });
 
-  static const _steps = [
+  static const _defaultSteps = [
     ('Thu thập dữ liệu', Icons.cloud_download_outlined),
     ('Phân tích AI', Icons.psychology_outlined),
     ('Tạo báo cáo', Icons.description_outlined),
@@ -22,27 +24,36 @@ class GeneratingStepsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(_steps.length * 2 - 1, (index) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 380;
+        final stepWidth = compact
+            ? ((constraints.maxWidth - 40) / steps.length).clamp(58.0, 72.0)
+            : 86.0;
+        final connectorWidth = compact ? 12.0 : 28.0;
+
+        final children = List.generate(steps.length * 2 - 1, (index) {
           if (index.isOdd) {
-            // ── Connector line ──
             final stepIndex = index ~/ 2;
             final isCompleted = stepIndex < currentStep;
-            return _AnimatedConnector(
-              isCompleted: isCompleted,
-              isDark: isDark,
-            );
+            return compact
+                ? Expanded(
+                    child: _AnimatedConnector(
+                      isCompleted: isCompleted,
+                      isDark: isDark,
+                    ),
+                  )
+                : _AnimatedConnector(
+                    isCompleted: isCompleted,
+                    isDark: isDark,
+                    width: connectorWidth,
+                  );
           }
 
-          // ── Step circle ──
           final stepIndex = index ~/ 2;
           final isCompleted = stepIndex < currentStep;
           final isActive = stepIndex == currentStep;
-          final (label, icon) = _steps[stepIndex];
+          final (label, icon) = steps[stepIndex];
 
           return _StepIndicator(
             label: label,
@@ -50,9 +61,23 @@ class GeneratingStepsWidget extends StatelessWidget {
             isCompleted: isCompleted,
             isActive: isActive,
             isDark: isDark,
+            width: stepWidth,
           );
-        }),
-      ),
+        });
+
+        if (compact) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children,
+          );
+        }
+
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(mainAxisSize: MainAxisSize.min, children: children),
+        );
+      },
     );
   }
 }
@@ -61,16 +86,18 @@ class GeneratingStepsWidget extends StatelessWidget {
 class _AnimatedConnector extends StatelessWidget {
   final bool isCompleted;
   final bool isDark;
+  final double width;
 
   const _AnimatedConnector({
     required this.isCompleted,
     required this.isDark,
+    this.width = 28,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 28,
+      width: width,
       height: 2,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 400),
@@ -101,6 +128,7 @@ class _StepIndicator extends StatelessWidget {
   final bool isCompleted;
   final bool isActive;
   final bool isDark;
+  final double width;
 
   const _StepIndicator({
     required this.label,
@@ -108,6 +136,7 @@ class _StepIndicator extends StatelessWidget {
     required this.isCompleted,
     required this.isActive,
     required this.isDark,
+    required this.width,
   });
 
   @override
@@ -118,45 +147,53 @@ class _StepIndicator extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.25)
         : Colors.black.withValues(alpha: 0.15);
 
-    final Color color =
-        isCompleted ? doneColor : (isActive ? activeColor : pendingColor);
+    final Color color = isCompleted
+        ? doneColor
+        : (isActive ? activeColor : pendingColor);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Circle with optional pulse glow
-        isActive
-            ? _PulseGlowCircle(color: color, icon: icon)
-            : Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: color.withValues(alpha: 0.12),
-                  border:
-                      Border.all(color: color, width: isCompleted ? 2 : 1.5),
+    return SizedBox(
+      width: width,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Circle with optional pulse glow
+          isActive
+              ? _PulseGlowCircle(color: color, icon: icon)
+              : Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color.withValues(alpha: 0.12),
+                    border: Border.all(
+                      color: color,
+                      width: isCompleted ? 2 : 1.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: isCompleted
+                        ? Icon(Icons.check_rounded, color: color, size: 20)
+                        : Icon(icon, color: color, size: 18),
+                  ),
                 ),
-                child: Center(
-                  child: isCompleted
-                      ? Icon(Icons.check_rounded, color: color, size: 20)
-                      : Icon(icon, color: color, size: 18),
-                ),
-              ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            color: isActive
-                ? color
-                : (isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              color: isActive
+                  ? color
+                  : (isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary),
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          textAlign: TextAlign.center,
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -203,8 +240,7 @@ class _PulseGlowCircleState extends State<_PulseGlowCircle>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: widget.color.withValues(alpha: 0.12 + pulse * 0.1),
-            border:
-                Border.all(color: widget.color, width: 2.0 + pulse * 0.5),
+            border: Border.all(color: widget.color, width: 2.0 + pulse * 0.5),
             boxShadow: [
               BoxShadow(
                 color: widget.color.withValues(alpha: 0.2 + pulse * 0.2),

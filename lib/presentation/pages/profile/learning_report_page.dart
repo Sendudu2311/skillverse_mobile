@@ -9,8 +9,8 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/ai_generation_loading_view.dart';
 import '../../widgets/learning_report/meowl_avatar_widget.dart';
-import '../../widgets/learning_report/generating_steps_widget.dart';
 import '../../widgets/learning_report/stats_grid_widget.dart';
 import '../../widgets/learning_report/trend_banner_widget.dart';
 import '../../widgets/learning_report/report_type_selector_widget.dart';
@@ -168,49 +168,12 @@ class _LearningReportPageState extends State<LearningReportPage>
 
   // ----- Generating State -----
   Widget _buildGeneratingState(LearningReportProvider provider, bool isDark) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 40),
-              MeowlAvatarWidget(
-                speech: provider.meowlSpeech,
-                animate: true,
-                size: 120,
-              ),
-              const SizedBox(height: 32),
-              GeneratingStepsWidget(
-                currentStep: provider.generatingStep,
-                isDark: isDark,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Quá trình phân tích AI có thể mất 15-30 giây',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              if (provider.generatingStatus.isNotEmpty)
-                Text(
-                  provider.generatingStatus,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.accentCyan,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
+    return AiGenerationLoadingView(
+      speech: provider.meowlSpeech,
+      currentStep: provider.generatingStep,
+      etaText: 'Quá trình phân tích AI có thể mất 15-30 giây',
+      statusText: provider.generatingStatus,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
     );
   }
 
@@ -644,19 +607,19 @@ class _LearningReportPageState extends State<LearningReportPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Flexible(
-                        child: Text(
-                          'Báo cáo ',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? AppTheme.darkTextPrimary
-                                : AppTheme.lightTextPrimary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        'Báo cáo',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
                         ),
                       ),
                       Container(
@@ -670,6 +633,8 @@ class _LearningReportPageState extends State<LearningReportPage>
                         ),
                         child: Text(
                           typeLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -689,6 +654,7 @@ class _LearningReportPageState extends State<LearningReportPage>
                             ? AppTheme.darkTextSecondary
                             : AppTheme.lightTextSecondary,
                       ),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],

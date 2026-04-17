@@ -9,6 +9,7 @@ import '../../data/models/learning_report_model.dart';
 import '../../data/services/learning_report_service.dart';
 import '../../data/services/streak_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/date_time_helper.dart';
 import '../widgets/learning_report/pdf_generator_widget.dart';
 
 class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
@@ -108,10 +109,7 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
         'Meowl rất tự hào về bạn! 🌟',
         'Cứ giữ phong độ này nha! 💪',
       ],
-      'stable': [
-        'Bạn đang học đều đặn đó! 📈',
-        'Ổn định là tốt, cố lên! 🎯',
-      ],
+      'stable': ['Bạn đang học đều đặn đó! 📈', 'Ổn định là tốt, cố lên! 🎯'],
       'declining': [
         'Meowl thấy bạn hơi chùng... 😔',
         'Đừng lo, Meowl sẽ giúp bạn! 💖',
@@ -120,7 +118,8 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
     };
 
     if (state == 'report' && trend != null) {
-      final list = trendSpeeches[trend.toLowerCase()] ?? trendSpeeches['stable']!;
+      final list =
+          trendSpeeches[trend.toLowerCase()] ?? trendSpeeches['stable']!;
       return list[_random.nextInt(list.length)];
     }
 
@@ -146,15 +145,12 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
 
   void _startGeneratingStepCycle() {
     _generatingStepTimer?.cancel();
-    _generatingStepTimer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) {
-        if (_isGenerating) {
-          _generatingStep = (_generatingStep + 1) % 4;
-          notifyListeners();
-        }
-      },
-    );
+    _generatingStepTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (_isGenerating) {
+        _generatingStep = (_generatingStep + 1) % 4;
+        notifyListeners();
+      }
+    });
   }
 
   void _stopGeneratingStepCycle() {
@@ -441,7 +437,8 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
       report: _latestReport!,
       streakDisplay: streakDisplay,
     );
-    final typeKey = (_latestReport!.reportType ?? 'COMPREHENSIVE').toUpperCase();
+    final typeKey = (_latestReport!.reportType ?? 'COMPREHENSIVE')
+        .toUpperCase();
     final typeFilename = typeKey.toLowerCase().replaceAll('_', '_');
     final date = DateTime.now().toIso8601String().substring(0, 10);
     final filename = 'skillverse_report_${typeFilename}_$date.pdf';
@@ -537,7 +534,8 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool _isNewerReport(StudentLearningReportResponse report, DateTime since) {
     if (report.generatedAt == null) return false;
     try {
-      final reportTime = DateTime.parse(report.generatedAt!);
+      final reportTime = DateTimeHelper.tryParseIso8601(report.generatedAt);
+      if (reportTime == null) return false;
       // Allow 5 second tolerance for clock drift
       return reportTime.isAfter(since.subtract(const Duration(seconds: 5)));
     } catch (_) {
