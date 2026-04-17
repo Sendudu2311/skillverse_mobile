@@ -11,6 +11,7 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/animated_list_item.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../../core/utils/date_time_helper.dart';
+import '../../../core/utils/error_handler.dart';
 
 class MessagingPage extends StatefulWidget {
   const MessagingPage({super.key});
@@ -150,7 +151,10 @@ class _ConversationTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
-            DateTimeHelper.formatSmart(DateTime.parse(conversation.lastTime)),
+            DateTimeHelper.formatSmart(
+              DateTimeHelper.tryParseIso8601(conversation.lastTime) ??
+                  DateTime.now(),
+            ),
             style: TextStyle(
               fontSize: 12,
               color: Theme.of(
@@ -234,14 +238,19 @@ class _MessagingChatPageState extends State<MessagingChatPage> {
     }
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
     _textController.clear();
-    context.read<MessagingProvider>().sendMessage(text);
+    final provider = context.read<MessagingProvider>();
+    await provider.sendMessage(text);
 
-    Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+    if (provider.errorMessage != null && mounted) {
+      ErrorHandler.showErrorSnackBar(context, provider.errorMessage!);
+    } else {
+      Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+    }
   }
 
   @override
@@ -325,11 +334,40 @@ class _MessagingChatPageState extends State<MessagingChatPage> {
                       ),
               ),
 
-              // Input area
-              _buildInputArea(provider),
+              // Input area — locked when session is explicitly closed
+              (widget.conversation?.chatEnabled ?? true)
+                  ? _buildInputArea(provider)
+                  : _buildDisabledBanner(
+                      'Buổi trao đổi này đã kết thúc hoặc bị hủy.',
+                    ),
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildDisabledBanner(String message) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.lock_outline,
+            size: 16,
+            color: Theme.of(context).hintColor,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            message,
+            style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor),
+          ),
+        ],
       ),
     );
   }
@@ -423,7 +461,8 @@ class _MessageBubble extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     DateTimeHelper.formatSmart(
-                      DateTime.parse(message.createdAt),
+                      DateTimeHelper.tryParseIso8601(message.createdAt) ??
+                          DateTime.now(),
                     ),
                     style: TextStyle(
                       fontSize: 10,

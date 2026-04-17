@@ -7,6 +7,8 @@ import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/common_loading.dart';
 import '../../themes/app_theme.dart';
 import '../../../core/utils/date_time_helper.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../../core/utils/html_helper.dart';
 
 /// Full-screen group chat window with real-time messaging.
 class GroupChatWindow extends StatefulWidget {
@@ -76,12 +78,19 @@ class _GroupChatWindowState extends State<GroupChatWindow> {
     }
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
     _messageController.clear();
-    context.read<GroupChatProvider>().sendMessage(content);
-    Future.delayed(const Duration(milliseconds: 100), () => _scrollToBottom());
+
+    final provider = context.read<GroupChatProvider>();
+    await provider.sendMessage(content);
+
+    if (provider.error != null && mounted) {
+      ErrorHandler.showErrorSnackBar(context, provider.error!);
+    } else {
+      Future.delayed(const Duration(milliseconds: 100), () => _scrollToBottom());
+    }
   }
 
   @override
@@ -519,7 +528,9 @@ class _GroupMessageBubble extends StatelessWidget {
                       const SizedBox(height: 4),
                       // Timestamp
                       Text(
-                        _formatTime(message.timestamp),
+                        message.timestamp != null
+                ? DateTimeHelper.formatSmart(DateTimeHelper.tryParseIso8601(message.timestamp!) ?? DateTime.now())
+                : '',
                         style: TextStyle(
                           fontSize: 10,
                           color: isMe
@@ -589,7 +600,7 @@ class _GroupMessageBubble extends StatelessWidget {
         );
       default: // TEXT
         return Text(
-          message.content,
+          HtmlHelper.cleanHtml(message.content),
           style: TextStyle(
             color: isMe
                 ? Colors.white
@@ -599,12 +610,5 @@ class _GroupMessageBubble extends StatelessWidget {
           ),
         );
     }
-  }
-
-  String _formatTime(String? timestamp) {
-    if (timestamp == null) return '';
-    final dt = DateTimeHelper.tryParseIso8601(timestamp);
-    if (dt == null) return '';
-    return DateTimeHelper.formatSmart(dt);
   }
 }

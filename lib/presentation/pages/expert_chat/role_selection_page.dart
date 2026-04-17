@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../../core/utils/string_helper.dart';
 import '../../../data/models/expert_chat_models.dart';
 import '../../providers/expert_chat_provider.dart';
 import '../../themes/app_theme.dart';
@@ -41,20 +42,20 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
           }
           if (_searchQuery.isEmpty) return true;
 
-          if (industry.industry.toLowerCase().contains(
-            _searchQuery.toLowerCase(),
-          )) {
+          if (StringHelper.removeDiacritics(
+            industry.industry,
+          ).contains(StringHelper.removeDiacritics(_searchQuery))) {
             return true;
           }
           return industry.roles.any(
             (role) =>
-                role.jobRole.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
-                (role.keywords?.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ) ??
-                    false),
+                StringHelper.removeDiacritics(
+                  role.jobRole,
+                ).contains(StringHelper.removeDiacritics(_searchQuery)) ||
+                (role.keywords != null &&
+                    StringHelper.removeDiacritics(
+                      role.keywords!,
+                    ).contains(StringHelper.removeDiacritics(_searchQuery))),
           );
         }).toList();
 
@@ -245,13 +246,13 @@ class _IndustrySection extends StatelessWidget {
         : industry.roles
               .where(
                 (role) =>
-                    role.jobRole.toLowerCase().contains(
-                      searchQuery.toLowerCase(),
-                    ) ||
-                    (role.keywords?.toLowerCase().contains(
-                          searchQuery.toLowerCase(),
-                        ) ??
-                        false),
+                    StringHelper.removeDiacritics(
+                      role.jobRole,
+                    ).contains(StringHelper.removeDiacritics(searchQuery)) ||
+                    (role.keywords != null &&
+                        StringHelper.removeDiacritics(
+                          role.keywords!,
+                        ).contains(StringHelper.removeDiacritics(searchQuery))),
               )
               .toList();
 

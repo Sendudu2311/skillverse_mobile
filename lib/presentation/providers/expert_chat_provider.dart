@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../core/utils/date_time_helper.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/expert_chat_models.dart';
 import '../../data/models/premium_models.dart';
@@ -35,7 +36,8 @@ class ExpertChatProvider extends ChangeNotifier with MultiLoadingProviderMixin {
   List<ExpertChatSession> _sessions = [];
 
   // G5: Deep Research mode
-  String? _aiAgentMode; // null = normal, "deep-research-pro-preview-12-2025" = deep
+  String?
+  _aiAgentMode; // null = normal, "deep-research-pro-preview-12-2025" = deep
 
   // G6: Subscription for gate check
   UserSubscriptionDto? _subscription;
@@ -151,7 +153,10 @@ Tôi có thể tư vấn chuyên sâu về:
   /// Send message to expert
   Future<void> sendMessage(String message) async {
     final sentSessionId = _sessionId ?? -1;
-    if (message.trim().isEmpty || _expertContext == null || _sendingSessions.contains(sentSessionId)) return;
+    if (message.trim().isEmpty ||
+        _expertContext == null ||
+        _sendingSessions.contains(sentSessionId))
+      return;
 
     // Capture current session context before async gap
     final sentContext = _expertContext;
@@ -233,7 +238,9 @@ Tôi có thể tư vấn chuyên sâu về:
         id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
         role: 'assistant',
         content: response.aiResponse,
-        timestamp: DateTime.parse(response.timestamp),
+        timestamp:
+            DateTimeHelper.tryParseIso8601(response.timestamp) ??
+            DateTime.now(),
         expertContext: sentContext,
       );
       _messages = [..._messages, assistantMessage];
@@ -301,7 +308,7 @@ Tôi có thể tư vấn chuyên sâu về:
           role: 'assistant',
           content: 'Tin nhắn của bạn đang được chuyên gia xử lý...',
           timestamp: DateTime.now(),
-        )
+        ),
       ];
       notifyListeners();
       return;
@@ -319,7 +326,8 @@ Tôi có thể tư vấn chuyên sâu về:
             id: '${session.sessionId}-$i-user',
             role: 'user',
             content: msg.userMessage,
-            timestamp: DateTime.parse(msg.createdAt),
+            timestamp:
+                DateTimeHelper.tryParseIso8601(msg.createdAt) ?? DateTime.now(),
           ),
         );
         newMessages.add(
@@ -327,7 +335,8 @@ Tôi có thể tư vấn chuyên sâu về:
             id: '${session.sessionId}-$i-assistant',
             role: 'assistant',
             content: msg.aiResponse,
-            timestamp: DateTime.parse(msg.createdAt),
+            timestamp:
+                DateTimeHelper.tryParseIso8601(msg.createdAt) ?? DateTime.now(),
             expertContext: _expertContext,
           ),
         );

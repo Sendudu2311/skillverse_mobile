@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../core/utils/date_time_helper.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
 import '../../data/models/chat_models.dart';
 import '../../data/services/chat_service.dart';
@@ -58,8 +59,7 @@ class ChatProvider with ChangeNotifier, LoadingProviderMixin {
     if (userId == null) return;
 
     try {
-      final context =
-          await _chatService.getOnboardingContext(userId, 'vi');
+      final context = await _chatService.getOnboardingContext(userId, 'vi');
       if (context != null && context.success) {
         _welcomeMessage = context.welcomeMessage.isNotEmpty
             ? context.welcomeMessage
@@ -105,18 +105,15 @@ class ChatProvider with ChangeNotifier, LoadingProviderMixin {
       // Create chat history from current messages (excluding the current user message)
       final chatHistory = _messages
           .where(
-              (msg) => msg.role != 'user' || msg.id != userMessage.id) // Exclude current user message
+            (msg) => msg.role != 'user' || msg.id != userMessage.id,
+          ) // Exclude current user message
           .take(10) // Last 10 messages
-          .map((msg) => ChatHistoryItem(
-                role: msg.role,
-                content: msg.content,
-              ))
+          .map((msg) => ChatHistoryItem(role: msg.role, content: msg.content))
           .toList();
 
       final request = ChatRequest(
         message: message,
-        language:
-            'vi', // Default to Vietnamese, can be made configurable later
+        language: 'vi', // Default to Vietnamese, can be made configurable later
         userId: _authProvider.user?.id,
         includeReminders: true,
         chatHistory: chatHistory,
@@ -163,20 +160,26 @@ class ChatProvider with ChangeNotifier, LoadingProviderMixin {
 
       // Convert ChatMessage to UIMessage
       _messages = history
-          .expand((chatMessage) => [
-                UIMessage(
-                  id: 'user_${chatMessage.id}',
-                  role: 'user',
-                  content: chatMessage.userMessage,
-                  timestamp: DateTime.parse(chatMessage.createdAt),
-                ),
-                UIMessage(
-                  id: 'ai_${chatMessage.id}',
-                  role: 'assistant',
-                  content: chatMessage.aiResponse,
-                  timestamp: DateTime.parse(chatMessage.createdAt),
-                ),
-              ])
+          .expand(
+            (chatMessage) => [
+              UIMessage(
+                id: 'user_${chatMessage.id}',
+                role: 'user',
+                content: chatMessage.userMessage,
+                timestamp:
+                    DateTimeHelper.tryParseIso8601(chatMessage.createdAt) ??
+                    DateTime.now(),
+              ),
+              UIMessage(
+                id: 'ai_${chatMessage.id}',
+                role: 'assistant',
+                content: chatMessage.aiResponse,
+                timestamp:
+                    DateTimeHelper.tryParseIso8601(chatMessage.createdAt) ??
+                    DateTime.now(),
+              ),
+            ],
+          )
           .toList();
 
       _currentSessionId = sessionId;

@@ -7,6 +7,8 @@ import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/common_loading.dart';
 import '../../themes/app_theme.dart';
 import '../../../core/utils/date_time_helper.dart';
+import '../../../core/utils/error_handler.dart';
+import '../../../core/utils/html_helper.dart';
 
 /// Full-screen recruitment chat window between Learner (candidate) and Recruiter.
 class RecruitmentChatWindow extends StatefulWidget {
@@ -72,12 +74,19 @@ class _RecruitmentChatWindowState extends State<RecruitmentChatWindow> {
     }
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
     _messageController.clear();
-    context.read<RecruitmentChatProvider>().sendMessage(content);
-    Future.delayed(const Duration(milliseconds: 100), () => _scrollToBottom());
+
+    final provider = context.read<RecruitmentChatProvider>();
+    await provider.sendMessage(content);
+
+    if (provider.error != null && mounted) {
+      ErrorHandler.showErrorSnackBar(context, provider.error!);
+    } else {
+      Future.delayed(const Duration(milliseconds: 100), () => _scrollToBottom());
+    }
   }
 
   @override
@@ -656,7 +665,7 @@ class _RecruitmentMessageBubble extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        message.content,
+                        HtmlHelper.cleanHtml(message.content),
                         style: TextStyle(
                           color: isMe
                               ? Colors.white
@@ -670,7 +679,9 @@ class _RecruitmentMessageBubble extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            _formatTime(message.createdAt),
+                            message.createdAt != null
+                                ? DateTimeHelper.formatSmart(DateTimeHelper.tryParseIso8601(message.createdAt!) ?? DateTime.now())
+                                : '',
                             style: TextStyle(
                               fontSize: 10,
                               color: isMe
@@ -707,10 +718,4 @@ class _RecruitmentMessageBubble extends StatelessWidget {
     );
   }
 
-  String _formatTime(String? timestamp) {
-    if (timestamp == null) return '';
-    final dt = DateTimeHelper.tryParseIso8601(timestamp);
-    if (dt == null) return '';
-    return DateTimeHelper.formatSmart(dt);
-  }
 }
