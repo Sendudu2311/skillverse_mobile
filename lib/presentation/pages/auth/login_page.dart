@@ -21,6 +21,20 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    // Show logout reason (e.g. ACCOUNT_LOGGED_ELSEWHERE) after redirect
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      final reason = authProvider.logoutReason;
+      if (reason != null && mounted) {
+        ErrorHandler.showWarningSnackBar(context, reason);
+        authProvider.clearLogoutReason();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -40,7 +54,10 @@ class _LoginPageState extends State<LoginPage> {
     if (success && mounted) {
       await _navigateAfterAuth();
     } else if (mounted) {
-      ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Đăng nhập thất bại');
+      ErrorHandler.showErrorSnackBar(
+        context,
+        authProvider.errorMessage ?? 'Đăng nhập thất bại',
+      );
     }
   }
 
@@ -52,7 +69,10 @@ class _LoginPageState extends State<LoginPage> {
     if (success && mounted) {
       await _navigateAfterAuth();
     } else if (mounted) {
-      ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Đăng nhập Google thất bại');
+      ErrorHandler.showErrorSnackBar(
+        context,
+        authProvider.errorMessage ?? 'Đăng nhập Google thất bại',
+      );
     }
   }
 
@@ -288,7 +308,9 @@ class _LoginPageState extends State<LoginPage> {
                                   ?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1.2,
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   ),
                             ),
                           ),

@@ -20,15 +20,17 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
   final ApiClient _apiClient = ApiClient();
 
   UserDto? _user;
+  String? _logoutReason;
 
   // Getters
   UserDto? get user => _user;
   bool get isAuthenticated => _user != null;
+  String? get logoutReason => _logoutReason;
 
   /// Khởi tạo provider và kiểm tra trạng thái đăng nhập
   Future<void> initialize() async {
     // Register force logout callback so the 401 interceptor can trigger logout
-    _apiClient.onForceLogout = () => forceLogout();
+    _apiClient.onForceLogout = ([String? reason]) => forceLogout(reason);
 
     await executeAsync(() async {
       final isAuth = await _authService.isAuthenticated();
@@ -161,13 +163,14 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
   /// Triggers notifyListeners() → GoRouter redirect → Login page.
   bool _isForceLoggingOut = false;
 
-  Future<void> forceLogout() async {
+  Future<void> forceLogout([String? reason]) async {
     // Prevent re-entrant calls (interceptor can fire multiple 401s)
     if (_isForceLoggingOut) return;
     _isForceLoggingOut = true;
 
-    debugPrint('🚪 Force logout triggered by 401 interceptor');
+    debugPrint('🚪 Force logout triggered by 401 interceptor: $reason');
     _user = null;
+    _logoutReason = reason;
     _apiClient.clearAuthToken();
     // Clear stored refresh token locally (no API call!)
     await _authService.clearStoredTokens();
@@ -202,6 +205,11 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
   /// Xóa lỗi hiện tại
   @override
   void clearError() => super.clearError();
+
+  /// Xóa lý do bị đăng xuất (sau khi đã hiển thị cho user)
+  void clearLogoutReason() {
+    _logoutReason = null;
+  }
 
   /// Register FCM token with backend (fire-and-forget, non-blocking).
   void _registerFcmToken() {

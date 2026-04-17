@@ -32,6 +32,9 @@ import 'presentation/providers/learning_report_provider.dart';
 import 'presentation/providers/group_chat_provider.dart';
 import 'presentation/providers/contract_provider.dart';
 import 'presentation/providers/recruitment_chat_provider.dart';
+import 'presentation/providers/ai_grading_provider.dart';
+import 'presentation/providers/interview_provider.dart';
+import 'presentation/providers/booking_dispute_provider.dart';
 import 'presentation/app.dart';
 import 'core/utils/storage_helper.dart';
 import 'core/utils/date_time_helper.dart';
@@ -84,8 +87,9 @@ void main() async {
         ChangeNotifierProvider(create: (_) => TaskBoardProvider()),
         ChangeNotifierProvider(create: (_) => ExpertChatProvider()),
         ChangeNotifierProxyProvider<AuthProvider, MessagingProvider>(
-          create: (context) =>
-              MessagingProvider(Provider.of<AuthProvider>(context, listen: false)),
+          create: (context) => MessagingProvider(
+            Provider.of<AuthProvider>(context, listen: false),
+          ),
           update: (context, authProvider, previous) =>
               previous ?? MessagingProvider(authProvider),
         ),
@@ -97,6 +101,9 @@ void main() async {
         ChangeNotifierProvider(create: (_) => GroupChatProvider()),
         ChangeNotifierProvider(create: (_) => ContractProvider()),
         ChangeNotifierProvider(create: (_) => RecruitmentChatProvider()),
+        ChangeNotifierProvider(create: (_) => AiGradingProvider()),
+        ChangeNotifierProvider(create: (_) => InterviewProvider()),
+        ChangeNotifierProvider(create: (_) => BookingDisputeProvider()),
       ],
       child: const SkillVerseApp(),
     ),
