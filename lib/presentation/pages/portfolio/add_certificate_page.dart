@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/section_header.dart';
@@ -9,6 +8,7 @@ import '../../themes/app_theme.dart';
 import '../../../data/models/portfolio_models.dart';
 import '../../../core/utils/validation_helper.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../../core/utils/date_time_helper.dart';
 import '../../widgets/common_loading.dart';
 
 class AddCertificatePage extends StatefulWidget {
@@ -36,8 +36,6 @@ class _AddCertificatePageState extends State<AddCertificatePage>
   DateTime? _issueDate;
   DateTime? _expiryDate;
   bool _isLoading = false;
-
-  final _dateFormat = DateFormat('yyyy-MM-dd');
 
   @override
   void initState() {
@@ -116,9 +114,11 @@ class _AddCertificatePageState extends State<AddCertificatePage>
       final request = CreateCertificateRequest.fromOldFields(
         title: _titleController.text.trim(),
         issuer: _issuerController.text.trim(),
-        issueDate: _issueDate != null ? _dateFormat.format(_issueDate!) : null,
+        issueDate: _issueDate != null
+            ? DateTimeHelper.formatCustom(_issueDate!, 'yyyy-MM-dd')
+            : null,
         expiryDate: _expiryDate != null
-            ? _dateFormat.format(_expiryDate!)
+            ? DateTimeHelper.formatCustom(_expiryDate!, 'yyyy-MM-dd')
             : null,
         credentialId: _credentialIdController.text.trim().isEmpty
             ? null
@@ -166,10 +166,7 @@ class _AddCertificatePageState extends State<AddCertificatePage>
     isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: SkillVerseAppBar(
-        title: '',
-        onBack: () => Navigator.pop(context),
-      ),
+      appBar: SkillVerseAppBar(title: '', onBack: () => Navigator.pop(context)),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Stack(
@@ -232,10 +229,7 @@ class _AddCertificatePageState extends State<AddCertificatePage>
 
             // Loading Overlay
             if (_isLoading)
-              Container(
-                color: Colors.black54,
-                child: CommonLoading.center(),
-              ),
+              Container(color: Colors.black54, child: CommonLoading.center()),
           ],
         ),
       ),
@@ -460,7 +454,9 @@ class _AddCertificatePageState extends State<AddCertificatePage>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    date != null ? _dateFormat.format(date) : 'Chọn ngày',
+                    date != null
+                        ? DateTimeHelper.formatCustom(date, 'yyyy-MM-dd')
+                        : 'Chọn ngày',
                     style: TextStyle(
                       color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                       fontSize: 16,

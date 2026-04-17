@@ -248,6 +248,22 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                           portfolioProvider.extendedProfile!,
                         ),
 
+                      // Work Experience Section
+                      if ((portfolioProvider.extendedProfile?.workExperiences?.isNotEmpty ?? false)) ...[
+                        const SizedBox(height: 24),
+                        _buildWorkExperienceSection(
+                          portfolioProvider.extendedProfile!.workExperiences!,
+                        ),
+                      ],
+
+                      // Education Section
+                      if ((portfolioProvider.extendedProfile?.educationHistory?.isNotEmpty ?? false)) ...[
+                        const SizedBox(height: 24),
+                        _buildEducationSection(
+                          portfolioProvider.extendedProfile!.educationHistory!,
+                        ),
+                      ],
+
                       const SizedBox(height: 24),
 
                       // Quick Stats
@@ -571,6 +587,232 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                   .toList(),
             ),
           ],
+
+          // Years of experience badge
+          if (profile.yearsOfExperience != null) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(
+                  Icons.workspace_premium,
+                  size: 16,
+                  color: AppTheme.themeBlueStart,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${profile.yearsOfExperience} năm kinh nghiệm',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorkExperienceSection(List<PortfolioWorkExperienceDto> items) {
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.work_history,
+                size: 18,
+                color: AppTheme.themeBlueStart,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Kinh nghiệm làm việc',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...items.map((exp) {
+            final dateRange =
+                '${exp.startDate ?? ""} → ${exp.currentJob == true ? "Hiện tại" : (exp.endDate ?? "")}';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(top: 5),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.themeBlueStart,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          exp.position ?? '',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: isDark
+                                ? Colors.white
+                                : AppTheme.lightTextPrimary,
+                          ),
+                        ),
+                        Text(
+                          exp.companyName ?? '',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark
+                                ? Colors.white70
+                                : AppTheme.lightTextSecondary,
+                          ),
+                        ),
+                        if (exp.startDate != null)
+                          Text(
+                            dateRange,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        if (exp.description != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            exp.description!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? Colors.white60
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEducationSection(List<PortfolioEducationDto> items) {
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.school,
+                size: 18,
+                color: AppTheme.themeOrangeStart,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Học vấn',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...items.map((edu) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(top: 5),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.themeOrangeStart,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          edu.degree ?? edu.institution ?? '',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: isDark
+                                ? Colors.white
+                                : AppTheme.lightTextPrimary,
+                          ),
+                        ),
+                        Text(
+                          edu.institution ?? '',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark
+                                ? Colors.white70
+                                : AppTheme.lightTextSecondary,
+                          ),
+                        ),
+                        if (edu.fieldOfStudy != null)
+                          Text(
+                            edu.fieldOfStudy!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        if (edu.startDate != null)
+                          Text(
+                            '${edu.startDate} → ${edu.endDate ?? ""}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        if (edu.status != null)
+                          Text(
+                            edu.status!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.themeGreenStart,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

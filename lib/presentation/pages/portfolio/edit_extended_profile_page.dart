@@ -43,8 +43,11 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
   final _behanceController = TextEditingController();
   final _dribbbleController = TextEditingController();
   final _expertiseController = TextEditingController();
+  final _yearsExpController = TextEditingController();
 
   List<String> _expertiseAreas = [];
+  List<PortfolioWorkExperienceDto> _workExperiences = [];
+  List<PortfolioEducationDto> _educationHistory = [];
   bool _isPublic = true;
   bool _isLoading = false;
 
@@ -74,6 +77,10 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
       _dribbbleController.text = profile.dribbbleUrl ?? '';
       _expertiseAreas = profile.expertiseAreas ?? [];
       _isPublic = profile.isPublic ?? true;
+      _yearsExpController.text =
+          profile.yearsOfExperience?.toString() ?? '';
+      _workExperiences = List.of(profile.workExperiences ?? []);
+      _educationHistory = List.of(profile.educationHistory ?? []);
     }
   }
 
@@ -90,6 +97,7 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
     _behanceController.dispose();
     _dribbbleController.dispose();
     _expertiseController.dispose();
+    _yearsExpController.dispose();
     super.dispose();
   }
 
@@ -153,6 +161,9 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             : _dribbbleController.text.trim(),
         expertiseAreas: _expertiseAreas.isEmpty ? null : _expertiseAreas,
         isPublic: _isPublic,
+        yearsOfExperience: int.tryParse(_yearsExpController.text.trim()),
+        workExperiences: _workExperiences.isEmpty ? null : _workExperiences,
+        educationHistory: _educationHistory.isEmpty ? null : _educationHistory,
       );
 
       final portfolioProvider = context.read<PortfolioProvider>();
@@ -243,6 +254,10 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
 
                     // Expertise Section
                     _buildExpertiseSection(),
+                    const SizedBox(height: 24),
+
+                    // Experience & Education Section
+                    _buildExperienceAndEducationSection(),
                     const SizedBox(height: 24),
 
                     // Privacy Section
@@ -567,6 +582,540 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             },
             activeTrackColor: AppTheme.themeGreenStart,
             activeThumbColor: Colors.white,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== EXPERIENCE & EDUCATION ====================
+
+  Widget _buildExperienceAndEducationSection() {
+    return Column(
+      children: [
+        // Years of experience
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.work_history,
+                    color: AppTheme.themeBlueStart,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Kinh nghiệm',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _yearsExpController,
+                label: 'Số năm kinh nghiệm',
+                hint: 'vd: 3',
+                prefixIcon: Icons.timer_outlined,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Kinh nghiệm làm việc',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : AppTheme.lightTextPrimary,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _showAddWorkExperienceDialog,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Thêm'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.themeBlueStart,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ),
+              if (_workExperiences.isEmpty)
+                Text(
+                  'Chưa có kinh nghiệm làm việc',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                )
+              else
+                ..._workExperiences.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final exp = entry.value;
+                  return _buildWorkExpTile(exp, idx);
+                }),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Education
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.school,
+                    color: AppTheme.themeOrangeStart,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Học vấn',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Quá trình học tập',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : AppTheme.lightTextPrimary,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _showAddEducationDialog,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Thêm'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.themeOrangeStart,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ),
+              if (_educationHistory.isEmpty)
+                Text(
+                  'Chưa có thông tin học vấn',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                )
+              else
+                ..._educationHistory.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final edu = entry.value;
+                  return _buildEducationTile(edu, idx);
+                }),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWorkExpTile(PortfolioWorkExperienceDto exp, int idx) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.themeBlueStart.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppTheme.themeBlueStart.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.business, size: 16, color: AppTheme.themeBlueStart),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  exp.position ?? 'Vị trí',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                  ),
+                ),
+                Text(
+                  exp.companyName ?? '',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+                if (exp.startDate != null)
+                  Text(
+                    '${exp.startDate} → ${exp.currentJob == true ? "Hiện tại" : (exp.endDate ?? "")}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+            visualDensity: VisualDensity.compact,
+            onPressed: () => setState(() => _workExperiences.removeAt(idx)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEducationTile(PortfolioEducationDto edu, int idx) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.themeOrangeStart.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppTheme.themeOrangeStart.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.school,
+            size: 16,
+            color: AppTheme.themeOrangeStart,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  edu.degree ?? 'Bằng cấp',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                  ),
+                ),
+                Text(
+                  edu.institution ?? '',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+                if (edu.fieldOfStudy != null)
+                  Text(
+                    edu.fieldOfStudy!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+            visualDensity: VisualDensity.compact,
+            onPressed: () => setState(() => _educationHistory.removeAt(idx)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddWorkExperienceDialog() {
+    final companyCtrl = TextEditingController();
+    final positionCtrl = TextEditingController();
+    final locationCtrl = TextEditingController();
+    final startCtrl = TextEditingController();
+    final endCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    bool isCurrent = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (_, setDialogState) => AlertDialog(
+          title: const Text('Thêm kinh nghiệm làm việc'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: companyCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Tên công ty *',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: positionCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Vị trí *',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: locationCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Địa điểm',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: startCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Ngày bắt đầu (YYYY-MM)',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (!isCurrent)
+                  TextField(
+                    controller: endCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Ngày kết thúc (YYYY-MM)',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: isCurrent,
+                      onChanged: (v) =>
+                          setDialogState(() => isCurrent = v ?? false),
+                      activeColor: AppTheme.themeBlueStart,
+                    ),
+                    const Text('Đang làm việc tại đây', style: TextStyle(fontSize: 13)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Mô tả',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Hủy'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (companyCtrl.text.trim().isEmpty ||
+                    positionCtrl.text.trim().isEmpty) { return; }
+                final exp = PortfolioWorkExperienceDto(
+                  companyName: companyCtrl.text.trim(),
+                  position: positionCtrl.text.trim(),
+                  location: locationCtrl.text.trim().isEmpty
+                      ? null
+                      : locationCtrl.text.trim(),
+                  startDate: startCtrl.text.trim().isEmpty
+                      ? null
+                      : startCtrl.text.trim(),
+                  endDate: isCurrent || endCtrl.text.trim().isEmpty
+                      ? null
+                      : endCtrl.text.trim(),
+                  currentJob: isCurrent,
+                  description: descCtrl.text.trim().isEmpty
+                      ? null
+                      : descCtrl.text.trim(),
+                );
+                setState(() => _workExperiences.add(exp));
+                Navigator.pop(ctx);
+              },
+              child: const Text('Thêm'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddEducationDialog() {
+    final institutionCtrl = TextEditingController();
+    final degreeCtrl = TextEditingController();
+    final fieldCtrl = TextEditingController();
+    final locationCtrl = TextEditingController();
+    final startCtrl = TextEditingController();
+    final endCtrl = TextEditingController();
+    final statusCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Thêm học vấn'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: institutionCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Trường học *',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: degreeCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Bằng cấp',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: fieldCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Ngành học',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: locationCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Địa điểm',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: startCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Ngày bắt đầu (YYYY-MM)',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: endCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Ngày kết thúc (YYYY-MM)',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: statusCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Tình trạng (vd: Đã tốt nghiệp)',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: descCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Mô tả',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (institutionCtrl.text.trim().isEmpty) return;
+              final edu = PortfolioEducationDto(
+                institution: institutionCtrl.text.trim(),
+                degree: degreeCtrl.text.trim().isEmpty
+                    ? null
+                    : degreeCtrl.text.trim(),
+                fieldOfStudy: fieldCtrl.text.trim().isEmpty
+                    ? null
+                    : fieldCtrl.text.trim(),
+                location: locationCtrl.text.trim().isEmpty
+                    ? null
+                    : locationCtrl.text.trim(),
+                startDate: startCtrl.text.trim().isEmpty
+                    ? null
+                    : startCtrl.text.trim(),
+                endDate: endCtrl.text.trim().isEmpty
+                    ? null
+                    : endCtrl.text.trim(),
+                status: statusCtrl.text.trim().isEmpty
+                    ? null
+                    : statusCtrl.text.trim(),
+                description: descCtrl.text.trim().isEmpty
+                    ? null
+                    : descCtrl.text.trim(),
+              );
+              setState(() => _educationHistory.add(edu));
+              Navigator.pop(ctx);
+            },
+            child: const Text('Thêm'),
           ),
         ],
       ),

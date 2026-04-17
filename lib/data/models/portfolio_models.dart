@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:json_annotation/json_annotation.dart';
+import '../../core/utils/number_formatter.dart';
 
 part 'portfolio_models.g.dart';
 
@@ -35,6 +36,67 @@ enum CertificateCategory {
   language,
   @JsonValue('OTHER')
   other,
+}
+
+// ==================== PORTFOLIO SUB-MODELS ====================
+
+/// Matches backend PortfolioWorkExperienceDTO.java
+@JsonSerializable()
+class PortfolioWorkExperienceDto {
+  final String? id;
+  final String? companyName;
+  final String? position;
+  final String? location;
+  final String? startDate;
+  final String? endDate;
+  @JsonKey(name: 'currentJob')
+  final bool? currentJob;
+  final String? description;
+
+  const PortfolioWorkExperienceDto({
+    this.id,
+    this.companyName,
+    this.position,
+    this.location,
+    this.startDate,
+    this.endDate,
+    this.currentJob,
+    this.description,
+  });
+
+  factory PortfolioWorkExperienceDto.fromJson(Map<String, dynamic> json) =>
+      _$PortfolioWorkExperienceDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$PortfolioWorkExperienceDtoToJson(this);
+}
+
+/// Matches backend PortfolioEducationDTO.java
+@JsonSerializable()
+class PortfolioEducationDto {
+  final String? id;
+  final String? institution;
+  final String? degree;
+  final String? fieldOfStudy;
+  final String? location;
+  final String? startDate;
+  final String? endDate;
+  final String? status;
+  final String? description;
+
+  const PortfolioEducationDto({
+    this.id,
+    this.institution,
+    this.degree,
+    this.fieldOfStudy,
+    this.location,
+    this.startDate,
+    this.endDate,
+    this.status,
+    this.description,
+  });
+
+  factory PortfolioEducationDto.fromJson(Map<String, dynamic> json) =>
+      _$PortfolioEducationDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$PortfolioEducationDtoToJson(this);
 }
 
 // ==================== EXTENDED PROFILE ====================
@@ -86,6 +148,18 @@ class ExtendedProfileDto {
   final bool? showContactInfo;
   final bool? allowJobOffers;
 
+  // New fields from backend UserProfileDTO
+  final String? email;
+  @JsonKey(name: 'avatarMediaId')
+  final int? avatarMediaId;
+  @JsonKey(name: 'companyId')
+  final int? companyId;
+  final String? socialLinks;
+  final String? themePreference;
+  final String? keywords;
+  final List<PortfolioWorkExperienceDto>? workExperiences;
+  final List<PortfolioEducationDto>? educationHistory;
+
   // Stats
   final int? portfolioViews;
   final int? totalProjects;
@@ -106,6 +180,14 @@ class ExtendedProfileDto {
     this.address,
     this.region,
     this.basicAvatarUrl,
+    this.email,
+    this.avatarMediaId,
+    this.companyId,
+    this.socialLinks,
+    this.themePreference,
+    this.keywords,
+    this.workExperiences,
+    this.educationHistory,
     this.professionalTitle,
     this.careerGoals,
     this.yearsOfExperience,
@@ -156,7 +238,7 @@ class ExtendedProfileDto {
   /// twitter: not in new backend, returns null
   String? get twitterUrl => null;
 
-  /// topSkills JSON string parsed to List<String> → expertiseAreas
+  /// topSkills JSON string parsed to a list of strings → expertiseAreas
   List<String>? get expertiseAreas {
     if (topSkills == null || topSkills!.trim().isEmpty) return null;
     try {
@@ -202,6 +284,12 @@ class CreateExtendedProfileRequest {
   @JsonKey(name: 'isPublic')
   final bool? isPublic;
   final bool? allowJobOffers;
+  // Backend field: yearsOfExperience
+  final int? yearsOfExperience;
+  // Backend field: workExperiences
+  final List<PortfolioWorkExperienceDto>? workExperiences;
+  // Backend field: educationHistory
+  final List<PortfolioEducationDto>? educationHistory;
 
   CreateExtendedProfileRequest({
     this.customUrlSlug,
@@ -217,6 +305,9 @@ class CreateExtendedProfileRequest {
     this.topSkills,
     this.isPublic,
     this.allowJobOffers,
+    this.yearsOfExperience,
+    this.workExperiences,
+    this.educationHistory,
   });
 
   /// Factory that accepts OLD field names from existing UI pages.
@@ -232,6 +323,9 @@ class CreateExtendedProfileRequest {
     String? dribbbleUrl,
     List<String>? expertiseAreas,
     bool? isPublic,
+    int? yearsOfExperience,
+    List<PortfolioWorkExperienceDto>? workExperiences,
+    List<PortfolioEducationDto>? educationHistory,
   }) {
     final topSkillsJson = expertiseAreas != null && expertiseAreas.isNotEmpty
         ? jsonEncode(expertiseAreas)
@@ -248,6 +342,9 @@ class CreateExtendedProfileRequest {
       dribbbleUrl: dribbbleUrl,
       topSkills: topSkillsJson,
       isPublic: isPublic,
+      yearsOfExperience: yearsOfExperience,
+      workExperiences: workExperiences?.isEmpty == true ? null : workExperiences,
+      educationHistory: educationHistory?.isEmpty == true ? null : educationHistory,
     );
   }
 
@@ -674,6 +771,7 @@ class GenerateCVRequest {
   final bool? includeProjects;
   final bool? includeCertificates;
   final bool? includeReviews;
+  final bool? includeCompletedMissions;
 
   GenerateCVRequest({
     this.templateName,
@@ -683,6 +781,7 @@ class GenerateCVRequest {
     this.includeProjects,
     this.includeCertificates,
     this.includeReviews,
+    this.includeCompletedMissions,
   });
 
   factory GenerateCVRequest.fromJson(Map<String, dynamic> json) =>
@@ -969,6 +1068,6 @@ class CompletedMissionDto {
   String get budgetDisplay {
     if (budget == null) return '';
     final cur = currency ?? 'VND';
-    return '${budget!.toStringAsFixed(0)} $cur';
+    return '${NumberFormatter.formatAmount(budget!)} $cur';
   }
 }

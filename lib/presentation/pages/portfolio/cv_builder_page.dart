@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:printing/printing.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/ai_generation_loading_view.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/glass_card.dart';
 import '../../themes/app_theme.dart';
@@ -25,7 +26,7 @@ class CVBuilderPage extends StatefulWidget {
 
 class _CVBuilderPageState extends State<CVBuilderPage> {
   String _selectedTemplate = 'professional';
-  bool _isGenerating = false;
+  PortfolioProvider? _portfolioProviderRef;
 
   final _targetRoleController = TextEditingController();
   final _targetIndustryController = TextEditingController();
@@ -69,22 +70,42 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PortfolioProvider>().loadCVs();
+      if (!mounted) return;
+      _portfolioProviderRef = context.read<PortfolioProvider>();
+      _portfolioProviderRef!.addListener(_onPortfolioProviderChanged);
+      _portfolioProviderRef!.loadCVs();
+      // Handle result that arrived while user was away
+      _onPortfolioProviderChanged();
     });
   }
 
   @override
   void dispose() {
+    _portfolioProviderRef?.removeListener(_onPortfolioProviderChanged);
     _targetRoleController.dispose();
     _targetIndustryController.dispose();
     _additionalInstructionsController.dispose();
     super.dispose();
   }
 
-  Future<void> _generateCV() async {
-    final portfolioProvider = context.read<PortfolioProvider>();
-    setState(() => _isGenerating = true);
+  void _onPortfolioProviderChanged() {
+    if (!mounted) return;
+    final p = _portfolioProviderRef;
+    if (p == null) return;
+    if (p.lastGeneratedCV != null) {
+      p.clearLastGeneratedCV();
+      ErrorHandler.showSuccessSnackBar(context, 'Tạo CV thành công!');
+      return;
+    }
+    if (p.cvGenerationError != null) {
+      final err = p.cvGenerationError!;
+      p.clearCVGenerationError();
+      ErrorHandler.showErrorSnackBar(context, err);
+    }
+  }
 
+  void _generateCV() {
+    final portfolioProvider = context.read<PortfolioProvider>();
     final request = GenerateCVRequest(
       templateName: _selectedTemplate,
       targetRole: _targetRoleController.text.trim().isNotEmpty
@@ -101,20 +122,8 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
       includeCertificates: _includeCertificates,
       includeReviews: _includeReviews,
     );
-
-    final success = await portfolioProvider.generateCV(request: request);
-
-    if (!mounted) return;
-    setState(() => _isGenerating = false);
-
-    if (success) {
-      ErrorHandler.showSuccessSnackBar(context, 'Tạo CV thành công!');
-    } else {
-      ErrorHandler.showErrorSnackBar(
-        context,
-        portfolioProvider.errorMessage ?? 'Có lỗi xảy ra',
-      );
-    }
+    // Fire and forget — state in provider; listener handles success/error
+    portfolioProvider.generateCV(request: request);
   }
 
   Future<void> _setActiveCV(int cvId) async {
@@ -152,8 +161,9 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
   Future<void> _openCVPdf(CVDto cv) async {
     final cvData = CVStructuredData.tryParse(cv.cvJson);
     if (cvData == null) {
-      if (mounted)
+      if (mounted) {
         ErrorHandler.showErrorSnackBar(context, 'Dữ liệu CV không hợp lệ.');
+      }
       return;
     }
     try {
@@ -215,6 +225,22 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
       appBar: SkillVerseAppBar(title: 'Quản lý CV', icon: Icons.description),
       body: Consumer<PortfolioProvider>(
         builder: (context, provider, child) {
+          if (provider.isCVGenerating) {
+            return const AiGenerationLoadingView(
+              speech: 'Meowl đang biên tập CV thật chỉnh chu cho bạn đó! 📄',
+              title: 'Đang tạo CV bằng AI',
+              description:
+                  'AI đang tổng hợp hồ sơ, lựa chọn điểm mạnh nổi bật và sắp xếp bố cục phù hợp.',
+              etaText: 'Thường mất khoảng 20-45 giây',
+              steps: [
+                ('Đọc hồ sơ', Icons.person_search_outlined),
+                ('Chọn điểm mạnh', Icons.stars_outlined),
+                ('Dựng CV', Icons.description_outlined),
+                ('Hoàn thiện', Icons.check_circle_outline),
+              ],
+            );
+          }
+
           if (provider.isLoading) {
             return const SingleChildScrollView(
               padding: EdgeInsets.all(16),
@@ -426,12 +452,12 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _isGenerating ? null : _generateCV,
-                    icon: _isGenerating
+                    onPressed: provider.isCVGenerating ? null : _generateCV,
+                    icon: provider.isCVGenerating
                         ? CommonLoading.small()
                         : const Icon(Icons.auto_awesome),
                     label: Text(
-                      _isGenerating ? 'Đang tạo CV...' : 'Tạo CV bằng AI',
+                      provider.isCVGenerating ? 'Đang tạo CV...' : 'Tạo CV bằng AI',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/section_header.dart';
@@ -9,6 +8,7 @@ import '../../themes/app_theme.dart';
 import '../../../data/models/portfolio_models.dart';
 import '../../../core/utils/validation_helper.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../../core/utils/date_time_helper.dart';
 import '../../widgets/common_loading.dart';
 
 class EditProjectPage extends StatefulWidget {
@@ -48,8 +48,6 @@ class _EditProjectPageState extends State<EditProjectPage>
   bool _isFeatured = false;
   bool _isLoading = false;
 
-  final _dateFormat = DateFormat('yyyy-MM-dd');
-
   @override
   void initState() {
     super.initState();
@@ -77,14 +75,10 @@ class _EditProjectPageState extends State<EditProjectPage>
       _isFeatured = project.isFeatured ?? false;
 
       if (project.startDate != null) {
-        try {
-          _startDate = DateTime.parse(project.startDate!);
-        } catch (_) {}
+        _startDate = DateTimeHelper.tryParseIso8601(project.startDate!);
       }
       if (project.endDate != null) {
-        try {
-          _endDate = DateTime.parse(project.endDate!);
-        } catch (_) {}
+        _endDate = DateTimeHelper.tryParseIso8601(project.endDate!);
       }
     }
   }
@@ -181,7 +175,7 @@ class _EditProjectPageState extends State<EditProjectPage>
               ? null
               : _githubUrlController.text.trim(),
           completionDate: _endDate != null
-              ? _dateFormat.format(_endDate!)
+              ? DateTimeHelper.formatCustom(_endDate!, 'yyyy-MM-dd')
               : null,
           isFeatured: _isFeatured,
         );
@@ -216,7 +210,7 @@ class _EditProjectPageState extends State<EditProjectPage>
               ? null
               : _githubUrlController.text.trim(),
           completionDate: _endDate != null
-              ? _dateFormat.format(_endDate!)
+              ? DateTimeHelper.formatCustom(_endDate!, 'yyyy-MM-dd')
               : null,
           isFeatured: _isFeatured,
         );
@@ -586,7 +580,9 @@ class _EditProjectPageState extends State<EditProjectPage>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    date != null ? _dateFormat.format(date) : 'Chọn ngày',
+                    date != null
+                        ? DateTimeHelper.formatCustom(date, 'yyyy-MM-dd')
+                        : 'Chọn ngày',
                     style: TextStyle(
                       color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                       fontSize: 16,

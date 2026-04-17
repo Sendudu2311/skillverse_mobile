@@ -22,6 +22,12 @@ class PortfolioProvider with ChangeNotifier, LoadingStateProviderMixin {
   List<CompletedMissionDto> _completedMissions = [];
   bool _isSyncing = false;
 
+  // CV generation state — separate from the mixin's isLoading so the
+  // full-screen AI loading view persists across Back + re-enter.
+  bool _isCVGenerating = false;
+  CVDto? _lastGeneratedCV;
+  String? _cvGenerationError;
+
   // Getters
   CompletePortfolioDto? get myPortfolio => _myPortfolio;
   ExtendedProfileDto? get extendedProfile => _extendedProfile;
@@ -34,6 +40,17 @@ class PortfolioProvider with ChangeNotifier, LoadingStateProviderMixin {
   List<SystemCertificateDto> get systemCertificates => _systemCertificates;
   List<CompletedMissionDto> get completedMissions => _completedMissions;
   bool get isSyncing => _isSyncing;
+  bool get isCVGenerating => _isCVGenerating;
+  CVDto? get lastGeneratedCV => _lastGeneratedCV;
+  String? get cvGenerationError => _cvGenerationError;
+
+  void clearLastGeneratedCV() {
+    _lastGeneratedCV = null;
+  }
+
+  void clearCVGenerationError() {
+    _cvGenerationError = null;
+  }
 
   // ==================== Extended Profile ====================
 
@@ -265,15 +282,27 @@ class PortfolioProvider with ChangeNotifier, LoadingStateProviderMixin {
   }
 
   Future<bool> generateCV({GenerateCVRequest? request}) async {
-    final result = await executeAsync<bool>(() async {
+    if (_isCVGenerating) return false;
+    _isCVGenerating = true;
+    _lastGeneratedCV = null;
+    _cvGenerationError = null;
+    notifyListeners();
+
+    try {
       final newCV = await _portfolioService.generateCV(request: request);
       _activeCV = newCV;
       // Reload full list from server to sync isActive flags
       _cvs = await _portfolioService.getAllCVs();
+      _lastGeneratedCV = newCV;
+      _isCVGenerating = false;
       notifyListeners();
       return true;
-    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
-    return result ?? false;
+    } catch (e) {
+      _cvGenerationError = ErrorHandler.getErrorMessage(e);
+      _isCVGenerating = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<bool> updateCV(int cvId, UpdateCVRequest request) async {
