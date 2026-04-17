@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../core/utils/date_time_helper.dart';
+import '../../../core/utils/number_formatter.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/contract_models.dart';
 import '../../providers/contract_provider.dart';
@@ -11,6 +11,7 @@ import '../../widgets/error_state_widget.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/themed_scaffold.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/common_loading.dart';
 
 class ContractDetailPage extends StatefulWidget {
   final int contractId;
@@ -22,11 +23,6 @@ class ContractDetailPage extends StatefulWidget {
 }
 
 class _ContractDetailPageState extends State<ContractDetailPage> {
-  static final _currencyFmt = NumberFormat.currency(
-    locale: 'vi_VN',
-    symbol: '₫',
-  );
-
   @override
   void initState() {
     super.initState();
@@ -90,12 +86,10 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
                           child: Row(
                             children: [
                               provider.isDownloadingPDF
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 18,
                                       height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
+                                      child: CommonLoading.button(),
                                     )
                                   : const Icon(
                                       Icons.download_rounded,
@@ -117,12 +111,10 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
                           child: Row(
                             children: [
                               provider.isSharingPDF
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 18,
                                       height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
+                                      child: CommonLoading.button(),
                                     )
                                   : const Icon(
                                       Icons.share_rounded,
@@ -148,7 +140,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
         body: Consumer<ContractProvider>(
           builder: (context, provider, _) {
             if (provider.isLoadingDetail) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(child: CommonLoading.center());
             }
 
             if (provider.errorMessage != null) {
@@ -377,7 +369,9 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
       children: [
         _infoRow(
           'Lương chính',
-          contract.salary != null ? _currencyFmt.format(contract.salary) : null,
+          contract.salary != null
+              ? NumberFormatter.formatCurrency(contract.salary!, currency: '₫')
+              : null,
           isDark,
           valueColor: AppTheme.successColor,
         ),
@@ -396,7 +390,10 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
           _sectionLabel('Thử việc', isDark),
           _infoRow(
             'Lương thử việc',
-            _currencyFmt.format(contract.probationSalary),
+            NumberFormatter.formatCurrency(
+              contract.probationSalary!,
+              currency: '₫',
+            ),
             isDark,
           ),
           if (contract.probationMonths != null)
@@ -410,19 +407,28 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
           if (contract.mealAllowance != null)
             _infoRow(
               'Ăn trưa',
-              _currencyFmt.format(contract.mealAllowance),
+              NumberFormatter.formatCurrency(
+                contract.mealAllowance!,
+                currency: '₫',
+              ),
               isDark,
             ),
           if (contract.transportAllowance != null)
             _infoRow(
               'Đi lại',
-              _currencyFmt.format(contract.transportAllowance),
+              NumberFormatter.formatCurrency(
+                contract.transportAllowance!,
+                currency: '₫',
+              ),
               isDark,
             ),
           if (contract.housingAllowance != null)
             _infoRow(
               'Nhà ở',
-              _currencyFmt.format(contract.housingAllowance),
+              NumberFormatter.formatCurrency(
+                contract.housingAllowance!,
+                currency: '₫',
+              ),
               isDark,
             ),
         ],
@@ -768,13 +774,9 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
         reason: reason.isNotEmpty ? reason : null,
       );
       if (success && mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Đã từ chối hợp đồng')));
+        ErrorHandler.showSuccessSnackBar(context, 'Đã từ chối hợp đồng');
       } else if (!success && mounted && provider.errorMessage != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(provider.errorMessage!)));
+        ErrorHandler.showErrorSnackBar(context, provider.errorMessage!);
       }
     }
     reasonController.dispose();

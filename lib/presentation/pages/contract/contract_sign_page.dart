@@ -11,7 +11,9 @@ import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/themed_scaffold.dart';
 import '../../widgets/skillverse_app_bar.dart';
+import '../../widgets/common_loading.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/utils/error_handler.dart';
 
 /// Contract signing page with a built-in signature pad.
 /// Uses CustomPainter to capture the user's signature, renders it to PNG,
@@ -74,8 +76,11 @@ class _ContractSignPageState extends State<ContractSignPage> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.info_outline,
-                                size: 20, color: AppTheme.accentCyan),
+                            Icon(
+                              Icons.info_outline,
+                              size: 20,
+                              color: AppTheme.accentCyan,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
@@ -101,12 +106,14 @@ class _ContractSignPageState extends State<ContractSignPage> {
                         child: Column(
                           children: [
                             Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                               child: Row(
                                 children: [
-                                  Icon(Icons.draw,
-                                      size: 16, color: AppTheme.accentCyan),
+                                  Icon(
+                                    Icons.draw,
+                                    size: 16,
+                                    color: AppTheme.accentCyan,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Chữ ký',
@@ -121,10 +128,13 @@ class _ContractSignPageState extends State<ContractSignPage> {
                                   const Spacer(),
                                   if (_hasSignature)
                                     TextButton.icon(
-                                      onPressed:
-                                          _isBusy ? null : _clearSignature,
-                                      icon: const Icon(Icons.delete_outline,
-                                          size: 16),
+                                      onPressed: _isBusy
+                                          ? null
+                                          : _clearSignature,
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        size: 16,
+                                      ),
                                       label: const Text('Xóa'),
                                       style: TextButton.styleFrom(
                                         foregroundColor: AppTheme.errorColor,
@@ -136,8 +146,7 @@ class _ContractSignPageState extends State<ContractSignPage> {
                               ),
                             ),
                             Container(
-                              margin:
-                                  const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                               height: 200,
                               decoration: BoxDecoration(
                                 color: Colors.white,
@@ -146,10 +155,10 @@ class _ContractSignPageState extends State<ContractSignPage> {
                                   color: _isDrawing
                                       ? AppTheme.accentCyan
                                       : _hasSignature
-                                          ? AppTheme.successColor
-                                              .withValues(alpha: 0.5)
-                                          : Colors.grey
-                                              .withValues(alpha: 0.3),
+                                      ? AppTheme.successColor.withValues(
+                                          alpha: 0.5,
+                                        )
+                                      : Colors.grey.withValues(alpha: 0.3),
                                   width: _isDrawing ? 2.5 : 2,
                                 ),
                               ),
@@ -162,22 +171,18 @@ class _ContractSignPageState extends State<ContractSignPage> {
                                   },
                                   onPanStart: (details) {
                                     setState(() {
-                                      _currentStroke = [
-                                        details.localPosition
-                                      ];
+                                      _currentStroke = [details.localPosition];
                                     });
                                   },
                                   onPanUpdate: (details) {
                                     setState(() {
-                                      _currentStroke
-                                          .add(details.localPosition);
+                                      _currentStroke.add(details.localPosition);
                                     });
                                   },
                                   onPanEnd: (_) {
                                     setState(() {
                                       if (_currentStroke.isNotEmpty) {
-                                        _strokes
-                                            .add(List.from(_currentStroke));
+                                        _strokes.add(List.from(_currentStroke));
                                       }
                                       _currentStroke = [];
                                       _isDrawing = false;
@@ -194,8 +199,14 @@ class _ContractSignPageState extends State<ContractSignPage> {
                                     child: CustomPaint(
                                       painter: _SignaturePainter(
                                         strokes: List.unmodifiable(
-                                            _strokes.map((s) => List<Offset>.unmodifiable(s))),
-                                        currentStroke: List<Offset>.unmodifiable(_currentStroke),
+                                          _strokes.map(
+                                            (s) => List<Offset>.unmodifiable(s),
+                                          ),
+                                        ),
+                                        currentStroke:
+                                            List<Offset>.unmodifiable(
+                                              _currentStroke,
+                                            ),
                                       ),
                                       size: Size.infinite,
                                     ),
@@ -214,8 +225,11 @@ class _ContractSignPageState extends State<ContractSignPage> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.warning_amber,
-                                size: 16, color: AppTheme.warningColor),
+                            Icon(
+                              Icons.warning_amber,
+                              size: 16,
+                              color: AppTheme.warningColor,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -251,11 +265,13 @@ class _ContractSignPageState extends State<ContractSignPage> {
                   child: Center(
                     child: GlassCard(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 24),
+                        horizontal: 32,
+                        vertical: 24,
+                      ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const CircularProgressIndicator(),
+                          CommonLoading.small(),
                           const SizedBox(height: 16),
                           Text(
                             'Đang ký hợp đồng...',
@@ -292,8 +308,9 @@ class _ContractSignPageState extends State<ContractSignPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF1E293B) : Colors.white)
-            .withValues(alpha: 0.95),
+        color: (isDark ? const Color(0xFF1E293B) : Colors.white).withValues(
+          alpha: 0.95,
+        ),
         border: Border(
           top: BorderSide(
             color: isDark
@@ -309,26 +326,19 @@ class _ContractSignPageState extends State<ContractSignPage> {
             builder: (context, provider, _) {
               final busy = _isUploading || provider.isSubmitting;
               return ElevatedButton.icon(
-                onPressed:
-                    (!_hasSignature || busy) ? null : _confirmAndSign,
+                onPressed: (!_hasSignature || busy) ? null : _confirmAndSign,
                 icon: busy
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+                        child: CommonLoading.button(),
                       )
                     : const Icon(Icons.check, size: 20),
-                label: Text(
-                  busy ? 'Đang xử lý...' : 'Xác nhận ký hợp đồng',
-                ),
+                label: Text(busy ? 'Đang xử lý...' : 'Xác nhận ký hợp đồng'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.successColor,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor:
-                      Colors.grey.withValues(alpha: 0.3),
+                  disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle: const TextStyle(
                     fontSize: 15,
@@ -404,29 +414,19 @@ class _ContractSignPageState extends State<ContractSignPage> {
 
       // 3. Call sign contract API
       final provider = context.read<ContractProvider>();
-      final success =
-          await provider.signContract(widget.contractId, imageUrl);
+      final success = await provider.signContract(widget.contractId, imageUrl);
 
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🎉 Ký hợp đồng thành công!'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
+        ErrorHandler.showSuccessSnackBar(context, '🎉 Ký hợp đồng thành công!');
         context.pop(); // Go back to detail page
       } else if (provider.errorMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(provider.errorMessage!)),
-        );
+        ErrorHandler.showErrorSnackBar(context, provider.errorMessage!);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: ${e.toString()}')),
-      );
+      ErrorHandler.showErrorSnackBar(context, e);
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
@@ -435,13 +435,13 @@ class _ContractSignPageState extends State<ContractSignPage> {
   /// Capture the RepaintBoundary containing the signature as a PNG Uint8List.
   Future<Uint8List?> _captureSignatureAsPng() async {
     try {
-      final boundary = _signatureKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _signatureKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) return null;
 
       final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       return byteData?.buffer.asUint8List();
     } catch (_) {
       return null;
@@ -454,8 +454,7 @@ class _ContractSignPageState extends State<ContractSignPage> {
     final formData = dio.FormData.fromMap({
       'file': dio.MultipartFile.fromBytes(
         pngBytes,
-        filename:
-            'signature_${DateTime.now().millisecondsSinceEpoch}.png',
+        filename: 'signature_${DateTime.now().millisecondsSinceEpoch}.png',
       ),
       'actorId': actorId,
     });
@@ -490,7 +489,8 @@ class _SignaturePainter extends CustomPainter {
     );
 
     final paint = Paint()
-      ..color = const Color(0xFF1E293B) // Dark ink
+      ..color =
+          const Color(0xFF1E293B) // Dark ink
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..strokeWidth = 2.5

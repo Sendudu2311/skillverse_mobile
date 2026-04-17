@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../core/utils/date_time_helper.dart';
+import '../../../core/utils/number_formatter.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/contract_models.dart';
 import '../../providers/contract_provider.dart';
@@ -12,6 +12,7 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/themed_scaffold.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/skeleton_loaders.dart';
+import '../../widgets/status_badge.dart';
 
 class MyContractsPage extends StatefulWidget {
   const MyContractsPage({super.key});
@@ -21,11 +22,6 @@ class MyContractsPage extends StatefulWidget {
 }
 
 class _MyContractsPageState extends State<MyContractsPage> {
-  static final _currencyFmt = NumberFormat.currency(
-    locale: 'vi_VN',
-    symbol: '₫',
-  );
-
   @override
   void initState() {
     super.initState();
@@ -85,9 +81,9 @@ class _MyContractsPageState extends State<MyContractsPage> {
   }
 
   Widget _buildContractCard(ContractResponse contract, bool isDark) {
-    final statusInfo = _getStatusDisplay(contract.status);
+    final statusName = contract.status?.jsonValue ?? 'N/A';
     final salaryFormatted = contract.salary != null
-        ? _currencyFmt.format(contract.salary)
+        ? NumberFormatter.formatCurrency(contract.salary!, currency: '₫')
         : 'Chưa xác định';
 
     return GlassCard(
@@ -100,7 +96,11 @@ class _MyContractsPageState extends State<MyContractsPage> {
           // Header: contract number + status
           Row(
             children: [
-              Icon(Icons.description, size: 18, color: statusInfo.color),
+              const Icon(
+                Icons.description,
+                size: 18,
+                color: AppTheme.primaryBlueDark,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -115,7 +115,7 @@ class _MyContractsPageState extends State<MyContractsPage> {
                   ),
                 ),
               ),
-              _buildStatusChip(statusInfo),
+              StatusBadge(status: statusName),
             ],
           ),
           const SizedBox(height: 12),
@@ -243,57 +243,8 @@ class _MyContractsPageState extends State<MyContractsPage> {
     );
   }
 
-  Widget _buildStatusChip(_ContractStatusDisplay info) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: info.color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: info.color.withValues(alpha: 0.4)),
-      ),
-      child: Text(
-        info.label,
-        style: TextStyle(
-          color: info.color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
   String _formatDate(String dateStr) {
     final dt = DateTimeHelper.tryParseIso8601(dateStr);
     return dt != null ? DateTimeHelper.formatDate(dt) : dateStr;
   }
-
-  _ContractStatusDisplay _getStatusDisplay(ContractStatus? status) {
-    return switch (status) {
-      ContractStatus.draft => _ContractStatusDisplay('Bản nháp', Colors.grey),
-      ContractStatus.pendingSigner => _ContractStatusDisplay(
-        'Chờ ký',
-        AppTheme.themeBlueStart,
-      ),
-      ContractStatus.pendingEmployer => _ContractStatusDisplay(
-        'Chờ NTD ký',
-        AppTheme.themeOrangeStart,
-      ),
-      ContractStatus.signed => _ContractStatusDisplay(
-        'Đã ký',
-        AppTheme.successColor,
-      ),
-      ContractStatus.rejected => _ContractStatusDisplay(
-        'Bị từ chối',
-        AppTheme.errorColor,
-      ),
-      ContractStatus.cancelled => _ContractStatusDisplay('Đã hủy', Colors.grey),
-      null => _ContractStatusDisplay('N/A', Colors.grey),
-    };
-  }
-}
-
-class _ContractStatusDisplay {
-  final String label;
-  final Color color;
-  _ContractStatusDisplay(this.label, this.color);
 }
