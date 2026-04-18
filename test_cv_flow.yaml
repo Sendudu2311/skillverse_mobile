@@ -1,0 +1,90 @@
+appId: com.example.skillverse_mobile
+---
+# ══════════════════════════════════════════════════════════
+# Maestro E2E Test: Luồng Chỉnh sửa CV  
+# Yêu cầu: App đang mở (flutter run), user đã đăng nhập
+# Bấm Back nếu cần để về Portfolio Overview  
+# ══════════════════════════════════════════════════════════
+
+# ── Step 1: Chụp trạng thái hiện tại ──  
+- takeScreenshot: 01_starting_state
+
+# ── Step 2: Bấm Back để về Portfolio Overview (nếu đang ở subpage) ──
+- back
+- back
+- takeScreenshot: 02_after_back
+
+# ── Step 3: Kiểm tra đang ở Portfolio Overview ──
+# Nút "Sửa CV" nằm ở header Portfolio Overview (icon edit_note)
+# Hierarchy ban đầu cho thấy accessibilityText = "Sửa CV"  
+- assertVisible:
+    text: ".*Về tôi.*"
+    optional: true
+- takeScreenshot: 03_portfolio_overview
+
+# ── Step 4: Bấm nút "Sửa CV" (icon button trên header) ──
+- tapOn: "Sửa CV"
+- takeScreenshot: 04_after_tap_edit
+
+# ── Step 5: Xác nhận đã mở trang Chỉnh sửa CV ──
+- assertVisible: "Chỉnh sửa CV"
+- takeScreenshot: 05_edit_cv_page
+
+# ── Step 6: Kiểm tra form auto-fill ──
+- assertVisible: "Thông tin cá nhân"
+- assertVisible: "Họ và tên"
+- takeScreenshot: 06_personal_info
+
+# ── Step 7: Cuộn đến Liên hệ ──
+- scrollUntilVisible:
+    element: "Liên hệ"
+    direction: DOWN
+- takeScreenshot: 07_contact
+
+# ── Step 8: Cuộn đến Tóm tắt, chỉnh sửa ──
+- scrollUntilVisible:
+    element: "Giới thiệu bản thân"
+    direction: DOWN
+- tapOn: "Giới thiệu bản thân"
+- eraseText: 200
+- inputText: "Full-stack developer with 3+ years of experience in React, Flutter, Node.js."
+- hideKeyboard
+- takeScreenshot: 08_summary_edited
+
+# ── Step 9: Cuộn qua các section ──
+- scrollUntilVisible:
+    element: "Kinh nghiệm"
+    direction: DOWN
+- takeScreenshot: 09_experience
+
+- scrollUntilVisible:
+    element: "Học vấn"
+    direction: DOWN
+- takeScreenshot: 10_education
+
+- scrollUntilVisible:
+    element: "Kỹ năng"
+    direction: DOWN
+- takeScreenshot: 11_skills
+
+- scrollUntilVisible:
+    element: "Dự án"
+    direction: DOWN
+- takeScreenshot: 12_projects
+
+- scrollUntilVisible:
+    element: "Chứng chỉ"
+    direction: DOWN
+- takeScreenshot: 13_certificates
+
+# ── Step 10: Lưu CV ──
+- scrollUntilVisible:
+    element: "Lưu CV"
+    direction: DOWN
+- takeScreenshot: 14_before_save
+- tapOn: "Lưu CV"
+
+# ── Step 11: Xác nhận ──
+- assertVisible:
+    text: ".*thành công.*"
+- takeScreenshot: 15_save_success

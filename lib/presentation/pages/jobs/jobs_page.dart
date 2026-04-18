@@ -44,10 +44,10 @@ class _JobsPageState extends State<JobsPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<JobProvider>();
       // Only fetch from API if provider has no cached data yet
-      if (provider.longTermJobs.isEmpty && !provider.isLoadingJobs) {
+      if (provider.longTermJobs.isEmpty && !provider.isLoadingLongTermJobs) {
         provider.loadPublicJobs();
       }
-      if (provider.shortTermJobs.isEmpty && !provider.isLoadingJobs) {
+      if (provider.shortTermJobs.isEmpty && !provider.isLoadingShortTermJobs) {
         provider.loadShortTermJobs();
       }
       // Pre-load applications for "Đã ứng tuyển" badges
@@ -65,11 +65,13 @@ class _JobsPageState extends State<JobsPage>
         _scrollController.position.maxScrollExtent - 200) {
       final provider = context.read<JobProvider>();
       if (_tabController.index == 0) {
-        if (provider.hasMoreLongTermJobs && !provider.isLoadingMoreLongTermJobs) {
+        if (provider.hasMoreLongTermJobs &&
+            !provider.isLoadingMoreLongTermJobs) {
           provider.loadMoreLongTermJobs();
         }
       } else {
-        if (provider.hasMoreShortTermJobs && !provider.isLoadingMoreShortTermJobs) {
+        if (provider.hasMoreShortTermJobs &&
+            !provider.isLoadingMoreShortTermJobs) {
           provider.loadMoreShortTermJobs();
         }
       }
@@ -377,13 +379,15 @@ class _JobsPageState extends State<JobsPage>
   Widget _buildLongTermJobList() {
     return Consumer<JobProvider>(
       builder: (context, provider, _) {
-        if (provider.isLoadingJobs) {
+        if (provider.isLoadingLongTermJobs) {
           return _buildSkeletonList();
         }
 
-        if (provider.hasError) {
+        if (provider.hasErrorLongTermJobs && provider.longTermJobs.isEmpty) {
           return ErrorStateWidget(
-            message: provider.errorMessage ?? 'Lỗi tải dữ liệu',
+            message:
+                provider.longTermJobsError ??
+                'Không thể tải danh sách việc làm lúc này.',
             onRetry: () => provider.loadPublicJobs(refresh: true),
           );
         }
@@ -410,6 +414,18 @@ class _JobsPageState extends State<JobsPage>
                   return Padding(
                     padding: const EdgeInsets.all(16),
                     child: CommonLoading.center(),
+                  );
+                }
+                if (provider.hasErrorLongTermJobs) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: TextButton.icon(
+                        onPressed: () => provider.loadMoreLongTermJobs(),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Thử tải thêm'),
+                      ),
+                    ),
                   );
                 }
                 if (!provider.hasMoreLongTermJobs) {
@@ -501,13 +517,30 @@ class _JobsPageState extends State<JobsPage>
           ),
 
           // Salary highlight
-          if (job.minBudget != null && job.maxBudget != null) ...[
-            const SizedBox(height: 12),
-            _buildSalaryRow(
-              '${NumberFormatter.formatPrice(job.minBudget!)} - ${NumberFormatter.formatCurrency(job.maxBudget!)}',
-              isNegotiable: job.negotiable == true,
-            ),
-          ],
+          () {
+            final String salaryText;
+            if (job.negotiable == true &&
+                (job.minBudget == null || job.minBudget == 0)) {
+              salaryText = 'Thỏa thuận';
+            } else if (job.minBudget != null && job.maxBudget != null) {
+              salaryText =
+                  '${NumberFormatter.formatPrice(job.minBudget!)} - ${NumberFormatter.formatCurrency(job.maxBudget!)}';
+            } else {
+              salaryText = '';
+            }
+            return salaryText.isNotEmpty
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 12),
+                      _buildSalaryRow(
+                        salaryText,
+                        isNegotiable: job.negotiable == true,
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink();
+          }(),
 
           const SizedBox(height: 10),
 
@@ -550,7 +583,10 @@ class _JobsPageState extends State<JobsPage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               if (job.deadline != null)
-                _buildDeadlineCountdown(DateTime.parse(job.deadline!)),
+                _buildDeadlineCountdown(
+                  DateTimeHelper.tryParseIso8601(job.deadline!) ??
+                      DateTime.now(),
+                ),
               if (job.applicantCount != null)
                 Text(
                   '${job.applicantCount} ứng viên',
@@ -563,7 +599,8 @@ class _JobsPageState extends State<JobsPage>
               if (job.createdAt != null && job.deadline == null)
                 Text(
                   DateTimeHelper.formatRelativeTime(
-                    DateTime.parse(job.createdAt!),
+                    DateTimeHelper.tryParseIso8601(job.createdAt!) ??
+                        DateTime.now(),
                   ),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
@@ -583,13 +620,15 @@ class _JobsPageState extends State<JobsPage>
   Widget _buildShortTermJobList() {
     return Consumer<JobProvider>(
       builder: (context, provider, _) {
-        if (provider.isLoadingJobs) {
+        if (provider.isLoadingShortTermJobs) {
           return _buildSkeletonList();
         }
 
-        if (provider.hasError) {
+        if (provider.hasErrorShortTermJobs && provider.shortTermJobs.isEmpty) {
           return ErrorStateWidget(
-            message: provider.errorMessage ?? 'Lỗi tải dữ liệu',
+            message:
+                provider.shortTermJobsError ??
+                'Không thể tải danh sách freelance lúc này.',
             onRetry: () => provider.loadShortTermJobs(refresh: true),
           );
         }
@@ -620,6 +659,18 @@ class _JobsPageState extends State<JobsPage>
                   return Padding(
                     padding: const EdgeInsets.all(16),
                     child: CommonLoading.center(),
+                  );
+                }
+                if (provider.hasErrorShortTermJobs) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: TextButton.icon(
+                        onPressed: () => provider.loadMoreShortTermJobs(),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Thử tải thêm'),
+                      ),
+                    ),
                   );
                 }
                 if (!provider.hasMoreShortTermJobs) {
@@ -714,13 +765,29 @@ class _JobsPageState extends State<JobsPage>
           ),
 
           // Salary highlight
-          if (job.budget != null) ...[
-            const SizedBox(height: 12),
-            _buildSalaryRow(
-              NumberFormatter.formatCurrency(job.budget!),
-              isNegotiable: job.negotiable == true,
-            ),
-          ],
+          () {
+            final String stSalaryText;
+            if (job.negotiable == true &&
+                (job.budget == null || job.budget == 0)) {
+              stSalaryText = 'Thỏa thuận';
+            } else if (job.budget != null) {
+              stSalaryText = NumberFormatter.formatCurrency(job.budget!);
+            } else {
+              stSalaryText = '';
+            }
+            return stSalaryText.isNotEmpty
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 12),
+                      _buildSalaryRow(
+                        stSalaryText,
+                        isNegotiable: job.negotiable == true,
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink();
+          }(),
 
           const SizedBox(height: 10),
 
@@ -763,7 +830,10 @@ class _JobsPageState extends State<JobsPage>
               Row(
                 children: [
                   if (job.deadline != null)
-                    _buildDeadlineCountdown(DateTime.parse(job.deadline!)),
+                    _buildDeadlineCountdown(
+                      DateTimeHelper.tryParseIso8601(job.deadline!) ??
+                          DateTime.now(),
+                    ),
                   if (job.applicantCount != null) ...[
                     if (job.deadline != null) const SizedBox(width: 12),
                     Text(
@@ -780,7 +850,8 @@ class _JobsPageState extends State<JobsPage>
               if (job.createdAt != null && job.deadline == null)
                 Text(
                   DateTimeHelper.formatRelativeTime(
-                    DateTime.parse(job.createdAt!),
+                    DateTimeHelper.tryParseIso8601(job.createdAt!) ??
+                        DateTime.now(),
                   ),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(

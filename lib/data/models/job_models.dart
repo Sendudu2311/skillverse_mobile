@@ -34,6 +34,8 @@ enum ShortTermJobStatus {
   underReview,
   @JsonValue('APPROVED')
   approved,
+  @JsonValue('AUTO_APPROVED')
+  autoApproved,
   @JsonValue('REJECTED')
   rejected,
   @JsonValue('COMPLETED')
@@ -42,6 +44,10 @@ enum ShortTermJobStatus {
   paid,
   @JsonValue('CANCELLED')
   cancelled,
+  @JsonValue('CANCELLATION_REQUESTED')
+  cancellationRequested,
+  @JsonValue('AUTO_CANCELLED')
+  autoCancelled,
   @JsonValue('DISPUTED')
   disputed,
   @JsonValue('ESCALATED')
@@ -55,8 +61,20 @@ enum JobApplicationStatus {
   pending,
   @JsonValue('REVIEWED')
   reviewed,
+  @JsonValue('INTERVIEW_SCHEDULED')
+  interviewScheduled,
+  @JsonValue('INTERVIEWED')
+  interviewed,
+  @JsonValue('OFFER_SENT')
+  offerSent,
+  @JsonValue('OFFER_ACCEPTED')
+  offerAccepted,
+  @JsonValue('OFFER_REJECTED')
+  offerRejected,
   @JsonValue('ACCEPTED')
   accepted,
+  @JsonValue('CONTRACT_SIGNED')
+  contractSigned,
   @JsonValue('REJECTED')
   rejected,
 }
@@ -74,6 +92,8 @@ enum ShortTermApplicationStatus {
   inProgress,
   @JsonValue('SUBMITTED')
   submitted,
+  @JsonValue('UNDER_REVIEW')
+  underReview,
   @JsonValue('SUBMITTED_OVERDUE')
   submittedOverdue,
   @JsonValue('REVISION_REQUIRED')
@@ -145,6 +165,7 @@ class JobPostingResponse {
 
   final String? createdAt;
   final String? updatedAt;
+  final bool? hasApplied;
 
   JobPostingResponse({
     this.id,
@@ -170,6 +191,7 @@ class JobPostingResponse {
     this.recruiterUserId,
     this.createdAt,
     this.updatedAt,
+    this.hasApplied,
   });
 
   factory JobPostingResponse.fromJson(Map<String, dynamic> json) =>
@@ -234,6 +256,7 @@ class ShortTermJobResponse {
   @JsonKey(name: 'isExpired')
   final bool? expired;
   final bool? canApply;
+  final bool? hasApplied;
 
   ShortTermJobResponse({
     this.id,
@@ -265,6 +288,7 @@ class ShortTermJobResponse {
     this.paidAt,
     this.expired,
     this.canApply,
+    this.hasApplied,
   });
 
   factory ShortTermJobResponse.fromJson(Map<String, dynamic> json) =>
@@ -372,12 +396,30 @@ class JobApplicationResponse {
   final String? reviewedAt;
   final String? processedAt;
 
+  // Candidate identity (new backend fields)
+  final String? userAvatar;
+  final String? userProfessionalTitle;
+
+  // Interview / offer fields
+  final String? interviewResult;
+  final String? offerDetails;
+  final int? offerSalary;
+  final String? offerAdditionalRequirements;
+  final String? candidateOfferResponse;
+  final int? counterSalaryAmount;
+  final String? counterAdditionalRequirements;
+  final int? offerRound;
+  final int? contractId;
+  final String? contractStatus;
+
   // Job details
   final String? recruiterCompanyName;
   final double? minBudget;
   final double? maxBudget;
   @JsonKey(name: 'isRemote')
   final bool? remote;
+  @JsonKey(name: 'isNegotiable')
+  final bool? negotiable;
   final String? location;
   @JsonKey(name: 'isHighlighted')
   final bool? highlighted;
@@ -390,6 +432,8 @@ class JobApplicationResponse {
     this.userId,
     this.userFullName,
     this.userEmail,
+    this.userAvatar,
+    this.userProfessionalTitle,
     this.coverLetter,
     this.appliedAt,
     this.status,
@@ -397,10 +441,21 @@ class JobApplicationResponse {
     this.rejectionReason,
     this.reviewedAt,
     this.processedAt,
+    this.interviewResult,
+    this.offerDetails,
+    this.offerSalary,
+    this.offerAdditionalRequirements,
+    this.candidateOfferResponse,
+    this.counterSalaryAmount,
+    this.counterAdditionalRequirements,
+    this.offerRound,
+    this.contractId,
+    this.contractStatus,
     this.recruiterCompanyName,
     this.minBudget,
     this.maxBudget,
     this.remote,
+    this.negotiable,
     this.location,
     this.highlighted,
     this.portfolioSlug,

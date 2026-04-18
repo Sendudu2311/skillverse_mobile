@@ -358,6 +358,42 @@ class JobService {
     }
   }
 
+  /// Candidate responds to an offer (OFFER_ACCEPTED or OFFER_REJECTED).
+  /// When rejecting, counterSalaryAmount and counterAdditionalRequirements
+  /// carry the candidate's structured counter-offer per the new backend schema.
+  /// PATCH /api/jobs/applications/{applicationId}/status
+  Future<JobApplicationResponse> respondToOffer({
+    required int applicationId,
+    required bool accept,
+    String? candidateOfferResponse,
+    int? counterSalaryAmount,
+    String? counterAdditionalRequirements,
+  }) async {
+    try {
+      final response = await _apiClient.dio.patch<Map<String, dynamic>>(
+        '/jobs/applications/$applicationId/status',
+        data: {
+          'status': accept ? 'OFFER_ACCEPTED' : 'OFFER_REJECTED',
+          if (candidateOfferResponse != null)
+            'candidateOfferResponse': candidateOfferResponse,
+          if (!accept && counterSalaryAmount != null)
+            'counterSalaryAmount': counterSalaryAmount,
+          if (!accept && counterAdditionalRequirements != null)
+            'counterAdditionalRequirements': counterAdditionalRequirements,
+        },
+      );
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      return JobApplicationResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException(_extractErrorMessage(e, 'Phản hồi đề nghị thất bại'));
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Phản hồi đề nghị thất bại: ${e.toString()}');
+    }
+  }
+
   /// Select a candidate for the job (recruiter)
   /// POST /api/short-term-jobs/{jobId}/select-candidate/{applicationId}
   Future<ShortTermApplicationResponse> selectCandidate(

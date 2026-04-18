@@ -9,9 +9,11 @@ import '../../widgets/skeleton_loaders.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/error_state_widget.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/date_time_helper.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../../core/utils/enum_helper.dart';
 import 'job_detail_page.dart';
 import 'short_term_submit_sheet.dart';
 
@@ -48,7 +50,8 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       final provider = context.read<JobProvider>();
-      if (provider.hasMoreShortTermApps && !provider.isLoadingMoreShortTermApps) {
+      if (provider.hasMoreShortTermApps &&
+          !provider.isLoadingMoreShortTermApps) {
         provider.loadMoreShortTermApplications();
       }
     }
@@ -101,12 +104,22 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
   Widget _buildLongTermApplications(JobProvider provider) {
     final apps = provider.myLongTermApplications;
 
+    if (apps.isEmpty && provider.hasErrorLongTermApps) {
+      return ErrorStateWidget(
+        title: 'Không thể tải đơn ứng tuyển',
+        message:
+            provider.longTermApplicationsError ??
+            'Đã có lỗi xảy ra khi tải đơn ứng tuyển của bạn.',
+        onRetry: () => provider.loadMyLongTermApplications(refresh: true),
+      );
+    }
+
     if (apps.isEmpty) {
       return _buildEmptyState('Chưa có đơn ứng tuyển nào', isLongTerm: true);
     }
 
     return RefreshIndicator(
-      onRefresh: () async => provider.loadMyLongTermApplications(),
+      onRefresh: () async => provider.loadMyLongTermApplications(refresh: true),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: apps.length,
@@ -172,7 +185,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                 ),
               ),
               const SizedBox(width: 8),
-              StatusBadge(status: app.status?.name ?? 'PENDING'),
+              StatusBadge(status: app.status?.toApiString() ?? 'PENDING'),
             ],
           ),
 
@@ -190,7 +203,11 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
 
           // Timeline progress
           const SizedBox(height: 12),
-          _buildStatusTimeline(app.status?.name ?? 'PENDING', isLongTerm: true),
+          _buildStatusTimeline(
+            app.status?.toApiString() ?? 'PENDING',
+            isLongTerm: true,
+            isOfferPath: app.remote == true || app.negotiable == true,
+          ),
 
           // Applied date
           if (app.appliedAt != null) ...[
@@ -204,7 +221,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'Nộp ${DateTimeHelper.formatSmart(DateTime.parse(app.appliedAt!))}',
+                  'Nộp ${DateTimeHelper.formatSmart(DateTimeHelper.tryParseIso8601(app.appliedAt!) ?? DateTime.now())}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).hintColor,
                     fontSize: 11,
@@ -234,6 +251,14 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
             ),
           ],
 
+          // Offer section: show when OFFER_SENT or after offer response
+          if (app.status == JobApplicationStatus.offerSent ||
+              app.status == JobApplicationStatus.offerAccepted ||
+              app.status == JobApplicationStatus.offerRejected) ...[
+            const SizedBox(height: 10),
+            _buildOfferSection(app),
+          ],
+
           // Tap hint
           const SizedBox(height: 6),
           Row(
@@ -259,12 +284,25 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
   Widget _buildShortTermApplications(JobProvider provider) {
     final apps = provider.myShortTermApplications;
 
+    if (apps.isEmpty &&
+        provider.hasErrorShortTermApps &&
+        !provider.isLoadingShortTermApps) {
+      return ErrorStateWidget(
+        title: 'Không thể tải đơn freelance',
+        message:
+            provider.shortTermAppsError ??
+            'Đã có lỗi xảy ra khi tải danh sách freelance đã ứng tuyển.',
+        onRetry: () => provider.loadMyShortTermApplications(refresh: true),
+      );
+    }
+
     if (apps.isEmpty && !provider.isLoadingShortTermApps) {
       return _buildEmptyState('Chưa có đơn freelance nào', isLongTerm: false);
     }
 
     return RefreshIndicator(
-      onRefresh: () async => provider.loadMyShortTermApplications(refresh: true),
+      onRefresh: () async =>
+          provider.loadMyShortTermApplications(refresh: true),
       child: ListView.builder(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
@@ -275,6 +313,18 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
               return Padding(
                 padding: const EdgeInsets.all(16),
                 child: CommonLoading.center(),
+              );
+            }
+            if (provider.hasErrorShortTermApps) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: () => provider.loadMoreShortTermApplications(),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Thử tải thêm'),
+                  ),
+                ),
               );
             }
             if (!provider.hasMoreShortTermApps) {
@@ -341,7 +391,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              StatusBadge(status: app.status?.name ?? 'PENDING'),
+              StatusBadge(status: app.status?.toApiString() ?? 'PENDING'),
             ],
           ),
 
@@ -367,7 +417,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
           // Timeline progress
           const SizedBox(height: 12),
           _buildStatusTimeline(
-            app.status?.name ?? 'PENDING',
+            app.status?.toApiString() ?? 'PENDING',
             isLongTerm: false,
           ),
 
@@ -383,7 +433,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'Nộp ${DateTimeHelper.formatSmart(DateTime.parse(app.appliedAt!))}',
+                  'Nộp ${DateTimeHelper.formatSmart(DateTimeHelper.tryParseIso8601(app.appliedAt!) ?? DateTime.now())}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).hintColor,
                     fontSize: 11,
@@ -438,9 +488,10 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        app.status == ShortTermApplicationStatus.revisionRequired
-                            ? AppTheme.themeOrangeStart
-                            : AppTheme.themePurpleStart,
+                        app.status ==
+                            ShortTermApplicationStatus.revisionRequired
+                        ? AppTheme.themeOrangeStart
+                        : AppTheme.themePurpleStart,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -501,7 +552,10 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     );
   }
 
-  void _showSubmitSheet(ShortTermApplicationResponse app, JobProvider provider) {
+  void _showSubmitSheet(
+    ShortTermApplicationResponse app,
+    JobProvider provider,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -528,14 +582,20 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
       decoration: BoxDecoration(
         color: AppTheme.themeOrangeStart.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.themeOrangeStart.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppTheme.themeOrangeStart.withValues(alpha: 0.3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.rate_review_outlined, size: 14, color: AppTheme.themeOrangeStart),
+              Icon(
+                Icons.rate_review_outlined,
+                size: 14,
+                color: AppTheme.themeOrangeStart,
+              ),
               const SizedBox(width: 6),
               Text(
                 'Yêu cầu chỉnh sửa',
@@ -549,7 +609,10 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                 const SizedBox(width: 4),
                 Text(
                   '(lần ${notes.length})',
-                  style: TextStyle(fontSize: 11, color: AppTheme.themeOrangeStart),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.themeOrangeStart,
+                  ),
                 ),
               ],
             ],
@@ -561,7 +624,8 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
-          if (latest.specificIssues != null && latest.specificIssues!.isNotEmpty) ...[
+          if (latest.specificIssues != null &&
+              latest.specificIssues!.isNotEmpty) ...[
             const SizedBox(height: 4),
             ...latest.specificIssues!.map(
               (issue) => Padding(
@@ -570,7 +634,9 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('• ', style: TextStyle(fontSize: 12)),
-                    Expanded(child: Text(issue, style: const TextStyle(fontSize: 12))),
+                    Expanded(
+                      child: Text(issue, style: const TextStyle(fontSize: 12)),
+                    ),
                   ],
                 ),
               ),
@@ -586,66 +652,325 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
   Widget _buildStatusTimeline(
     String currentStatus, {
     required bool isLongTerm,
+    bool isOfferPath = false,
   }) {
-    final steps = isLongTerm
-        ? ['PENDING', 'REVIEWED', 'ACCEPTED']
-        : ['PENDING', 'WORKING', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'COMPLETED'];
+    if (isLongTerm) {
+      return _buildLongTermDots(currentStatus, isOfferPath: isOfferPath);
+    }
+    return _buildShortTermTimeline(currentStatus);
+  }
 
-    // Check if rejected/cancelled (show as failed state)
-    final isRejected =
-        currentStatus == 'REJECTED' ||
-        currentStatus == 'CANCELLED' ||
-        currentStatus == 'WITHDRAWN' ||
-        currentStatus == 'AUTO_CANCELLED' ||
-        currentStatus == 'CANCELLATION_REQUESTED';
+  /// Long-term: 5 labeled steps aligned with full backend status flow.
+  ///
+  /// Steps: Nộp đơn → Xét duyệt → Phỏng vấn → Đề nghị → Ký HĐ
+  /// Fail states: REJECTED, OFFER_REJECTED → red dot at the rejection step.
+  Widget _buildLongTermDots(String currentStatus, {bool isOfferPath = false}) {
+    // Direct-accept path (Onsite/Fixed): no Offer step
+    // Offer path (Remote/Negotiable): full Offer negotiation step
+    final stepLabels = isOfferPath
+        ? ['Nộp đơn', 'Xét duyệt', 'Phỏng vấn', 'Đề nghị', 'Ký HĐ']
+        : ['Nộp đơn', 'Xét duyệt', 'Phỏng vấn', 'Trúng tuyển', 'Ký HĐ'];
 
-    final currentIndex = steps.indexOf(currentStatus.toUpperCase());
+    // Offer path: OFFER_* statuses map to step 3 (Đề nghị); ACCEPTED → also step 3 (post-offer)
+    // Direct path: ACCEPTED maps to step 3 (Trúng tuyển); OFFER_* statuses won't appear
+    final statusToStep = isOfferPath
+        ? const {
+            'PENDING': 0,
+            'REVIEWED': 1,
+            'INTERVIEW_SCHEDULED': 2,
+            'INTERVIEWED': 2,
+            'OFFER_SENT': 3,
+            'OFFER_ACCEPTED': 3,
+            'OFFER_REJECTED': 3,
+            'ACCEPTED': 2,
+            'CONTRACT_SIGNED': 4,
+          }
+        : const {
+            'PENDING': 0,
+            'REVIEWED': 1,
+            'INTERVIEW_SCHEDULED': 2,
+            'INTERVIEWED': 2,
+            'ACCEPTED': 3,
+            'CONTRACT_SIGNED': 4,
+          };
 
-    return Row(
-      children: List.generate(steps.length * 2 - 1, (i) {
-        if (i.isOdd) {
-          // Connector line
-          final stepIdx = i ~/ 2;
-          final isCompleted = !isRejected && currentIndex > stepIdx;
-          return Expanded(
-            child: Container(
-              height: 2,
-              color: isCompleted
-                  ? AppTheme.themeGreenStart
-                  : Theme.of(context).dividerColor,
-            ),
-          );
-        }
+    final failedStatuses = isOfferPath
+        ? const {'REJECTED', 'OFFER_REJECTED', 'CANCELLED', 'WITHDRAWN'}
+        : const {'REJECTED', 'CANCELLED', 'WITHDRAWN'};
 
-        // Step dot
-        final stepIdx = i ~/ 2;
-        final isCurrent = !isRejected && currentIndex == stepIdx;
-        final isCompleted = !isRejected && currentIndex > stepIdx;
+    final upper = currentStatus.toUpperCase();
+    final isRejected = failedStatuses.contains(upper);
+    // Fail step: REJECTED at review (step 1), OFFER_REJECTED at offer (step 3)
+    final currentIndex = isRejected
+        ? (upper == 'OFFER_REJECTED' ? 3 : 1)
+        : (statusToStep[upper] ?? 0);
 
-        return Container(
-          width: isCurrent ? 14 : 10,
-          height: isCurrent ? 14 : 10,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isRejected && stepIdx == 0
-                ? Colors.red
-                : isCompleted
-                ? AppTheme.themeGreenStart
-                : isCurrent
-                ? AppTheme.themeBlueStart
-                : Theme.of(context).dividerColor,
-            border: isCurrent
-                ? Border.all(
-                    color: AppTheme.themeBlueStart.withValues(alpha: 0.3),
-                    width: 2,
-                  )
-                : null,
+    final String? failLabel;
+    if (upper == 'OFFER_REJECTED') {
+      failLabel = 'Từ chối đề nghị';
+    } else if (isRejected) {
+      failLabel = 'Đơn bị từ chối';
+    } else {
+      failLabel = null;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: List.generate(stepLabels.length * 2 - 1, (i) {
+            if (i.isOdd) {
+              final stepIdx = i ~/ 2;
+              final isCompleted = !isRejected && currentIndex > stepIdx;
+              return Expanded(
+                child: Container(
+                  height: 2,
+                  color: isRejected && stepIdx >= currentIndex
+                      ? Colors.red.withValues(alpha: 0.2)
+                      : isCompleted
+                      ? AppTheme.themeGreenStart
+                      : Theme.of(context).dividerColor,
+                ),
+              );
+            }
+
+            final stepIdx = i ~/ 2;
+            final isCurrent = currentIndex == stepIdx;
+            final isCompleted = !isRejected && currentIndex > stepIdx;
+            final isFailDot = isRejected && isCurrent;
+
+            final Color dotColor;
+            if (isFailDot) {
+              dotColor = Colors.red;
+            } else if (isCompleted) {
+              dotColor = AppTheme.themeGreenStart;
+            } else if (isCurrent) {
+              dotColor = AppTheme.themeBlueStart;
+            } else {
+              dotColor = Theme.of(context).dividerColor;
+            }
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: isCurrent ? 14 : 10,
+                  height: isCurrent ? 14 : 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: dotColor,
+                    border: isCurrent
+                        ? Border.all(
+                            color: dotColor.withValues(alpha: 0.35),
+                            width: 2,
+                          )
+                        : null,
+                  ),
+                  child: isCompleted
+                      ? const Icon(Icons.check, size: 7, color: Colors.white)
+                      : isFailDot
+                      ? const Icon(Icons.close, size: 7, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  stepLabels[stepIdx],
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: isFailDot
+                        ? Colors.red
+                        : isCurrent || isCompleted
+                        ? Theme.of(context).textTheme.bodySmall?.color
+                        : Theme.of(context).hintColor,
+                    fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
+            );
+          }),
+        ),
+
+        // Failure label below timeline
+        if (failLabel != null) ...[
+          const SizedBox(height: 5),
+          Row(
+            children: [
+              const Icon(Icons.cancel_outlined, size: 11, color: Colors.red),
+              const SizedBox(width: 4),
+              Text(
+                failLabel,
+                style: const TextStyle(fontSize: 10, color: Colors.red),
+              ),
+            ],
           ),
-          child: isCompleted
-              ? const Icon(Icons.check, size: 7, color: Colors.white)
-              : null,
-        );
-      }),
+        ],
+      ],
+    );
+  }
+
+  /// Short-term: 4 labeled steps with failure / revision visual states.
+  ///
+  /// Happy:    green completed steps → blue current dot
+  /// Revision: orange current dot + inline warning text
+  /// Failure:  red first dot + red connectors + failure label
+  Widget _buildShortTermTimeline(String currentStatus) {
+    const stepLabels = ['Đã nộp', 'Đang làm', 'Chờ duyệt', 'Hoàn thành'];
+
+    const statusToStep = {
+      'PENDING': 0,
+      'ACCEPTED': 1,
+      'WORKING': 1,
+      'IN_PROGRESS': 1,
+      'SUBMITTED': 2,
+      'SUBMITTED_OVERDUE': 2,
+      'REVISION_REQUIRED': 2,
+      'REVISION_RESPONSE_OVERDUE': 2,
+      'UNDER_REVIEW': 2,
+      'APPROVED': 3,
+      'COMPLETED': 3,
+      'PAID': 3,
+    };
+
+    const failedStatuses = {
+      'REJECTED',
+      'CANCELLED',
+      'WITHDRAWN',
+      'AUTO_CANCELLED',
+      'CANCELLATION_REQUESTED',
+      'DISPUTE_OPENED',
+    };
+
+    const revisionStatuses = {
+      'REVISION_REQUIRED',
+      'REVISION_RESPONSE_OVERDUE',
+      'SUBMITTED_OVERDUE',
+    };
+
+    final upper = currentStatus.toUpperCase();
+    final isRejected = failedStatuses.contains(upper);
+    final isRevision = revisionStatuses.contains(upper);
+    final currentIndex = isRejected ? 0 : (statusToStep[upper] ?? 0);
+
+    String? warningText;
+    if (isRevision) {
+      warningText = switch (upper) {
+        'REVISION_REQUIRED' => 'Cần chỉnh sửa — nhấn "Nộp lại" để resubmit',
+        'REVISION_RESPONSE_OVERDUE' => 'Quá hạn phản hồi yêu cầu chỉnh sửa',
+        _ => 'Nộp bài trễ hạn',
+      };
+    } else if (isRejected) {
+      warningText = switch (upper) {
+        'DISPUTE_OPENED' => 'Đang tranh chấp',
+        'CANCELLATION_REQUESTED' => 'Đang yêu cầu hủy',
+        _ => 'Đơn ứng tuyển đã kết thúc',
+      };
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: List.generate(stepLabels.length * 2 - 1, (i) {
+            if (i.isOdd) {
+              final stepIdx = i ~/ 2;
+              final isCompleted = !isRejected && currentIndex > stepIdx;
+              return Expanded(
+                child: Container(
+                  height: 2,
+                  color: isRejected
+                      ? Colors.red.withValues(alpha: 0.25)
+                      : isCompleted
+                      ? AppTheme.themeGreenStart
+                      : Theme.of(context).dividerColor,
+                ),
+              );
+            }
+
+            final stepIdx = i ~/ 2;
+            final isCurrent = !isRejected && currentIndex == stepIdx;
+            final isCompleted = !isRejected && currentIndex > stepIdx;
+            final isCurrentRevision = isCurrent && isRevision;
+
+            final Color dotColor;
+            if (isRejected && stepIdx == 0) {
+              dotColor = Colors.red;
+            } else if (isCurrentRevision) {
+              dotColor = AppTheme.themeOrangeStart;
+            } else if (isCompleted) {
+              dotColor = AppTheme.themeGreenStart;
+            } else if (isCurrent) {
+              dotColor = AppTheme.themeBlueStart;
+            } else {
+              dotColor = Theme.of(context).dividerColor;
+            }
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: isCurrent ? 14 : 10,
+                  height: isCurrent ? 14 : 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: dotColor,
+                    border: isCurrent
+                        ? Border.all(
+                            color: dotColor.withValues(alpha: 0.35),
+                            width: 2,
+                          )
+                        : null,
+                  ),
+                  child: (isCompleted || (isRejected && stepIdx == 0))
+                      ? Icon(
+                          isRejected && stepIdx == 0
+                              ? Icons.close
+                              : Icons.check,
+                          size: 7,
+                          color: Colors.white,
+                        )
+                      : null,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  stepLabels[stepIdx],
+                  style: TextStyle(
+                    fontSize: 9,
+                    color:
+                        isCurrent || isCompleted || (isRejected && stepIdx == 0)
+                        ? (isRejected && stepIdx == 0 ? Colors.red : null)
+                        : Theme.of(context).hintColor,
+                    fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
+            );
+          }),
+        ),
+
+        // Warning / failure hint below the row
+        if (warningText != null) ...[
+          const SizedBox(height: 5),
+          Row(
+            children: [
+              Icon(
+                isRevision ? Icons.rate_review_outlined : Icons.cancel_outlined,
+                size: 11,
+                color: isRevision ? AppTheme.themeOrangeStart : Colors.red,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  warningText,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isRevision ? AppTheme.themeOrangeStart : Colors.red,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 
@@ -666,6 +991,391 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
           const SizedBox(width: 8),
           Expanded(
             child: Text(message, style: TextStyle(fontSize: 12, color: color)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== OFFER SECTION ====================
+
+  Widget _buildOfferSection(JobApplicationResponse app) {
+    final isPending = app.status == JobApplicationStatus.offerSent;
+    final isResponding = context.watch<JobProvider>().isRespondingToOffer;
+    final isAccepted = app.status == JobApplicationStatus.offerAccepted;
+    final Color headerColor = isPending
+        ? const Color(0xFFAA55FF)
+        : isAccepted
+        ? AppTheme.themeGreenStart
+        : Colors.red;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: headerColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: headerColor.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row: icon + title + round badge
+          Row(
+            children: [
+              Icon(Icons.local_offer_outlined, size: 14, color: headerColor),
+              const SizedBox(width: 6),
+              Text(
+                isPending ? 'Đề nghị từ nhà tuyển dụng' : 'Đề nghị việc làm',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: headerColor,
+                ),
+              ),
+              if (app.offerRound != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: headerColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Vòng ${app.offerRound}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: headerColor,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+
+          if (_hasOfferSummary(app)) ...[
+            const SizedBox(height: 8),
+            ..._buildOfferSummaryContent(app, compact: true),
+          ] else ...[
+            const SizedBox(height: 8),
+            Text(
+              'Nhà tuyển dụng chưa cung cấp đủ thông tin đề nghị.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).hintColor,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+
+          // Previous candidate response (if already responded)
+          if ((app.candidateOfferResponse?.trim().isNotEmpty ?? false) ||
+              app.counterSalaryAmount != null ||
+              (app.counterAdditionalRequirements?.trim().isNotEmpty ??
+                  false)) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Phản hồi của bạn',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).hintColor,
+                    ),
+                  ),
+                  if (app.candidateOfferResponse?.trim().isNotEmpty ??
+                      false) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      app.candidateOfferResponse!.trim(),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                        color: Theme.of(context).hintColor,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if (app.counterSalaryAmount != null) ...[
+                    const SizedBox(height: 6),
+                    _buildOfferMetaRow(
+                      icon: Icons.payments_outlined,
+                      label: 'Lương đề xuất lại',
+                      value: NumberFormatter.formatCurrency(
+                        app.counterSalaryAmount!.toDouble(),
+                      ),
+                    ),
+                  ],
+                  if (app.counterAdditionalRequirements?.trim().isNotEmpty ??
+                      false) ...[
+                    const SizedBox(height: 6),
+                    _buildOfferMetaRow(
+                      icon: Icons.notes_outlined,
+                      label: 'Yêu cầu thêm',
+                      value: app.counterAdditionalRequirements!.trim(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+
+          // Accept / Reject buttons — only when status is OFFER_SENT
+          if (isPending) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: isResponding
+                        ? null
+                        : () => _showOfferResponseDialog(app, accept: false),
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text(
+                      'Từ chối',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: isResponding
+                        ? null
+                        : () => _showOfferResponseDialog(app, accept: true),
+                    icon: const Icon(Icons.check, size: 14),
+                    label: const Text(
+                      'Chấp nhận',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.themeGreenStart,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  bool _hasOfferSummary(JobApplicationResponse app) {
+    return (app.offerDetails?.trim().isNotEmpty ?? false) ||
+        app.offerSalary != null ||
+        (app.offerAdditionalRequirements?.trim().isNotEmpty ?? false);
+  }
+
+  List<Widget> _buildOfferSummaryContent(
+    JobApplicationResponse app, {
+    required bool compact,
+  }) {
+    final widgets = <Widget>[];
+
+    if (app.offerDetails?.trim().isNotEmpty ?? false) {
+      widgets.add(
+        Text(
+          app.offerDetails!.trim(),
+          style: TextStyle(fontSize: compact ? 12 : 13, height: 1.5),
+          maxLines: compact ? 4 : null,
+          overflow: compact ? TextOverflow.ellipsis : null,
+        ),
+      );
+    }
+
+    if (app.offerSalary != null) {
+      if (widgets.isNotEmpty) {
+        widgets.add(const SizedBox(height: 8));
+      }
+      widgets.add(
+        _buildOfferMetaRow(
+          icon: Icons.payments_outlined,
+          label: 'Mức đề nghị',
+          value: NumberFormatter.formatCurrency(app.offerSalary!.toDouble()),
+        ),
+      );
+    }
+
+    if (app.offerAdditionalRequirements?.trim().isNotEmpty ?? false) {
+      if (widgets.isNotEmpty) {
+        widgets.add(const SizedBox(height: 8));
+      }
+      widgets.add(
+        _buildOfferMetaRow(
+          icon: Icons.assignment_outlined,
+          label: 'Điều kiện thêm',
+          value: app.offerAdditionalRequirements!.trim(),
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  Widget _buildOfferMetaRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 13, color: Theme.of(context).hintColor),
+        const SizedBox(width: 6),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(height: 1.5),
+              children: [
+                TextSpan(
+                  text: '$label: ',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                TextSpan(text: value),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showOfferResponseDialog(
+    JobApplicationResponse app, {
+    required bool accept,
+  }) {
+    final controller = TextEditingController();
+    final counterSalaryController = TextEditingController();
+    final counterNoteController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(accept ? 'Chấp nhận đề nghị' : 'Từ chối đề nghị'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                accept
+                    ? 'Bạn sắp chấp nhận đề nghị từ nhà tuyển dụng.'
+                    : 'Bạn sắp từ chối đề nghị. ${(app.offerRound ?? 0) >= 2 ? "Đây là lần từ chối cuối — đơn sẽ kết thúc." : "Nhà tuyển dụng có thể gửi thêm 1 đề nghị nữa."}',
+                style: const TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Lời nhắn cho nhà tuyển dụng (tùy chọn)',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              if (!accept) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  'Đề xuất lại (tùy chọn):',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: counterSalaryController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    hintText: 'Đề xuất lương (VNĐ)',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: counterNoteController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    hintText: 'Yêu cầu thêm (tùy chọn)',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final provider = context.read<JobProvider>();
+              final counterSalary = int.tryParse(
+                counterSalaryController.text.trim(),
+              );
+              final ok = await provider.respondToOffer(
+                applicationId: app.id!,
+                accept: accept,
+                candidateOfferResponse: controller.text.trim().isEmpty
+                    ? null
+                    : controller.text.trim(),
+                counterSalaryAmount: accept ? null : counterSalary,
+                counterAdditionalRequirements: accept
+                    ? null
+                    : counterNoteController.text.trim().isEmpty
+                    ? null
+                    : counterNoteController.text.trim(),
+              );
+              if (mounted) {
+                if (ok) {
+                  ErrorHandler.showSuccessSnackBar(
+                    context,
+                    accept ? 'Đã chấp nhận đề nghị' : 'Đã từ chối đề nghị',
+                  );
+                } else {
+                  ErrorHandler.showErrorSnackBar(
+                    context,
+                    provider.errorMessage ?? 'Có lỗi xảy ra',
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accept ? AppTheme.themeGreenStart : Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(accept ? 'Xác nhận chấp nhận' : 'Xác nhận từ chối'),
           ),
         ],
       ),
