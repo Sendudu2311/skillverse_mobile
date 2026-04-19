@@ -35,6 +35,7 @@ import 'presentation/providers/recruitment_chat_provider.dart';
 import 'presentation/providers/ai_grading_provider.dart';
 import 'presentation/providers/interview_provider.dart';
 import 'presentation/providers/booking_dispute_provider.dart';
+import 'presentation/providers/student_verification_provider.dart';
 import 'presentation/app.dart';
 import 'core/utils/storage_helper.dart';
 import 'core/utils/date_time_helper.dart';
@@ -104,6 +105,9 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AiGradingProvider()),
         ChangeNotifierProvider(create: (_) => InterviewProvider()),
         ChangeNotifierProvider(create: (_) => BookingDisputeProvider()),
+        ChangeNotifierProvider(
+          create: (_) => StudentVerificationProvider(),
+        ),
       ],
       child: const SkillVerseApp(),
     ),
