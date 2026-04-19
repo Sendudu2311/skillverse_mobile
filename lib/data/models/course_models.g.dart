@@ -189,6 +189,9 @@ CourseDetailDto _$CourseDetailDtoFromJson(Map<String, dynamic> json) =>
       requirements: (json['requirements'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
+      courseSkills: (json['courseSkills'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       rating: (json['rating'] as num?)?.toDouble(),
       reviewCount: (json['reviewCount'] as num?)?.toInt(),
       createdAt: json['createdAt'] as String?,
@@ -228,6 +231,7 @@ Map<String, dynamic> _$CourseDetailDtoToJson(CourseDetailDto instance) =>
       'language': instance.language,
       'learningObjectives': instance.learningObjectives,
       'requirements': instance.requirements,
+      'courseSkills': instance.courseSkills,
       'rating': instance.rating,
       'reviewCount': instance.reviewCount,
       'createdAt': instance.createdAt,

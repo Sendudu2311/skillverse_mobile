@@ -226,6 +226,7 @@ class CourseDetailDto {
   final String? language;
   final List<String>? learningObjectives;
   final List<String>? requirements;
+  final List<String>? courseSkills;
   final double? rating;
   final int? reviewCount;
   final String? createdAt;
@@ -261,6 +262,7 @@ class CourseDetailDto {
     this.language,
     this.learningObjectives,
     this.requirements,
+    this.courseSkills,
     this.rating,
     this.reviewCount,
     this.createdAt,

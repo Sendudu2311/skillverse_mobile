@@ -264,7 +264,7 @@ class QuizAnswerResultDto {
   Map<String, dynamic> toJson() => _$QuizAnswerResultDtoToJson(this);
 }
 
-/// Quiz submit response
+/// Quiz submit response — backend may return attempt as nested object
 @JsonSerializable()
 class QuizSubmitResponseDto {
   final int score;
@@ -277,8 +277,22 @@ class QuizSubmitResponseDto {
     required this.attempt,
   });
 
-  factory QuizSubmitResponseDto.fromJson(Map<String, dynamic> json) =>
-      _$QuizSubmitResponseDtoFromJson(json);
+  /// Custom fromJson to handle both flat and nested response formats.
+  /// Backend may return: { score, passed, attempt: {...} }
+  /// Or the attempt fields may be at the top level alongside score/passed.
+  factory QuizSubmitResponseDto.fromJson(Map<String, dynamic> json) {
+    // If 'attempt' is a nested Map, parse normally via codegen
+    if (json['attempt'] is Map<String, dynamic>) {
+      return _$QuizSubmitResponseDtoFromJson(json);
+    }
+    // Fallback: attempt fields are at top level (flat response)
+    // Construct attempt from the same json map
+    return QuizSubmitResponseDto(
+      score: (json['score'] as num?)?.toInt() ?? 0,
+      passed: json['passed'] as bool? ?? false,
+      attempt: QuizAttemptDto.fromJson(json),
+    );
+  }
 
   Map<String, dynamic> toJson() => _$QuizSubmitResponseDtoToJson(this);
 }
