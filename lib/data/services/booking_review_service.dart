@@ -8,17 +8,15 @@ class BookingReviewService {
   /// Create a review for a booking
   Future<BookingReview> createReview(
     int bookingId, {
-    required int rating,
+    required int stars,
     required String comment,
-    bool isAnonymous = false,
   }) async {
     try {
       final response = await _apiClient.post(
         '/reviews/booking/$bookingId',
         data: CreateBookingReviewRequest(
-          rating: rating,
+          stars: stars,
           comment: comment,
-          isAnonymous: isAnonymous,
         ).toJson(),
       );
       return BookingReview.fromJson(response.data);

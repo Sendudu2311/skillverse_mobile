@@ -43,16 +43,15 @@ class BookingReview {
 }
 
 /// Request body for POST /api/reviews/booking/{bookingId}
+/// Backend expects `stars` (not `rating`) and does not have `isAnonymous`.
 @JsonSerializable()
 class CreateBookingReviewRequest {
-  final int rating;
+  final int stars;
   final String comment;
-  final bool isAnonymous;
 
   CreateBookingReviewRequest({
-    required this.rating,
+    required this.stars,
     required this.comment,
-    this.isAnonymous = false,
   });
 
   factory CreateBookingReviewRequest.fromJson(Map<String, dynamic> json) =>

@@ -69,9 +69,8 @@ class _BookingReviewPageState extends State<BookingReviewPage> {
     try {
       final review = await _reviewService.createReview(
         widget.bookingId,
-        rating: _selectedRating,
+        stars: _selectedRating,
         comment: _commentController.text.trim(),
-        isAnonymous: _isAnonymous,
       );
       if (mounted) {
         ErrorHandler.showSuccessSnackBar(context, 'Đã gửi đánh giá!');

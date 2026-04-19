@@ -1,22 +1,26 @@
 import 'package:flutter/foundation.dart';
 import '../../data/models/booking_dispute_models.dart';
 import '../../data/services/booking_dispute_service.dart';
+import '../../core/mixins/provider_loading_mixin.dart';
 import '../../core/utils/error_handler.dart';
 
-class BookingDisputeProvider extends ChangeNotifier {
+/// Provider for Booking Dispute management.
+///
+/// Uses [LoadingStateProviderMixin] to auto-manage:
+/// - `isLoading` — whether the primary async operation is in progress
+/// - `hasError` / `errorMessage` — error tracking
+class BookingDisputeProvider extends ChangeNotifier
+    with LoadingStateProviderMixin {
   final BookingDisputeService _service = BookingDisputeService();
 
   BookingDisputeDto? _dispute;
   List<BookingDisputeEvidenceDto> _evidences = [];
-  bool _isLoading = false;
   bool _isBusy = false;
-  String? _errorMessage;
 
   BookingDisputeDto? get dispute => _dispute;
-  List<BookingDisputeEvidenceDto> get evidences => List.unmodifiable(_evidences);
-  bool get isLoading => _isLoading;
+  List<BookingDisputeEvidenceDto> get evidences =>
+      List.unmodifiable(_evidences);
   bool get isBusy => _isBusy;
-  String? get errorMessage => _errorMessage;
 
   bool get isResolved =>
       _dispute?.status == DisputeStatus.resolved ||
@@ -31,29 +35,19 @@ class BookingDisputeProvider extends ChangeNotifier {
   // ── Load ──────────────────────────────────────────────────────────────────
 
   Future<void> loadDispute(int disputeId) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-    try {
+    await executeAsync(() async {
       final results = await Future.wait([
         _service.getDispute(disputeId),
         _service.getEvidence(disputeId),
       ]);
       _dispute = results[0] as BookingDisputeDto;
       _evidences = results[1] as List<BookingDisputeEvidenceDto>;
-    } catch (e) {
-      _errorMessage = ErrorHandler.getErrorMessage(e);
-    } finally {
-      _isLoading = false;
       notifyListeners();
-    }
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   Future<void> loadDisputeByBooking(int bookingId) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-    try {
+    await executeAsync(() async {
       final d = await _service.getDisputeByBooking(bookingId);
       if (d != null) {
         _dispute = d;
@@ -62,12 +56,8 @@ class BookingDisputeProvider extends ChangeNotifier {
         _dispute = null;
         _evidences = [];
       }
-    } catch (e) {
-      _errorMessage = ErrorHandler.getErrorMessage(e);
-    } finally {
-      _isLoading = false;
       notifyListeners();
-    }
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   // ── Open Dispute ──────────────────────────────────────────────────────────
@@ -193,7 +183,6 @@ class BookingDisputeProvider extends ChangeNotifier {
   void clear() {
     _dispute = null;
     _evidences = [];
-    _errorMessage = null;
-    notifyListeners();
+    resetState();
   }
 }
