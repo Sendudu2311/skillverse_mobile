@@ -106,7 +106,7 @@ void main() {
       expect(user.id, 1);
       expect(user.email, 'admin@skillverse.vn');
       expect(user.fullName, 'Admin User');
-      expect(user.roles, ['ADMIN', 'USER']);
+      expect(user.roles, {'ADMIN', 'USER'});
     });
 
     test('fromJson() with optional fields null', () {
@@ -123,14 +123,14 @@ void main() {
         id: 5,
         email: 'x@y.com',
         fullName: 'Full Name',
-        roles: ['USER'],
+        roles: {'USER'},
       );
       final json = user.toJson();
 
       expect(json['id'], 5);
       expect(json['email'], 'x@y.com');
       expect(json['fullName'], 'Full Name');
-      expect(json['roles'], ['USER']);
+      expect(json['roles'], ['USER']); // toJson converts Set to List
     });
   });
 

@@ -70,7 +70,8 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
     return result ?? false;
   }
 
-  /// Đăng ký
+  /// Đăng ký — backend returns UserRegistrationResponse (no token).
+  /// User must verify email before they can log in.
   Future<bool> register({
     required String email,
     required String password,
@@ -86,16 +87,9 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
         fullName: fullName,
         phoneNumber: phoneNumber,
       );
-      final response = await _authService.register(request);
-      _apiClient.setAuthToken(response.accessToken);
-
-      // Set onboarding prompt flag for subsequent dashboard load
-      await StorageHelper.instance.writeBool(
-        StorageKey.showOnboardingPrompt,
-        true,
-      );
-
-      notifyListeners();
+      await _authService.register(request);
+      // NOTE: No token returned — user must verify email first.
+      // Navigation to verify-email page is handled by the caller.
       return true;
     }, errorMessageBuilder: (e) => _getErrorMessage(e));
     return result ?? false;

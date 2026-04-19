@@ -54,16 +54,10 @@ class UserService {
     }
   }
 
-  // Get User Profile
+  // Get User Profile (public view)
   Future<UserProfileResponse> getUserProfile(int userId) async {
     try {
-      // NOTE: There is no public endpoint /users/profile/{id} in docs yet.
-      // This might be intended for public profile view, but for now we warn or fallback?
-      // For now, if this is used, it might fail if the API doesn't exist.
-      // But based on analysis, we should use /user/profile for "me".
-      // Leaving this as is might be risky if used for "others".
-      // However, for verify task, I will focus on "me" endpoints.
-      final response = await _apiClient.dio.get('/users/profile/$userId');
+      final response = await _apiClient.dio.get('/user/profile/public/$userId');
 
       return UserProfileResponse.fromJson(response.data);
     } on DioException catch (e) {

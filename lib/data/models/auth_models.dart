@@ -69,15 +69,66 @@ class UserDto {
   final int id;
   final String email;
   final String? fullName;
-  final List<String>? roles;
+  final String? firstName;
+  final String? lastName;
+  final String? avatarUrl;
+  final String? primaryRole;
+  final String? authProvider;
+  @JsonKey(defaultValue: false)
+  final bool googleLinked;
+  @JsonKey(defaultValue: {})
+  final Set<String>? roles;
 
-  UserDto({required this.id, required this.email, this.fullName, this.roles});
+  UserDto({
+    required this.id,
+    required this.email,
+    this.fullName,
+    this.firstName,
+    this.lastName,
+    this.avatarUrl,
+    this.primaryRole,
+    this.authProvider,
+    this.googleLinked = false,
+    this.roles,
+  });
 
   factory UserDto.fromJson(Map<String, dynamic> json) {
     return _$UserDtoFromJson(json);
   }
 
   Map<String, dynamic> toJson() => _$UserDtoToJson(this);
+}
+
+/// Registration response matching backend's BaseRegistrationResponse.
+/// Backend does NOT return tokens on registration — user must verify email first.
+@JsonSerializable()
+class UserRegistrationResponse {
+  @JsonKey(defaultValue: false)
+  final bool success;
+  final String? message;
+  final String? email;
+  final int? userId;
+  @JsonKey(defaultValue: true)
+  final bool requiresVerification;
+  final int? otpExpiryMinutes;
+  final String? otpExpiryTime;
+  final String? nextStep;
+
+  UserRegistrationResponse({
+    this.success = false,
+    this.message,
+    this.email,
+    this.userId,
+    this.requiresVerification = true,
+    this.otpExpiryMinutes,
+    this.otpExpiryTime,
+    this.nextStep,
+  });
+
+  factory UserRegistrationResponse.fromJson(Map<String, dynamic> json) =>
+      _$UserRegistrationResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$UserRegistrationResponseToJson(this);
 }
 
 @JsonSerializable()

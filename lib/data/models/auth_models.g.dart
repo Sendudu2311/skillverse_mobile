@@ -51,14 +51,53 @@ UserDto _$UserDtoFromJson(Map<String, dynamic> json) => UserDto(
   id: (json['id'] as num).toInt(),
   email: json['email'] as String,
   fullName: json['fullName'] as String?,
-  roles: (json['roles'] as List<dynamic>?)?.map((e) => e as String).toList(),
+  firstName: json['firstName'] as String?,
+  lastName: json['lastName'] as String?,
+  avatarUrl: json['avatarUrl'] as String?,
+  primaryRole: json['primaryRole'] as String?,
+  authProvider: json['authProvider'] as String?,
+  googleLinked: json['googleLinked'] as bool? ?? false,
+  roles:
+      (json['roles'] as List<dynamic>?)?.map((e) => e as String).toSet() ?? {},
 );
 
 Map<String, dynamic> _$UserDtoToJson(UserDto instance) => <String, dynamic>{
   'id': instance.id,
   'email': instance.email,
   'fullName': instance.fullName,
-  'roles': instance.roles,
+  'firstName': instance.firstName,
+  'lastName': instance.lastName,
+  'avatarUrl': instance.avatarUrl,
+  'primaryRole': instance.primaryRole,
+  'authProvider': instance.authProvider,
+  'googleLinked': instance.googleLinked,
+  'roles': instance.roles?.toList(),
+};
+
+UserRegistrationResponse _$UserRegistrationResponseFromJson(
+  Map<String, dynamic> json,
+) => UserRegistrationResponse(
+  success: json['success'] as bool? ?? false,
+  message: json['message'] as String?,
+  email: json['email'] as String?,
+  userId: (json['userId'] as num?)?.toInt(),
+  requiresVerification: json['requiresVerification'] as bool? ?? true,
+  otpExpiryMinutes: (json['otpExpiryMinutes'] as num?)?.toInt(),
+  otpExpiryTime: json['otpExpiryTime'] as String?,
+  nextStep: json['nextStep'] as String?,
+);
+
+Map<String, dynamic> _$UserRegistrationResponseToJson(
+  UserRegistrationResponse instance,
+) => <String, dynamic>{
+  'success': instance.success,
+  'message': instance.message,
+  'email': instance.email,
+  'userId': instance.userId,
+  'requiresVerification': instance.requiresVerification,
+  'otpExpiryMinutes': instance.otpExpiryMinutes,
+  'otpExpiryTime': instance.otpExpiryTime,
+  'nextStep': instance.nextStep,
 };
 
 RefreshTokenRequest _$RefreshTokenRequestFromJson(Map<String, dynamic> json) =>

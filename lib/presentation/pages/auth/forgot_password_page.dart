@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/utils/error_handler.dart';
+import '../../../data/services/auth_service.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../../core/utils/validation_helper.dart';
@@ -34,8 +35,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     await ErrorHandler.handleAsync(
       context: context,
       operation: () async {
-        // TODO: Implement forgot password API call
-        await Future.delayed(const Duration(seconds: 2)); // Simulate API call
+        await AuthService().forgotPassword(_emailController.text.trim());
         
         if (mounted) {
           setState(() {

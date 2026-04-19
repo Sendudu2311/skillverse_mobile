@@ -59,7 +59,8 @@ class AuthService {
   }
 
   /// Đăng ký người dùng mới
-  Future<AuthResponse> register(RegisterRequest request) async {
+  /// Backend returns UserRegistrationResponse (no token) — user must verify email first.
+  Future<UserRegistrationResponse> register(RegisterRequest request) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/users/register',
@@ -70,7 +71,7 @@ class AuthService {
         throw ApiException('Không có dữ liệu phản hồi');
       }
 
-      return AuthResponse.fromJson(response.data!);
+      return UserRegistrationResponse.fromJson(response.data!);
     } catch (e) {
       if (e is ApiException) rethrow;
       if (e is AppException) throw ApiException(e.message);
