@@ -360,4 +360,40 @@ class RoadmapService {
       if (e is AppException) rethrow;
       throw UnknownException('Lỗi không xác định: ${e.toString()}');
     }
-  }}
+  }
+
+  /// Restore a soft-deleted roadmap back to PAUSED status
+  /// API: POST /api/v1/ai/roadmap/{sessionId}/restore
+  Future<void> restoreRoadmap(int sessionId) async {
+    try {
+      await _apiClient.dio.post('/v1/ai/roadmap/$sessionId/restore');
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Lỗi khôi phục lộ trình');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+    }
+  }
+
+  /// Atomically mark a roadmap node as complete
+  /// API: POST /api/v1/ai/roadmap/{sessionId}/nodes/{nodeId}/complete
+  Future<Map<String, dynamic>> completeNode(
+    int sessionId,
+    String nodeId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/v1/ai/roadmap/$sessionId/nodes/$nodeId/complete',
+      );
+      if (response.data == null) {
+        throw UnknownException('Không có dữ liệu phản hồi');
+      }
+      return response.data!;
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Lỗi hoàn thành node');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+    }
+  }
+}

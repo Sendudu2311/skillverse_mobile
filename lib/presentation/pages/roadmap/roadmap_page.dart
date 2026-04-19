@@ -646,15 +646,22 @@ class _RoadmapPageState extends State<RoadmapPage> {
     int sessionId,
   ) async {
     final provider = context.read<RoadmapProvider>();
+    final messenger = ScaffoldMessenger.of(context);
 
     switch (action) {
       case 'restore':
         final success = await provider.restoreRoadmap(sessionId);
         if (mounted) {
           if (success) {
-            ErrorHandler.showSuccessSnackBar(context, 'Đã khôi phục lộ trình');
+            messenger.showSnackBar(SnackBar(
+              content: const Text('Đã khôi phục lộ trình'),
+              backgroundColor: Colors.green,
+            ));
           } else {
-            ErrorHandler.showErrorSnackBar(context, 'Lỗi khôi phục lộ trình');
+            messenger.showSnackBar(SnackBar(
+              content: const Text('Lỗi khôi phục lộ trình'),
+              backgroundColor: Colors.red,
+            ));
           }
         }
         break;

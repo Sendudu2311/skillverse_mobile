@@ -13,10 +13,14 @@ class KanbanView extends StatelessWidget {
     return Selector<TaskBoardProvider, List<TaskColumn>>(
       selector: (context, provider) => provider.columns,
       builder: (context, columns, _) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return ListView.builder(
           padding: const EdgeInsets.all(12),
-          itemCount: columns.length,
+          itemCount: columns.length + 1,
           itemBuilder: (context, index) {
+            if (index == columns.length) {
+              return _buildAddColumnCard(context, isDark);
+            }
             final column = columns[index];
             return KanbanColumn(
               column: column,
@@ -26,6 +30,76 @@ class KanbanView extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  Widget _buildAddColumnCard(BuildContext context, bool isDark) {
+    return GestureDetector(
+      onTap: () => _showCreateColumnDialog(context),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground.withValues(alpha: 0.5)
+              : AppTheme.lightCardBackground.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_circle_outline, size: 20,
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+            const SizedBox(width: 8),
+            Text(
+              'Thêm cột mới',
+              style: TextStyle(
+                fontSize: 13,
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCreateColumnDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Tạo cột mới'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Tên cột (ví dụ: Review, Pending...)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                Navigator.of(ctx).pop();
+                context.read<TaskBoardProvider>().createColumn(name);
+              }
+            },
+            child: const Text('Tạo'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -49,6 +123,9 @@ class KanbanColumn extends StatelessWidget {
     return AppTheme.primaryBlueDark;
   }
 
+  static const _protectedNames = {'TO DO', 'IN PROGRESS', 'DONE', 'OVERDUE'};
+  bool get _isProtectedColumn => _protectedNames.contains(column.name.toUpperCase());
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -67,7 +144,7 @@ class KanbanColumn extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(isDark),
+          _buildHeader(context, isDark),
           DragTarget<Task>(
             onAcceptWithDetails: (details) {
               final task = details.data;
@@ -104,7 +181,7 @@ class KanbanColumn extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(bool isDark) {
+  Widget _buildHeader(BuildContext context, bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -154,6 +231,65 @@ class KanbanColumn extends StatelessWidget {
                 color: _columnColor,
               ),
             ),
+          ),
+          const SizedBox(width: 4),
+          if (!_isProtectedColumn)
+            _buildColumnMenu(context, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColumnMenu(BuildContext context, bool isDark) {
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.more_vert,
+        size: 18,
+        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+      ),
+      onSelected: (value) {
+        if (value == 'delete') {
+          _showDeleteColumnDialog(context);
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline, size: 16, color: AppTheme.errorColor),
+              const SizedBox(width: 8),
+              Text(
+                'Xóa cột',
+                style: TextStyle(color: AppTheme.errorColor, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showDeleteColumnDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa cột?'),
+        content: const Text(
+          'Hành động này sẽ xóa cột và toàn bộ nhiệm vụ bên trong. Bạn có chắc chắn muốn xóa không?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context.read<TaskBoardProvider>().deleteColumn(column.id);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor, foregroundColor: Colors.white),
+            child: const Text('Xóa'),
           ),
         ],
       ),

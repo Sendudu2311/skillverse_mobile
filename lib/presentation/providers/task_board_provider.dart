@@ -361,6 +361,83 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
     return result ?? {};
   }
 
+  // ==================== COLUMN & ARCHIVE MANAGEMENT ====================
+
+  Future<void> createColumn(String name, {String? color}) async {
+    await executeAsync(
+      () async {
+        await _taskBoardService.createColumn(name, color: color);
+        await loadBoard();
+      },
+      errorMessageBuilder: (e) => 'Không thể tạo cột: $e',
+    );
+  }
+
+  Future<void> deleteColumn(String columnId, {String? targetColumnId}) async {
+    await executeAsync(
+      () async {
+        await _taskBoardService.deleteColumn(columnId, targetColumnId: targetColumnId);
+        await loadBoard();
+      },
+      errorMessageBuilder: (e) => 'Không thể xóa cột: $e',
+    );
+  }
+
+  Future<Map<String, dynamic>?> getArchivedTasks({int? roadmapSessionId, int page = 0, int size = 20}) async {
+    return await executeAsync(
+      () async {
+        return await _taskBoardService.getArchivedTasks(roadmapSessionId: roadmapSessionId, page: page, size: size);
+      },
+      errorMessageBuilder: (e) => 'Không thể tải nhiệm vụ lưu trữ: $e',
+    );
+  }
+
+  Future<void> unarchiveTask(String taskId) async {
+    await executeAsync(
+      () async {
+        await _taskBoardService.unarchiveTask(taskId);
+        await loadBoard();
+      },
+      errorMessageBuilder: (e) => 'Không thể khôi phục nhiệm vụ: $e',
+    );
+  }
+
+  Future<void> archiveRoadmapTasks(int roadmapSessionId) async {
+    await executeAsync(
+      () async {
+        await _taskBoardService.archiveRoadmapTasks(roadmapSessionId);
+        await loadBoard();
+      },
+      errorMessageBuilder: (e) => 'Không thể lưu trữ nhiệm vụ lộ trình: $e',
+    );
+  }
+
+  Future<void> reorderTask(String taskId, String targetColumnId, {double? previousOrderIndex, double? nextOrderIndex}) async {
+    try {
+      await _taskBoardService.reorderTask(
+        taskId, 
+        targetColumnId: targetColumnId, 
+        previousOrderIndex: previousOrderIndex, 
+        nextOrderIndex: nextOrderIndex
+      );
+      // Let's reload board to ensure exact ordering UI/Backend match later
+      // But we can skip immediate loadBoard to avoid jank during drag and drop
+    } catch (e) {
+      debugPrint('❌ Errror reordering task: $e');
+      setError('Lỗi sắp xếp nhiệm vụ');
+    }
+  }
+
+  Future<void> completeAllTasksForNode(int roadmapSessionId, String nodeId) async {
+    await executeAsync(
+      () async {
+        await _taskBoardService.completeAllTasksForNode(roadmapSessionId, nodeId);
+        await loadBoard();
+      },
+      errorMessageBuilder: (e) => 'Không thể hoàn thành danh sách nhiệm vụ: $e',
+    );
+  }
+
   // ==================== HELPERS ====================
 
   /// Get tasks for a specific day — used by TimelineView

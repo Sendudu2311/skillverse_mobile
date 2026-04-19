@@ -116,6 +116,49 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
   }
 
   // ============================================================================
+  // LIFECYCLE — Activate paused roadmap
+  // ============================================================================
+
+  /// Whether the current error is a "paused roadmap" error.
+  bool get isPausedError =>
+      errorMessage != null &&
+      errorMessage!.contains('tạm dừng');
+
+  /// Activate a paused roadmap, then reload it.
+  Future<void> activateAndReload(int sessionId) async {
+    await executeAsync(() async {
+      await _roadmapService.activateRoadmap(sessionId);
+      // Now reload the roadmap data
+      _currentRoadmap = await _roadmapService.getRoadmapById(sessionId);
+      if (_currentRoadmap?.progress != null) {
+        _progressMap = Map<String, QuestProgress>.from(
+          _currentRoadmap!.progress!,
+        );
+      } else {
+        _progressMap = {};
+      }
+      notifyListeners();
+    }, errorMessageBuilder: (error) {
+      return 'Lỗi kích hoạt lộ trình: ${error.toString()}';
+    });
+  }
+
+  // ============================================================================
+  // COMPLETE NODE
+  // ============================================================================
+
+  Future<void> completeNode(int sessionId, String nodeId) async {
+    await executeAsync(() async {
+      await _roadmapService.completeNode(sessionId, nodeId);
+      // Reload roadmap data to reflect the completed node status
+      _currentRoadmap = await _roadmapService.getRoadmapById(sessionId);
+      notifyListeners();
+    }, errorMessageBuilder: (error) {
+      return 'Lỗi hoàn thành chặng: ${error.toString()}';
+    });
+  }
+
+  // ============================================================================
   // RESET
   // ============================================================================
 

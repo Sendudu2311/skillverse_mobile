@@ -8,6 +8,7 @@ import '../../widgets/glass_card.dart';
 import 'widgets/ai_study_planner_dialog.dart';
 import 'widgets/timeline_view.dart';
 import 'widgets/kanban_view.dart';
+import 'widgets/task_archive_sheet.dart';
 
 /// Main Task Board Page - Mission Control
 class TaskBoardPage extends StatefulWidget {
@@ -42,6 +43,13 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
         icon: Icons.satellite_alt,
         useGradientTitle: true,
         onBack: () => context.go('/dashboard'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.inventory_2_outlined, color: AppTheme.accentOrange),
+            onPressed: () => TaskArchiveSheet.show(context),
+            tooltip: 'Lưu trữ & Thùng rác',
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

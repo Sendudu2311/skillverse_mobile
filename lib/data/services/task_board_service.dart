@@ -152,6 +152,118 @@ class TaskBoardService {
     }
   }
 
+  /// Delete a column (optionally move tasks to another column)
+  Future<void> deleteColumn(
+    String columnId, {
+    String? targetColumnId,
+  }) async {
+    try {
+      await _apiClient.dio.delete(
+        '/task-board/columns/$columnId',
+        queryParameters: {
+          if (targetColumnId != null) 'targetColumnId': targetColumnId,
+        },
+      );
+    } catch (e) {
+      debugPrint('❌ Error deleting column: $e');
+      rethrow;
+    }
+  }
+
+  // ==================== ARCHIVE ====================
+
+  /// Get archived tasks (paginated)
+  Future<Map<String, dynamic>> getArchivedTasks({
+    int? roadmapSessionId,
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/task-board/archived',
+        queryParameters: {
+          'page': page,
+          'size': size,
+          if (roadmapSessionId != null) 'roadmapSessionId': roadmapSessionId,
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('❌ Error getting archived tasks: $e');
+      rethrow;
+    }
+  }
+
+  /// Unarchive a task
+  Future<TaskResponse> unarchiveTask(String taskId) async {
+    try {
+      final response = await _apiClient.dio.patch(
+        '/task-board/tasks/$taskId/unarchive',
+      );
+      return TaskResponse.fromJson(response.data);
+    } catch (e) {
+      debugPrint('❌ Error unarchiving task: $e');
+      rethrow;
+    }
+  }
+
+  /// Archive all tasks belonging to a roadmap session
+  Future<Map<String, dynamic>> archiveRoadmapTasks(
+    int roadmapSessionId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/task-board/archive-roadmap/$roadmapSessionId',
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('❌ Error archiving roadmap tasks: $e');
+      rethrow;
+    }
+  }
+
+  // ==================== REORDER & COMPLETE ====================
+
+  /// Reorder a task within or across columns
+  Future<TaskResponse> reorderTask(
+    String taskId, {
+    required String targetColumnId,
+    double? previousOrderIndex,
+    double? nextOrderIndex,
+  }) async {
+    try {
+      final response = await _apiClient.dio.put(
+        '/task-board/tasks/$taskId/reorder',
+        queryParameters: {
+          'targetColumnId': targetColumnId,
+          if (previousOrderIndex != null)
+            'previousOrderIndex': previousOrderIndex,
+          if (nextOrderIndex != null) 'nextOrderIndex': nextOrderIndex,
+        },
+      );
+      return TaskResponse.fromJson(response.data);
+    } catch (e) {
+      debugPrint('❌ Error reordering task: $e');
+      rethrow;
+    }
+  }
+
+  /// Complete all tasks for a roadmap node
+  Future<Map<String, dynamic>> completeAllTasksForNode(
+    int roadmapSessionId,
+    String nodeId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/task-board/nodes/$roadmapSessionId/$nodeId/complete-all',
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('❌ Error completing all tasks for node: $e');
+      rethrow;
+    }
+  }
+
   // ==================== NOTES ====================
 
   /// Get all notes

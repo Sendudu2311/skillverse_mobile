@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/roadmap_detail_provider.dart';
+import '../../providers/roadmap_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/roadmap_models.dart';
 import 'package:go_router/go_router.dart';
@@ -46,6 +47,10 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
           }
 
           if (provider.errorMessage != null) {
+            // ── Paused roadmap → show activate UI ──
+            if (provider.isPausedError) {
+              return _buildPausedState(context, provider, isDark);
+            }
             return ErrorStateWidget(
               message: provider.errorMessage!,
               onRetry: () => context.go('/roadmap'),
@@ -82,6 +87,90 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPausedState(
+    BuildContext context,
+    RoadmapDetailProvider provider,
+    bool isDark,
+  ) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.pause_circle_outline,
+                size: 64,
+                color: Colors.amber.shade600,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Lộ trình đang tạm dừng',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Kích hoạt lại lộ trình để tiếp tục xem nội dung và theo dõi tiến độ học tập.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            if (provider.isLoading)
+              const CircularProgressIndicator()
+            else ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                      await provider.activateAndReload(widget.sessionId);
+                      if (mounted && !provider.hasError) {
+                        // Refresh list provider so back-navigation shows updated status
+                        context.read<RoadmapProvider>().loadUserRoadmaps(force: true);
+                        context.read<RoadmapProvider>().loadStatusCounts();
+                      }
+                    },
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Kích hoạt lại'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () => context.pop(),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Quay lại'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/roadmap_models.dart';
 import '../../providers/roadmap_detail_provider.dart';
+import '../../providers/task_board_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/common_loading.dart';
@@ -37,6 +38,7 @@ class RoadmapNodeCard extends StatefulWidget {
 
 class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
   bool _isCreatingPlan = false;
+  bool _isCompletingNode = false;
 
   // ============================================================================
   // STATIC HELPERS
@@ -387,41 +389,117 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
   }
 
   Widget _buildCreateStudyPlanButton(BuildContext context, RoadmapNode node) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: _isCreatingPlan ? null : () => _createStudyPlan(node),
-        icon: _isCreatingPlan
-            ? CommonLoading.small()
-            : Icon(
-                Icons.event_note_outlined,
-                size: 18,
-                color: widget.isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+    if (node.nodeStatus?.toUpperCase() == 'COMPLETED') {
+      return const SizedBox.shrink(); 
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: _isCreatingPlan || _isCompletingNode ? null : () => _createStudyPlan(node),
+              icon: _isCreatingPlan
+                  ? CommonLoading.small()
+                  : Icon(
+                      Icons.event_note_outlined,
+                      size: 18,
+                      color: widget.isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+                    ),
+              label: Text(
+                _isCreatingPlan ? 'Đang tạo KH...' : 'Lên kế hoạch',
+                style: TextStyle(
+                  color: _isCreatingPlan || _isCompletingNode
+                      ? (widget.isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)
+                      : (widget.isDark ? AppTheme.accentCyan : AppTheme.primaryBlue),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-        label: Text(
-          _isCreatingPlan ? 'Đang tạo kế hoạch...' : '📋 Tạo kế hoạch học',
-          style: TextStyle(
-            color: _isCreatingPlan
-                ? (widget.isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary)
-                : (widget.isDark ? AppTheme.accentCyan : AppTheme.primaryBlue),
-            fontWeight: FontWeight.w600,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: widget.isDark
+                      ? AppTheme.accentCyan.withValues(alpha: 0.4)
+                      : AppTheme.primaryBlue.withValues(alpha: 0.4),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
           ),
         ),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          side: BorderSide(
-            color: widget.isDark
-                ? AppTheme.accentCyan.withValues(alpha: 0.4)
-                : AppTheme.primaryBlue.withValues(alpha: 0.4),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+        const SizedBox(width: 8),
+        SizedBox(
+          height: 48,
+          width: 48,
+          child: ElevatedButton(
+            onPressed: _isCreatingPlan || _isCompletingNode ? null : () => _showCompleteNodeDialog(node),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.zero,
+              backgroundColor: AppTheme.successColor.withValues(alpha: 0.15),
+              foregroundColor: AppTheme.successColor,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: _isCompletingNode
+              ? CommonLoading.small()
+              : const Icon(Icons.done_all, size: 20),
           ),
         ),
+      ],
+    );
+  }
+
+  Future<void> _showCompleteNodeDialog(RoadmapNode node) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hoàn thành trọn vẹn?'),
+        content: const Text(
+          'Hành động này sẽ đánh dấu chặng này là đã hoàn thành, đồng thời chuyển trạng thái tất cả task liên quan trong Bảng công việc sang "Hoàn thành". Bạn chắc chắn chứ?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.successColor),
+            child: const Text('Chắc chắn'),
+          ),
+        ],
       ),
     );
+
+    if (confirmed == true && mounted) {
+      _completeNode(node);
+    }
+  }
+
+  Future<void> _completeNode(RoadmapNode node) async {
+    if (!mounted) return;
+    setState(() => _isCompletingNode = true);
+
+    try {
+      final roadmapProvider = context.read<RoadmapDetailProvider>();
+      final taskProvider = context.read<TaskBoardProvider>();
+
+      // Call APIs consecutively
+      await roadmapProvider.completeNode(widget.sessionId, node.id);
+      await taskProvider.completeAllTasksForNode(widget.sessionId, node.id);
+
+      if (!mounted) return;
+      ErrorHandler.showSuccessSnackBar(context, 'Đã đánh dấu hoàn thành chặng!');
+    } catch (e) {
+      if (!mounted) return;
+      ErrorHandler.showErrorSnackBar(context, 'Lỗi hoàn thành chặng: $e');
+    } finally {
+      if (mounted) setState(() => _isCompletingNode = false);
+    }
   }
 
   Future<void> _createStudyPlan(RoadmapNode node) async {
