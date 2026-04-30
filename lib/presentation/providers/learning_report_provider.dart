@@ -9,6 +9,7 @@ import '../../data/models/learning_report_model.dart';
 import '../../data/services/learning_report_service.dart';
 import '../../data/services/streak_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/error_handler.dart';
 import '../../core/utils/date_time_helper.dart';
 import '../widgets/learning_report/pdf_generator_widget.dart';
 
@@ -26,6 +27,10 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool _isGenerating = false;
   bool _isLoadingHistory = false;
   String _generatingStatus = '';
+
+  // Summary (live analytics, no AI wait)
+  StudentLearningReportResponse? _summaryReport;
+  bool _isLoadingSummary = false;
 
   // --- New state for full parity ---
   ReportType _selectedReportType = ReportType.comprehensive;
@@ -49,6 +54,8 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool get isDownloadingPDF => _isDownloadingPDF;
   int get historyPage => _historyPage;
   bool get hasMoreHistory => _hasMoreHistory;
+  StudentLearningReportResponse? get summaryReport => _summaryReport;
+  bool get isLoadingSummary => _isLoadingSummary;
 
   ReportType get selectedReportType => _selectedReportType;
   String get meowlSpeech => _meowlSpeech;
@@ -161,6 +168,21 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
 
   // ==================== Actions ====================
 
+  /// Load live summary (deterministic, no AI wait)
+  Future<void> loadSummary(String range) async {
+    if (_isLoadingSummary) return;
+    _isLoadingSummary = true;
+    notifyListeners();
+    try {
+      _summaryReport = await _service.getSummary(range);
+    } catch (e) {
+      debugPrint('Error loading summary: $e');
+    } finally {
+      _isLoadingSummary = false;
+      notifyListeners();
+    }
+  }
+
   /// Load latest report + check can-generate + streak in parallel
   Future<void> loadLatestReport() async {
     _updateMeowlSpeech();
@@ -175,7 +197,7 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
       _streakInfo = results[2] as StreakInfo?;
       _activeSection = 'overview';
       _updateMeowlSpeech();
-    }, errorMessageBuilder: (e) => 'Lỗi tải báo cáo: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     notifyListeners();
   }
 
@@ -277,7 +299,7 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
           'AI vẫn đang xử lý báo cáo. Nhấn nút "Kiểm tra lại" sau vài phút.',
         );
       } else {
-        setError('Lỗi tạo báo cáo: ${e.toString()}');
+        setError(ErrorHandler.getErrorMessage(e));
       }
       _updateMeowlSpeech();
     } finally {
@@ -334,7 +356,7 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
           'AI vẫn đang xử lý báo cáo. Nhấn nút "Kiểm tra lại" sau vài phút.',
         );
       } else {
-        setError('Lỗi tạo báo cáo: ${e.toString()}');
+        setError(ErrorHandler.getErrorMessage(e));
       }
       _updateMeowlSpeech();
     } finally {
@@ -400,7 +422,7 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
         setError('Chưa có báo cáo mới. Thử lại sau vài phút.');
       }
     } catch (e) {
-      setError('Lỗi kiểm tra: ${e.toString()}');
+      setError(ErrorHandler.getErrorMessage(e));
     } finally {
       _isGenerating = false;
       _generatingStatus = '';
@@ -421,7 +443,7 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
       clearError();
       _updateMeowlSpeech();
     } catch (e) {
-      setError('Lỗi tải báo cáo: ${e.toString()}');
+      setError(ErrorHandler.getErrorMessage(e));
     } finally {
       _isGenerating = false;
       _generatingStatus = '';
@@ -519,6 +541,8 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
     _isDownloadingPDF = false;
     _historyPage = 0;
     _hasMoreHistory = true;
+    _summaryReport = null;
+    _isLoadingSummary = false;
     _stopGeneratingStepCycle();
     resetState();
     notifyListeners();
@@ -582,4 +606,7 @@ class LearningReportProvider with ChangeNotifier, LoadingStateProviderMixin {
     _stopGeneratingStepCycle();
     super.dispose();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => reset();
 }

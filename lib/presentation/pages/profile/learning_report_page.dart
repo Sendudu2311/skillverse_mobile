@@ -19,6 +19,8 @@ import '../../widgets/learning_report/report_section_card_widget.dart';
 import '../../widgets/learning_report/report_history_item_widget.dart';
 import '../../widgets/learning_report/skeleton_widgets.dart';
 import '../../widgets/learning_report/animated_transitions.dart';
+import '../../widgets/stat_card.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class LearningReportPage extends StatefulWidget {
   const LearningReportPage({super.key});
@@ -39,6 +41,7 @@ class _LearningReportPageState extends State<LearningReportPage>
       final provider = context.read<LearningReportProvider>();
       provider.loadLatestReport();
       provider.loadReportHistory();
+      provider.loadSummary('WEEK');
     });
   }
 
@@ -278,6 +281,8 @@ class _LearningReportPageState extends State<LearningReportPage>
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 28),
+              _buildLiveSummarySection(provider, isDark),
+              const SizedBox(height: 20),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1166,6 +1171,106 @@ class _LearningReportPageState extends State<LearningReportPage>
           );
         },
       ),
+    );
+  }
+
+  // ==================== Live Summary Section ====================
+
+  Widget _buildLiveSummarySection(
+    LearningReportProvider provider,
+    bool isDark,
+  ) {
+    final summary = provider.summaryReport;
+    final isLoading = provider.isLoadingSummary;
+
+    if (!isLoading && summary == null) {
+      return EmptyStateWidget(
+        icon: Icons.analytics_outlined,
+        title: 'Chưa có dữ liệu thống kê',
+        subtitle: 'Tạo báo cáo đầu tiên để xem số liệu của bạn',
+      );
+    }
+
+    final metrics = summary?.metrics;
+    final generatedAt = summary?.generatedAt;
+    String? dateLabel;
+    if (generatedAt != null && generatedAt.isNotEmpty) {
+      final dt = DateTimeHelper.tryParseIso8601(generatedAt);
+      if (dt != null) dateLabel = DateTimeHelper.formatDate(dt);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.bar_chart, size: 14, color: AppTheme.accentCyan),
+            const SizedBox(width: 6),
+            Text(
+              'THỐNG KÊ TUẦN NÀY',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.accentCyan,
+                letterSpacing: 1,
+              ),
+            ),
+            if (dateLabel != null) ...[
+              const Spacer(),
+              Text(
+                dateLabel,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        ShimmerLoading(
+          isLoading: isLoading,
+          child: GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 2.2,
+            children: [
+              StatCard(
+                title: 'Giờ học',
+                value: '${metrics?.totalStudyHours ?? 0}h',
+                icon: Icons.timer_outlined,
+                gradientColors: [
+                  AppTheme.themeBlueStart,
+                  AppTheme.themeBlueEnd,
+                ],
+              ),
+              StatCard(
+                title: 'Hoàn thành',
+                value: '${metrics?.totalTasksCompleted ?? 0}',
+                icon: Icons.check_circle_outline,
+                gradientColors: [Color(0xFF10B981), Color(0xFF059669)],
+              ),
+              StatCard(
+                title: 'Tiến độ',
+                value: '${summary?.overallProgress?.toStringAsFixed(0) ?? 0}%',
+                icon: Icons.trending_up,
+                gradientColors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+              ),
+              StatCard(
+                title: 'Streak',
+                value: '${metrics?.currentStreak ?? 0} ngày',
+                icon: Icons.local_fire_department_outlined,
+                gradientColors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
