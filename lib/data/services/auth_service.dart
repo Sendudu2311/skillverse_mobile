@@ -52,8 +52,7 @@ class AuthService {
       return authResponse;
     } catch (e) {
       debugPrint('Login error: $e');
-      if (e is ApiException) rethrow;
-      if (e is AppException) throw ApiException(e.message);
+      if (e is AppException) rethrow;
       throw ApiException('Đăng nhập thất bại');
     }
   }
@@ -73,8 +72,7 @@ class AuthService {
 
       return UserRegistrationResponse.fromJson(response.data!);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      if (e is AppException) throw ApiException(e.message);
+      if (e is AppException) rethrow;
       throw ApiException('Đăng ký thất bại');
     }
   }
@@ -133,8 +131,7 @@ class AuthService {
       // Sign out from Google if authentication failed
       await _googleSignIn.signOut();
 
-      if (e is ApiException) rethrow;
-      if (e is AppException) throw ApiException(e.message);
+      if (e is AppException) rethrow;
       throw ApiException('Đăng nhập Google thất bại');
     }
   }
@@ -156,8 +153,7 @@ class AuthService {
         data: {'email': email, 'otp': otp},
       );
     } catch (e) {
-      if (e is ApiException) rethrow;
-      if (e is AppException) throw ApiException(e.message);
+      if (e is AppException) rethrow;
       throw ApiException('Xác thực email thất bại');
     }
   }
@@ -170,8 +166,7 @@ class AuthService {
         data: {'email': email},
       );
     } catch (e) {
-      if (e is ApiException) rethrow;
-      if (e is AppException) throw ApiException(e.message);
+      if (e is AppException) rethrow;
       throw ApiException('Gửi lại OTP thất bại');
     }
   }
@@ -184,8 +179,7 @@ class AuthService {
         data: {'email': email},
       );
     } catch (e) {
-      if (e is ApiException) rethrow;
-      if (e is AppException) throw ApiException(e.message);
+      if (e is AppException) rethrow;
       throw ApiException('Gửi email quên mật khẩu thất bại');
     }
   }

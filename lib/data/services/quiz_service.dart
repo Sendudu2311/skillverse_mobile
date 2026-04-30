@@ -20,7 +20,7 @@ class QuizService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-        'Lấy thông tin bài kiểm tra thất bại: ${e.toString()}',
+        'Lấy thông tin bài kiểm tra thất bại',
       );
     }
   }
@@ -39,7 +39,7 @@ class QuizService {
       // Return empty list if 404 or other non-critical error?
       // Better to throw so we can handle it in UI
       throw ApiException(
-        'Lấy danh sách bài kiểm tra thất bại: ${e.toString()}',
+        'Lấy danh sách bài kiểm tra thất bại',
       );
     }
   }
@@ -59,7 +59,7 @@ class QuizService {
       return QuizSubmitResponseDto.fromJson(data);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Nộp bài thất bại: ${e.toString()}');
+      throw ApiException('Nộp bài thất bại');
     }
   }
 
@@ -73,7 +73,7 @@ class QuizService {
           .toList();
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy lịch sử làm bài thất bại: ${e.toString()}');
+      throw ApiException('Lấy lịch sử làm bài thất bại');
     }
   }
 
@@ -89,7 +89,7 @@ class QuizService {
       return QuizAttemptStatusDto.fromJson(response.data);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy trạng thái quiz thất bại: ${e.toString()}');
+      throw ApiException('Lấy trạng thái quiz thất bại');
     }
   }
 
@@ -106,7 +106,7 @@ class QuizService {
       return QuizAttemptSessionDto.fromJson(response.data);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Bắt đầu quiz session thất bại: ${e.toString()}');
+      throw ApiException('Bắt đầu quiz session thất bại');
     }
   }
 
@@ -125,7 +125,7 @@ class QuizService {
       return QuizAttemptSessionDto.fromJson(response.data);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Heartbeat quiz session thất bại: ${e.toString()}');
+      throw ApiException('Heartbeat quiz session thất bại');
     }
   }
 
@@ -144,7 +144,7 @@ class QuizService {
       return QuizAttemptReviewDto.fromJson(response.data);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy đáp án bài kiểm tra thất bại: ${e.toString()}');
+      throw ApiException('Lấy đáp án bài kiểm tra thất bại');
     }
   }
 }

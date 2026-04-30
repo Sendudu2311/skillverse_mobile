@@ -143,4 +143,7 @@ class DashboardProvider extends ChangeNotifier with LoadingStateProviderMixin {
     _dashboardData = null;
     resetState(); // Clears isLoading + errorMessage + notifyListeners()
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => clear();
 }

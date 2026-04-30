@@ -18,7 +18,7 @@ class AssignmentService {
       return AssignmentDetailDto.fromJson(response.data);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy thông tin bài tập thất bại: ${e.toString()}');
+      throw ApiException('Lấy thông tin bài tập thất bại');
     }
   }
 
@@ -42,7 +42,7 @@ class AssignmentService {
           .toList();
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy lịch sử nộp bài thất bại: ${e.toString()}');
+      throw ApiException('Lấy lịch sử nộp bài thất bại');
     }
   }
 
@@ -60,7 +60,7 @@ class AssignmentService {
       return AssignmentSubmissionDetailDto.fromJson(response.data);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Nộp bài tập thất bại: ${e.toString()}');
+      throw ApiException('Nộp bài tập thất bại');
     }
   }
 
@@ -89,7 +89,7 @@ class AssignmentService {
       return data['id'] as int;
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Tải file lên thất bại: ${e.toString()}');
+      throw ApiException('Tải file lên thất bại');
     }
   }
 }

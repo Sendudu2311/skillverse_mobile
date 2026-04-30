@@ -34,79 +34,83 @@ class _ExpertChatLandingPageState extends State<ExpertChatLandingPage> {
         useGradientTitle: true,
         onBack: () => context.go('/dashboard'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header with subtitle
-            Text(
-              'Luôn cập nhật • Phục vụ 24/7 • Chuyên môn đa dạng',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
-                fontFamily: 'monospace',
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-
-            // Stats Row
-            _buildStatsRow(context),
-            const SizedBox(height: 16),
-
-
-            // Mode Selection Cards
-            _buildModeCard(
-              context,
-              icon: Icons.work_outline,
-              title: 'TƯ VẤN NGHỀ NGHIỆP',
-              subtitle: 'GENERAL CAREER ADVISOR',
-              features: [
-                'Tư vấn nghề nghiệp tổng quát',
-                'Xu hướng thị trường lao động',
-                'Lộ trình phát triển kỹ năng',
-                'Định hướng học tập',
-              ],
-              buttonText: 'BẮT ĐẦU',
-              onTap: () => context.push('/chat'),
-              color: AppTheme.primaryBlueDark,
-            ),
-            const SizedBox(height: 16),
-
-            _buildModeCard(
-              context,
-              icon: Icons.auto_awesome,
-              title: 'CHAT VỚI CHUYÊN GIA',
-              subtitle: 'EXPERT MODE',
-              features: [
-                'Tư vấn chuyên sâu theo lĩnh vực',
-                'Chuyên gia theo ngành nghề',
-                'Kiến thức chuyên môn chi tiết',
-                'Lộ trình cụ thể cho từng vai trò',
-              ],
-              buttonText: 'CHỌN CHUYÊN GIA',
-              onTap: () => context.push('/expert-chat/domain'),
-              color: AppTheme.accentCyan,
-              isPremium: true,
-            ),
-            const SizedBox(height: 12),
-            // Quick-access to chat history without re-selecting context
-            TextButton.icon(
-              onPressed: () => context.push('/expert-chat/chat'),
-              icon: Icon(Icons.history, size: 16, color: AppTheme.accentCyan),
-              label: Text(
-                'Xem lịch sử tư vấn',
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header with subtitle
+              Text(
+                'Luôn cập nhật • Phục vụ 24/7 • Chuyên môn đa dạng',
                 style: TextStyle(
-                  fontSize: 13,
-                  color: AppTheme.accentCyan,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                  fontFamily: 'monospace',
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+  
+              // Stats Row
+              _buildStatsRow(context),
+              const SizedBox(height: 16),
+  
+  
+              // Mode Selection Cards
+              _buildModeCard(
+                context,
+                icon: Icons.work_outline,
+                title: 'TƯ VẤN NGHỀ NGHIỆP',
+                subtitle: 'GENERAL CAREER ADVISOR',
+                features: [
+                  'Tư vấn nghề nghiệp tổng quát',
+                  'Xu hướng thị trường lao động',
+                  'Lộ trình phát triển kỹ năng',
+                  'Định hướng học tập',
+                ],
+                buttonText: 'BẮT ĐẦU',
+                onTap: () => context.push('/chat'),
+                color: AppTheme.primaryBlueDark,
+              ),
+              const SizedBox(height: 16),
+  
+              _buildModeCard(
+                context,
+                icon: Icons.auto_awesome,
+                title: 'CHAT VỚI CHUYÊN GIA',
+                subtitle: 'EXPERT MODE',
+                features: [
+                  'Tư vấn chuyên sâu theo lĩnh vực',
+                  'Chuyên gia theo ngành nghề',
+                  'Kiến thức chuyên môn chi tiết',
+                  'Lộ trình cụ thể cho từng vai trò',
+                ],
+                buttonText: 'CHỌN CHUYÊN GIA',
+                onTap: () => context.push('/expert-chat/domain'),
+                color: AppTheme.accentCyan,
+                isPremium: true,
+              ),
+              const SizedBox(height: 12),
+              // Quick-access to chat history without re-selecting context
+              TextButton.icon(
+                onPressed: () => context.push('/expert-chat/chat'),
+                icon: Icon(Icons.history, size: 16, color: AppTheme.accentCyan),
+                label: Text(
+                  'Xem lịch sử tư vấn',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.accentCyan,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

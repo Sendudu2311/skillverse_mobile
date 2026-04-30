@@ -73,90 +73,90 @@ class _PostFormPageState extends State<PostFormPage> {
             TextButton(onPressed: _saveDraft, child: const Text('Lưu nháp')),
         ],
       ),
-      body: _isLoading
-          ? CommonLoading.center()
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Title field
-                    TextFormField(
-                      controller: _titleController,
-                      decoration: InputDecoration(
-                        labelText: 'Tiêu đề *',
-                        hintText: 'Nhập tiêu đề bài viết...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: _isLoading
+            ? CommonLoading.center()
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Title field
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: InputDecoration(
+                          labelText: 'Tiêu đề *',
+                          hintText: 'Nhập tiêu đề bài viết...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
+                        maxLength: 200,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Vui lòng nhập tiêu đề';
+                          }
+                          return null;
+                        },
                       ),
-                      maxLength: 200,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Vui lòng nhập tiêu đề';
-                        }
-                        return null;
-                      },
-                    ),
 
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // Rich text editor
-                    GlassCard(
-                      padding: EdgeInsets.zero,
-                      child: Column(
-                        children: [
-                          // Toolbar
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(12),
+                      // Rich text editor
+                      GlassCard(
+                        padding: EdgeInsets.zero,
+                        child: Column(
+                          children: [
+                            // Toolbar
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).cardColor,
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(12),
+                                ),
+                              ),
+                              child: quill.QuillSimpleToolbar(
+                                controller: _quillController,
                               ),
                             ),
-                            child: quill.QuillSimpleToolbar(
-                              controller: _quillController,
-                              // TODO: Add configurations back when correct API is found
-                              // configurations: const quill.QuillSimpleToolbarConfigurations(...),
-                            ),
-                          ),
 
-                          // Editor
-                          Container(
-                            height: 400,
-                            padding: const EdgeInsets.all(16),
-                            child: quill.QuillEditor.basic(
-                              controller: _quillController,
-                              // TODO: Add configurations back when correct API is found
-                              // configurations: const quill.QuillEditorConfigurations(...),
+                            // Editor
+                            Container(
+                              height: 400,
+                              padding: const EdgeInsets.all(16),
+                              child: quill.QuillEditor.basic(
+                                controller: _quillController,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // Publish button
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _publishPost,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.all(16),
-                        backgroundColor: AppTheme.themeOrangeStart,
+                      // Publish button
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _publishPost,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.all(16),
+                          backgroundColor: AppTheme.themeOrangeStart,
+                        ),
+                        child: _isLoading
+                            ? CommonLoading.small()
+                            : const Text(
+                                'Đăng bài',
+                                style: TextStyle(fontSize: 16),
+                              ),
                       ),
-                      child: _isLoading
-                          ? CommonLoading.small()
-                          : const Text(
-                              'Đăng bài',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 
@@ -175,7 +175,10 @@ class _PostFormPageState extends State<PostFormPage> {
     final content = _quillController.document.toPlainText().trim();
     if (content.isEmpty) {
       if (mounted) {
-        ErrorHandler.showWarningSnackBar(context, 'Vui lòng nhập nội dung bài viết');
+        ErrorHandler.showWarningSnackBar(
+          context,
+          'Vui lòng nhập nội dung bài viết',
+        );
       }
       return;
     }
@@ -197,7 +200,9 @@ class _PostFormPageState extends State<PostFormPage> {
           if (post != null) {
             ErrorHandler.showSuccessSnackBar(
               context,
-              isDraft ? 'Đã lưu nháp thành công' : 'Đã đăng bài viết thành công',
+              isDraft
+                  ? 'Đã lưu nháp thành công'
+                  : 'Đã đăng bài viết thành công',
             );
             context.pop();
           } else {

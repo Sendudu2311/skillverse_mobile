@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:dio/dio.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/error_handler.dart';
 import '../../data/models/enrollment_models.dart';
 import '../../data/services/enrollment_service.dart';
 
@@ -27,57 +27,41 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
   }
 
   /// Enroll user in a course
-  Future<bool> enrollInCourse({
-    required int courseId,
-  }) async {
-    final result = await executeAsync(
-      () async {
-        final enrollment = await _enrollmentService.enrollUser(
-          courseId: courseId,
-        );
+  Future<bool> enrollInCourse({required int courseId}) async {
+    final result = await executeAsync(() async {
+      final enrollment = await _enrollmentService.enrollUser(
+        courseId: courseId,
+      );
 
-        // Add to enrollments list
-        _enrollments.add(enrollment);
+      // Add to enrollments list
+      _enrollments.add(enrollment);
 
-        // Update cache
-        _enrollmentStatusCache[courseId] = true;
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) =>
-          _extractErrorMessage(e, 'Failed to enroll in course'),
-    );
+      // Update cache
+      _enrollmentStatusCache[courseId] = true;
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   /// Unenroll user from a course
-  Future<bool> unenrollFromCourse({
-    required int courseId,
-  }) async {
-    final result = await executeAsync(
-      () async {
-        await _enrollmentService.unenrollUser(
-          courseId: courseId,
-        );
+  Future<bool> unenrollFromCourse({required int courseId}) async {
+    final result = await executeAsync(() async {
+      await _enrollmentService.unenrollUser(courseId: courseId);
 
-        // Remove from enrollments list
-        _enrollments.removeWhere((e) => e.courseId == courseId);
+      // Remove from enrollments list
+      _enrollments.removeWhere((e) => e.courseId == courseId);
 
-        // Update cache
-        _enrollmentStatusCache[courseId] = false;
-        notifyListeners();
-        return true;
-      },
-      errorMessageBuilder: (e) =>
-          _extractErrorMessage(e, 'Failed to unenroll from course'),
-    );
+      // Update cache
+      _enrollmentStatusCache[courseId] = false;
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
     return result ?? false;
   }
 
   /// Check enrollment status for a course
-  Future<bool> checkEnrollmentStatus({
-    required int courseId,
-  }) async {
+  Future<bool> checkEnrollmentStatus({required int courseId}) async {
     try {
       final enrolled = await _enrollmentService.checkEnrollmentStatus(
         courseId: courseId,
@@ -93,32 +77,25 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
   }
 
   /// Fetch user's enrollments
-  Future<void> fetchUserEnrollments({
-    int page = 0,
-    int size = 20,
-  }) async {
-    await executeAsync(
-      () async {
-        final response = await _enrollmentService.getUserEnrollments(
-          page: page,
-          size: size,
-        );
+  Future<void> fetchUserEnrollments({int page = 0, int size = 20}) async {
+    await executeAsync(() async {
+      final response = await _enrollmentService.getUserEnrollments(
+        page: page,
+        size: size,
+      );
 
-        if (page == 0) {
-          _enrollments = response.content ?? [];
-        } else {
-          _enrollments.addAll(response.content ?? []);
-        }
+      if (page == 0) {
+        _enrollments = response.content ?? [];
+      } else {
+        _enrollments.addAll(response.content ?? []);
+      }
 
-        // Update cache
-        for (var enrollment in response.content ?? []) {
-          _enrollmentStatusCache[enrollment.courseId] = true;
-        }
-        notifyListeners();
-      },
-      errorMessageBuilder: (e) =>
-          _extractErrorMessage(e, 'Failed to fetch enrollments'),
-    );
+      // Update cache
+      for (var enrollment in response.content ?? []) {
+        _enrollmentStatusCache[enrollment.courseId] = true;
+      }
+      notifyListeners();
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   /// Update course progress
@@ -176,9 +153,7 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
   // Helper: refresh a single enrollment from the server
   Future<void> _refreshEnrollment(int courseId) async {
     try {
-      final fresh = await _enrollmentService.getEnrollment(
-        courseId: courseId,
-      );
+      final fresh = await _enrollmentService.getEnrollment(courseId: courseId);
       final idx = _enrollments.indexWhere((e) => e.courseId == courseId);
       if (idx != -1) {
         _enrollments[idx] = fresh;
@@ -189,22 +164,13 @@ class EnrollmentProvider with ChangeNotifier, LoadingStateProviderMixin {
     }
   }
 
-  // Helper: extract error message from DioException or generic error
-  String _extractErrorMessage(dynamic e, String fallback) {
-    if (e is DioException && e.response != null) {
-      final data = e.response!.data;
-      if (data is Map && data.containsKey('message')) {
-        return data['message'];
-      }
-      return 'Error: ${e.response!.statusCode}';
-    }
-    return '$fallback: $e';
-  }
-
   /// Clear all data
   void clear() {
     _enrollments = [];
     _enrollmentStatusCache = {};
     resetState(); // Clears isLoading + errorMessage + notifyListeners()
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => clear();
 }

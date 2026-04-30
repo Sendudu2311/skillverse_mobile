@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../../data/models/portfolio_models.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/section_header.dart';
+import '../../widgets/status_badge.dart';
+import '../../../core/utils/date_time_helper.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/skillverse_app_bar.dart';
@@ -15,7 +19,7 @@ import '../../../core/utils/html_helper.dart';
 import '../../../core/utils/number_formatter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:printing/printing.dart';
-import '../../widgets/portfolio/cv_pdf_generator_widget.dart';
+import 'widgets/cv_pdf_generator_widget.dart';
 import '../../../data/models/cv_structured_data.dart';
 import 'edit_extended_profile_page.dart';
 import 'edit_project_page.dart';
@@ -55,6 +59,9 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
           portfolioProvider.loadActiveCV(),
           portfolioProvider.loadCompletedMissions(),
           portfolioProvider.loadSystemCertificates(),
+          portfolioProvider.loadVerifiedSkills(
+            userId: context.read<AuthProvider>().user?.id,
+          ),
         ]);
       } catch (e) {
         if (!mounted) return;
@@ -249,7 +256,11 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                         ),
 
                       // Work Experience Section
-                      if ((portfolioProvider.extendedProfile?.workExperiences?.isNotEmpty ?? false)) ...[
+                      if ((portfolioProvider
+                              .extendedProfile
+                              ?.workExperiences
+                              ?.isNotEmpty ??
+                          false)) ...[
                         const SizedBox(height: 24),
                         _buildWorkExperienceSection(
                           portfolioProvider.extendedProfile!.workExperiences!,
@@ -257,7 +268,11 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                       ],
 
                       // Education Section
-                      if ((portfolioProvider.extendedProfile?.educationHistory?.isNotEmpty ?? false)) ...[
+                      if ((portfolioProvider
+                              .extendedProfile
+                              ?.educationHistory
+                              ?.isNotEmpty ??
+                          false)) ...[
                         const SizedBox(height: 24),
                         _buildEducationSection(
                           portfolioProvider.extendedProfile!.educationHistory!,
@@ -303,6 +318,13 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
                       // CV Section
                       _buildCVSection(context, portfolioProvider.activeCV),
 
+                      const SizedBox(height: 24),
+
+                      // Verified Skills Section
+                      _buildVerifiedSkillsSection(
+                        context,
+                        portfolioProvider.verifiedSkills,
+                      ),
                       const SizedBox(height: 24),
 
                       // Reviews Section
@@ -353,16 +375,21 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
             child: CircleAvatar(
               radius: 38,
               backgroundColor: Colors.white,
-              child: Text(
-                user?.fullName?.isNotEmpty == true
-                    ? user!.fullName![0].toUpperCase()
-                    : 'U',
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.themePurpleStart,
-                ),
-              ),
+              backgroundImage: profile?.avatarUrl.isNotEmpty == true
+                  ? NetworkImage(profile!.avatarUrl)
+                  : null,
+              child: profile?.avatarUrl.isNotEmpty == true
+                  ? null
+                  : Text(
+                      user?.fullName?.isNotEmpty == true
+                          ? user!.fullName![0].toUpperCase()
+                          : 'U',
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.themePurpleStart,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 16),
@@ -1816,6 +1843,367 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
           ],
         ),
       ),
+    );
+  }
+
+  // ─── Verified Skills ─────────────────────────────────────────────────────
+
+  Widget _buildVerifiedSkillsSection(
+    BuildContext context,
+    List<UserVerifiedSkillDto> skills,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: SectionHeader(
+                title: 'Kỹ năng đã xác minh',
+                icon: Icons.verified_outlined,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                context.push('/student/skill-verifications');
+              },
+              icon: const Icon(
+                Icons.add_circle_outline,
+                color: AppTheme.themeGreenStart,
+                size: 18,
+              ),
+              label: const Text(
+                'Xác thực',
+                style: TextStyle(color: AppTheme.themeGreenStart, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (skills.isEmpty)
+          GlassCard(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.verified_outlined,
+                  size: 40,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Chưa có kỹ năng nào được xác minh',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Hoàn thành Journey hoặc gửi yêu cầu xác thực kỹ năng để bắt đầu.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ...skills.map(
+          (skill) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: GlassCard(
+              onTap: () => _showVerifiedSkillDetail(context, skill),
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          skill.skillName,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? AppTheme.darkTextPrimary
+                                    : AppTheme.lightTextPrimary,
+                              ),
+                        ),
+                        if (skill.verifiedByMentorName != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Xác minh bởi ${skill.verifiedByMentorName}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                        if (skill.verifiedAt != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            DateTimeHelper.formatRelativeTime(
+                              skill.verifiedAt!,
+                            ),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      StatusBadge(status: 'COMPLETED_VERIFIED'),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppTheme.darkBackgroundSecondary
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          skill.sourceLabel,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showVerifiedSkillDetail(
+    BuildContext context,
+    UserVerifiedSkillDto skill,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark
+          ? AppTheme.darkCardBackground
+          : AppTheme.lightCardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Title with verified icon
+              Row(
+                children: [
+                  const Icon(
+                    Icons.verified,
+                    color: AppTheme.themeGreenStart,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Chứng nhận Kỹ năng',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? Colors.white
+                            : AppTheme.lightTextPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Skill name
+              Text(
+                skill.skillName,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.themeBlueStart,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Verified by
+              _buildDetailRow(
+                isDark,
+                'Được xác thực bởi',
+                skill.verifiedByMentorName ?? 'Hệ thống Admin',
+                valueColor: AppTheme.themeBlueStart,
+              ),
+              const SizedBox(height: 10),
+              // Date
+              if (skill.verifiedAt != null)
+                _buildDetailRow(
+                  isDark,
+                  'Thời gian xác thực',
+                  DateTimeHelper.formatDate(skill.verifiedAt!),
+                ),
+              if (skill.verifiedAt != null) const SizedBox(height: 10),
+              // Verification note
+              if (skill.verificationNote != null &&
+                  skill.verificationNote!.isNotEmpty) ...[
+                Text(
+                  'Đánh giá chi tiết:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '"${skill.verificationNote}"',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+              // Source badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: skill.journeyId != null
+                      ? AppTheme.themeBlueStart.withValues(alpha: 0.15)
+                      : AppTheme.themeGreenStart.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      skill.journeyId != null
+                          ? Icons.map_outlined
+                          : Icons.verified_user_outlined,
+                      size: 16,
+                      color: skill.journeyId != null
+                          ? AppTheme.themeBlueStart
+                          : AppTheme.themeGreenStart,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      skill.journeyId != null
+                          ? 'Xác thực qua lộ trình (Roadmap Mentoring)'
+                          : skill.sourceLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: skill.journeyId != null
+                            ? AppTheme.themeBlueStart
+                            : AppTheme.themeGreenStart,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(
+    bool isDark,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              color:
+                  valueColor ??
+                  (isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

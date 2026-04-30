@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../data/models/course_models.dart';
-import '../themes/app_theme.dart';
-import '../widgets/glass_card.dart';
-import '../../core/utils/number_formatter.dart';
+import '../../../../data/models/course_models.dart';
+import '../../../themes/app_theme.dart';
+import '../../../widgets/glass_card.dart';
+import '../../../../core/utils/number_formatter.dart';
 
 /// Horizontal course card for list views
 /// Shows thumbnail, title, author, stats, and price

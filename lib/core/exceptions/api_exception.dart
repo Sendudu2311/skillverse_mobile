@@ -1,57 +1,59 @@
 import 'package:dio/dio.dart';
+import '../error/exceptions.dart';
 
-class ApiException implements Exception {
-  final String message;
+/// Legacy API exception class — now extends [AppException] so that
+/// [ErrorHandler.getErrorMessage] handles it through the standard
+/// `AppException` branch (HTML-page detection, Vietnamese messages, etc.).
+class ApiException extends AppException {
   final int? statusCode;
 
-  const ApiException(this.message, [this.statusCode]);
+  ApiException(super.message, [this.statusCode]);
 
   factory ApiException.fromDioException(DioException dioException) {
     switch (dioException.type) {
       case DioExceptionType.connectionTimeout:
-        return const ApiException('Connection timeout. Please check your internet connection.');
+        return ApiException('Kết nối đến máy chủ quá lâu. Vui lòng thử lại.');
       case DioExceptionType.sendTimeout:
-        return const ApiException('Request timeout. Please try again.');
+        return ApiException('Gửi dữ liệu quá lâu. Vui lòng thử lại.');
       case DioExceptionType.receiveTimeout:
-        return const ApiException('Response timeout. Please try again.');
+        return ApiException('Nhận dữ liệu quá lâu. Vui lòng thử lại.');
       case DioExceptionType.badResponse:
         return ApiException(
           _handleStatusCode(dioException.response?.statusCode),
           dioException.response?.statusCode,
         );
       case DioExceptionType.cancel:
-        return const ApiException('Request cancelled.');
+        return ApiException('Yêu cầu đã bị hủy');
       case DioExceptionType.unknown:
         if (dioException.message?.contains('SocketException') == true) {
-          return const ApiException('No internet connection. Please check your network.');
+          return ApiException(
+            'Không có kết nối Internet. Vui lòng kiểm tra lại.',
+          );
         }
-        return const ApiException('Something went wrong. Please try again.');
+        return ApiException('Đã xảy ra lỗi không xác định. Vui lòng thử lại.');
       default:
-        return const ApiException('Something went wrong. Please try again.');
+        return ApiException('Đã xảy ra lỗi không xác định. Vui lòng thử lại.');
     }
   }
 
   static String _handleStatusCode(int? statusCode) {
     switch (statusCode) {
       case 400:
-        return 'Bad request. Please check your input.';
+        return 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.';
       case 401:
-        return 'Unauthorized. Please login again.';
+        return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
       case 403:
-        return 'Forbidden. You don\'t have permission to access this resource.';
+        return 'Bạn không có quyền thực hiện thao tác này.';
       case 404:
-        return 'Resource not found.';
+        return 'Không tìm thấy dữ liệu yêu cầu.';
       case 500:
-        return 'Internal server error. Please try again later.';
+        return 'Lỗi máy chủ. Vui lòng thử lại sau.';
       case 502:
-        return 'Bad gateway. Please try again later.';
+        return 'Máy chủ không phản hồi. Vui lòng thử lại sau.';
       case 503:
-        return 'Service unavailable. Please try again later.';
+        return 'Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau.';
       default:
-        return 'Something went wrong. Please try again.';
+        return 'Đã xảy ra lỗi (Mã: $statusCode)';
     }
   }
-
-  @override
-  String toString() => message;
 }

@@ -10,7 +10,7 @@ import '../../../core/utils/validation_helper.dart';
 
 class VerifyEmailPage extends StatefulWidget {
   final String email;
-  
+
   const VerifyEmailPage({super.key, required this.email});
 
   @override
@@ -56,7 +56,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
-    
+
     final success = await authProvider.verifyEmail(
       widget.email,
       _otpController.text.trim(),
@@ -66,7 +66,10 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
       ErrorHandler.showSuccessSnackBar(context, 'Xác thực email thành công!');
       context.go('/login');
     } else if (mounted) {
-      ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Xác thực thất bại');
+      ErrorHandler.showErrorSnackBar(
+        context,
+        authProvider.errorMessage ?? 'Xác thực thất bại',
+      );
     }
   }
 
@@ -76,10 +79,16 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     final success = await authProvider.resendOtp(widget.email);
 
     if (success && mounted) {
-      ErrorHandler.showSuccessSnackBar(context, 'OTP đã được gửi lại thành công');
+      ErrorHandler.showSuccessSnackBar(
+        context,
+        'OTP đã được gửi lại thành công',
+      );
       _startCountdown();
     } else if (mounted) {
-      ErrorHandler.showErrorSnackBar(context, authProvider.errorMessage ?? 'Gửi lại OTP thất bại');
+      ErrorHandler.showErrorSnackBar(
+        context,
+        authProvider.errorMessage ?? 'Gửi lại OTP thất bại',
+      );
     }
   }
 
@@ -88,7 +97,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     return Scaffold(
       appBar: SkillVerseAppBar(
         title: 'Xác thực Email',
-        onBack: () => context.go('/register'),
+        onBack: () => context.go('/login'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -99,7 +108,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 32),
-                
+
                 // Icon and Title
                 Center(
                   child: Column(
@@ -108,7 +117,9 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Icon(
@@ -117,29 +128,35 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                           color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       Text(
                         'Xác thực Email',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       RichText(
                         textAlign: TextAlign.center,
                         text: TextSpan(
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                          ),
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.7),
+                              ),
                           children: [
-                            const TextSpan(text: 'Chúng tôi đã gửi mã xác thực đến\n'),
+                            const TextSpan(
+                              text: 'Chúng tôi đã gửi mã xác thực đến\n',
+                            ),
                             TextSpan(
                               text: widget.email,
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
@@ -147,9 +164,9 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 48),
-                
+
                 // OTP Field
                 TextFormField(
                   controller: _otpController,
@@ -164,25 +181,32 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                     hintText: '000000',
                     prefixIcon: Icon(Icons.security),
                   ),
-                  validator: (value) => ValidationHelper.lengthRange(value, 6, 6, fieldName: 'Mã xác thực'),
+                  validator: (value) => ValidationHelper.lengthRange(
+                    value,
+                    6,
+                    6,
+                    fieldName: 'Mã xác thực',
+                  ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Verify Button
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
                     return ElevatedButton(
-                      onPressed: authProvider.isLoading ? null : _handleVerification,
+                      onPressed: authProvider.isLoading
+                          ? null
+                          : _handleVerification,
                       child: authProvider.isLoading
                           ? CommonLoading.small()
                           : const Text('Xác thực'),
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Resend OTP Section
                 Center(
                   child: Column(
@@ -191,14 +215,16 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                         'Không nhận được mã?',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       if (_canResend)
                         Consumer<AuthProvider>(
                           builder: (context, authProvider, child) {
                             return TextButton(
-                              onPressed: authProvider.isLoading ? null : _handleResendOtp,
+                              onPressed: authProvider.isLoading
+                                  ? null
+                                  : _handleResendOtp,
                               child: const Text('Gửi lại mã'),
                             );
                           },
@@ -206,16 +232,19 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                       else
                         Text(
                           'Gửi lại mã sau $_countdown giây',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
+                              ),
                         ),
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Change Email
                 Center(
                   child: TextButton(

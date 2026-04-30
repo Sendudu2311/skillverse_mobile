@@ -45,7 +45,7 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
-  Future<void> _pickAndUploadAvatar(BuildContext context) async {
+  Future<void> _pickAndUploadAvatar() async {
     // Capture references before any async gap
     final authProvider = context.read<AuthProvider>();
     final userProvider = context.read<UserProvider>();
@@ -69,19 +69,18 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       await UserService().uploadAvatar(filePath, userId);
+      if (!mounted) return;
 
       // Reload profile to get the new avatar URL
-      if (mounted) {
-        await userProvider.loadUserProfile();
-        ErrorHandler.showSuccessSnackBar(
-          context,
-          'Cập nhật ảnh đại diện thành công!',
-        );
-      }
+      await userProvider.loadUserProfile();
+      if (!mounted) return;
+      ErrorHandler.showSuccessSnackBar(
+        context,
+        'Cập nhật ảnh đại diện thành công!',
+      );
     } catch (e) {
-      if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, e);
-      }
+      if (!mounted) return;
+      ErrorHandler.showErrorSnackBar(context, e);
     } finally {
       if (mounted) {
         setState(() => _isUploadingAvatar = false);
@@ -245,9 +244,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 bottom: 0,
                 right: 0,
                 child: GestureDetector(
-                  onTap: _isUploadingAvatar
-                      ? null
-                      : () => _pickAndUploadAvatar(context),
+                  onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(

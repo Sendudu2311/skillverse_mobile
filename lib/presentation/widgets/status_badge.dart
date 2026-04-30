@@ -67,6 +67,7 @@ class StatusBadge extends StatelessWidget {
       // Booking statuses
       'CONFIRMED' => ('Đã xác nhận', AppTheme.successColor),
       'ONGOING' => ('Đang diễn ra', AppTheme.infoColor),
+      'MENTORING_ACTIVE' || 'MENTORINGACTIVE' => ('Đang mentoring', AppTheme.infoColor),
       'PENDING_COMPLETION' ||
       'PENDINGCOMPLETION' => ('Chờ xác nhận hoàn thành', AppTheme.warningColor),
       'DISPUTED' => ('Tranh chấp', AppTheme.errorColor),
@@ -88,6 +89,12 @@ class StatusBadge extends StatelessWidget {
       'DELETED' => ('Đã xoá', Colors.grey),
       'LOCKED' => ('Đã khoá', Colors.grey),
       'AVAILABLE' => ('Sẵn sàng', Colors.teal),
+      'COMPLETED_UNVERIFIED' ||
+      'COMPLETEDUNVERIFIED' => ('Hoàn thành (chưa xác minh)', Colors.amber),
+      'AWAITING_VERIFICATION' ||
+      'AWAITINGVERIFICATION' => ('Đang chờ xác minh', AppTheme.warningColor),
+      'COMPLETED_VERIFIED' ||
+      'COMPLETEDVERIFIED' => ('Hoàn thành ✓', AppTheme.successColor),
 
       // Contract statuses
       'DRAFT' => ('Bản nháp', Colors.grey),
@@ -99,6 +106,18 @@ class StatusBadge extends StatelessWidget {
       'LATE_PENDING' => ('Nộp muộn - Đang chờ', Colors.orange),
       'GRADED' => ('Đã chấm', AppTheme.successColor),
       'LATE_GRADED' => ('Nộp muộn - Đã chấm', AppTheme.successColor),
+
+      // Node Submission statuses (Feature B)
+      'REWORK_REQUESTED' => ('Yêu cầu làm lại', AppTheme.warningColor),
+
+      // Node Verification statuses (Feature B)
+      'NOT_VERIFIED' => ('Chưa xác minh', Colors.grey),
+      'VERIFIED' => ('Đã xác minh', AppTheme.successColor),
+
+      // Node Review results (Feature B)
+      'PASS' => ('Đạt', AppTheme.successColor),
+      'REWORK' => ('Làm lại', AppTheme.warningColor),
+      'FAIL' => ('Không đạt', AppTheme.errorColor),
 
       _ => (status, Colors.grey),
     };

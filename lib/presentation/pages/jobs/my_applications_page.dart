@@ -77,24 +77,28 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
           ],
         ),
       ),
-      body: Consumer<JobProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoadingApplications) {
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 4,
-              itemBuilder: (_, __) => const ListItemSkeleton(lineCount: 3),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<JobProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoadingApplications) {
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: 4,
+                itemBuilder: (_, __) => const ListItemSkeleton(lineCount: 3),
+              );
+            }
+  
+            return TabBarView(
+              controller: _tabController,
+              children: [
+                _buildLongTermApplications(provider),
+                _buildShortTermApplications(provider),
+              ],
             );
-          }
-
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _buildLongTermApplications(provider),
-              _buildShortTermApplications(provider),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }

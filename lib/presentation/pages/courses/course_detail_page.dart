@@ -20,6 +20,7 @@ import '../../widgets/common_loading.dart';
 import '../../../data/services/enrollment_service.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/animated_success_overlay.dart';
 import '../../../core/utils/date_time_helper.dart';
 import '../../../core/utils/html_helper.dart';
 
@@ -357,7 +358,21 @@ class _CourseDetailPageState extends State<CourseDetailPage>
       setState(() => _isEnrolling = false);
 
       if (enrolled && mounted) {
-        ErrorHandler.showSuccessSnackBar(context, 'Đăng ký thành công!');
+        AnimatedSuccessOverlay.show(
+          context: context,
+          title: 'Đăng ký thành công! 🎉',
+          subtitle: _course!.title,
+          primaryButtonText: 'Bắt đầu học',
+          onPrimaryAction: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    CourseLearningPage(courseId: widget.courseId),
+              ),
+            );
+          },
+        );
       } else if (mounted) {
         ErrorHandler.showErrorSnackBar(
           context,
@@ -418,36 +433,20 @@ class _CourseDetailPageState extends State<CourseDetailPage>
     }
     if (!mounted) return;
 
-    // Show success dialog
-    showDialog(
+    // Show success overlay
+    AnimatedSuccessOverlay.show(
       context: context,
-      builder: (context) => AlertDialog(
-        icon: const Icon(Icons.check_circle, color: Colors.green, size: 64),
-        title: const Text('Mua khóa học thành công!'),
-        content: Text(
-          'Bạn đã mua thành công khóa học "${_course!.title}".\n'
-          'Bắt đầu học ngay bây giờ!',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Để sau'),
+      title: 'Mua khóa học thành công! 🎉',
+      subtitle: _course!.title,
+      primaryButtonText: 'Học ngay',
+      onPrimaryAction: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CourseLearningPage(courseId: widget.courseId),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      CourseLearningPage(courseId: widget.courseId),
-                ),
-              );
-            },
-            child: const Text('Học ngay'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -459,4 +459,60 @@ class PortfolioService {
       rethrow;
     }
   }
+
+  // ==================== Verified Skills ====================
+
+  /// GET /api/portfolio/verified-skills
+  Future<List<UserVerifiedSkillDto>> getVerifiedSkills() async {
+    try {
+      final response = await _apiClient.dio.get('/portfolio/verified-skills');
+      return _unwrapList(response.data, UserVerifiedSkillDto.fromJson);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// GET /api/v1/public/students/{userId}/verified-skills/details
+  /// Returns student self-verified skills with full evidence details.
+  Future<List<Map<String, dynamic>>> getPublicStudentVerifiedSkillDetails(
+    int userId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/v1/public/students/$userId/verified-skills/details',
+      );
+      final data = response.data;
+      if (data is List) {
+        return data.cast<Map<String, dynamic>>();
+      }
+      if (data is Map<String, dynamic> && data['data'] is List) {
+        return (data['data'] as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// GET /api/v1/public/mentor-verifications/{userId}/verified-skills/details
+  /// Returns mentor-panel verified skills with full evidence details.
+  Future<List<Map<String, dynamic>>> getPublicMentorVerifiedSkillDetails(
+    int userId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/v1/public/mentor-verifications/$userId/verified-skills/details',
+      );
+      final data = response.data;
+      if (data is List) {
+        return data.cast<Map<String, dynamic>>();
+      }
+      if (data is Map<String, dynamic> && data['data'] is List) {
+        return (data['data'] as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
 }

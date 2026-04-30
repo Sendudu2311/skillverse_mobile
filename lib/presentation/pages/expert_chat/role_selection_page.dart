@@ -29,7 +29,11 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
         if (domain == null) {
           return Scaffold(
             appBar: AppBar(title: const Text('Chọn Vai Trò')),
-            body: const Center(child: Text('Vui lòng chọn lĩnh vực trước')),
+            body: SafeArea(
+              top: false,
+              bottom: true,
+              child: const Center(child: Text('Vui lòng chọn lĩnh vực trước')),
+            ),
           );
         }
 
@@ -111,113 +115,117 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
               ),
             ],
           ),
-          body: Column(
-            children: [
-              // Search and Filter
-              Container(
-                padding: const EdgeInsets.all(12),
-                color: isDark
-                    ? AppTheme.darkCardBackground
-                    : AppTheme.lightCardBackground,
-                child: Row(
-                  children: [
-                    // Search
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Tìm vai trò...',
-                          hintStyle: const TextStyle(fontSize: 13),
-                          prefixIcon: const Icon(Icons.search, size: 18),
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            _searchQuery = value;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Filter dropdown
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _selectedIndustryFilter,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        hint: const Text(
-                          'Tất cả',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                        isExpanded: true,
-                        items: [
-                          const DropdownMenuItem(
-                            value: '',
-                            child: Text(
-                              'Tất cả',
-                              style: TextStyle(fontSize: 11),
+          body: SafeArea(
+            top: false,
+            bottom: true,
+            child: Column(
+              children: [
+                // Search and Filter
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  color: isDark
+                      ? AppTheme.darkCardBackground
+                      : AppTheme.lightCardBackground,
+                  child: Row(
+                    children: [
+                      // Search
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Tìm vai trò...',
+                            hintStyle: const TextStyle(fontSize: 13),
+                            prefixIcon: const Icon(Icons.search, size: 18),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          ...domain.industries.map(
-                            (industry) => DropdownMenuItem(
-                              value: industry.industry,
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Filter dropdown
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _selectedIndustryFilter,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          hint: const Text(
+                            'Tất cả',
+                            style: TextStyle(fontSize: 11),
+                          ),
+                          isExpanded: true,
+                          items: [
+                            const DropdownMenuItem(
+                              value: '',
                               child: Text(
-                                industry.industry,
-                                style: const TextStyle(fontSize: 11),
-                                overflow: TextOverflow.ellipsis,
+                                'Tất cả',
+                                style: TextStyle(fontSize: 11),
                               ),
                             ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedIndustryFilter = value?.isEmpty == true
-                                ? null
-                                : value;
-                          });
-                        },
+                            ...domain.industries.map(
+                              (industry) => DropdownMenuItem(
+                                value: industry.industry,
+                                child: Text(
+                                  industry.industry,
+                                  style: const TextStyle(fontSize: 11),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedIndustryFilter = value?.isEmpty == true
+                                  ? null
+                                  : value;
+                            });
+                          },
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-
-              // Industries and Roles
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: filteredIndustries.length,
-                  itemBuilder: (context, index) {
-                    final industry = filteredIndustries[index];
-                    return _IndustrySection(
-                      industry: industry,
-                      searchQuery: _searchQuery,
-                      onRoleSelected: (role) {
-                        provider.selectIndustry(industry);
-                        provider.selectRole(role);
-                        provider.startNewChat();
-                        context.push('/expert-chat/chat');
-                      },
-                    );
-                  },
+  
+                // Industries and Roles
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: filteredIndustries.length,
+                    itemBuilder: (context, index) {
+                      final industry = filteredIndustries[index];
+                      return _IndustrySection(
+                        industry: industry,
+                        searchQuery: _searchQuery,
+                        onRoleSelected: (role) {
+                          provider.selectIndustry(industry);
+                          provider.selectRole(role);
+                          provider.startNewChat();
+                          context.push('/expert-chat/chat');
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

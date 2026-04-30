@@ -17,7 +17,7 @@ class JourneyService {
 
   // AI calls thường mất 15-60s, dùng 2 phút/attempt thay vì 10 phút flat.
   // Nếu timeout → tự retry tối đa maxRetries lần trước khi báo lỗi.
-  static const Duration _aiTimeout = Duration(minutes: 2);
+  static const Duration _aiTimeout = Duration(minutes: 5);
 
   /// Thực thi [call] với retry logic cho các AI endpoint.
   /// Chỉ retry khi timeout (DioExceptionType.receiveTimeout / sendTimeout).
@@ -32,18 +32,21 @@ class JourneyService {
       try {
         return await call();
       } on DioException catch (e) {
-        final isTimeout = e.type == DioExceptionType.receiveTimeout ||
+        final isTimeout =
+            e.type == DioExceptionType.receiveTimeout ||
             e.type == DioExceptionType.sendTimeout ||
             e.type == DioExceptionType.connectionTimeout;
         attempt++;
         if (isTimeout && attempt < maxRetries) {
-          debugPrint('⏱ AI timeout (attempt $attempt/$maxRetries), retrying...');
+          debugPrint(
+            '⏱ AI timeout (attempt $attempt/$maxRetries), retrying...',
+          );
           continue;
         }
         throw _handleDioError(e, errorMessage);
       } catch (e) {
         if (e is AppException) rethrow;
-        throw UnknownException('Lỗi không xác định: ${e.toString()}');
+        throw UnknownException('Lỗi không xác định');
       }
     }
   }
@@ -65,7 +68,7 @@ class JourneyService {
       throw _handleDioError(e, 'Tạo hành trình thất bại');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -79,7 +82,7 @@ class JourneyService {
       throw _handleDioError(e, 'Lấy thông tin hành trình thất bại');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -108,14 +111,15 @@ class JourneyService {
       }
 
       return content
-          .map((json) =>
-              JourneySummaryDto.fromJson(json as Map<String, dynamic>))
+          .map(
+            (json) => JourneySummaryDto.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } on DioException catch (e) {
       throw _handleDioError(e, 'Lấy danh sách hành trình thất bại');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -128,14 +132,15 @@ class JourneyService {
       if (response.data == null) return [];
       final list = response.data as List<dynamic>;
       return list
-          .map((json) =>
-              JourneySummaryDto.fromJson(json as Map<String, dynamic>))
+          .map(
+            (json) => JourneySummaryDto.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } on DioException catch (e) {
       throw _handleDioError(e, 'Lấy hành trình đang hoạt động thất bại');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -155,7 +160,7 @@ class JourneyService {
       throw _handleDioError(e, 'Lấy tiến độ hành trình thất bại');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -166,19 +171,21 @@ class JourneyService {
   /// Generate AI assessment test for a journey
   /// POST /api/v1/journey/{journeyId}/generate-test
   /// Retries up to [maxRetries] times with [_aiTimeout] per attempt.
-  Future<GenerateTestResponseDto> generateTest(int journeyId, {int maxRetries = 2}) async {
+  Future<GenerateTestResponseDto> generateTest(
+    int journeyId, {
+    int maxRetries = 2,
+  }) async {
     return _retryAiCall(
       maxRetries: maxRetries,
       call: () async {
         final response = await _apiClient.dio.post(
           '/v1/journey/$journeyId/generate-test',
           data: {},
-          options: Options(
-            sendTimeout: _aiTimeout,
-            receiveTimeout: _aiTimeout,
-          ),
+          options: Options(sendTimeout: _aiTimeout, receiveTimeout: _aiTimeout),
         );
-        return GenerateTestResponseDto.fromJson(response.data as Map<String, dynamic>);
+        return GenerateTestResponseDto.fromJson(
+          response.data as Map<String, dynamic>,
+        );
       },
       errorMessage: 'Tạo bài đánh giá thất bại',
     );
@@ -194,13 +201,12 @@ class JourneyService {
       final response = await _apiClient.dio.get(
         '/v1/journey/$journeyId/test/$testId',
       );
-      return AssessmentTestDto.fromJson(
-          response.data as Map<String, dynamic>);
+      return AssessmentTestDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleDioError(e, 'Lấy bài đánh giá thất bại');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -217,10 +223,7 @@ class JourneyService {
         final response = await _apiClient.dio.post(
           '/v1/journey/$journeyId/submit-test',
           data: request.toJson(),
-          options: Options(
-            sendTimeout: _aiTimeout,
-            receiveTimeout: _aiTimeout,
-          ),
+          options: Options(sendTimeout: _aiTimeout, receiveTimeout: _aiTimeout),
         );
         return TestResultDto.fromJson(response.data as Map<String, dynamic>);
       },
@@ -243,7 +246,7 @@ class JourneyService {
       throw _handleDioError(e, 'Lấy kết quả bài đánh giá thất bại');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -253,19 +256,21 @@ class JourneyService {
 
   /// Generate roadmap based on test results
   /// POST /api/v1/journey/{journeyId}/generate-roadmap
-  Future<JourneySummaryDto> generateRoadmap(int journeyId, {int maxRetries = 2}) async {
+  Future<JourneySummaryDto> generateRoadmap(
+    int journeyId, {
+    int maxRetries = 2,
+  }) async {
     return _retryAiCall(
       maxRetries: maxRetries,
       call: () async {
         final response = await _apiClient.dio.post(
           '/v1/journey/$journeyId/generate-roadmap',
           data: {},
-          options: Options(
-            sendTimeout: _aiTimeout,
-            receiveTimeout: _aiTimeout,
-          ),
+          options: Options(sendTimeout: _aiTimeout, receiveTimeout: _aiTimeout),
         );
-        return JourneySummaryDto.fromJson(response.data as Map<String, dynamic>);
+        return JourneySummaryDto.fromJson(
+          response.data as Map<String, dynamic>,
+        );
       },
       errorMessage: 'Tạo lộ trình thất bại',
     );
@@ -283,7 +288,7 @@ class JourneyService {
       throw _handleDioError(e, 'Lấy lộ trình thất bại');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -310,8 +315,51 @@ class JourneyService {
       throw _handleDioError(e, 'Tạo kế hoạch học tập thất bại');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
+  }
+
+  // ============================================================
+  // CRUD
+  // ============================================================
+
+  /// Delete a journey permanently
+  /// DELETE /api/v1/journey/{journeyId}
+  Future<void> deleteJourney(int journeyId) async {
+    try {
+      await _apiClient.dio.delete('/v1/journey/$journeyId');
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Xóa hành trình thất bại');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định');
+    }
+  }
+
+  /// Generate study plans for all roadmap nodes in a journey
+  /// POST /api/v1/journey/{journeyId}/generate-study-plans
+  Future<Map<String, dynamic>> generateStudyPlans(
+    int journeyId, {
+    int maxRetries = 2,
+  }) async {
+    return _retryAiCall(
+      maxRetries: maxRetries,
+      call: () async {
+        final response = await _apiClient.dio.post(
+          '/v1/journey/$journeyId/generate-study-plans',
+          data: {},
+          options: Options(
+            sendTimeout: const Duration(minutes: 5),
+            receiveTimeout: const Duration(minutes: 5),
+          ),
+        );
+        if (response.data is Map<String, dynamic>) {
+          return response.data as Map<String, dynamic>;
+        }
+        return {'message': 'Đã tạo kế hoạch học tập', 'created': true};
+      },
+      errorMessage: 'Tạo kế hoạch học tập thất bại',
+    );
   }
 
   // ============================================================
@@ -321,13 +369,21 @@ class JourneyService {
   /// Pause a journey
   /// POST /api/v1/journey/{journeyId}/pause
   Future<JourneySummaryDto> pauseJourney(int journeyId) async {
-    return _postLifecycleAction(journeyId, 'pause', 'Tạm dừng hành trình thất bại');
+    return _postLifecycleAction(
+      journeyId,
+      'pause',
+      'Tạm dừng hành trình thất bại',
+    );
   }
 
   /// Resume a paused journey
   /// POST /api/v1/journey/{journeyId}/resume
   Future<JourneySummaryDto> resumeJourney(int journeyId) async {
-    return _postLifecycleAction(journeyId, 'resume', 'Tiếp tục hành trình thất bại');
+    return _postLifecycleAction(
+      journeyId,
+      'resume',
+      'Tiếp tục hành trình thất bại',
+    );
   }
 
   /// Cancel a journey
@@ -339,24 +395,40 @@ class JourneyService {
   /// Complete a journey
   /// POST /api/v1/journey/{journeyId}/complete
   Future<JourneySummaryDto> completeJourney(int journeyId) async {
-    return _postLifecycleAction(journeyId, 'complete', 'Hoàn thành hành trình thất bại');
+    return _postLifecycleAction(
+      journeyId,
+      'complete',
+      'Hoàn thành hành trình thất bại',
+    );
+  }
+
+  /// Request verification for a completed journey
+  /// POST /api/v1/journey/{journeyId}/request-verification
+  Future<JourneySummaryDto> requestVerification(int journeyId) async {
+    return _postLifecycleAction(
+      journeyId,
+      'request-verification',
+      'Yêu cầu xác minh thất bại',
+    );
   }
 
   /// Generate AI summary report
   /// POST /api/v1/journey/{journeyId}/generate-report
-  Future<JourneySummaryDto> generateAiReport(int journeyId, {int maxRetries = 2}) async {
+  Future<JourneySummaryDto> generateAiReport(
+    int journeyId, {
+    int maxRetries = 2,
+  }) async {
     return _retryAiCall(
       maxRetries: maxRetries,
       call: () async {
         final response = await _apiClient.dio.post(
           '/v1/journey/$journeyId/generate-report',
           data: {},
-          options: Options(
-            sendTimeout: _aiTimeout,
-            receiveTimeout: _aiTimeout,
-          ),
+          options: Options(sendTimeout: _aiTimeout, receiveTimeout: _aiTimeout),
         );
-        return JourneySummaryDto.fromJson(response.data as Map<String, dynamic>);
+        return JourneySummaryDto.fromJson(
+          response.data as Map<String, dynamic>,
+        );
       },
       errorMessage: 'Tạo báo cáo AI thất bại',
     );
@@ -381,13 +453,15 @@ class JourneyService {
       throw _handleDioError(e, errorMessage);
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
   /// Handle DioException — extract server message, fallback to default
   AppException _handleDioError(DioException e, String defaultMessage) {
-    debugPrint('🛑 JourneyService Error: ${e.type} | Status: ${e.response?.statusCode}');
+    debugPrint(
+      '🛑 JourneyService Error: ${e.type} | Status: ${e.response?.statusCode}',
+    );
 
     // Priority: Use error from ApiClient interceptor
     if (e.error is AppException) {
@@ -413,8 +487,10 @@ class JourneyService {
           final serverMessage =
               errorMap['message'] ?? errorMap['error'] ?? errorMap['details'];
           if (serverMessage != null) {
-            return ServerException(serverMessage.toString(),
-                statusCode: e.response?.statusCode);
+            return ServerException(
+              serverMessage.toString(),
+              statusCode: e.response?.statusCode,
+            );
           }
         }
       } catch (err) {

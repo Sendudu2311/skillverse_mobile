@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../providers/job_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/animated_success_overlay.dart';
 
 import '../../widgets/common_loading.dart';
 import 'my_applications_page.dart';
@@ -23,8 +24,7 @@ class JobApplySheet extends StatefulWidget {
   State<JobApplySheet> createState() => _JobApplySheetState();
 }
 
-class _JobApplySheetState extends State<JobApplySheet>
-    with SingleTickerProviderStateMixin {
+class _JobApplySheetState extends State<JobApplySheet> {
   final _formKey = GlobalKey<FormState>();
   final _coverLetterController = TextEditingController();
   final _priceController = TextEditingController();
@@ -33,26 +33,9 @@ class _JobApplySheetState extends State<JobApplySheet>
   bool _isSubmitting = false;
   bool _isSuccess = false;
 
-  late AnimationController _successAnimController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
-
   @override
   void initState() {
     super.initState();
-    _successAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _successAnimController, curve: Curves.elasticOut),
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _successAnimController,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
-      ),
-    );
   }
 
   @override
@@ -61,7 +44,6 @@ class _JobApplySheetState extends State<JobApplySheet>
     _priceController.dispose();
     _durationController.dispose();
     _portfolioController.dispose();
-    _successAnimController.dispose();
     super.dispose();
   }
 
@@ -75,14 +57,17 @@ class _JobApplySheetState extends State<JobApplySheet>
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          16,
-          20,
-          MediaQuery.of(context).viewInsets.bottom + 20,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: _isSuccess ? _buildSuccessState() : _buildFormState(),
         ),
-        child: _isSuccess ? _buildSuccessState() : _buildFormState(),
       ),
     );
   }
@@ -90,125 +75,16 @@ class _JobApplySheetState extends State<JobApplySheet>
   // ==================== SUCCESS STATE ====================
 
   Widget _buildSuccessState() {
-    return AnimatedBuilder(
-      animation: _successAnimController,
-      builder: (context, child) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Drag handle
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).dividerColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // Animated checkmark
-            Transform.scale(
-              scale: _scaleAnimation.value,
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.themeGreenStart, AppTheme.themeGreenEnd],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.themeGreenStart.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.check_rounded,
-                  color: Colors.white,
-                  size: 40,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            Opacity(
-              opacity: _fadeAnimation.value,
-              child: Column(
-                children: [
-                  Text(
-                    'Ứng tuyển thành công! 🎉',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.jobTitle,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).hintColor,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // CTA buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text('Đóng'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const MyApplicationsPage(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.assignment_outlined, size: 18),
-                          label: const Text('Xem đơn'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.themeBlueStart,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        );
+    return AnimatedSuccessOverlay(
+      title: 'Ứng tuyển thành công! 🎉',
+      subtitle: widget.jobTitle,
+      primaryButtonText: 'Xem đơn',
+      onPrimaryAction: () {
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const MyApplicationsPage()));
       },
+      onClose: () => Navigator.of(context).pop(),
     );
   }
 
@@ -402,7 +278,6 @@ class _JobApplySheetState extends State<JobApplySheet>
 
     if (success) {
       setState(() => _isSuccess = true);
-      _successAnimController.forward();
     } else {
       navigator.pop();
       ErrorHandler.showErrorSnackBar(

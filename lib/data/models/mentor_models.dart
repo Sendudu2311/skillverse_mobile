@@ -13,6 +13,8 @@ enum BookingStatus {
   rejected,
   @JsonValue('ONGOING')
   ongoing,
+  @JsonValue('MENTORING_ACTIVE')
+  mentoringActive,
   @JsonValue('PENDING_COMPLETION')
   pendingCompletion,
   @JsonValue('COMPLETED')
@@ -78,6 +80,7 @@ class MentorProfile {
   final double? ratingAverage;
   final int? ratingCount;
   final double? hourlyRate;
+  final double? roadmapMentoringPrice;
   @JsonKey(defaultValue: false)
   final bool preChatEnabled;
   final String? slug;
@@ -103,6 +106,7 @@ class MentorProfile {
     this.ratingAverage,
     this.ratingCount,
     this.hourlyRate,
+    this.roadmapMentoringPrice,
     this.preChatEnabled = false,
     this.slug,
     this.createdAt,
@@ -129,6 +133,11 @@ class MentorProfile {
     return '${NumberFormatter.formatAmount(hourlyRate!)} VND/giờ';
   }
 
+  String get formattedRoadmapMentoringPrice {
+    if (roadmapMentoringPrice == null) return 'Liên hệ';
+    return NumberFormatter.formatCurrency(roadmapMentoringPrice!);
+  }
+
   factory MentorProfile.fromJson(Map<String, dynamic> json) =>
       _$MentorProfileFromJson(json);
   Map<String, dynamic> toJson() => _$MentorProfileToJson(this);
@@ -148,6 +157,7 @@ class MentorProfile {
     double? ratingAverage,
     int? ratingCount,
     double? hourlyRate,
+    double? roadmapMentoringPrice,
     bool? preChatEnabled,
     String? slug,
     DateTime? createdAt,
@@ -171,6 +181,8 @@ class MentorProfile {
       ratingAverage: ratingAverage ?? this.ratingAverage,
       ratingCount: ratingCount ?? this.ratingCount,
       hourlyRate: hourlyRate ?? this.hourlyRate,
+      roadmapMentoringPrice:
+          roadmapMentoringPrice ?? this.roadmapMentoringPrice,
       preChatEnabled: preChatEnabled ?? this.preChatEnabled,
       slug: slug ?? this.slug,
       createdAt: createdAt ?? this.createdAt,
@@ -211,8 +223,10 @@ class MentorAvailability {
   String get formattedTimeRange {
     final s = startTime.toLocal();
     final e = endTime.toLocal();
-    final start = '${s.hour.toString().padLeft(2, '0')}:${s.minute.toString().padLeft(2, '0')}';
-    final end = '${e.hour.toString().padLeft(2, '0')}:${e.minute.toString().padLeft(2, '0')}';
+    final start =
+        '${s.hour.toString().padLeft(2, '0')}:${s.minute.toString().padLeft(2, '0')}';
+    final end =
+        '${e.hour.toString().padLeft(2, '0')}:${e.minute.toString().padLeft(2, '0')}';
     return '$start - $end';
   }
 
@@ -246,6 +260,10 @@ class MentorBooking {
   final DateTime? completionDeadline;
   final int? disputeId;
   final bool? chatAllowed;
+  // V3: Context fields from backend BookingResponse
+  final String? bookingType;
+  final int? journeyId;
+  final int? roadmapSessionId;
 
   MentorBooking({
     required this.id,
@@ -270,6 +288,9 @@ class MentorBooking {
     this.completionDeadline,
     this.disputeId,
     this.chatAllowed,
+    this.bookingType,
+    this.journeyId,
+    this.roadmapSessionId,
   });
 
   /// Get calculated duration
@@ -293,6 +314,8 @@ class MentorBooking {
         return 'Đã từ chối';
       case BookingStatus.ongoing:
         return 'Đang diễn ra';
+      case BookingStatus.mentoringActive:
+        return 'Đang mentoring';
       case BookingStatus.pendingCompletion:
         return 'Chờ xác nhận hoàn thành';
       case BookingStatus.completed:
@@ -325,10 +348,11 @@ class MentorBooking {
   }
 
   /// Check if a dispute can be opened.
-  /// PENDING_COMPLETION: always allowed.
+  /// PENDING_COMPLETION / MENTORING_ACTIVE: always allowed.
   /// ONGOING/CONFIRMED: only after endTime.
   bool get canOpenDispute {
     if (status == BookingStatus.pendingCompletion) return true;
+    if (status == BookingStatus.mentoringActive) return true;
     if (status == BookingStatus.ongoing || status == BookingStatus.confirmed) {
       return DateTime.now().isAfter(endTime);
     }
@@ -340,8 +364,21 @@ class MentorBooking {
     if (chatAllowed != null) return chatAllowed!;
     return status == BookingStatus.pending ||
         status == BookingStatus.confirmed ||
-        status == BookingStatus.ongoing;
+        status == BookingStatus.ongoing ||
+        status == BookingStatus.mentoringActive;
   }
+
+  bool get isRoadmapMentoring => bookingType == 'ROADMAP_MENTORING';
+
+  bool get hasRoadmapWorkspace =>
+      isRoadmapMentoring &&
+      roadmapSessionId != null &&
+      journeyId != null &&
+      (status == BookingStatus.confirmed ||
+          status == BookingStatus.mentoringActive ||
+          status == BookingStatus.pendingCompletion ||
+          status == BookingStatus.completed ||
+          status == BookingStatus.disputed);
 
   factory MentorBooking.fromJson(Map<String, dynamic> json) =>
       _$MentorBookingFromJson(json);
@@ -370,6 +407,9 @@ class MentorBooking {
     DateTime? completionDeadline,
     int? disputeId,
     bool? chatAllowed,
+    String? bookingType,
+    int? journeyId,
+    int? roadmapSessionId,
   }) {
     return MentorBooking(
       id: id ?? this.id,
@@ -394,6 +434,9 @@ class MentorBooking {
       completionDeadline: completionDeadline ?? this.completionDeadline,
       disputeId: disputeId ?? this.disputeId,
       chatAllowed: chatAllowed ?? this.chatAllowed,
+      bookingType: bookingType ?? this.bookingType,
+      journeyId: journeyId ?? this.journeyId,
+      roadmapSessionId: roadmapSessionId ?? this.roadmapSessionId,
     );
   }
 }
@@ -402,6 +445,7 @@ String _dateTimeToUtcIso8601String(DateTime time) =>
     time.toUtc().toIso8601String();
 
 /// Create booking intent request
+/// V3 Phase 1: optional context fields for ROADMAP_MENTORING, NODE_MENTORING, etc.
 @JsonSerializable()
 class CreateBookingRequest {
   final int mentorId;
@@ -413,12 +457,23 @@ class CreateBookingRequest {
   final double priceVnd;
   final String paymentMethod; // Only 'WALLET' is supported by backend
 
+  // V3 Phase 1: optional node/journey context — null for legacy bookings
+  final int? journeyId;
+  final String? nodeId;
+  final int? nodeSkillId;
+  final String?
+  bookingType; // "GENERAL" | "NODE_MENTORING" | "JOURNEY_MENTORING" | "ROADMAP_MENTORING"
+
   CreateBookingRequest({
     required this.mentorId,
     required this.startTime,
     required this.durationMinutes,
     required this.priceVnd,
     this.paymentMethod = 'WALLET',
+    this.journeyId,
+    this.nodeId,
+    this.nodeSkillId,
+    this.bookingType,
   });
 
   factory CreateBookingRequest.fromJson(Map<String, dynamic> json) =>

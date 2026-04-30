@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/error_handler.dart';
 import '../../data/models/payment_models.dart';
 import '../../data/services/payment_service.dart';
 
@@ -31,55 +32,69 @@ class PaymentProvider with ChangeNotifier, LoadingStateProviderMixin {
     String? successUrl,
     String? cancelUrl,
   }) async {
-    return await executeAsync(() async {
-      final request = CreatePaymentRequestDto(
-        amount: amount,
-        currency: 'VND',
-        type: type,
-        paymentMethod: paymentMethod,
-        description: description,
-        planId: planId,
-        courseId: courseId,
-        successUrl: successUrl,
-        cancelUrl: cancelUrl,
-      );
+    return await executeAsync(
+      () async {
+        final request = CreatePaymentRequestDto(
+          amount: amount,
+          currency: 'VND',
+          type: type,
+          paymentMethod: paymentMethod,
+          description: description,
+          planId: planId,
+          courseId: courseId,
+          successUrl: successUrl,
+          cancelUrl: cancelUrl,
+        );
 
-      final response = await _paymentService.createPayment(request: request);
-      _lastPaymentResponse = response;
-      notifyListeners();
-      return response;
-    }, errorMessageBuilder: (e) => _extractErrorMessage(e, 'Lỗi tạo thanh toán'));
+        final response = await _paymentService.createPayment(request: request);
+        _lastPaymentResponse = response;
+        notifyListeners();
+        return response;
+      },
+      errorMessageBuilder: (e) => _extractErrorMessage(e, 'Lỗi tạo thanh toán'),
+    );
   }
 
   /// Load payment history
   Future<void> loadPaymentHistory() async {
-    await executeAsync(() async {
-      _paymentHistory = await _paymentService.getPaymentHistory();
-      notifyListeners();
-    }, errorMessageBuilder: (e) => _extractErrorMessage(e, 'Lỗi tải lịch sử thanh toán'));
+    await executeAsync(
+      () async {
+        _paymentHistory = await _paymentService.getPaymentHistory();
+        notifyListeners();
+      },
+      errorMessageBuilder: (e) =>
+          _extractErrorMessage(e, 'Lỗi tải lịch sử thanh toán'),
+    );
   }
 
   /// Get payment by reference
   Future<PaymentTransactionDto?> getPaymentByReference(
-      String internalReference) async {
-    final result = await executeAsync<PaymentTransactionDto?>(() async {
-      return await _paymentService.getPaymentByReference(
-        internalReference: internalReference,
-      );
-    }, errorMessageBuilder: (e) => _extractErrorMessage(e, 'Lỗi tải thông tin thanh toán'));
+    String internalReference,
+  ) async {
+    final result = await executeAsync<PaymentTransactionDto?>(
+      () async {
+        return await _paymentService.getPaymentByReference(
+          internalReference: internalReference,
+        );
+      },
+      errorMessageBuilder: (e) =>
+          _extractErrorMessage(e, 'Lỗi tải thông tin thanh toán'),
+    );
     return result;
   }
 
   /// Cancel payment
-  Future<bool> cancelPayment(String internalReference,
-      {String? reason}) async {
-    final result = await executeAsync(() async {
-      await _paymentService.cancelPayment(
-        internalReference: internalReference,
-        reason: reason,
-      );
-      return true;
-    }, errorMessageBuilder: (e) => _extractErrorMessage(e, 'Lỗi hủy thanh toán'));
+  Future<bool> cancelPayment(String internalReference, {String? reason}) async {
+    final result = await executeAsync(
+      () async {
+        await _paymentService.cancelPayment(
+          internalReference: internalReference,
+          reason: reason,
+        );
+        return true;
+      },
+      errorMessageBuilder: (e) => _extractErrorMessage(e, 'Lỗi hủy thanh toán'),
+    );
     return result ?? false;
   }
 
@@ -93,11 +108,18 @@ class PaymentProvider with ChangeNotifier, LoadingStateProviderMixin {
     notifyListeners();
   }
 
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() {
+    _paymentHistory = [];
+    _lastPaymentResponse = null;
+    resetState();
+  }
+
   // Helper: extract error message from DioException or generic error
   String _extractErrorMessage(dynamic e, String fallback) {
     if (e is DioException && e.response?.data is Map) {
       return (e.response!.data as Map)['message']?.toString() ?? fallback;
     }
-    return 'Lỗi không xác định: ${e.toString()}';
+    return ErrorHandler.getErrorMessage(e);
   }
 }

@@ -86,6 +86,7 @@ class RoadmapNode {
   final bool? isCore; // true = main path, false = side quest
   final String? parentId; // parent node ID in tree
   final List<String>? suggestedCourseIds; // validated course IDs from DB
+  final List<String>? suggestedModuleIds; // validated module IDs from DB
   final String? nodeStatus; // LOCKED, AVAILABLE, IN_PROGRESS, COMPLETED
 
   RoadmapNode({
@@ -106,6 +107,7 @@ class RoadmapNode {
     this.isCore,
     this.parentId,
     this.suggestedCourseIds,
+    this.suggestedModuleIds,
     this.nodeStatus,
   });
 
@@ -515,6 +517,7 @@ class RoadmapSessionSummary {
   final String? difficultyLevel;
   final int? schemaVersion;
   final String? status; // ACTIVE, PAUSED, DELETED
+  final String? roadmapMode; // SKILL_BASED, CAREER_BASED
   final String createdAt;
 
   RoadmapSessionSummary({
@@ -531,6 +534,7 @@ class RoadmapSessionSummary {
     this.difficultyLevel,
     this.schemaVersion,
     this.status,
+    this.roadmapMode,
     required this.createdAt,
   });
 
@@ -552,6 +556,7 @@ class RoadmapSessionSummary {
     String? difficultyLevel,
     int? schemaVersion,
     String? status,
+    String? roadmapMode,
     String? createdAt,
   }) {
     return RoadmapSessionSummary(
@@ -568,6 +573,7 @@ class RoadmapSessionSummary {
       difficultyLevel: difficultyLevel ?? this.difficultyLevel,
       schemaVersion: schemaVersion ?? this.schemaVersion,
       status: status ?? this.status,
+      roadmapMode: roadmapMode ?? this.roadmapMode,
       createdAt: createdAt ?? this.createdAt,
     );
   }

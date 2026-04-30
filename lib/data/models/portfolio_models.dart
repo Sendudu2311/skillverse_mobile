@@ -343,8 +343,12 @@ class CreateExtendedProfileRequest {
       topSkills: topSkillsJson,
       isPublic: isPublic,
       yearsOfExperience: yearsOfExperience,
-      workExperiences: workExperiences?.isEmpty == true ? null : workExperiences,
-      educationHistory: educationHistory?.isEmpty == true ? null : educationHistory,
+      workExperiences: workExperiences?.isEmpty == true
+          ? null
+          : workExperiences,
+      educationHistory: educationHistory?.isEmpty == true
+          ? null
+          : educationHistory,
     );
   }
 
@@ -799,6 +803,66 @@ class UpdateCVRequest {
   factory UpdateCVRequest.fromJson(Map<String, dynamic> json) =>
       _$UpdateCVRequestFromJson(json);
   Map<String, dynamic> toJson() => _$UpdateCVRequestToJson(this);
+}
+
+// ==================== VERIFIED SKILLS ====================
+// Maps to backend UserVerifiedSkillDTO.java
+
+class UserVerifiedSkillDto {
+  final int id;
+  final String skillName;
+  final String? skillLevel;
+  final int? verifiedByMentorId;
+  final String? verifiedByMentorName;
+  final int? journeyId;
+  final int? bookingId;
+  final String? verificationNote;
+  final DateTime? verifiedAt;
+
+  /// Source of verification: 'ROADMAP', 'STUDENT_MANUAL', 'MENTOR_MANUAL'
+  final String source;
+
+  UserVerifiedSkillDto({
+    required this.id,
+    required this.skillName,
+    this.skillLevel,
+    this.verifiedByMentorId,
+    this.verifiedByMentorName,
+    this.journeyId,
+    this.bookingId,
+    this.verificationNote,
+    this.verifiedAt,
+    this.source = 'ROADMAP',
+  });
+
+  factory UserVerifiedSkillDto.fromJson(Map<String, dynamic> json) {
+    return UserVerifiedSkillDto(
+      id: (json['id'] as num).toInt(),
+      skillName: json['skillName'] as String,
+      skillLevel: json['skillLevel'] as String?,
+      verifiedByMentorId: (json['verifiedByMentorId'] as num?)?.toInt(),
+      verifiedByMentorName: json['verifiedByMentorName'] as String?,
+      journeyId: (json['journeyId'] as num?)?.toInt(),
+      bookingId: (json['bookingId'] as num?)?.toInt(),
+      verificationNote: json['verificationNote'] as String?,
+      verifiedAt: json['verifiedAt'] != null
+          ? DateTime.tryParse(json['verifiedAt'].toString())
+          : null,
+      source: json['source'] as String? ?? 'ROADMAP',
+    );
+  }
+
+  /// Display label for verification source
+  String get sourceLabel {
+    switch (source) {
+      case 'STUDENT_MANUAL':
+        return 'Tự xác thực';
+      case 'MENTOR_MANUAL':
+        return 'Mentor xác thực';
+      default:
+        return 'Roadmap';
+    }
+  }
 }
 
 // ==================== COMPOSITE / PROVIDER STATE ====================

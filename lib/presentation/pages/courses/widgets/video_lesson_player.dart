@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pod_player/pod_player.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-import 'common_loading.dart';
-import 'error_state_widget.dart';
+import '../../../widgets/common_loading.dart';
+import '../../../widgets/error_state_widget.dart';
 
 class VideoLessonPlayer extends StatefulWidget {
   final String? videoUrl;
@@ -18,7 +18,8 @@ class VideoLessonPlayer extends StatefulWidget {
   State<VideoLessonPlayer> createState() => _VideoLessonPlayerState();
 }
 
-class _VideoLessonPlayerState extends State<VideoLessonPlayer> with WidgetsBindingObserver {
+class _VideoLessonPlayerState extends State<VideoLessonPlayer>
+    with WidgetsBindingObserver {
   PodPlayerController? _controller;
   bool _isInitializing = true;
   String? _errorMessage;
@@ -33,7 +34,8 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> with WidgetsBindi
   @override
   void didUpdateWidget(VideoLessonPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.videoUrl != widget.videoUrl || oldWidget.lessonId != widget.lessonId) {
+    if (oldWidget.videoUrl != widget.videoUrl ||
+        oldWidget.lessonId != widget.lessonId) {
       _disposeController();
       setState(() {
         _isInitializing = true;
@@ -68,8 +70,10 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> with WidgetsBindi
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      if (_controller?.isInitialised == true && (_controller?.isVideoPlaying ?? false)) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      if (_controller?.isInitialised == true &&
+          (_controller?.isVideoPlaying ?? false)) {
         _controller?.pause();
       }
     }
@@ -117,7 +121,10 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> with WidgetsBindi
   }
 
   /// Trích xuất URL stream từ YouTube với retry 1 lần (phòng URL hết hạn)
-  Future<String> _extractYouTubeUrl(String youtubeUrl, {bool isRetry = false}) async {
+  Future<String> _extractYouTubeUrl(
+    String youtubeUrl, {
+    bool isRetry = false,
+  }) async {
     final yt = YoutubeExplode();
     try {
       final videoId = VideoId(youtubeUrl);
@@ -125,7 +132,9 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> with WidgetsBindi
       final streamInfo = manifest.muxed.bestQuality;
       return streamInfo.url.toString();
     } catch (e) {
-      debugPrint('Error extracting YouTube URL${isRetry ? " (retry)" : ""}: $e');
+      debugPrint(
+        'Error extracting YouTube URL${isRetry ? " (retry)" : ""}: $e',
+      );
       if (!isRetry) {
         // Retry 1 lần — YouTube stream URL có thể hết hạn
         yt.close();

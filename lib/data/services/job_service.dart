@@ -28,7 +28,7 @@ class JobService {
           .toList();
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy danh sách việc làm thất bại: ${e.toString()}');
+      throw ApiException('Lấy danh sách việc làm thất bại');
     }
   }
 
@@ -54,7 +54,7 @@ class JobService {
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy danh sách việc làm thất bại: ${e.toString()}');
+      throw ApiException('Lấy danh sách việc làm thất bại');
     }
   }
 
@@ -82,7 +82,7 @@ class JobService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-        'Lấy danh sách việc ngắn hạn thất bại: ${e.toString()}',
+        'Lấy danh sách việc ngắn hạn thất bại',
       );
     }
   }
@@ -113,7 +113,7 @@ class JobService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-        'Lấy danh sách đơn ứng tuyển ngắn hạn thất bại: ${e.toString()}',
+        'Lấy danh sách đơn ứng tuyển ngắn hạn thất bại',
       );
     }
   }
@@ -132,7 +132,7 @@ class JobService {
       return JobPostingResponse.fromJson(response.data!);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy thông tin việc làm thất bại: ${e.toString()}');
+      throw ApiException('Lấy thông tin việc làm thất bại');
     }
   }
 
@@ -156,7 +156,7 @@ class JobService {
       throw ApiException(_extractErrorMessage(e, 'Ứng tuyển thất bại'));
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Ứng tuyển thất bại: ${e.toString()}');
+      throw ApiException('Ứng tuyển thất bại');
     }
   }
 
@@ -180,7 +180,7 @@ class JobService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-        'Lấy danh sách đơn ứng tuyển thất bại: ${e.toString()}',
+        'Lấy danh sách đơn ứng tuyển thất bại',
       );
     }
   }
@@ -207,7 +207,7 @@ class JobService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-        'Lấy danh sách việc ngắn hạn thất bại: ${e.toString()}',
+        'Lấy danh sách việc ngắn hạn thất bại',
       );
     }
   }
@@ -245,7 +245,7 @@ class JobService {
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Tìm kiếm việc làm thất bại: ${e.toString()}');
+      throw ApiException('Tìm kiếm việc làm thất bại');
     }
   }
 
@@ -264,7 +264,7 @@ class JobService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-        'Lấy thông tin việc ngắn hạn thất bại: ${e.toString()}',
+        'Lấy thông tin việc ngắn hạn thất bại',
       );
     }
   }
@@ -289,7 +289,7 @@ class JobService {
       throw ApiException(_extractErrorMessage(e, 'Ứng tuyển thất bại'));
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Ứng tuyển việc ngắn hạn thất bại: ${e.toString()}');
+      throw ApiException('Ứng tuyển việc ngắn hạn thất bại');
     }
   }
 
@@ -315,7 +315,7 @@ class JobService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-        'Lấy danh sách đơn ứng tuyển ngắn hạn thất bại: ${e.toString()}',
+        'Lấy danh sách đơn ứng tuyển ngắn hạn thất bại',
       );
     }
   }
@@ -328,7 +328,7 @@ class JobService {
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Rút đơn ứng tuyển thất bại: ${e.toString()}');
+      throw ApiException('Rút đơn ứng tuyển thất bại');
     }
   }
 
@@ -354,7 +354,7 @@ class JobService {
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Bàn giao công việc thất bại: ${e.toString()}');
+      throw ApiException('Bàn giao công việc thất bại');
     }
   }
 
@@ -390,7 +390,7 @@ class JobService {
       throw ApiException(_extractErrorMessage(e, 'Phản hồi đề nghị thất bại'));
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Phản hồi đề nghị thất bại: ${e.toString()}');
+      throw ApiException('Phản hồi đề nghị thất bại');
     }
   }
 
@@ -412,7 +412,7 @@ class JobService {
       throw ApiException(_extractErrorMessage(e, 'Chọn ứng viên thất bại'));
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Chọn ứng viên thất bại: ${e.toString()}');
+      throw ApiException('Chọn ứng viên thất bại');
     }
   }
 
@@ -438,7 +438,7 @@ class JobService {
       throw ApiException(_extractErrorMessage(e, 'Duyệt bàn giao thất bại'));
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Duyệt bàn giao thất bại: ${e.toString()}');
+      throw ApiException('Duyệt bàn giao thất bại');
     }
   }
 
@@ -466,7 +466,7 @@ class JobService {
       throw ApiException(_extractErrorMessage(e, 'Yêu cầu sửa thất bại'));
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Yêu cầu sửa thất bại: ${e.toString()}');
+      throw ApiException('Yêu cầu sửa thất bại');
     }
   }
 
@@ -489,7 +489,7 @@ class JobService {
       throw ApiException(_extractErrorMessage(e, 'Gửi yêu cầu hủy thất bại'));
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Gửi yêu cầu hủy thất bại: ${e.toString()}');
+      throw ApiException('Gửi yêu cầu hủy thất bại');
     }
   }
 
@@ -510,7 +510,7 @@ class JobService {
       throw ApiException(_extractErrorMessage(e, 'Chấp nhận hủy thất bại'));
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Chấp nhận hủy thất bại: ${e.toString()}');
+      throw ApiException('Chấp nhận hủy thất bại');
     }
   }
 
@@ -529,7 +529,7 @@ class JobService {
       throw ApiException(_extractErrorMessage(e, 'Hoàn tất job thất bại'));
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Hoàn tất job thất bại: ${e.toString()}');
+      throw ApiException('Hoàn tất job thất bại');
     }
   }
 
@@ -550,7 +550,7 @@ class JobService {
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Xác nhận thanh toán thất bại: ${e.toString()}');
+      throw ApiException('Xác nhận thanh toán thất bại');
     }
   }
 

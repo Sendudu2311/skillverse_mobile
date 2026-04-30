@@ -13,7 +13,7 @@ import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../../data/models/portfolio_models.dart';
 import '../../../data/models/cv_structured_data.dart';
-import '../../widgets/portfolio/cv_pdf_generator_widget.dart';
+import 'widgets/cv_pdf_generator_widget.dart';
 import 'cv_preview_page.dart';
 import 'edit_cv_page.dart';
 
@@ -223,346 +223,353 @@ class _CVBuilderPageState extends State<CVBuilderPage> {
 
     return Scaffold(
       appBar: SkillVerseAppBar(title: 'Quản lý CV', icon: Icons.description),
-      body: Consumer<PortfolioProvider>(
-        builder: (context, provider, child) {
-          if (provider.isCVGenerating) {
-            return const AiGenerationLoadingView(
-              speech: 'Meowl đang biên tập CV thật chỉnh chu cho bạn đó! 📄',
-              title: 'Đang tạo CV bằng AI',
-              description:
-                  'AI đang tổng hợp hồ sơ, lựa chọn điểm mạnh nổi bật và sắp xếp bố cục phù hợp.',
-              etaText: 'Thường mất khoảng 20-45 giây',
-              steps: [
-                ('Đọc hồ sơ', Icons.person_search_outlined),
-                ('Chọn điểm mạnh', Icons.stars_outlined),
-                ('Dựng CV', Icons.description_outlined),
-                ('Hoàn thiện', Icons.check_circle_outline),
-              ],
-            );
-          }
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<PortfolioProvider>(
+          builder: (context, provider, child) {
+            if (provider.isCVGenerating) {
+              return const AiGenerationLoadingView(
+                speech: 'Meowl đang biên tập CV thật chỉnh chu cho bạn đó! 📄',
+                title: 'Đang tạo CV bằng AI',
+                description:
+                    'AI đang tổng hợp hồ sơ, lựa chọn điểm mạnh nổi bật và sắp xếp bố cục phù hợp.',
+                etaText: 'Thường mất khoảng 20-45 giây',
+                steps: [
+                  ('Đọc hồ sơ', Icons.person_search_outlined),
+                  ('Chọn điểm mạnh', Icons.stars_outlined),
+                  ('Dựng CV', Icons.description_outlined),
+                  ('Hoàn thiện', Icons.check_circle_outline),
+                ],
+              );
+            }
 
-          if (provider.isLoading) {
-            return const SingleChildScrollView(
-              padding: EdgeInsets.all(16),
+            if (provider.isLoading) {
+              return const SingleChildScrollView(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    CardSkeleton(imageHeight: null),
+                    SizedBox(height: 16),
+                    TextSkeleton(lines: 6),
+                  ],
+                ),
+              );
+            }
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CardSkeleton(imageHeight: null),
-                  SizedBox(height: 16),
-                  TextSkeleton(lines: 6),
+                  // ═══ TEMPLATE SELECTOR (horizontal carousel) ═══
+                  Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              AppTheme.accentCyan,
+                              AppTheme.primaryBlueDark,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'CHỌN MẪU CV',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.accentCyan,
+                          fontFamily: 'monospace',
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 1.35,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: _templates.map((t) {
+                      final selected = _selectedTemplate == t.id;
+                      return _buildTemplateCard(t, selected, isDark);
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ═══ AI CUSTOMIZATION ═══
+                  Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              AppTheme.accentCyan,
+                              AppTheme.primaryBlueDark,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'TÙY CHỈNH AI',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.accentCyan,
+                          fontFamily: 'monospace',
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'AI sẽ tối ưu CV dựa trên thông tin bạn cung cấp',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  GlassCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _targetRoleController,
+                            decoration: const InputDecoration(
+                              labelText: 'Vị trí mục tiêu',
+                              hintText: 'VD: Senior Flutter Developer',
+                              prefixIcon: Icon(Icons.work_outline, size: 20),
+                              isDense: true,
+                            ),
+                            textInputAction: TextInputAction.next,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _targetIndustryController,
+                            decoration: const InputDecoration(
+                              labelText: 'Ngành nghề',
+                              hintText: 'VD: Fintech, E-commerce',
+                              prefixIcon: Icon(Icons.business, size: 20),
+                              isDense: true,
+                            ),
+                            textInputAction: TextInputAction.next,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _additionalInstructionsController,
+                            decoration: const InputDecoration(
+                              labelText: 'Yêu cầu đặc biệt',
+                              hintText: 'VD: Nhấn mạnh React và Node.js...',
+                              prefixIcon: Icon(Icons.edit_note, size: 20),
+                              isDense: true,
+                            ),
+                            maxLines: 2,
+                            textInputAction: TextInputAction.done,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ═══ CONTENT TOGGLES ═══
+                  GlassCard(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        children: [
+                          SwitchListTile(
+                            title: const Text(
+                              'Bao gồm Dự án',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                            value: _includeProjects,
+                            onChanged: (v) =>
+                                setState(() => _includeProjects = v),
+                            secondary: const Icon(
+                              Icons.folder_outlined,
+                              size: 20,
+                            ),
+                            dense: true,
+                          ),
+                          SwitchListTile(
+                            title: const Text(
+                              'Bao gồm Chứng chỉ',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                            value: _includeCertificates,
+                            onChanged: (v) =>
+                                setState(() => _includeCertificates = v),
+                            secondary: const Icon(
+                              Icons.verified_outlined,
+                              size: 20,
+                            ),
+                            dense: true,
+                          ),
+                          SwitchListTile(
+                            title: const Text(
+                              'Bao gồm Đánh giá',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                            value: _includeReviews,
+                            onChanged: (v) =>
+                                setState(() => _includeReviews = v),
+                            secondary: const Icon(
+                              Icons.rate_review_outlined,
+                              size: 20,
+                            ),
+                            dense: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ═══ GENERATE BUTTON ═══
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: provider.isCVGenerating ? null : _generateCV,
+                      icon: provider.isCVGenerating
+                          ? CommonLoading.small()
+                          : const Icon(Icons.auto_awesome),
+                      label: Text(
+                        provider.isCVGenerating
+                            ? 'Đang tạo CV...'
+                            : 'Tạo CV bằng AI',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlueDark,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // ═══ MY CVs ═══
+                  Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              AppTheme.accentCyan,
+                              AppTheme.primaryBlueDark,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'CV CỦA TÔI',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.accentCyan,
+                          fontFamily: 'monospace',
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${provider.cvs.length} CV',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (provider.cvs.isEmpty)
+                    GlassCard(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.description_outlined,
+                                size: 48,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Chưa có CV nào',
+                                style: TextStyle(
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Tạo CV đầu tiên bằng AI ở trên',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ...provider.cvs.map((cv) => _buildCVCard(cv, isDark)),
                 ],
               ),
             );
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ═══ TEMPLATE SELECTOR (horizontal carousel) ═══
-                Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppTheme.accentCyan,
-                            AppTheme.primaryBlueDark,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'CHỌN MẪU CV',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.accentCyan,
-                        fontFamily: 'monospace',
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 1.35,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: _templates.map((t) {
-                    final selected = _selectedTemplate == t.id;
-                    return _buildTemplateCard(t, selected, isDark);
-                  }).toList(),
-                ),
-
-                const SizedBox(height: 16),
-
-                // ═══ AI CUSTOMIZATION ═══
-                Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppTheme.accentCyan,
-                            AppTheme.primaryBlueDark,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'TÙY CHỈNH AI',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.accentCyan,
-                        fontFamily: 'monospace',
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'AI sẽ tối ưu CV dựa trên thông tin bạn cung cấp',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                GlassCard(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: _targetRoleController,
-                          decoration: const InputDecoration(
-                            labelText: 'Vị trí mục tiêu',
-                            hintText: 'VD: Senior Flutter Developer',
-                            prefixIcon: Icon(Icons.work_outline, size: 20),
-                            isDense: true,
-                          ),
-                          textInputAction: TextInputAction.next,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _targetIndustryController,
-                          decoration: const InputDecoration(
-                            labelText: 'Ngành nghề',
-                            hintText: 'VD: Fintech, E-commerce',
-                            prefixIcon: Icon(Icons.business, size: 20),
-                            isDense: true,
-                          ),
-                          textInputAction: TextInputAction.next,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _additionalInstructionsController,
-                          decoration: const InputDecoration(
-                            labelText: 'Yêu cầu đặc biệt',
-                            hintText: 'VD: Nhấn mạnh React và Node.js...',
-                            prefixIcon: Icon(Icons.edit_note, size: 20),
-                            isDense: true,
-                          ),
-                          maxLines: 2,
-                          textInputAction: TextInputAction.done,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // ═══ CONTENT TOGGLES ═══
-                GlassCard(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Column(
-                      children: [
-                        SwitchListTile(
-                          title: const Text(
-                            'Bao gồm Dự án',
-                            style: TextStyle(fontSize: 13),
-                          ),
-                          value: _includeProjects,
-                          onChanged: (v) =>
-                              setState(() => _includeProjects = v),
-                          secondary: const Icon(
-                            Icons.folder_outlined,
-                            size: 20,
-                          ),
-                          dense: true,
-                        ),
-                        SwitchListTile(
-                          title: const Text(
-                            'Bao gồm Chứng chỉ',
-                            style: TextStyle(fontSize: 13),
-                          ),
-                          value: _includeCertificates,
-                          onChanged: (v) =>
-                              setState(() => _includeCertificates = v),
-                          secondary: const Icon(
-                            Icons.verified_outlined,
-                            size: 20,
-                          ),
-                          dense: true,
-                        ),
-                        SwitchListTile(
-                          title: const Text(
-                            'Bao gồm Đánh giá',
-                            style: TextStyle(fontSize: 13),
-                          ),
-                          value: _includeReviews,
-                          onChanged: (v) => setState(() => _includeReviews = v),
-                          secondary: const Icon(
-                            Icons.rate_review_outlined,
-                            size: 20,
-                          ),
-                          dense: true,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // ═══ GENERATE BUTTON ═══
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: provider.isCVGenerating ? null : _generateCV,
-                    icon: provider.isCVGenerating
-                        ? CommonLoading.small()
-                        : const Icon(Icons.auto_awesome),
-                    label: Text(
-                      provider.isCVGenerating ? 'Đang tạo CV...' : 'Tạo CV bằng AI',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlueDark,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // ═══ MY CVs ═══
-                Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppTheme.accentCyan,
-                            AppTheme.primaryBlueDark,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'CV CỦA TÔI',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.accentCyan,
-                        fontFamily: 'monospace',
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${provider.cvs.length} CV',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                if (provider.cvs.isEmpty)
-                  GlassCard(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Center(
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.description_outlined,
-                              size: 48,
-                              color: isDark
-                                  ? AppTheme.darkTextSecondary
-                                  : Colors.grey.shade400,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Chưa có CV nào',
-                              style: TextStyle(
-                                color: isDark
-                                    ? AppTheme.darkTextSecondary
-                                    : Colors.grey.shade600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Tạo CV đầu tiên bằng AI ở trên',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark
-                                    ? AppTheme.darkTextSecondary
-                                    : Colors.grey.shade500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  ...provider.cvs.map((cv) => _buildCVCard(cv, isDark)),
-              ],
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }

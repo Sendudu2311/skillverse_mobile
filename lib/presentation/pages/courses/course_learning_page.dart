@@ -9,8 +9,8 @@ import '../../../data/services/module_service.dart';
 import '../../../data/services/lesson_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../../data/services/group_chat_service.dart';
-import '../../widgets/video_lesson_player.dart';
-import '../../widgets/reading_lesson_content.dart';
+import 'widgets/video_lesson_player.dart';
+import 'widgets/reading_lesson_content.dart';
 import 'quiz_attempt_page.dart';
 import 'assignment_page.dart';
 import 'certificate_view_page.dart';
@@ -1387,11 +1387,10 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
 
     switch (lesson.lessonType) {
       case LessonType.video:
-        return VideoLessonPlayer(
-          key: ValueKey(lesson.id),
-          videoUrl: lesson.videoUrl,
-          lessonId: lesson.id,
-        );
+        // Video is handled directly in _buildLearningContent (OrientationBuilder)
+        // to support landscape/portrait layout switching without recreating the player.
+        // This case is unreachable in normal flow — return empty as safe fallback.
+        return const SizedBox.shrink();
       case LessonType.reading:
         return ReadingLessonContent(
           content: lesson.contentText,

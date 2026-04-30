@@ -46,44 +46,48 @@ class _InterviewSchedulePageState extends State<InterviewSchedulePage> {
             ? 'Phỏng vấn: ${widget.jobTitle}'
             : 'Lịch Phỏng Vấn',
       ),
-      body: Consumer<InterviewProvider>(
-        builder: (context, provider, _) {
-          final hasVisibleData = widget.applicationId != null
-              ? provider.currentInterview != null
-              : provider.myInterviews.isNotEmpty;
-
-          if (provider.isLoading && !hasVisibleData) {
-            return CommonLoading.center(message: 'Đang tải...');
-          }
-
-          // Single interview view (by application)
-          if (widget.applicationId != null) {
-            final interview = provider.currentInterview;
-            if (interview == null) {
-              return _buildEmptyState('Chưa có lịch phỏng vấn cho đơn này');
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<InterviewProvider>(
+          builder: (context, provider, _) {
+            final hasVisibleData = widget.applicationId != null
+                ? provider.currentInterview != null
+                : provider.myInterviews.isNotEmpty;
+  
+            if (provider.isLoading && !hasVisibleData) {
+              return CommonLoading.center(message: 'Đang tải...');
             }
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: _buildInterviewCard(interview, provider),
+  
+            // Single interview view (by application)
+            if (widget.applicationId != null) {
+              final interview = provider.currentInterview;
+              if (interview == null) {
+                return _buildEmptyState('Chưa có lịch phỏng vấn cho đơn này');
+              }
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: _buildInterviewCard(interview, provider),
+              );
+            }
+  
+            // List view (all my interviews)
+            final interviews = provider.myInterviews;
+            if (interviews.isEmpty) {
+              return _buildEmptyState('Bạn chưa có lịch phỏng vấn nào');
+            }
+  
+            return RefreshIndicator(
+              onRefresh: () => provider.loadMyInterviews(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: interviews.length,
+                itemBuilder: (context, index) =>
+                    _buildInterviewCard(interviews[index], provider),
+              ),
             );
-          }
-
-          // List view (all my interviews)
-          final interviews = provider.myInterviews;
-          if (interviews.isEmpty) {
-            return _buildEmptyState('Bạn chưa có lịch phỏng vấn nào');
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => provider.loadMyInterviews(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: interviews.length,
-              itemBuilder: (context, index) =>
-                  _buildInterviewCard(interviews[index], provider),
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }

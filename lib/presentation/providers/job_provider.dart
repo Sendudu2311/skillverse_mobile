@@ -3,6 +3,7 @@ import '../../data/models/job_models.dart';
 import '../../data/services/job_service.dart';
 import '../../core/utils/pagination_helper.dart';
 import '../../core/utils/string_helper.dart';
+import '../../core/utils/error_handler.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
 
 class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
@@ -234,7 +235,7 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
     await executeAsync(() async {
       _selectedJob = await _jobService.getJobDetails(jobId);
       notifyListeners();
-    }, errorMessageBuilder: (e) => 'Lỗi tải chi tiết: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   /// Load short-term job details
@@ -242,7 +243,7 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
     await executeAsync(() async {
       _selectedShortTermJob = await _jobService.getShortTermJobDetails(jobId);
       notifyListeners();
-    }, errorMessageBuilder: (e) => 'Lỗi tải chi tiết: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   // ==================== APPLICATIONS ====================
@@ -259,7 +260,7 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
       await loadMyLongTermApplications();
       return true;
     } catch (e) {
-      setError('Ứng tuyển thất bại: ${e.toString()}');
+      setError(ErrorHandler.getErrorMessage(e));
       return false;
     } finally {
       _isApplying = false;
@@ -290,7 +291,7 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
       await loadMyShortTermApplications();
       return true;
     } catch (e) {
-      setError('Ứng tuyển thất bại: ${e.toString()}');
+      setError(ErrorHandler.getErrorMessage(e));
       return false;
     } finally {
       _isApplying = false;
@@ -310,7 +311,7 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
       final apps = await _jobService.getMyApplications();
       _longTermApplications = apps;
     } catch (e) {
-      _longTermApplicationsError = 'Lỗi tải đơn ứng tuyển: ${e.toString()}';
+      _longTermApplicationsError = ErrorHandler.getErrorMessage(e);
     } finally {
       _isLoadingLongTermApps = false;
       notifyListeners();
@@ -345,7 +346,7 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
       setError(null);
       return true;
     } catch (e) {
-      setError('Nộp bài thất bại: ${e.toString()}');
+      setError(ErrorHandler.getErrorMessage(e));
       return false;
     } finally {
       _isSubmittingDeliverable = false;
@@ -376,7 +377,7 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
       setError(null);
       return true;
     } catch (e) {
-      setError(e.toString());
+      setError(ErrorHandler.getErrorMessage(e));
       return false;
     } finally {
       _isRespondingToOffer = false;
@@ -392,7 +393,7 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
       setError(null);
       return true;
     } catch (e) {
-      setError('Rút đơn thất bại: ${e.toString()}');
+      setError(ErrorHandler.getErrorMessage(e));
       return false;
     }
   }
@@ -442,6 +443,20 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
   void clearSelectedJob() {
     _selectedJob = null;
     _selectedShortTermJob = null;
+    notifyListeners();
+  }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() {
+    _longTermPagination?.reset();
+    _shortTermPagination?.reset();
+    _shortTermAppPagination?.reset();
+    _selectedJob = null;
+    _selectedShortTermJob = null;
+    _searchQuery = '';
+    _isLoadingLongTermApps = false;
+    _longTermApplicationsError = null;
+    resetState();
     notifyListeners();
   }
 }

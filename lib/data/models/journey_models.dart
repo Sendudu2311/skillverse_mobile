@@ -36,6 +36,12 @@ enum JourneyStatus {
   paused,
   @JsonValue('CANCELLED')
   cancelled,
+  @JsonValue('COMPLETED_UNVERIFIED')
+  completedUnverified,
+  @JsonValue('AWAITING_VERIFICATION')
+  awaitingVerification,
+  @JsonValue('COMPLETED_VERIFIED')
+  completedVerified,
 }
 
 /// Skill level assessed by AI
@@ -100,9 +106,11 @@ class StartJourneyRequest {
   final String? jobRole;
   final String? subCategory;
   final List<String>? skills;
+  final List<String>? existingSkills;
   final List<String>? focusAreas;
   final String? language;
   final String? duration;
+  final int? questionCount;
 
   const StartJourneyRequest({
     this.type,
@@ -113,9 +121,11 @@ class StartJourneyRequest {
     this.jobRole,
     this.subCategory,
     this.skills,
+    this.existingSkills,
     this.focusAreas,
     this.language,
     this.duration,
+    this.questionCount,
   });
 
   factory StartJourneyRequest.fromJson(Map<String, dynamic> json) =>
@@ -219,6 +229,10 @@ class JourneySummaryDto {
   final List<MilestoneDto>? milestones;
   final TestResultSummaryDto? latestTestResult;
 
+  // V3 Phase 1 fields
+  final String? skillName;
+  final bool? finalVerificationRequired;
+
   // Assessment test info
   final int? assessmentTestId;
   final String? assessmentTestTitle;
@@ -248,6 +262,8 @@ class JourneySummaryDto {
     this.totalNodesCompleted,
     this.milestones,
     this.latestTestResult,
+    this.skillName,
+    this.finalVerificationRequired,
     this.assessmentTestId,
     this.assessmentTestTitle,
     this.assessmentTestQuestionCount,

@@ -10,10 +10,12 @@ import '../../providers/premium_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../providers/student_verification_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/animated_success_overlay.dart';
 import '../payment/payment_webview_page.dart';
 import 'subscription_management_sheet.dart';
 
@@ -30,6 +32,8 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PremiumProvider>().loadAll();
+      // Load student verification eligibility so student plan gate works
+      context.read<StudentVerificationProvider>().loadEligibility();
     });
   }
 
@@ -46,51 +50,67 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
         onBack: () =>
             context.canPop() ? context.pop() : context.go('/dashboard'),
       ),
-      body: Consumer<PremiumProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading && provider.availablePlans.isEmpty) {
-            return _buildSkeleton(isDark);
-          }
+      body: SafeArea(
+        top: false,
+        child: Consumer<PremiumProvider>(
+          builder: (context, provider, child) {
+            if (provider.isLoading && provider.availablePlans.isEmpty) {
+              return _buildSkeleton(isDark);
+            }
 
-          if (provider.errorMessage != null &&
-              provider.errorMessage!.isNotEmpty) {
-            return _buildError(context, provider, isDark);
-          }
+            if (provider.errorMessage != null &&
+                provider.errorMessage!.isNotEmpty) {
+              return _buildError(context, provider, isDark);
+            }
 
-          return RefreshIndicator(
-            onRefresh: () => provider.loadAll(),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Current subscription banner
-                  if (provider.currentSubscription != null &&
-                      provider.currentSubscription!.isActive)
-                    _buildCurrentSubscriptionBanner(context, provider, isDark),
+            return RefreshIndicator(
+              onRefresh: () => provider.loadAll(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Current subscription banner
+                    if (provider.currentSubscription != null &&
+                        provider.currentSubscription!.isActive)
+                      _buildCurrentSubscriptionBanner(
+                        context,
+                        provider,
+                        isDark,
+                      ),
 
-                  // Header text
-                  if (provider.currentSubscription == null ||
-                      !provider.currentSubscription!.isActive) ...[
-                    _buildPromoHeader(isDark),
-                    const SizedBox(height: 24),
-                  ],
+                    // Header text
+                    if (provider.currentSubscription == null ||
+                        !provider.currentSubscription!.isActive) ...[
+                      _buildPromoHeader(isDark),
+                      const SizedBox(height: 24),
+                    ],
 
-                  // Plan cards
-                  ...provider.displayPlans.map(
-                    (plan) {
+                    // Plan cards
+                    ...provider.displayPlans.map((plan) {
                       final currentSubscription = provider.currentSubscription;
-                      final isCurrentPlan = currentSubscription != null &&
+                      final isCurrentPlan =
+                          currentSubscription != null &&
                           currentSubscription.plan.id == plan.id;
                       final currentPlanWeight =
                           currentSubscription?.plan.planType.weight ?? -1;
-                      
+
                       // Identify downgrade if user has active plan, it's not the same plan,
                       // and the current weight is higher than the target plan's weight.
-                      final isDowngrade = provider.hasPremium &&
+                      final isDowngrade =
+                          provider.hasPremium &&
                           !isCurrentPlan &&
                           (currentPlanWeight > plan.planType.weight);
+
+                      // Gate student pack behind identity verification
+                      final isStudentPlan =
+                          plan.planType == PlanType.studentPack;
+                      final studentVerified = isStudentPlan
+                          ? context
+                                .watch<StudentVerificationProvider>()
+                                .canBuyStudentPremium
+                          : true;
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
@@ -99,23 +119,24 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
                           isCurrentPlan: isCurrentPlan,
                           isDowngrade: isDowngrade,
                           hasActivePlan: provider.hasPremium,
+                          isStudentVerified: studentVerified,
                           onPayOS: () => _handlePayOS(plan),
                           onWallet: () => _handleWalletPay(plan),
                         ),
                       );
-                    },
-                  ),
+                    }),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Benefits section
-                  _buildBenefitsSection(isDark),
-                  const SizedBox(height: 32),
-                ],
+                    // Benefits section
+                    _buildBenefitsSection(isDark),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -579,7 +600,10 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
 
     if (paymentResponse == null) {
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán');
+        ErrorHandler.showErrorSnackBar(
+          context,
+          paymentProvider.errorMessage ?? 'Lỗi tạo thanh toán',
+        );
       }
       return;
     }
@@ -604,7 +628,11 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
     if (!mounted) return;
     final isSuccess = result != null && result['success'] == true;
     if (isSuccess) {
-      ErrorHandler.showSuccessSnackBar(context, '🎉 Đăng ký Premium thành công!');
+      AnimatedSuccessOverlay.show(
+        context: context,
+        title: '🎉 Chào mừng Premium!',
+        subtitle: 'Bạn đã đăng ký thành công gói Premium.',
+      );
     } else {
       ErrorHandler.showWarningSnackBar(context, '⏳ Đang xử lý thanh toán...');
     }
@@ -714,7 +742,11 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
 
       if (subscription != null) {
         walletProvider.refresh();
-        ErrorHandler.showSuccessSnackBar(context, '🎉 Đã kích hoạt ${plan.displayName}!');
+        AnimatedSuccessOverlay.show(
+          context: context,
+          title: '🎉 Đã kích hoạt ${plan.displayName}!',
+          subtitle: 'Chúc bạn tận hưởng trải nghiệm Premium.',
+        );
         // Reload plans to update current subscription
         premiumProvider.loadAll();
       } else {
@@ -727,7 +759,10 @@ class _PremiumPlansPageState extends State<PremiumPlansPage> {
       if (mounted) navigator.pop();
       if (!mounted) return;
       premiumProvider.resetState();
-      ErrorHandler.showErrorSnackBar(context, e.toString().replaceAll('Exception: ', ''));
+      ErrorHandler.showErrorSnackBar(
+        context,
+        e.toString().replaceAll('Exception: ', ''),
+      );
     }
   }
 
@@ -780,6 +815,7 @@ class _PlanCard extends StatelessWidget {
   final bool isCurrentPlan;
   final bool isDowngrade;
   final bool hasActivePlan;
+  final bool isStudentVerified;
   final VoidCallback onPayOS;
   final VoidCallback onWallet;
 
@@ -788,6 +824,7 @@ class _PlanCard extends StatelessWidget {
     required this.isCurrentPlan,
     required this.isDowngrade,
     required this.hasActivePlan,
+    this.isStudentVerified = true,
     required this.onPayOS,
     required this.onWallet,
   });
@@ -1033,6 +1070,66 @@ class _PlanCard extends StatelessWidget {
                       '⚠️ Không thể hạ cấp',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
+                  ),
+                ),
+              ] else if (plan.planType == PlanType.studentPack &&
+                  !isStudentVerified) ...[
+                // Student verification required banner
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.warningColor.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.school_outlined,
+                            size: 18,
+                            color: AppTheme.warningColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Bạn cần xác minh sinh viên để mua gói này.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark
+                                    ? AppTheme.darkTextPrimary
+                                    : AppTheme.lightTextPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => GoRouter.of(
+                            context,
+                          ).push('/student-verification'),
+                          icon: const Icon(
+                            Icons.verified_user_outlined,
+                            size: 18,
+                          ),
+                          label: const Text('Xác minh ngay'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accentCyan,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ] else ...[

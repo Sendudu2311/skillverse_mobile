@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import '../../../data/models/cv_structured_data.dart';
+import '../../../../data/models/cv_structured_data.dart';
 
 /// Native PDF Generator for CVs.
 /// Creates a clean, professional, ATS-friendly A4 PDF document based on CVStructuredData.

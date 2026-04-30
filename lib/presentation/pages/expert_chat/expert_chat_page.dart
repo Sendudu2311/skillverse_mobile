@@ -10,7 +10,7 @@ import '../../widgets/formatted_ai_response.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/skillverse_app_bar.dart';
-import '../../widgets/premium_card.dart';
+import 'widgets/premium_card.dart';
 import '../../../data/models/premium_models.dart';
 
 /// Expert Chat Page with Session History Drawer
@@ -64,6 +64,17 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
     });
   }
 
+  String _formatSessionTime(String? isoString) {
+    if (isoString == null) return '';
+    final dt = DateTime.tryParse(isoString);
+    if (dt == null) return '';
+    final diff = DateTime.now().difference(dt);
+    if (diff.inDays > 0) return '${diff.inDays} ngày trước';
+    if (diff.inHours > 0) return '${diff.inHours} giờ trước';
+    if (diff.inMinutes > 0) return '${diff.inMinutes} phút trước';
+    return 'Vừa xong';
+  }
+
   Future<void> _sendMessage() async {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
@@ -71,20 +82,19 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
     _messageController.clear();
     _focusNode.unfocus();
 
-    await context.read<ExpertChatProvider>().sendMessage(message);
+    final sendFuture = context.read<ExpertChatProvider>().sendMessage(message);
+    // Scroll immediately so the optimistic user bubble is visible.
+    _scrollToBottom();
+    await sendFuture;
+    // Scroll again after the assistant response is appended.
     _scrollToBottom();
   }
 
   // G6: Check if user is premium (not FREE_TIER)
   bool _isPremiumUser(UserSubscriptionDto? subscription) {
     if (subscription == null) return false;
-    return subscription.isActive && subscription.plan.planType != PlanType.freeTier;
-  }
-
-  // G6: Check if user is Premium Plus
-  bool _isPremiumPlus(UserSubscriptionDto? subscription) {
-    if (subscription == null) return false;
-    return subscription.isActive && subscription.plan.planType == PlanType.premiumPlus;
+    return subscription.isActive &&
+        subscription.plan.planType != PlanType.freeTier;
   }
 
   // G6: Login required screen
@@ -105,7 +115,11 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                   ),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.lock_outline, color: Colors.white, size: 48),
+                child: const Icon(
+                  Icons.lock_outline,
+                  color: Colors.white,
+                  size: 48,
+                ),
               ),
               const SizedBox(height: 24),
               Text(
@@ -134,7 +148,10 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
               ElevatedButton(
                 onPressed: () => context.go('/login'),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 14,
+                  ),
                   backgroundColor: AppTheme.primaryBlueDark,
                   foregroundColor: Colors.white,
                 ),
@@ -159,7 +176,8 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
             children: [
               PremiumCard(
                 title: 'Nâng cấp Premium',
-                subtitle: 'Chat Chuyên gia chỉ dành cho thành viên Premium. Vui lòng nâng cấp tài khoản để truy cập.',
+                subtitle:
+                    'Chat Chuyên gia chỉ dành cho thành viên Premium. Vui lòng nâng cấp tài khoản để truy cập.',
                 icon: Icons.workspace_premium,
                 onTap: () => context.go('/premium'),
               ),
@@ -177,7 +195,8 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
 
   // G5: Deep Research mode selector
   void _showAiModeSelector(BuildContext context, ExpertChatProvider provider) {
-    final isPlus = _isPremiumPlus(provider.subscription);
+    // Match backend rule: any active premium can use Deep Research
+    final isPremium = _isPremiumUser(provider.subscription);
 
     showCupertinoModalPopup(
       context: context,
@@ -204,11 +223,11 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
           ),
           CupertinoActionSheetAction(
             onPressed: () {
-              if (!isPlus) {
+              if (!isPremium) {
                 Navigator.pop(ctx);
                 ErrorHandler.showWarningSnackBar(
                   context,
-                  'Chế độ Nghiên cứu sâu chỉ dành cho tài khoản Premium Plus. Hệ thống sẽ tự động chuyển về chế độ Tiêu chuẩn.',
+                  'Chế độ Nghiên cứu sâu chỉ dành cho tài khoản Premium. Hệ thống sẽ tự động chuyển về chế độ Tiêu chuẩn.',
                 );
                 context.go('/premium');
                 return;
@@ -219,12 +238,16 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.auto_awesome, size: 18, color: isPlus ? Colors.amber : Colors.grey),
-                const SizedBox(width: 8),
-                Text(
-                  'Nghiên cứu sâu${isPlus ? '' : ' (Premium Plus)'}',
+                Icon(
+                  Icons.auto_awesome,
+                  size: 18,
+                  color: isPremium ? Colors.amber : Colors.grey,
                 ),
-                if (provider.aiAgentMode == 'deep-research-pro-preview-12-2025') ...[
+                const SizedBox(width: 8),
+                Text('Nghiên cứu sâu${isPremium ? '' : ' (Premium)'}'),
+                if (isPremium &&
+                    provider.aiAgentMode ==
+                        'deep-research-pro-preview-12-2025') ...[
                   const SizedBox(width: 8),
                   const Icon(Icons.check, size: 16, color: Colors.green),
                 ],
@@ -248,8 +271,11 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
   ) {
     final expertContext = provider.expertContext;
     final isDeepResearch = provider.aiAgentMode != null;
-    final displayTitle = (provider.currentSessionTitle ?? expertContext?.jobRole ?? 'Expert Chat')
-        .toUpperCase();
+    final displayTitle =
+        (provider.currentSessionTitle ??
+                expertContext?.jobRole ??
+                'Expert Chat')
+            .toUpperCase();
 
     return SliverAppBar(
       pinned: true,
@@ -289,9 +315,13 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                         Row(
                           children: [
                             Icon(
-                              isDeepResearch ? Icons.auto_awesome : Icons.smart_toy,
+                              isDeepResearch
+                                  ? Icons.auto_awesome
+                                  : Icons.smart_toy,
                               size: 14,
-                              color: isDeepResearch ? Colors.amber : Colors.white,
+                              color: isDeepResearch
+                                  ? Colors.amber
+                                  : Colors.white,
                             ),
                             const SizedBox(width: 6),
                             Flexible(
@@ -311,7 +341,10 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                         const SizedBox(height: 2),
                         Text(
                           expertContext?.domain ?? '',
-                          style: const TextStyle(fontSize: 10, color: Colors.white70),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white70,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -320,7 +353,10 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                 ),
                 // G5: Deep Research toggle button
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isDeepResearch
                         ? Colors.amber.withValues(alpha: 0.3)
@@ -342,7 +378,9 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                           isDeepResearch ? 'Sâu' : 'Thường',
                           style: TextStyle(
                             fontSize: 10,
-                            color: isDeepResearch ? Colors.amber : Colors.white70,
+                            color: isDeepResearch
+                                ? Colors.amber
+                                : Colors.white70,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -372,20 +410,106 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
           return _buildLoginRequiredScreen(context);
         }
 
-        // G6: Subscription gate — not premium
+        // G6: Subscription gate — show loading until subscription is known
+        // to avoid flashing paywall for paying users on first load
+        final subscriptionLoaded =
+            provider.subscription != null || provider.historyBootstrapDone;
+        if (!subscriptionLoaded) {
+          return Scaffold(
+            appBar: const SkillVerseAppBar(title: 'Expert Chat'),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
         if (!_isPremiumUser(provider.subscription)) {
           return _buildPremiumGateScreen(context);
         }
 
         if (expertContext == null) {
-          // Still loading / auto-resolving the latest session
+          // Read-only: session loaded from history with no cached context
+          if (provider.isReadOnlySession) {
+            return _buildReadOnlyScaffold(context, provider, isDark);
+          }
+
+          final bootstrapDone = provider.historyBootstrapDone;
+          final loadingNow =
+              provider.loadingSessions ||
+              provider.isLoadingFor('session') ||
+              !bootstrapDone;
+
+          if (loadingNow) {
+            return Scaffold(
+              drawer: _buildSessionDrawer(context, provider, isDark),
+              body: const SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: ChatBubbleSkeleton(pairCount: 3),
+                  ),
+                ),
+              ),
+            );
+          }
+
+          // Bootstrap done, no sessions — show empty state with CTAs
           return Scaffold(
-            // Removed key: _scaffoldKey to prevent DuplicateGlobalKey exception
-            drawer: _buildSessionDrawer(context, provider, isDark),
-            body: const Center(
+            appBar: const SkillVerseAppBar(title: 'Expert Chat'),
+            body: Center(
               child: Padding(
-                padding: EdgeInsets.all(16),
-                child: ChatBubbleSkeleton(pairCount: 3),
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      size: 64,
+                      color: AppTheme.primaryBlueDark.withValues(alpha: 0.4),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Chưa có cuộc trò chuyện nào',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Chọn chuyên gia để bắt đầu tư vấn',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/expert-chat/domain'),
+                      icon: const Icon(Icons.person_search, size: 18),
+                      label: const Text('Chọn chuyên gia'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlueDark,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () => context.go('/expert-chat'),
+                      child: const Text('Quay lại'),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -431,7 +555,9 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     child: Row(
                       children: [
                         Container(
@@ -446,7 +572,11 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                             ),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
+                          child: const Icon(
+                            Icons.auto_awesome,
+                            size: 18,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         _ThinkingIndicator(),
@@ -462,71 +592,238 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
 
           // Compact Input Area
           bottomSheet: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isDark ? AppTheme.darkBackgroundPrimary : AppTheme.lightBackgroundPrimary,
+              color: isDark
+                  ? AppTheme.darkBackgroundPrimary
+                  : AppTheme.lightBackgroundPrimary,
               border: Border(
                 top: BorderSide(
                   width: 1,
-                  color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
+                  color: isDark
+                      ? AppTheme.darkBorderColor
+                      : AppTheme.lightBorderColor,
                 ),
               ),
             ),
             child: SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
-                        border: Border.all(
-                          color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _messageController,
-                        focusNode: _focusNode,
-                        decoration: InputDecoration(
-                          hintText: 'Hỏi chuyên gia...',
-                          hintStyle: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          color: isDark
+                              ? AppTheme.darkCardBackground
+                              : AppTheme.lightCardBackground,
+                          border: Border.all(
+                            color: isDark
+                                ? AppTheme.darkBorderColor
+                                : AppTheme.lightBorderColor,
                           ),
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          border: InputBorder.none,
                         ),
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _sendMessage(),
-                        enabled: !provider.isSending,
+                        child: TextField(
+                          controller: _messageController,
+                          focusNode: _focusNode,
+                          decoration: InputDecoration(
+                            hintText: 'Hỏi chuyên gia...',
+                            hintStyle: TextStyle(
+                              fontSize: 14,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            border: InputBorder.none,
+                          ),
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                          enabled: !provider.isSending,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: provider.isSending ? null : _sendMessage,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        gradient: provider.isSending
-                            ? null
-                            : const LinearGradient(
-                                colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
-                              ),
-                        color: provider.isSending ? Colors.grey : null,
-                        shape: BoxShape.circle,
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: provider.isSending ? null : _sendMessage,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: provider.isSending
+                              ? null
+                              : const LinearGradient(
+                                  colors: [
+                                    AppTheme.primaryBlueDark,
+                                    AppTheme.accentCyan,
+                                  ],
+                                ),
+                          color: provider.isSending ? Colors.grey : null,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
-                      child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  /// Read-only scaffold: shows history without input; user must re-select expert
+  Widget _buildReadOnlyScaffold(
+    BuildContext context,
+    ExpertChatProvider provider,
+    bool isDark,
+  ) {
+    return Scaffold(
+      key: _scaffoldKey,
+      drawer: _buildSessionDrawer(context, provider, isDark),
+      body: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            automaticallyImplyLeading: false,
+            backgroundColor: isDark
+                ? AppTheme.darkBackgroundPrimary
+                : AppTheme.lightBackgroundPrimary,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.menu,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        onPressed: () =>
+                            _scaffoldKey.currentState?.openDrawer(),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'LỊCH SỬ TRÒ CHUYỆN',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (provider.isLoadingFor('session'))
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: ChatBubbleSkeleton(pairCount: 3),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _MessageBubble(
+                    message: provider.messages[index],
+                    expertContext: null,
+                    onSuggestionTap: null,
+                  ),
+                  childCount: provider.messages.length,
+                ),
+              ),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
+      bottomSheet: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          border: Border(
+            top: BorderSide(
+              color: isDark
+                  ? AppTheme.darkBorderColor
+                  : AppTheme.lightBorderColor,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              const Icon(Icons.lock_outline, size: 16, color: Colors.grey),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Chọn lại chuyên gia để tiếp tục chat',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => context.push('/expert-chat/domain'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlueDark,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Chọn', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -536,7 +833,9 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
     bool isDark,
   ) {
     return Drawer(
-      backgroundColor: isDark ? AppTheme.darkBackgroundPrimary : AppTheme.lightBackgroundPrimary,
+      backgroundColor: isDark
+          ? AppTheme.darkBackgroundPrimary
+          : AppTheme.lightBackgroundPrimary,
       child: SafeArea(
         child: Column(
           children: [
@@ -553,7 +852,13 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                   const SizedBox(width: 10),
                   const Text(
                     'LỊCH SỬ TRÒ CHUYỆN',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'monospace', color: Colors.white, letterSpacing: 1),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'monospace',
+                      color: Colors.white,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ],
               ),
@@ -563,15 +868,29 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  context.push('/expert-chat/domain');
+                  final p = context.read<ExpertChatProvider>();
+                  if (p.expertContext != null) {
+                    // Same expert — open blank chat without re-selecting
+                    p.startNewChat();
+                  } else {
+                    context.push('/expert-chat/domain');
+                  }
                 },
                 icon: const Icon(Icons.add, size: 16),
-                label: const Text('Trò chuyện mới', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Trò chuyện mới',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryBlueDark,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ),
@@ -579,80 +898,155 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
               child: provider.loadingSessions
                   ? CommonLoading.center()
                   : provider.sessions.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.chat_bubble_outline, size: 40, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                              const SizedBox(height: 12),
-                              Text('Chưa có cuộc trò chuyện', style: TextStyle(fontSize: 13, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: 40,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          itemCount: provider.sessions.length,
-                          itemBuilder: (context, index) {
-                            final session = provider.sessions[index];
-                            final isActive = provider.sessionId == session.sessionId;
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 6),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Chưa có cuộc trò chuyện',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      itemCount: provider.sessions.length,
+                      itemBuilder: (context, index) {
+                        final session = provider.sessions[index];
+                        final isActive =
+                            provider.sessionId == session.sessionId;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? AppTheme.primaryBlueDark.withValues(
+                                    alpha: 0.15,
+                                  )
+                                : (isDark
+                                      ? AppTheme.darkCardBackground
+                                      : AppTheme.lightCardBackground),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isActive
+                                  ? AppTheme.primaryBlueDark
+                                  : (isDark
+                                        ? AppTheme.darkBorderColor
+                                        : AppTheme.lightBorderColor),
+                              width: isActive ? 1.5 : 1,
+                            ),
+                          ),
+                          child: ListTile(
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              await provider.loadSession(session);
+                              _scrollToBottom();
+                            },
+                            leading: Container(
+                              padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: isActive
-                                    ? AppTheme.primaryBlueDark.withValues(alpha: 0.15)
-                                    : (isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: isActive
-                                      ? AppTheme.primaryBlueDark
-                                      : (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
-                                  width: isActive ? 1.5 : 1,
+                                color: AppTheme.primaryBlueDark.withValues(
+                                  alpha: 0.2,
                                 ),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              child: ListTile(
-                                dense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                onTap: () async {
-                                  Navigator.pop(context);
-                                  await provider.loadSession(session);
-                                  _scrollToBottom();
-                                },
-                                leading: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryBlueDark.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Icon(Icons.auto_awesome, size: 16, color: AppTheme.primaryBlueDark),
-                                ),
-                                title: Text(session.title, style: TextStyle(fontSize: 12, fontWeight: isActive ? FontWeight.bold : FontWeight.w600, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                subtitle: Text('${session.messageCount} tin nhắn', style: TextStyle(fontSize: 10, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
-                                trailing: IconButton(
-                                  icon: Icon(Icons.delete_outline, size: 16, color: Colors.red.withValues(alpha: 0.7)),
-                                  onPressed: () async {
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Xóa cuộc trò chuyện?'),
-                                        content: const Text('Bạn có chắc muốn xóa cuộc trò chuyện này?'),
-                                        actions: [
-                                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
-                                          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Xóa', style: TextStyle(color: Colors.red))),
-                                        ],
+                              child: Icon(
+                                Icons.auto_awesome,
+                                size: 16,
+                                color: AppTheme.primaryBlueDark,
+                              ),
+                            ),
+                            title: Text(
+                              session.title,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isActive
+                                    ? FontWeight.bold
+                                    : FontWeight.w600,
+                                color: isDark
+                                    ? AppTheme.darkTextPrimary
+                                    : AppTheme.lightTextPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              '${session.messageCount} tin nhắn  •  ${_formatSessionTime(session.lastMessageAt)}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                            ),
+                            trailing: IconButton(
+                              icon: Icon(
+                                Icons.delete_outline,
+                                size: 16,
+                                color: Colors.red.withValues(alpha: 0.7),
+                              ),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Xóa cuộc trò chuyện?'),
+                                    content: const Text(
+                                      'Bạn có chắc muốn xóa cuộc trò chuyện này?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Hủy'),
                                       ),
-                                    );
-                                    if (confirm == true) provider.deleteSession(session.sessionId);
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text(
+                                          'Xóa',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true)
+                                  provider.deleteSession(session.sessionId);
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor)),
+                border: Border(
+                  top: BorderSide(
+                    color: isDark
+                        ? AppTheme.darkBorderColor
+                        : AppTheme.lightBorderColor,
+                  ),
+                ),
               ),
               child: ElevatedButton.icon(
                 onPressed: () {
@@ -660,13 +1054,24 @@ class _ExpertChatPageState extends State<ExpertChatPage> {
                   context.go('/expert-chat');
                 },
                 icon: const Icon(Icons.exit_to_app, size: 16),
-                label: const Text('Thoát chế độ chuyên gia', style: TextStyle(fontSize: 12)),
+                label: const Text(
+                  'Thoát chế độ chuyên gia',
+                  style: TextStyle(fontSize: 12),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
-                  foregroundColor: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                  side: BorderSide(color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+                  foregroundColor: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                  side: BorderSide(
+                    color: isDark
+                        ? AppTheme.darkBorderColor
+                        : AppTheme.lightBorderColor,
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ),
@@ -682,7 +1087,11 @@ class _MessageBubble extends StatelessWidget {
   final dynamic expertContext;
   final Function(String)? onSuggestionTap;
 
-  const _MessageBubble({required this.message, required this.expertContext, this.onSuggestionTap});
+  const _MessageBubble({
+    required this.message,
+    required this.expertContext,
+    this.onSuggestionTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -693,17 +1102,25 @@ class _MessageBubble extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!isUser) ...[
             Container(
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan]),
+                gradient: const LinearGradient(
+                  colors: [AppTheme.primaryBlueDark, AppTheme.accentCyan],
+                ),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.auto_awesome, size: 16, color: Colors.white),
+              child: const Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(width: 10),
           ],
@@ -712,9 +1129,18 @@ class _MessageBubble extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 gradient: isUser
-                    ? LinearGradient(colors: [AppTheme.primaryBlueDark.withValues(alpha: 0.15), AppTheme.accentCyan.withValues(alpha: 0.15)])
+                    ? LinearGradient(
+                        colors: [
+                          AppTheme.primaryBlueDark.withValues(alpha: 0.15),
+                          AppTheme.accentCyan.withValues(alpha: 0.15),
+                        ],
+                      )
                     : null,
-                color: isUser ? null : (isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground),
+                color: isUser
+                    ? null
+                    : (isDark
+                          ? AppTheme.darkCardBackground
+                          : AppTheme.lightCardBackground),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(12),
                   topRight: const Radius.circular(12),
@@ -722,12 +1148,29 @@ class _MessageBubble extends StatelessWidget {
                   bottomRight: Radius.circular(isUser ? 2 : 12),
                 ),
                 border: Border.all(
-                  color: isUser ? AppTheme.primaryBlueDark.withValues(alpha: 0.3) : (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+                  color: isUser
+                      ? AppTheme.primaryBlueDark.withValues(alpha: 0.3)
+                      : (isDark
+                            ? AppTheme.darkBorderColor
+                            : AppTheme.lightBorderColor),
                 ),
               ),
               child: isUser
-                  ? SelectableText(message.content, style: TextStyle(fontSize: 13, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary, height: 1.4))
-                  : FormattedAIResponse(content: message.content, isDark: isDark, onSuggestionTap: onSuggestionTap),
+                  ? SelectableText(
+                      message.content,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
+                        height: 1.4,
+                      ),
+                    )
+                  : FormattedAIResponse(
+                      content: message.content,
+                      isDark: isDark,
+                      onSuggestionTap: onSuggestionTap,
+                    ),
             ),
           ),
           if (isUser) ...[
@@ -736,7 +1179,9 @@ class _MessageBubble extends StatelessWidget {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd]),
+                gradient: const LinearGradient(
+                  colors: [AppTheme.themeOrangeStart, AppTheme.themeOrangeEnd],
+                ),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.person, size: 16, color: Colors.white),
@@ -753,13 +1198,17 @@ class _ThinkingIndicator extends StatefulWidget {
   State<_ThinkingIndicator> createState() => _ThinkingIndicatorState();
 }
 
-class _ThinkingIndicatorState extends State<_ThinkingIndicator> with SingleTickerProviderStateMixin {
+class _ThinkingIndicatorState extends State<_ThinkingIndicator>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 1500), vsync: this)..repeat();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat();
   }
 
   @override

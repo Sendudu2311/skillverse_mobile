@@ -4,7 +4,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import '../../data/models/contract_models.dart';
 import '../../data/services/contract_service.dart';
-import '../widgets/contract/contract_pdf_generator.dart';
+import '../../core/utils/error_handler.dart';
+import '../pages/contract/widgets/contract_pdf_generator.dart';
 
 class ContractProvider extends ChangeNotifier {
   final ContractService _service = ContractService();
@@ -16,7 +17,7 @@ class ContractProvider extends ChangeNotifier {
   bool _isLoadingDetail = false;
   String? _errorMessage;
   bool _isSubmitting = false;
-  
+
   bool _isDownloadingPDF = false;
   bool _isSharingPDF = false;
   String? lastSavedPdfPath;
@@ -49,7 +50,7 @@ class ContractProvider extends ChangeNotifier {
         return bDate.compareTo(aDate);
       });
     } catch (e) {
-      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _errorMessage = ErrorHandler.getErrorMessage(e);
     } finally {
       _isLoadingList = false;
       notifyListeners();
@@ -65,7 +66,7 @@ class ContractProvider extends ChangeNotifier {
     try {
       _selectedContract = await _service.getContractById(id);
     } catch (e) {
-      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _errorMessage = ErrorHandler.getErrorMessage(e);
     } finally {
       _isLoadingDetail = false;
       notifyListeners();
@@ -92,7 +93,7 @@ class ContractProvider extends ChangeNotifier {
       }
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _errorMessage = ErrorHandler.getErrorMessage(e);
       return false;
     } finally {
       _isSubmitting = false;
@@ -116,7 +117,7 @@ class ContractProvider extends ChangeNotifier {
       }
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _errorMessage = ErrorHandler.getErrorMessage(e);
       return false;
     } finally {
       _isSubmitting = false;
@@ -135,7 +136,7 @@ class ContractProvider extends ChangeNotifier {
 
   Future<void> downloadPDF() async {
     if (_selectedContract == null || _isDownloadingPDF) return;
-    
+
     _isDownloadingPDF = true;
     notifyListeners();
 
@@ -144,7 +145,8 @@ class ContractProvider extends ChangeNotifier {
         contract: _selectedContract!,
       );
 
-      final filename = 'contract_${_selectedContract!.id}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final filename =
+          'contract_${_selectedContract!.id}_${DateTime.now().millisecondsSinceEpoch}.pdf';
 
       Directory? dir;
       if (Platform.isAndroid) {
@@ -156,11 +158,10 @@ class ContractProvider extends ChangeNotifier {
         dir = await getDownloadsDirectory();
       }
       dir ??= await getApplicationDocumentsDirectory();
-      
+
       final file = File('${dir.path}/$filename');
       await file.writeAsBytes(pdfBytes);
       lastSavedPdfPath = file.path;
-      
     } catch (e) {
       debugPrint('Error saving PDF: $e');
       lastSavedPdfPath = null;
@@ -181,14 +182,23 @@ class ContractProvider extends ChangeNotifier {
         contract: _selectedContract!,
       );
 
-      final filename = 'contract_${_selectedContract!.id}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final filename =
+          'contract_${_selectedContract!.id}_${DateTime.now().millisecondsSinceEpoch}.pdf';
       await Printing.sharePdf(bytes: pdfBytes, filename: filename);
-      
     } catch (e) {
       debugPrint('Error sharing PDF: $e');
     } finally {
       _isSharingPDF = false;
       notifyListeners();
     }
+  }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() {
+    _contracts = [];
+    _selectedContract = null;
+    _errorMessage = null;
+    lastSavedPdfPath = null;
+    notifyListeners();
   }
 }

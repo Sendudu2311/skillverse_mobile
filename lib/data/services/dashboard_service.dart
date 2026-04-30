@@ -1,3 +1,4 @@
+import '../../../core/error/exceptions.dart';
 import '../../../core/exceptions/api_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../models/dashboard_models.dart';
@@ -19,8 +20,8 @@ class DashboardService {
     try {
       return await WalletService().getMyWallet();
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch wallet: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Không thể tải dữ liệu ví');
     }
   }
 
@@ -37,10 +38,8 @@ class DashboardService {
 
       return UsageStatsResponse.fromJson(response.data!);
     } catch (e) {
-      // ignore: avoid_print
-      print('[Dashboard] fetchUsageStats error: $e');
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch usage stats: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Không thể tải thống kê sử dụng');
     }
   }
 
@@ -57,12 +56,8 @@ class DashboardService {
 
       return SubscriptionResponse.fromJson(response.data!);
     } catch (e) {
-      // Subscription is optional, return null if not found
-      if (e is ApiException && e.message.contains('404')) {
-        return null;
-      }
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch subscription: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Không thể tải thông tin gói Premium');
     }
   }
 
@@ -71,10 +66,12 @@ class DashboardService {
   Future<List<RoadmapSession>> fetchRoadmaps() async {
     try {
       final summaries = await RoadmapService().getUserRoadmaps(size: 10);
-      return summaries.map((s) => RoadmapSession.fromSummary(s.toJson())).toList();
+      return summaries
+          .map((s) => RoadmapSession.fromSummary(s.toJson()))
+          .toList();
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch roadmaps: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Không thể tải lộ trình học tập');
     }
   }
 
@@ -125,7 +122,8 @@ class DashboardService {
         continueLearning: results[4] as EnrollmentDetailDto?,
       );
     } catch (e) {
-      throw ApiException('Failed to fetch dashboard data: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Không thể tải dữ liệu tổng quan');
     }
   }
 }

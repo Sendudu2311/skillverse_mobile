@@ -5,7 +5,6 @@ import '../pages/auth/login_page.dart';
 import '../pages/auth/register_page.dart';
 import '../pages/auth/verify_email_page.dart';
 import '../pages/auth/forgot_password_page.dart';
-import '../pages/home/home_page.dart';
 import '../pages/dashboard/dashboard_page.dart';
 import '../pages/courses/courses_page.dart';
 import '../pages/courses/course_detail_page.dart';
@@ -31,6 +30,7 @@ import '../pages/community/post_form_page.dart';
 import '../pages/roadmap/roadmap_page.dart';
 import '../pages/roadmap/roadmap_generate_page.dart';
 import '../pages/roadmap/roadmap_detail_page.dart';
+import '../pages/roadmap/roadmap_workspace_page.dart';
 import '../pages/mentor/mentor_list_page.dart';
 import '../pages/mentor/mentor_detail_page.dart';
 import '../pages/mentor/my_bookings_page.dart';
@@ -50,6 +50,8 @@ import '../pages/wallet/wallet_page.dart';
 import '../pages/journey/journey_list_page.dart';
 import '../pages/journey/journey_create_page.dart';
 import '../pages/journey/journey_detail_page.dart';
+import '../pages/journey/final_verification_page.dart';
+import '../providers/final_verification_provider.dart';
 import '../pages/expert_chat/expert_chat_landing_page.dart';
 import '../pages/expert_chat/domain_selection_page.dart';
 import '../pages/expert_chat/role_selection_page.dart';
@@ -59,6 +61,9 @@ import '../pages/legal/privacy_policy_page.dart';
 import '../pages/terms/terms_of_service_page.dart';
 import '../pages/splash/splash_page.dart';
 import '../pages/notifications/notification_page.dart';
+import '../pages/student/student_skill_verification_page.dart';
+import '../pages/student_verification/student_verification_page.dart';
+import '../pages/business/recruiter_profile_page.dart';
 import '../widgets/main_layout.dart';
 import '../providers/auth_provider.dart';
 
@@ -73,7 +78,6 @@ class AppRouter {
       debugLogDiagnostics: true,
       initialLocation: '/splash',
       refreshListenable: authProvider, // Auto-redirect on auth changes
-
       // P5.6: Deep link configuration — GoRouter 12+ handles deep links implicitly
       // via its route matching system. Incoming Android/iOS intents with URIs
       // (e.g. from FCM notifications) are automatically matched against defined routes.
@@ -151,14 +155,6 @@ class AppRouter {
         ),
 
         // Main App Routes
-        GoRoute(
-          path: '/home',
-          name: 'home',
-          builder: (context, state) => MainLayout(
-            currentPath: state.matchedLocation,
-            child: const HomePage(),
-          ),
-        ),
         GoRoute(
           path: '/dashboard',
           name: 'dashboard',
@@ -390,6 +386,17 @@ class AppRouter {
             return JourneyDetailPage(journeyId: journeyId);
           },
         ),
+        GoRoute(
+          path: '/journey/:journeyId/final-verification',
+          name: 'journey-final-verification',
+          builder: (context, state) {
+            final journeyId = int.parse(state.pathParameters['journeyId']!);
+            return ChangeNotifierProvider(
+              create: (_) => FinalVerificationProvider(),
+              child: FinalVerificationPage(journeyId: journeyId),
+            );
+          },
+        ),
 
         // Roadmap Routes
         GoRoute(
@@ -410,19 +417,50 @@ class AppRouter {
             return RoadmapDetailPage(sessionId: sessionId);
           },
         ),
+        GoRoute(
+          path: '/roadmap/:sessionId/workspace',
+          name: 'roadmap-workspace',
+          builder: (context, state) {
+            final sessionId = int.parse(state.pathParameters['sessionId']!);
+            final bookingId = int.tryParse(
+              state.uri.queryParameters['bookingId'] ?? '',
+            );
+            final journeyId = int.tryParse(
+              state.uri.queryParameters['journeyId'] ?? '',
+            );
+            return RoadmapWorkspacePage(
+              sessionId: sessionId,
+              bookingId: bookingId,
+              journeyId: journeyId,
+            );
+          },
+        ),
 
         // Mentor Routes
         GoRoute(
           path: '/mentors',
           name: 'mentors',
-          builder: (context, state) => const MentorListPage(),
+          builder: (context, state) {
+            final action = state.uri.queryParameters['action'];
+            final journeyId = state.uri.queryParameters['journeyId'];
+            return MentorListPage(
+              action: action,
+              journeyId: journeyId != null ? int.tryParse(journeyId) : null,
+            );
+          },
         ),
         GoRoute(
           path: '/mentors/:mentorId',
           name: 'mentor-detail',
           builder: (context, state) {
             final mentorId = int.parse(state.pathParameters['mentorId']!);
-            return MentorDetailPage(mentorId: mentorId);
+            final action = state.uri.queryParameters['action'];
+            final journeyId = state.uri.queryParameters['journeyId'];
+            return MentorDetailPage(
+              mentorId: mentorId,
+              action: action,
+              journeyId: journeyId != null ? int.tryParse(journeyId) : null,
+            );
           },
         ),
         GoRoute(
@@ -588,6 +626,30 @@ class AppRouter {
           path: '/portfolio',
           name: 'portfolio',
           builder: (context, state) => const PortfolioPage(),
+        ),
+
+        // Student Skill Verification Route
+        GoRoute(
+          path: '/student/skill-verifications',
+          name: 'student-skill-verifications',
+          builder: (context, state) => const StudentSkillVerificationPage(),
+        ),
+
+        // Student Identity Verification Route (for Student Premium eligibility)
+        GoRoute(
+          path: '/student-verification',
+          name: 'student-verification',
+          builder: (context, state) => const StudentVerificationPage(),
+        ),
+
+        // Recruiter Public Profile Route
+        GoRoute(
+          path: '/business/profile/:recruiterId',
+          name: 'recruiter-profile',
+          builder: (context, state) {
+            final recruiterId = int.parse(state.pathParameters['recruiterId']!);
+            return RecruiterProfilePage(recruiterId: recruiterId);
+          },
         ),
       ],
 

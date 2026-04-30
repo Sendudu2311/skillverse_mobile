@@ -179,6 +179,21 @@ class GroupChatProvider extends ChangeNotifier {
   }
 
   // ── Cleanup ──────────────────────────────────────────────────────────
+
+  /// Called by app-level logout listener: disconnect WebSocket and purge all user data.
+  void clearOnLogout() {
+    _service.disconnect();
+    _groups = [];
+    _messages = [];
+    _currentGroup = null;
+    _currentUserId = null;
+    _currentUserName = null;
+    _currentUserAvatar = null;
+    _authToken = null;
+    _error = null;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _service.disconnect();

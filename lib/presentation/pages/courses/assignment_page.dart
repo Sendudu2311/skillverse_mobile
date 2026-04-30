@@ -462,7 +462,11 @@ class _AssignmentPageState extends State<AssignmentPage> {
             ),
         ],
       ),
-      body: _buildBody(),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: _buildBody(),
+      ),
     );
   }
 

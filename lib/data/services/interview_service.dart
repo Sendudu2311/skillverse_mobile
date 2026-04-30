@@ -26,7 +26,7 @@ class InterviewService {
     } catch (e) {
       debugPrint('❌ Error scheduling interview: $e');
       if (e is ApiException) rethrow;
-      throw ApiException('Lên lịch phỏng vấn thất bại: ${e.toString()}');
+      throw ApiException('Lên lịch phỏng vấn thất bại');
     }
   }
 
@@ -42,7 +42,7 @@ class InterviewService {
       debugPrint('❌ Error getting interview by application: $e');
       if (e is ApiException) rethrow;
       throw ApiException(
-        'Lấy lịch phỏng vấn theo đơn thất bại: ${e.toString()}',
+        'Lấy lịch phỏng vấn theo đơn thất bại',
       );
     }
   }
@@ -65,7 +65,7 @@ class InterviewService {
       debugPrint('❌ Error getting interviews by job: $e');
       if (e is ApiException) rethrow;
       throw ApiException(
-        'Lấy danh sách phỏng vấn theo job thất bại: ${e.toString()}',
+        'Lấy danh sách phỏng vấn theo job thất bại',
       );
     }
   }
@@ -86,7 +86,7 @@ class InterviewService {
       debugPrint('❌ Error getting my interviews: $e');
       if (e is ApiException) rethrow;
       throw ApiException(
-        'Lấy lịch phỏng vấn của bạn thất bại: ${e.toString()}',
+        'Lấy lịch phỏng vấn của bạn thất bại',
       );
     }
   }
@@ -106,7 +106,7 @@ class InterviewService {
     } catch (e) {
       debugPrint('❌ Error completing interview: $e');
       if (e is ApiException) rethrow;
-      throw ApiException('Hoàn thành phỏng vấn thất bại: ${e.toString()}');
+      throw ApiException('Hoàn thành phỏng vấn thất bại');
     }
   }
 
@@ -121,7 +121,7 @@ class InterviewService {
     } catch (e) {
       debugPrint('❌ Error confirming interview: $e');
       if (e is ApiException) rethrow;
-      throw ApiException('Xác nhận phỏng vấn thất bại: ${e.toString()}');
+      throw ApiException('Xác nhận phỏng vấn thất bại');
     }
   }
 
@@ -140,7 +140,7 @@ class InterviewService {
     } catch (e) {
       debugPrint('❌ Error declining interview: $e');
       if (e is ApiException) rethrow;
-      throw ApiException('Từ chối phỏng vấn thất bại: ${e.toString()}');
+      throw ApiException('Từ chối phỏng vấn thất bại');
     }
   }
 
@@ -155,7 +155,7 @@ class InterviewService {
     } catch (e) {
       debugPrint('❌ Error cancelling interview: $e');
       if (e is ApiException) rethrow;
-      throw ApiException('Hủy phỏng vấn thất bại: ${e.toString()}');
+      throw ApiException('Hủy phỏng vấn thất bại');
     }
   }
 }

@@ -247,4 +247,7 @@ class PremiumProvider with ChangeNotifier, LoadingStateProviderMixin {
     _hasPremium = false;
     resetState();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => clearAll();
 }

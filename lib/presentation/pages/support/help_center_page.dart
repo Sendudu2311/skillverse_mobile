@@ -63,63 +63,67 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const SkillVerseAppBar(title: 'Trung Tâm Hỗ Trợ'),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Tìm kiếm câu hỏi...',
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search),
+                  hintText: 'Tìm kiếm câu hỏi...',
+                ),
+                onChanged: (v) => setState(() => _search = v),
               ),
-              onChanged: (v) => setState(() => _search = v),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _filtered.length,
-                itemBuilder: (context, idx) {
-                  final cat = _filtered[idx];
-                  final faqs = cat['faqs'] as List;
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    child: ExpansionTile(
-                      title: Text(cat['title']),
-                      children: faqs
-                          .map<Widget>(
-                            (f) => ListTile(
-                              title: Text(f['q']),
-                              subtitle: Text(f['a']),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  );
-                },
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _filtered.length,
+                  itemBuilder: (context, idx) {
+                    final cat = _filtered[idx];
+                    final faqs = cat['faqs'] as List;
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: ExpansionTile(
+                        title: Text(cat['title']),
+                        children: faqs
+                            .map<Widget>(
+                              (f) => ListTile(
+                                title: Text(f['q']),
+                                subtitle: Text(f['a']),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: const [
-                _SupportCard(
-                  icon: Icons.mail,
-                  title: 'Email',
-                  detail: 'support@skillverse.com',
-                ),
-                _SupportCard(
-                  icon: Icons.phone,
-                  title: 'Hotline',
-                  detail: '1800 1234',
-                ),
-                _SupportCard(
-                  icon: Icons.chat_bubble_outline,
-                  title: 'Live Chat',
-                  detail: '8:00 - 22:00',
-                ),
-              ],
-            ),
-          ],
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: const [
+                  _SupportCard(
+                    icon: Icons.mail,
+                    title: 'Email',
+                    detail: 'support@skillverse.com',
+                  ),
+                  _SupportCard(
+                    icon: Icons.phone,
+                    title: 'Hotline',
+                    detail: '1800 1234',
+                  ),
+                  _SupportCard(
+                    icon: Icons.chat_bubble_outline,
+                    title: 'Live Chat',
+                    detail: '8:00 - 22:00',
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

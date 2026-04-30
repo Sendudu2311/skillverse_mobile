@@ -143,6 +143,15 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
+  /// Called by app-level logout listener: stop polling and clear all cached data.
+  void clearOnLogout() {
+    stopPolling();
+    _unreadCount = 0;
+    _filter = NotificationFilter.all;
+    _pagination.reset();
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     stopPolling();

@@ -12,206 +12,210 @@ class TermsOfServicePage extends StatelessWidget {
         title: 'Điều Khoản Sử Dụng',
         onBack: () => context.go('/profile'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.primary,
-                    Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.shield,
-                    size: 48,
-                    color: Colors.white,
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Điều Khoản Sử Dụng',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.shield,
+                      size: 48,
                       color: Colors.white,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Cập nhật lần cuối: 18/06/2025',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.9),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Điều Khoản Sử Dụng',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Cập nhật lần cuối: 18/06/2025',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+  
+              const SizedBox(height: 24),
+  
+              // Content Sections
+              _buildSection(
+                '1. Giới thiệu',
+                'Chào mừng bạn đến với Skillverse – nền tảng học tập kỹ năng cá nhân và nghề nghiệp thông qua AI, chuyên gia và các khoá học tùy chỉnh. Bằng việc truy cập hoặc sử dụng dịch vụ của chúng tôi, bạn đồng ý với các điều khoản dưới đây.',
+              ),
+  
+              _buildSectionWithCards(
+                '2. Dịch vụ cung cấp',
+                [
+                  _ServiceCard(
+                    icon: Icons.book,
+                    title: '2.1. Học tập kỹ năng',
+                    items: [
+                      'Các khóa học về kỹ năng mềm, kỹ năng chuyên môn',
+                      'Tư duy logic, sáng tạo, quản lý thời gian',
+                      'Tùy chỉnh lộ trình học dựa trên bài kiểm tra đầu vào',
+                    ],
+                  ),
+                  _ServiceCard(
+                    icon: Icons.psychology,
+                    title: '2.2. AI phản hồi và đánh giá',
+                    description: 'Phân tích bài làm, bài viết, tương tác để đưa ra phản hồi tự động về tiến độ và đề xuất học tập.',
+                  ),
+                  _ServiceCard(
+                    icon: Icons.people,
+                    title: '2.3. Kết nối với chuyên gia',
+                    description: 'Người dùng có thể đặt lịch tư vấn 1-1 hoặc tham gia hội thảo do chuyên gia giảng dạy.',
+                  ),
+                  _ServiceCard(
+                    icon: Icons.credit_card,
+                    title: '2.4. Cộng đồng người học',
+                    description: 'Diễn đàn chia sẻ, thảo luận, hỏi – đáp giữa người học và giảng viên.',
                   ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Content Sections
-            _buildSection(
-              '1. Giới thiệu',
-              'Chào mừng bạn đến với Skillverse – nền tảng học tập kỹ năng cá nhân và nghề nghiệp thông qua AI, chuyên gia và các khoá học tùy chỉnh. Bằng việc truy cập hoặc sử dụng dịch vụ của chúng tôi, bạn đồng ý với các điều khoản dưới đây.',
-            ),
-
-            _buildSectionWithCards(
-              '2. Dịch vụ cung cấp',
-              [
-                _ServiceCard(
-                  icon: Icons.book,
-                  title: '2.1. Học tập kỹ năng',
-                  items: [
-                    'Các khóa học về kỹ năng mềm, kỹ năng chuyên môn',
-                    'Tư duy logic, sáng tạo, quản lý thời gian',
-                    'Tùy chỉnh lộ trình học dựa trên bài kiểm tra đầu vào',
-                  ],
-                ),
-                _ServiceCard(
-                  icon: Icons.psychology,
-                  title: '2.2. AI phản hồi và đánh giá',
-                  description: 'Phân tích bài làm, bài viết, tương tác để đưa ra phản hồi tự động về tiến độ và đề xuất học tập.',
-                ),
-                _ServiceCard(
-                  icon: Icons.people,
-                  title: '2.3. Kết nối với chuyên gia',
-                  description: 'Người dùng có thể đặt lịch tư vấn 1-1 hoặc tham gia hội thảo do chuyên gia giảng dạy.',
-                ),
-                _ServiceCard(
-                  icon: Icons.credit_card,
-                  title: '2.4. Cộng đồng người học',
-                  description: 'Diễn đàn chia sẻ, thảo luận, hỏi – đáp giữa người học và giảng viên.',
-                ),
-              ],
-            ),
-
-            _buildSectionWithRequirements(
-              '3. Tài khoản người dùng',
-              [
-                _RequirementItem(
-                  title: '3.1. Điều kiện đăng ký',
-                  items: [
-                    'Người dùng cá nhân phải từ 13 tuổi trở lên',
-                    'Người dùng dưới 18 tuổi phải có sự đồng ý từ phụ huynh/người giám hộ',
-                  ],
-                ),
-                _RequirementItem(
-                  title: '3.2. Trách nhiệm của bạn',
-                  items: [
-                    'Bảo mật thông tin đăng nhập',
-                    'Không chia sẻ tài khoản cho người khác',
-                    'Cập nhật thông tin chính xác, trung thực',
-                  ],
-                ),
-              ],
-            ),
-
-            _buildSectionWithBehavior(
-              '4. Hành vi người dùng được chấp nhận',
-              accepted: [
-                'Tôn trọng người khác khi tham gia cộng đồng',
-                'Chỉ tải lên nội dung do chính bạn tạo ra hoặc được quyền sử dụng',
-                'Sử dụng dịch vụ đúng mục đích học tập',
-              ],
-              prohibited: [
-                'Sử dụng AI để gian lận hoặc lách luật kiểm tra',
-                'Tạo tài khoản giả hoặc sử dụng danh tính giả mạo',
-                'Tải lên hoặc chia sẻ nội dung phản cảm, vi phạm pháp luật',
-              ],
-            ),
-
-            _buildSectionWithOwnership(
-              '5. Nội dung và quyền sở hữu',
-              [
-                _OwnershipCard(
-                  title: '5.1. Nội dung của Skillverse',
-                  items: [
-                    'Bao gồm video học, bài giảng, AI engine, giao diện người dùng',
-                    'Thuộc bản quyền Skillverse hoặc đối tác cấp phép',
-                  ],
-                ),
-                _OwnershipCard(
-                  title: '5.2. Nội dung bạn tạo ra',
-                  items: [
-                    'Bạn giữ quyền sở hữu đối với nội dung do bạn tạo',
-                    'Cấp quyền sử dụng cho Skillverse để cải thiện sản phẩm',
-                  ],
-                ),
-              ],
-            ),
-
-            _buildSectionWithPayment(
-              '6. Thanh toán và hoàn tiền',
-              [
-                _PaymentCard(
-                  title: '6.1. Dịch vụ miễn phí',
-                  description: 'Truy cập cơ bản, bài học thử, bài kiểm tra trình độ',
-                ),
-                _PaymentCard(
-                  title: '6.2. Dịch vụ trả phí (Pro/Plus)',
-                  items: [
-                    'Khoá học nâng cao, AI feedback chi tiết, lịch học 1-1',
-                    'Thanh toán qua thẻ tín dụng, Momo, ZaloPay, VNPay…',
-                  ],
-                ),
-                _PaymentCard(
-                  title: '6.3. Chính sách hoàn tiền',
-                  items: [
-                    'Hoàn tiền 100% trong vòng 7 ngày nếu chưa học quá 30% nội dung',
-                    'Sau thời gian/giới hạn trên, không hoàn lại',
-                  ],
-                ),
-              ],
-            ),
-
-            _buildSection(
-              '7. Tạm ngưng hoặc chấm dứt dịch vụ',
-              'Skillverse có quyền cảnh báo, khoá hoặc xoá vĩnh viễn tài khoản nếu người dùng:\n\n• Vi phạm các điều khoản nêu trên\n• Có hành vi gian lận hoặc gây tổn hại đến hệ thống hoặc người khác\n• Sử dụng dịch vụ sai mục đích',
-            ),
-
-            _buildSection(
-              '8. Trách nhiệm pháp lý',
-              'Skillverse KHÔNG chịu trách nhiệm nếu:\n\n• Dữ liệu bị mất do sự cố ngoài ý muốn\n• Nội dung do người dùng đăng tải gây tranh cãi\n• Áp dụng sai kiến thức dẫn đến thiệt hại',
-            ),
-
-            _buildSection(
-              '9. Cập nhật điều khoản',
-              'Skillverse có quyền thay đổi điều khoản vào bất cứ thời điểm nào. Chúng tôi sẽ thông báo qua email hoặc popup trong tài khoản.',
-            ),
-
-            _buildSection(
-              '10. Luật áp dụng và giải quyết tranh chấp',
-              'Mọi tranh chấp liên quan sẽ được xử lý theo pháp luật Việt Nam. Trong trường hợp hai bên không tự thoả thuận được, vụ việc sẽ được chuyển đến Toà án Nhân dân có thẩm quyền tại TP. Hồ Chí Minh.',
-            ),
-
-            _buildContactSection('11. Liên hệ'),
-
-            const SizedBox(height: 32),
-
-            // Footer
-            Center(
-              child: Text(
-                '© 2025 Skillverse. All rights reserved.',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
+  
+              _buildSectionWithRequirements(
+                '3. Tài khoản người dùng',
+                [
+                  _RequirementItem(
+                    title: '3.1. Điều kiện đăng ký',
+                    items: [
+                      'Người dùng cá nhân phải từ 13 tuổi trở lên',
+                      'Người dùng dưới 18 tuổi phải có sự đồng ý từ phụ huynh/người giám hộ',
+                    ],
+                  ),
+                  _RequirementItem(
+                    title: '3.2. Trách nhiệm của bạn',
+                    items: [
+                      'Bảo mật thông tin đăng nhập',
+                      'Không chia sẻ tài khoản cho người khác',
+                      'Cập nhật thông tin chính xác, trung thực',
+                    ],
+                  ),
+                ],
+              ),
+  
+              _buildSectionWithBehavior(
+                '4. Hành vi người dùng được chấp nhận',
+                accepted: [
+                  'Tôn trọng người khác khi tham gia cộng đồng',
+                  'Chỉ tải lên nội dung do chính bạn tạo ra hoặc được quyền sử dụng',
+                  'Sử dụng dịch vụ đúng mục đích học tập',
+                ],
+                prohibited: [
+                  'Sử dụng AI để gian lận hoặc lách luật kiểm tra',
+                  'Tạo tài khoản giả hoặc sử dụng danh tính giả mạo',
+                  'Tải lên hoặc chia sẻ nội dung phản cảm, vi phạm pháp luật',
+                ],
+              ),
+  
+              _buildSectionWithOwnership(
+                '5. Nội dung và quyền sở hữu',
+                [
+                  _OwnershipCard(
+                    title: '5.1. Nội dung của Skillverse',
+                    items: [
+                      'Bao gồm video học, bài giảng, AI engine, giao diện người dùng',
+                      'Thuộc bản quyền Skillverse hoặc đối tác cấp phép',
+                    ],
+                  ),
+                  _OwnershipCard(
+                    title: '5.2. Nội dung bạn tạo ra',
+                    items: [
+                      'Bạn giữ quyền sở hữu đối với nội dung do bạn tạo',
+                      'Cấp quyền sử dụng cho Skillverse để cải thiện sản phẩm',
+                    ],
+                  ),
+                ],
+              ),
+  
+              _buildSectionWithPayment(
+                '6. Thanh toán và hoàn tiền',
+                [
+                  _PaymentCard(
+                    title: '6.1. Dịch vụ miễn phí',
+                    description: 'Truy cập cơ bản, bài học thử, bài kiểm tra trình độ',
+                  ),
+                  _PaymentCard(
+                    title: '6.2. Dịch vụ trả phí (Pro/Plus)',
+                    items: [
+                      'Khoá học nâng cao, AI feedback chi tiết, lịch học 1-1',
+                      'Thanh toán qua thẻ tín dụng, Momo, ZaloPay, VNPay…',
+                    ],
+                  ),
+                  _PaymentCard(
+                    title: '6.3. Chính sách hoàn tiền',
+                    items: [
+                      'Hoàn tiền 100% trong vòng 7 ngày nếu chưa học quá 30% nội dung',
+                      'Sau thời gian/giới hạn trên, không hoàn lại',
+                    ],
+                  ),
+                ],
+              ),
+  
+              _buildSection(
+                '7. Tạm ngưng hoặc chấm dứt dịch vụ',
+                'Skillverse có quyền cảnh báo, khoá hoặc xoá vĩnh viễn tài khoản nếu người dùng:\n\n• Vi phạm các điều khoản nêu trên\n• Có hành vi gian lận hoặc gây tổn hại đến hệ thống hoặc người khác\n• Sử dụng dịch vụ sai mục đích',
+              ),
+  
+              _buildSection(
+                '8. Trách nhiệm pháp lý',
+                'Skillverse KHÔNG chịu trách nhiệm nếu:\n\n• Dữ liệu bị mất do sự cố ngoài ý muốn\n• Nội dung do người dùng đăng tải gây tranh cãi\n• Áp dụng sai kiến thức dẫn đến thiệt hại',
+              ),
+  
+              _buildSection(
+                '9. Cập nhật điều khoản',
+                'Skillverse có quyền thay đổi điều khoản vào bất cứ thời điểm nào. Chúng tôi sẽ thông báo qua email hoặc popup trong tài khoản.',
+              ),
+  
+              _buildSection(
+                '10. Luật áp dụng và giải quyết tranh chấp',
+                'Mọi tranh chấp liên quan sẽ được xử lý theo pháp luật Việt Nam. Trong trường hợp hai bên không tự thoả thuận được, vụ việc sẽ được chuyển đến Toà án Nhân dân có thẩm quyền tại TP. Hồ Chí Minh.',
+              ),
+  
+              _buildContactSection('11. Liên hệ'),
+  
+              const SizedBox(height: 32),
+  
+              // Footer
+              Center(
+                child: Text(
+                  '© 2025 Skillverse. All rights reserved.',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
                 ),
               ),
-            ),
-
-            const SizedBox(height: 32),
-          ],
+  
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
     );

@@ -353,6 +353,9 @@ class PostProvider with ChangeNotifier, LoadingStateProviderMixin {
     resetState();
   }
 
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => reset();
+
   @override
   void dispose() {
     _paginationHelper?.dispose();

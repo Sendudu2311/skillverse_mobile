@@ -178,7 +178,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
           _isSaving = false;
         });
 
-        ErrorHandler.showSuccessSnackBar(context, 'Cập nhật thông tin thành công!');
+        ErrorHandler.showSuccessSnackBar(
+          context,
+          'Cập nhật thông tin thành công!',
+        );
 
         // Delay before popping to show success message
         await Future.delayed(const Duration(milliseconds: 500));
@@ -244,112 +247,117 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
               ),
           ],
         ),
-        body: _isLoading
-            ? _buildLoadingState()
-            : FadeTransition(
-                opacity: _fadeAnimation,
-                child: Consumer<UserProvider>(
-                  builder: (context, userProvider, child) {
-                    return SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.all(16),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Avatar section
-                            _buildAvatarSection(),
+        body: SafeArea(
+          top: false,
+          bottom: true,
+          child: _isLoading
+              ? _buildLoadingState()
+              : FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Consumer<UserProvider>(
+                    builder: (context, userProvider, child) {
+                      return SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Avatar section
+                              _buildAvatarSection(),
 
-                            const SizedBox(height: 24),
+                              const SizedBox(height: 24),
 
-                            // Personal Information
-                            SectionHeader(
-                              title: 'Thông tin cá nhân',
-                              icon: Icons.person_outline,
-                            ),
-                            const SizedBox(height: 16),
-
-                            _buildTextField(
-                              controller: _fullNameController,
-                              focusNode: _fullNameFocus,
-                              label: 'Họ và tên',
-                              icon: Icons.badge_outlined,
-                              enabled: _isEditing,
-                              validator: (value) => ValidationHelper.required(
-                                value,
-                                fieldName: 'Họ và tên',
+                              // Personal Information
+                              SectionHeader(
+                                title: 'Thông tin cá nhân',
+                                icon: Icons.person_outline,
                               ),
-                              textInputAction: TextInputAction.next,
-                              onFieldSubmitted: (_) =>
-                                  _phoneFocus.requestFocus(),
-                            ),
+                              const SizedBox(height: 16),
 
-                            const SizedBox(height: 12),
+                              _buildTextField(
+                                controller: _fullNameController,
+                                focusNode: _fullNameFocus,
+                                label: 'Họ và tên',
+                                icon: Icons.badge_outlined,
+                                enabled: _isEditing,
+                                validator: (value) => ValidationHelper.required(
+                                  value,
+                                  fieldName: 'Họ và tên',
+                                ),
+                                textInputAction: TextInputAction.next,
+                                onFieldSubmitted: (_) =>
+                                    _phoneFocus.requestFocus(),
+                              ),
 
-                            _buildTextField(
-                              controller: _phoneController,
-                              focusNode: _phoneFocus,
-                              label: 'Số điện thoại',
-                              icon: Icons.phone_outlined,
-                              enabled: _isEditing,
-                              keyboardType: TextInputType.phone,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(11),
-                              ],
-                              validator: (value) =>
-                                  ValidationHelper.phoneNumber(
-                                    value,
-                                    isRequired: true,
-                                  ),
-                              textInputAction: TextInputAction.next,
-                              onFieldSubmitted: (_) => _bioFocus.requestFocus(),
-                            ),
+                              const SizedBox(height: 12),
 
-                            const SizedBox(height: 12),
+                              _buildTextField(
+                                controller: _phoneController,
+                                focusNode: _phoneFocus,
+                                label: 'Số điện thoại',
+                                icon: Icons.phone_outlined,
+                                enabled: _isEditing,
+                                keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(11),
+                                ],
+                                validator: (value) =>
+                                    ValidationHelper.phoneNumber(
+                                      value,
+                                      isRequired: true,
+                                    ),
+                                textInputAction: TextInputAction.next,
+                                onFieldSubmitted: (_) =>
+                                    _bioFocus.requestFocus(),
+                              ),
 
-                            // Bio Section
-                            SectionHeader(
-                              title: 'Giới thiệu',
-                              icon: Icons.info_outline,
-                            ),
-                            const SizedBox(height: 16),
+                              const SizedBox(height: 12),
 
-                            _buildTextField(
-                              controller: _bioController,
-                              focusNode: _bioFocus,
-                              label: 'Giới thiệu bản thân',
-                              icon: Icons.notes,
-                              enabled: _isEditing,
-                              maxLines: 4,
-                              maxLength: 500,
-                              textInputAction: TextInputAction.newline,
-                              hint: 'Viết vài dòng về bản thân...',
-                            ),
+                              // Bio Section
+                              SectionHeader(
+                                title: 'Giới thiệu',
+                                icon: Icons.info_outline,
+                              ),
+                              const SizedBox(height: 16),
 
-                            const SizedBox(height: 24),
+                              _buildTextField(
+                                controller: _bioController,
+                                focusNode: _bioFocus,
+                                label: 'Giới thiệu bản thân',
+                                icon: Icons.notes,
+                                enabled: _isEditing,
+                                maxLines: 4,
+                                maxLength: 500,
+                                textInputAction: TextInputAction.newline,
+                                hint: 'Viết vài dòng về bản thân...',
+                              ),
 
-                            const SizedBox(height: 12),
+                              const SizedBox(height: 24),
 
-                            _buildTextField(
-                              controller: _addressController,
-                              focusNode: _addressFocus,
-                              label: 'Địa chỉ chi tiết',
-                              icon: Icons.home_outlined,
-                              enabled: _isEditing,
-                              maxLines: 2,
-                              hint: 'Số nhà, tên đường...',
-                            ),
+                              const SizedBox(height: 12),
 
-                            const SizedBox(height: 32),
-                          ],
+                              _buildTextField(
+                                controller: _addressController,
+                                focusNode: _addressFocus,
+                                label: 'Địa chỉ chi tiết',
+                                icon: Icons.home_outlined,
+                                enabled: _isEditing,
+                                maxLines: 2,
+                                hint: 'Số nhà, tên đường...',
+                              ),
+
+                              const SizedBox(height: 32),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }

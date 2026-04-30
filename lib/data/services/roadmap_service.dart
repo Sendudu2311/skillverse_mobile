@@ -13,16 +13,7 @@ class RoadmapService {
 
   final ApiClient _apiClient = ApiClient();
 
-  // Request deduplication for generate
-  Future<RoadmapResponse>? _ongoingGenerateRequest;
-  String? _lastRequestKey;
-
-  /// Create a unique key for request deduplication
-  String _createRequestKey(GenerateRoadmapRequest request) {
-    return '${request.goal}_${request.duration}_${request.experience}_${request.style}';
-  }
-
-  /// Get all roadmap sessions for the current user
+/// Get all roadmap sessions for the current user
   /// API: GET /api/v1/ai/roadmap
   Future<List<RoadmapSessionSummary>> getUserRoadmaps({
     bool includeDeleted = false,
@@ -51,7 +42,7 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi lấy danh sách lộ trình');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -72,84 +63,22 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi lấy thông tin lộ trình');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
-  /// Pre-validate roadmap generation request
-  /// API: POST /api/v1/ai/roadmap/validate
+  /// @deprecated Tính năng đã chuyển sang Journey.
   Future<List<ValidationResult>> preValidate(
     GenerateRoadmapRequest request,
   ) async {
-    try {
-      final response = await _apiClient.dio.post<List<dynamic>>(
-        '/v1/ai/roadmap/validate',
-        data: request.toJson(),
-      );
-
-      if (response.data == null) {
-        return [];
-      }
-
-      return response.data!
-          .map(
-            (json) => ValidationResult.fromJson(json as Map<String, dynamic>),
-          )
-          .toList();
-    } on DioException catch (e) {
-      throw _handleDioError(e, 'Lỗi xác thực lộ trình');
-    } catch (e) {
-      if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
-    }
+    throw UnsupportedError('Tính năng đã chuyển sang Journey');
   }
 
-  /// Generate a new personalized learning roadmap using AI
-  /// API: POST /api/v1/ai/roadmap/generate
+  /// @deprecated Tính năng đã chuyển sang Journey.
   Future<RoadmapResponse> generateRoadmap(
     GenerateRoadmapRequest request,
   ) async {
-    // Basic deduplication
-    final key = _createRequestKey(request);
-    if (_ongoingGenerateRequest != null && _lastRequestKey == key) {
-      return _ongoingGenerateRequest!;
-    }
-
-    _lastRequestKey = key;
-    _ongoingGenerateRequest = _generateRoadmapInternal(request);
-
-    try {
-      final result = await _ongoingGenerateRequest!;
-      return result;
-    } finally {
-      _ongoingGenerateRequest = null;
-    }
-  }
-
-  Future<RoadmapResponse> _generateRoadmapInternal(
-    GenerateRoadmapRequest request,
-  ) async {
-    try {
-      final response = await _apiClient.dio.post<Map<String, dynamic>>(
-        '/v1/ai/roadmap/generate',
-        data: request.toJson(),
-        options: Options(
-          sendTimeout: const Duration(minutes: 10),
-          receiveTimeout: const Duration(minutes: 10),
-        ),
-      );
-
-      if (response.data == null) {
-        throw UnknownException('Không có dữ liệu phản hồi từ AI');
-      }
-
-      return RoadmapResponse.fromJson(response.data!);
-    } on DioException catch (e) {
-      throw _handleDioError(e, 'Lỗi tạo lộ trình');
-    } catch (e) {
-      if (e is AppException) rethrow;
-      throw UnknownException('Lỗi hệ thống: ${e.toString()}');
-    }
+    throw UnsupportedError('Tính năng đã chuyển sang Journey');
   }
 
   /// Generate clarification questions for roadmap request
@@ -177,7 +106,7 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi lấy câu hỏi làm rõ');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -206,7 +135,7 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi cập nhật tiến độ');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -270,7 +199,7 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi kích hoạt lộ trình');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -283,7 +212,7 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi tạm dừng lộ trình');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -296,7 +225,7 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi xoá lộ trình');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -309,7 +238,7 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi xoá vĩnh viễn lộ trình');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -335,7 +264,7 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi lấy lộ trình đã xoá');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -358,7 +287,7 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi lấy thống kê lộ trình');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -371,7 +300,7 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi khôi phục lộ trình');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 
@@ -393,7 +322,7 @@ class RoadmapService {
       throw _handleDioError(e, 'Lỗi hoàn thành node');
     } catch (e) {
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định: ${e.toString()}');
+      throw UnknownException('Lỗi không xác định');
     }
   }
 }

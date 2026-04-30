@@ -361,6 +361,16 @@ class MessagingProvider extends ChangeNotifier with LoadingStateProviderMixin {
 
   // ── Cleanup ─────────────────────────────────────────────────────────
 
+  /// Called by app-level logout listener: disconnect WebSocket and purge all user data.
+  void clearOnLogout() {
+    disconnectWebSocket();
+    _conversations = [];
+    _messages = [];
+    _activeOtherUserId = null;
+    _activeBookingId = null;
+    resetState();
+  }
+
   @override
   void dispose() {
     disconnectWebSocket();

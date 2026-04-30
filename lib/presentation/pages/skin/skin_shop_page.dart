@@ -56,62 +56,66 @@ class _SkinShopPageState extends State<SkinShopPage> {
         useGradientTitle: true,
         gradientColors: const [AppTheme.themePurpleStart, AppTheme.accentCyan],
       ),
-      body: Consumer<SkinProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading && provider.allSkins.isEmpty) {
-            return GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.75,
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<SkinProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoading && provider.allSkins.isEmpty) {
+              return GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.75,
+                ),
+                itemCount: 6,
+                itemBuilder: (_, __) => const GridItemSkeleton(),
+              );
+            }
+  
+            return RefreshIndicator(
+              onRefresh: () => provider.refreshAll(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Hall of Fame
+                    if (provider.hallOfFame.isNotEmpty) ...[
+                      _buildHallOfFame(provider.hallOfFame, isDark),
+                      const SizedBox(height: 24),
+                    ],
+  
+                    // Rising Stars
+                    if (provider.risingStars.isNotEmpty) ...[
+                      _buildRisingStars(provider.risingStars, isDark),
+                      const SizedBox(height: 24),
+                    ],
+  
+                    // Filter chips
+                    SelectableChipRow(
+                      labels: const ['Tất cả', 'Common', 'Rare', 'Legendary'],
+                      selectedIndex: const ['all', 'common', 'rare', 'legendary']
+                          .indexOf(_selectedFilter),
+                      onSelected: (i) {
+                        final key = const ['all', 'common', 'rare', 'legendary'][i];
+                        setState(() => _selectedFilter = key);
+                        _resetPagination();
+                      },
+                    ),
+                    const SizedBox(height: 16),
+  
+                    // Skin grid
+                    _buildSkinGrid(provider, isDark),
+                  ],
+                ),
               ),
-              itemCount: 6,
-              itemBuilder: (_, __) => const GridItemSkeleton(),
             );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => provider.refreshAll(),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Hall of Fame
-                  if (provider.hallOfFame.isNotEmpty) ...[
-                    _buildHallOfFame(provider.hallOfFame, isDark),
-                    const SizedBox(height: 24),
-                  ],
-
-                  // Rising Stars
-                  if (provider.risingStars.isNotEmpty) ...[
-                    _buildRisingStars(provider.risingStars, isDark),
-                    const SizedBox(height: 24),
-                  ],
-
-                  // Filter chips
-                  SelectableChipRow(
-                    labels: const ['Tất cả', 'Common', 'Rare', 'Legendary'],
-                    selectedIndex: const ['all', 'common', 'rare', 'legendary']
-                        .indexOf(_selectedFilter),
-                    onSelected: (i) {
-                      final key = const ['all', 'common', 'rare', 'legendary'][i];
-                      setState(() => _selectedFilter = key);
-                      _resetPagination();
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Skin grid
-                  _buildSkinGrid(provider, isDark),
-                ],
-              ),
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }

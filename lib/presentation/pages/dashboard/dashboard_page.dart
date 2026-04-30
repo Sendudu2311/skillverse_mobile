@@ -27,7 +27,7 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  bool _showAllActions = false;
+
   StreamSubscription? _fcmForegroundSub;
   StreamSubscription? _fcmTapSub;
 
@@ -226,12 +226,8 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 16),
                 ],
 
-                // 4. Quick Actions (4-col, expandable)
-                DashboardQuickActionsWidget(
-                  showAllActions: _showAllActions,
-                  onToggleShowAll: () => setState(() => _showAllActions = true),
-                  isDark: isDark,
-                ),
+                // 4. Quick Actions (2×4 grid)
+                DashboardQuickActionsWidget(isDark: isDark),
                 const SizedBox(height: 16),
 
                 // 5. Stats Grid (2×2)

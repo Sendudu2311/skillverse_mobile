@@ -162,27 +162,32 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          if (_error != null)
-            ErrorStateWidget(
-              message: _error!,
-              onRetry: () {
-                setState(() {
-                  _error = null;
-                  _isLoading = true;
-                });
-                _controller.reload();
-              },
-            )
-          else
-            WebViewWidget(controller: _controller),
-          if (_isLoading)
-            Container(
-              color: Colors.white,
-              child: CommonLoading.center(message: 'Đang tải trang thanh toán...'),
-            ),
-        ],
+      body: SafeArea(
+        top: false,
+        child: Stack(
+          children: [
+            if (_error != null)
+              ErrorStateWidget(
+                message: _error!,
+                onRetry: () {
+                  setState(() {
+                    _error = null;
+                    _isLoading = true;
+                  });
+                  _controller.reload();
+                },
+              )
+            else
+              WebViewWidget(controller: _controller),
+            if (_isLoading)
+              Container(
+                color: Colors.white,
+                child: CommonLoading.center(
+                  message: 'Đang tải trang thanh toán...',
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -211,10 +216,7 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
     );
 
     if (confirmed == true && mounted) {
-      Navigator.pop(context, {
-        'success': false,
-        'cancelled': true,
-      });
+      Navigator.pop(context, {'success': false, 'cancelled': true});
     }
   }
 }

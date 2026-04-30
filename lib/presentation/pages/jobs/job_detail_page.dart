@@ -113,19 +113,43 @@ class _JobDetailPageState extends State<JobDetailPage> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.business,
-                          size: 16,
-                          color: Theme.of(context).hintColor,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          job.recruiterCompanyName ?? 'Công ty',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
+                    GestureDetector(
+                      onTap: job.recruiterUserId != null
+                          ? () => context.push(
+                              '/business/profile/${job.recruiterUserId}',
+                            )
+                          : null,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.business,
+                            size: 16,
+                            color: Theme.of(context).hintColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              job.recruiterCompanyName ?? 'Công ty',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    decoration: job.recruiterUserId != null
+                                        ? TextDecoration.underline
+                                        : null,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (job.recruiterUserId != null) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.open_in_new,
+                              size: 14,
+                              color: Theme.of(context).hintColor,
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                     if (job.createdAt != null) ...[
                       const SizedBox(height: 4),
@@ -324,31 +348,62 @@ class _JobDetailPageState extends State<JobDetailPage> {
                     _buildStatusChip(jobStatus),
                     if (job.recruiterInfo?.companyName != null) ...[
                       const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.business,
-                            size: 16,
-                            color: Theme.of(context).hintColor,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(job.recruiterInfo!.companyName!),
-                          if (job.recruiterInfo?.rating != null) ...[
-                            const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap:
+                            (job.recruiterId ?? job.recruiterInfo?.id) != null
+                            ? () => context.push(
+                                '/business/profile/${job.recruiterId ?? job.recruiterInfo?.id}',
+                              )
+                            : null,
+                        child: Row(
+                          children: [
                             Icon(
-                              Icons.star,
-                              size: 14,
-                              color: Colors.amber.shade600,
+                              Icons.business,
+                              size: 16,
+                              color: Theme.of(context).hintColor,
                             ),
-                            const SizedBox(width: 2),
-                            Text(
-                              NumberFormatter.formatRating(
-                                job.recruiterInfo!.rating!,
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                job.recruiterInfo!.companyName!,
+                                style: TextStyle(
+                                  decoration:
+                                      (job.recruiterId ??
+                                              job.recruiterInfo?.id) !=
+                                          null
+                                      ? TextDecoration.underline
+                                      : null,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              style: const TextStyle(fontSize: 12),
                             ),
+                            if (job.recruiterInfo?.rating != null) ...[
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.star,
+                                size: 14,
+                                color: Colors.amber.shade600,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                NumberFormatter.formatRating(
+                                  job.recruiterInfo!.rating!,
+                                ),
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                            if ((job.recruiterId ?? job.recruiterInfo?.id) !=
+                                null) ...[
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.open_in_new,
+                                size: 14,
+                                color: Theme.of(context).hintColor,
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ],
                     if (job.createdAt != null) ...[
@@ -1922,7 +1977,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
         onPressed: app.id != null ? () => _openInterviewSchedule(app) : null,
       ),
       JobApplicationStatus.offerSent => _DetailActionState(
-        label: provider.isRespondingToOffer ? 'Đang xử lý...' : 'Phản hồi đề nghị',
+        label: provider.isRespondingToOffer
+            ? 'Đang xử lý...'
+            : 'Phản hồi đề nghị',
         icon: Icons.handshake_outlined,
         color: AppTheme.themeGreenStart,
         enabled: app.id != null && !provider.isRespondingToOffer,
@@ -2372,11 +2429,14 @@ class _JobDetailPageState extends State<JobDetailPage> {
             ElevatedButton(
               onPressed: () => Navigator.pop(dialogCtx, accepting),
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    accepting ? AppTheme.themeGreenStart : Colors.red,
+                backgroundColor: accepting
+                    ? AppTheme.themeGreenStart
+                    : Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: Text(accepting ? 'Xác nhận chấp nhận' : 'Xác nhận từ chối'),
+              child: Text(
+                accepting ? 'Xác nhận chấp nhận' : 'Xác nhận từ chối',
+              ),
             ),
           ],
         ),

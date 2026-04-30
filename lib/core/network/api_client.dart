@@ -233,8 +233,13 @@ class ApiClient {
                 message = jsonData['message'];
               }
             } catch (_) {
-              // If not JSON, use the string as is
-              message = responseData;
+              // If not JSON, check if it looks like HTML (e.g. Nginx error page)
+              if (responseData.contains('<html') ||
+                  responseData.contains('<!DOCTYPE')) {
+                message = _statusCodeMessage(statusCode);
+              } else {
+                message = responseData;
+              }
             }
           }
         }
@@ -244,6 +249,30 @@ class ApiClient {
         return NetworkException('Yêu cầu đã bị hủy');
       default:
         return UnknownException(error.message);
+    }
+  }
+
+  /// Clean status-code message when response body is HTML (e.g. Nginx error page)
+  static String _statusCodeMessage(int? statusCode) {
+    switch (statusCode) {
+      case 400:
+        return 'Dữ liệu không hợp lệ';
+      case 401:
+        return 'Phiên đăng nhập đã hết hạn';
+      case 403:
+        return 'Bạn không có quyền thực hiện thao tác này';
+      case 404:
+        return 'Không tìm thấy dữ liệu yêu cầu';
+      case 500:
+        return 'Lỗi máy chủ. Vui lòng thử lại sau';
+      case 502:
+        return 'Máy chủ không phản hồi. Vui lòng thử lại sau';
+      case 503:
+        return 'Dịch vụ tạm thời không khả dụng';
+      case 504:
+        return 'Máy chủ phản hồi quá lâu. Vui lòng thử lại sau';
+      default:
+        return 'Lỗi từ máy chủ (Mã: $statusCode)';
     }
   }
 

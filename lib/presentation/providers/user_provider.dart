@@ -186,4 +186,7 @@ class UserProvider with ChangeNotifier, LoadingStateProviderMixin {
     _applicationStatus = null;
     resetState();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => clearData();
 }

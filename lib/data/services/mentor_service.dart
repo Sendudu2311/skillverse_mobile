@@ -122,14 +122,9 @@ class MentorService {
     CreateBookingRequest request,
   ) async {
     try {
-      final walletRequest = CreateBookingRequest(
-        mentorId: request.mentorId,
-        startTime: request.startTime,
-        durationMinutes: request.durationMinutes,
-        priceVnd: request.priceVnd,
-        paymentMethod: 'WALLET',
-      );
-      final json = walletRequest.toJson();
+      final json = request.toJson();
+      // Ensure paymentMethod is WALLET
+      json['paymentMethod'] = 'WALLET';
       // Backend expects ZonedDateTime (ISO-8601 with timezone offset).
       // Dart's DateTime.toIso8601String() omits the offset, causing 400.
       // Convert to UTC so the 'Z' suffix is appended.

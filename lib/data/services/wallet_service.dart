@@ -1,3 +1,4 @@
+import '../../../core/error/exceptions.dart';
 import '../../../core/exceptions/api_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../models/dashboard_models.dart';
@@ -27,8 +28,8 @@ class WalletService {
 
       return WalletResponse.fromJson(response.data!);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch wallet: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Không thể tải dữ liệu ví');
     }
   }
 
@@ -48,8 +49,8 @@ class WalletService {
 
       return WalletStatistics.fromJson(response.data!);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch wallet statistics: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Không thể tải thống kê ví');
     }
   }
 
@@ -75,11 +76,13 @@ class WalletService {
       if (content == null) return [];
 
       return content
-          .map((json) => WalletTransaction.fromJson(json as Map<String, dynamic>))
+          .map(
+            (json) => WalletTransaction.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch transactions: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Không thể tải lịch sử giao dịch');
     }
   }
 
@@ -109,8 +112,8 @@ class WalletService {
 
       return response.data!;
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to create deposit: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Tạo nạp tiền thất bại');
     }
   }
 
@@ -128,8 +131,8 @@ class WalletService {
 
       return response.data!.cast<Map<String, dynamic>>();
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch coin packages: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Không thể tải gói xu');
     }
   }
 
@@ -155,8 +158,8 @@ class WalletService {
 
       return response.data!;
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to purchase coins: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Mua xu thất bại');
     }
   }
 
@@ -195,8 +198,8 @@ class WalletService {
 
       return response.data!;
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to create withdrawal request: ${e.toString()}');
+      if (e is AppException) rethrow;
+      throw ApiException('Tạo yêu cầu rút tiền thất bại');
     }
   }
 }

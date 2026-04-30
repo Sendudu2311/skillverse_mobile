@@ -156,4 +156,14 @@ class SkinProvider extends ChangeNotifier with LoadingStateProviderMixin {
   Future<void> refreshAll() async {
     await Future.wait([loadAllSkins(), loadLeaderboard()]);
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() {
+    _allSkins = [];
+    _mySkins = [];
+    _leaderboard = [];
+    _selectedSkin = null;
+    clearMessages();
+    resetState();
+  }
 }

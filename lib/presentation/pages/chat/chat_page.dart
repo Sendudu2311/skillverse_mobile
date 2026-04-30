@@ -4,7 +4,11 @@ import 'package:go_router/go_router.dart';
 import '../../../presentation/providers/chat_provider.dart';
 import '../../../data/models/chat_models.dart';
 import '../../../core/utils/meowl_guard.dart';
+import '../../../core/utils/date_time_helper.dart';
 import '../../widgets/common_loading.dart';
+import '../../widgets/formatted_ai_response.dart';
+import '../../widgets/skeleton_loaders.dart';
+import '../../themes/app_theme.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -16,6 +20,7 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Data for expandable prompt categories
 
@@ -28,6 +33,10 @@ class _ChatPageState extends State<ChatPage> {
       final chatProvider = context.read<ChatProvider>();
       if (chatProvider.messages.isEmpty) {
         chatProvider.initialize();
+      }
+      // G1: Load session list for drawer
+      if (chatProvider.sessions.isEmpty) {
+        chatProvider.loadSessions();
       }
     });
   }
@@ -90,7 +99,7 @@ class _ChatPageState extends State<ChatPage> {
     return Consumer<ChatProvider>(
       builder: (context, chatProvider, child) {
         // Auto-scroll when loading changes
-        if (chatProvider.isLoading) {
+        if (chatProvider.isSending) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_scrollController.hasClients) {
               _scrollController.animateTo(
@@ -102,46 +111,50 @@ class _ChatPageState extends State<ChatPage> {
           });
         }
 
-        return Column(
-          children: [
-            // ## Chat Header ##
-            _buildChatHeader(),
+        return Scaffold(
+          key: _scaffoldKey,
+          endDrawer: _buildSessionDrawer(chatProvider),
+          body: Column(
+            children: [
+              // ## Chat Header ##
+              _buildChatHeader(chatProvider),
 
-            // ## Messages List ##
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                itemCount: chatProvider.messages.length +
-                    (chatProvider.isLoading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  // Show thinking indicator as the last item while loading
-                  if (index >= chatProvider.messages.length) {
-                    return _buildThinkingBubble();
-                  }
-                  final message = chatProvider.messages[index];
-                  return _buildMessageBubble(message);
-                },
+              // ## Messages List ##
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: chatProvider.messages.length +
+                      (chatProvider.isSending ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    // Show thinking indicator as the last item while loading
+                    if (index >= chatProvider.messages.length) {
+                      return _buildThinkingBubble();
+                    }
+                    final message = chatProvider.messages[index];
+                    return _buildMessageBubble(message);
+                  },
+                ),
               ),
-            ),
 
-            // ## Quick Prompts and Categories ##
-            _buildQuickPromptsRow(),
+              // ## Quick Prompts and Categories ##
+              _buildQuickPromptsRow(),
 
-            // ## Input Section ##
-            _buildInputArea(chatProvider),
-          ],
+              // ## Input Section ##
+              _buildInputArea(chatProvider),
+            ],
+          ),
         );
       },
     );
   }
 
-  /// Builds the header with the AI assistant's avatar and name.
-  Widget _buildChatHeader() {
+  /// Builds the header with the AI assistant's avatar, name, and session controls.
+  Widget _buildChatHeader(ChatProvider chatProvider) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
         border: Border(
           bottom: BorderSide(color: Theme.of(context).dividerColor),
         ),
@@ -169,20 +182,40 @@ class _ChatPageState extends State<ChatPage> {
             ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Meowl Chat',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  chatProvider.currentSessionTitle ?? 'Meowl Chat',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
+                const Text(
                   'AI Assistant',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
+          ),
+          // G1: New conversation button
+          IconButton(
+            icon: const Icon(Icons.add_comment_outlined, size: 22),
+            tooltip: 'Cuộc trò chuyện mới',
+            onPressed: () {
+              chatProvider.startNewConversation();
+            },
+          ),
+          // G1: Session history drawer toggle
+          IconButton(
+            icon: const Icon(Icons.history, size: 22),
+            tooltip: 'Lịch sử trò chuyện',
+            onPressed: () {
+              _scaffoldKey.currentState?.openEndDrawer();
+              // Refresh sessions when opening
+              chatProvider.loadSessions();
+            },
           ),
         ],
       ),
@@ -273,8 +306,8 @@ class _ChatPageState extends State<ChatPage> {
           ),
           const SizedBox(width: 8),
           FloatingActionButton.small(
-            onPressed: chatProvider.isLoading ? null : _sendMessage,
-            child: chatProvider.isLoading
+            onPressed: chatProvider.isSending ? null : _sendMessage,
+            child: chatProvider.isSending
                 ? CommonLoading.small()
                 : const Icon(Icons.send),
           ),
@@ -317,14 +350,17 @@ class _ChatPageState extends State<ChatPage> {
                         : Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Text(
-                    message.content,
-                    style: TextStyle(
-                      color: isUser
-                          ? Theme.of(context).colorScheme.onPrimary
-                          : Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
+                  child: isUser
+                      ? Text(
+                          message.content,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        )
+                      : FormattedAIResponse(
+                          content: message.content,
+                          isDark: Theme.of(context).brightness == Brightness.dark,
+                        ),
                 ),
               ),
               // User Avatar
@@ -374,6 +410,240 @@ class _ChatPageState extends State<ChatPage> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: const _ThinkingDots(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════ G1: Session Drawer ══════════════════════
+
+  /// Builds the session history drawer (endDrawer)
+  Widget _buildSessionDrawer(ChatProvider chatProvider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Drawer(
+      width: MediaQuery.of(context).size.width * 0.8,
+      backgroundColor:
+          isDark ? AppTheme.darkBackgroundPrimary : AppTheme.lightBackgroundPrimary,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Drawer header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark
+                        ? AppTheme.darkBorderColor
+                        : AppTheme.lightBorderColor,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    color: AppTheme.primaryBlueDark,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Lịch sử trò chuyện',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.add_comment_outlined,
+                      size: 20,
+                      color: AppTheme.primaryBlueDark,
+                    ),
+                    tooltip: 'Cuộc trò chuyện mới',
+                    onPressed: () {
+                      Navigator.pop(context);
+                      chatProvider.startNewConversation();
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Session list
+            Expanded(
+              child: chatProvider.loadingSessions
+                  ? ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: 5,
+                      itemBuilder: (_, __) => const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: ListItemSkeleton(),
+                      ),
+                    )
+                  : chatProvider.sessions.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline,
+                                size: 40,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Chưa có cuộc trò chuyện',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          itemCount: chatProvider.sessions.length,
+                          itemBuilder: (context, index) {
+                            final session = chatProvider.sessions[index];
+                            final isActive =
+                                chatProvider.currentSessionId == session.sessionId;
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? AppTheme.primaryBlueDark.withValues(
+                                        alpha: 0.15,
+                                      )
+                                    : (isDark
+                                        ? AppTheme.darkCardBackground
+                                        : AppTheme.lightCardBackground),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isActive
+                                      ? AppTheme.primaryBlueDark
+                                      : (isDark
+                                          ? AppTheme.darkBorderColor
+                                          : AppTheme.lightBorderColor),
+                                  width: isActive ? 1.5 : 1,
+                                ),
+                              ),
+                              child: ListTile(
+                                dense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                onTap: () async {
+                                  Navigator.pop(context);
+                                  await chatProvider.loadSession(session);
+                                  if (_scrollController.hasClients) {
+                                    _scrollController.animateTo(
+                                      _scrollController.position.maxScrollExtent,
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeOut,
+                                    );
+                                  }
+                                },
+                                leading: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryBlueDark.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(
+                                    Icons.chat_outlined,
+                                    size: 16,
+                                    color: AppTheme.primaryBlueDark,
+                                  ),
+                                ),
+                                title: Text(
+                                  session.title,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isActive
+                                        ? FontWeight.bold
+                                        : FontWeight.w600,
+                                    color: isDark
+                                        ? AppTheme.darkTextPrimary
+                                        : AppTheme.lightTextPrimary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text(
+                                  '${session.messageCount} tin nhắn  •  ${_formatSessionTime(session.lastMessageAt)}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: isDark
+                                        ? AppTheme.darkTextSecondary
+                                        : AppTheme.lightTextSecondary,
+                                  ),
+                                ),
+                                trailing: IconButton(
+                                  icon: Icon(
+                                    Icons.delete_outline,
+                                    size: 18,
+                                    color: isDark
+                                        ? AppTheme.darkTextSecondary
+                                        : AppTheme.lightTextSecondary,
+                                  ),
+                                  onPressed: () => _showDeleteConfirmation(
+                                    chatProvider,
+                                    session,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Format session time using DateTimeHelper
+  String _formatSessionTime(String isoString) {
+    final dt = DateTimeHelper.tryParseIso8601(isoString);
+    if (dt == null) return '';
+    return DateTimeHelper.formatSmart(dt);
+  }
+
+  /// Show delete confirmation dialog
+  void _showDeleteConfirmation(ChatProvider chatProvider, ChatSession session) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa cuộc trò chuyện'),
+        content: Text('Bạn có chắc muốn xóa "${session.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              chatProvider.deleteSession(session.sessionId);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Xóa'),
           ),
         ],
       ),

@@ -60,4 +60,7 @@ class AiGradingProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => clearResult();
 }

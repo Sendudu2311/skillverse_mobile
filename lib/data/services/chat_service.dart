@@ -44,7 +44,7 @@ class ChatService {
     } catch (e) {
       debugPrint('Error in sendMessage: $e');
       if (e is ApiException) rethrow;
-      throw ApiException('Gửi tin nhắn thất bại: ${e.toString()}');
+      throw ApiException('Gửi tin nhắn thất bại');
     }
   }
 
@@ -74,7 +74,7 @@ class ChatService {
       return response.data!.map((json) => ChatMessage.fromJson(json as Map<String, dynamic>)).toList();
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy lịch sử trò chuyện thất bại: ${e.toString()}');
+      throw ApiException('Lấy lịch sử trò chuyện thất bại');
     }
   }
 
@@ -104,7 +104,7 @@ class ChatService {
       return response.data!.map((json) => ChatSession.fromJson(json as Map<String, dynamic>)).toList();
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy danh sách phiên thất bại: ${e.toString()}');
+      throw ApiException('Lấy danh sách phiên thất bại');
     }
   }
 
@@ -114,7 +114,7 @@ class ChatService {
       await _apiClient.dio.delete('/v1/meowl/chat/sessions/$sessionId');
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Xóa phiên thất bại: ${e.toString()}');
+      throw ApiException('Xóa phiên thất bại');
     }
   }
 
@@ -149,7 +149,7 @@ class ChatService {
       return ChatSession.fromJson(response.data!);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Đổi tên phiên thất bại: ${e.toString()}');
+      throw ApiException('Đổi tên phiên thất bại');
     }
   }
 }

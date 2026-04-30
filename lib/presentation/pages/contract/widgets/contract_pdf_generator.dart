@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:http/http.dart' as http;
-import '../../../data/models/contract_models.dart';
+import '../../../../data/models/contract_models.dart';
 
 /// Formal Vietnamese Labor-Law-Compliant PDF generator for Job Contracts.
 ///
@@ -21,8 +21,10 @@ class ContractPdfGeneratorWidget {
   static const _muted = PdfColor.fromInt(0xFF4A4A4A);
   static const _panelStrong = PdfColor.fromInt(0xFFF5F5F5);
 
-  static final _currencyFmt =
-      NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+  static final _currencyFmt = NumberFormat.currency(
+    locale: 'vi_VN',
+    symbol: 'đ',
+  );
 
   // ==================== PUBLIC API ====================
 
@@ -38,11 +40,14 @@ class ContractPdfGeneratorWidget {
 
     // Fetch signature images
     final employerSigImg = await _fetchImage(
-        contract.employerSignature?.signatureImageUrl);
+      contract.employerSignature?.signatureImageUrl,
+    );
     final candidateSigImg = await _fetchImage(
-        contract.candidateSignature?.signatureImageUrl);
+      contract.candidateSignature?.signatureImageUrl,
+    );
 
-    final contractNumber = contract.contractNumber ??
+    final contractNumber =
+        contract.contractNumber ??
         'HD-${DateTime.now().year}-${contract.id.toString().padLeft(4, '0')}';
     final contractTitle = _getContractTitle(contract.contractType);
     final contractTitleEn = _getContractTitleEn(contract.contractType);
@@ -51,10 +56,13 @@ class ContractPdfGeneratorWidget {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.only(
-            left: 40, right: 40, top: 45, bottom: 45),
+          left: 40,
+          right: 40,
+          top: 45,
+          bottom: 45,
+        ),
         header: (_) => pw.SizedBox.shrink(),
-        footer: (ctx) => _buildFooter(
-            ctx, contractTitle, contractNumber),
+        footer: (ctx) => _buildFooter(ctx, contractTitle, contractNumber),
         build: (ctx) => [
           // ===== PAGE 1: Header =====
           _buildQuocHieu(),
@@ -78,8 +86,7 @@ class ContractPdfGeneratorWidget {
 
           // ===== SIGNATURE =====
           pw.SizedBox(height: 24),
-          _buildSignatureSection(
-              contract, employerSigImg, candidateSigImg),
+          _buildSignatureSection(contract, employerSigImg, candidateSigImg),
         ],
       ),
     );
@@ -97,9 +104,10 @@ class ContractPdfGeneratorWidget {
           pw.Text(
             'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM',
             style: pw.TextStyle(
-                fontSize: 14,
-                fontWeight: pw.FontWeight.bold,
-                letterSpacing: 0.5),
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
             textAlign: pw.TextAlign.center,
           ),
           pw.SizedBox(height: 3),
@@ -122,12 +130,18 @@ class ContractPdfGeneratorWidget {
           pw.Text(
             'Số: $contractNumber',
             style: pw.TextStyle(
-                fontSize: 11, fontStyle: pw.FontStyle.italic, color: _ink),
+              fontSize: 11,
+              fontStyle: pw.FontStyle.italic,
+              color: _ink,
+            ),
           ),
           pw.Text(
             'Ngày ký: ${_fmtDate(DateTime.now().toIso8601String())}',
             style: pw.TextStyle(
-                fontSize: 11, fontStyle: pw.FontStyle.italic, color: _ink),
+              fontSize: 11,
+              fontStyle: pw.FontStyle.italic,
+              color: _ink,
+            ),
           ),
         ],
       ),
@@ -143,16 +157,20 @@ class ContractPdfGeneratorWidget {
           pw.Text(
             title,
             style: pw.TextStyle(
-                fontSize: 20,
-                fontWeight: pw.FontWeight.bold,
-                letterSpacing: 1.5),
+              fontSize: 20,
+              fontWeight: pw.FontWeight.bold,
+              letterSpacing: 1.5,
+            ),
             textAlign: pw.TextAlign.center,
           ),
           pw.SizedBox(height: 4),
           pw.Text(
             titleEn,
             style: pw.TextStyle(
-                fontSize: 12, fontStyle: pw.FontStyle.italic, color: _muted),
+              fontSize: 12,
+              fontStyle: pw.FontStyle.italic,
+              color: _muted,
+            ),
             textAlign: pw.TextAlign.center,
           ),
         ],
@@ -161,7 +179,10 @@ class ContractPdfGeneratorWidget {
   }
 
   static pw.Widget _buildFooter(
-      pw.Context ctx, String title, String contractNumber) {
+    pw.Context ctx,
+    String title,
+    String contractNumber,
+  ) {
     return pw.Container(
       padding: const pw.EdgeInsets.only(top: 8),
       decoration: const pw.BoxDecoration(
@@ -171,22 +192,28 @@ class ContractPdfGeneratorWidget {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Expanded(
-            child: pw.Text(title,
-                style: const pw.TextStyle(fontSize: 9, color: _ink)),
-          ),
-          pw.Expanded(
-            child: pw.Text('Số: $contractNumber',
-                style: pw.TextStyle(
-                    fontSize: 9,
-                    fontStyle: pw.FontStyle.italic,
-                    color: _ink),
-                textAlign: pw.TextAlign.center),
+            child: pw.Text(
+              title,
+              style: const pw.TextStyle(fontSize: 9, color: _ink),
+            ),
           ),
           pw.Expanded(
             child: pw.Text(
-                'Trang ${ctx.pageNumber}/${ctx.pagesCount}',
-                style: const pw.TextStyle(fontSize: 9, color: _ink),
-                textAlign: pw.TextAlign.right),
+              'Số: $contractNumber',
+              style: pw.TextStyle(
+                fontSize: 9,
+                fontStyle: pw.FontStyle.italic,
+                color: _ink,
+              ),
+              textAlign: pw.TextAlign.center,
+            ),
+          ),
+          pw.Expanded(
+            child: pw.Text(
+              'Trang ${ctx.pageNumber}/${ctx.pagesCount}',
+              style: const pw.TextStyle(fontSize: 9, color: _ink),
+              textAlign: pw.TextAlign.right,
+            ),
           ),
         ],
       ),
@@ -200,7 +227,8 @@ class ContractPdfGeneratorWidget {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         _clauseText(
-            'Căn cứ Bộ luật Lao động nước Cộng hòa xã hội chủ nghĩa Việt Nam năm 2019;'),
+          'Căn cứ Bộ luật Lao động nước Cộng hòa xã hội chủ nghĩa Việt Nam năm 2019;',
+        ),
         _clauseText('Căn cứ nhu cầu và năng lực của hai bên,'),
         pw.SizedBox(height: 4),
         pw.RichText(
@@ -290,15 +318,21 @@ class ContractPdfGeneratorWidget {
     final location = _norm(c.workingLocation);
     final startDate = c.startDate != null ? _fmtDate(c.startDate!) : '—';
     final endDate = c.endDate != null ? _fmtDate(c.endDate!) : '—';
-    final probMonths =
-        c.probationMonths != null ? '${c.probationMonths} tháng' : '—';
+    final probMonths = c.probationMonths != null
+        ? '${c.probationMonths} tháng'
+        : '—';
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text('Điều khoản chung',
-            style: pw.TextStyle(
-                fontSize: 12, fontWeight: pw.FontWeight.bold, color: _ink)),
+        pw.Text(
+          'Điều khoản chung',
+          style: pw.TextStyle(
+            fontSize: 12,
+            fontWeight: pw.FontWeight.bold,
+            color: _ink,
+          ),
+        ),
         pw.SizedBox(height: 6),
         _overviewRow('Công việc', position),
         _overviewRow('Địa điểm làm việc', location),
@@ -324,21 +358,32 @@ class ContractPdfGeneratorWidget {
       ),
       child: pw.Column(
         children: [
-          pw.Text('Mức lương hàng tháng',
-              style: pw.TextStyle(
-                  fontSize: 12, fontWeight: pw.FontWeight.bold, color: _ink)),
+          pw.Text(
+            'Mức lương hàng tháng',
+            style: pw.TextStyle(
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+              color: _ink,
+            ),
+          ),
           pw.SizedBox(height: 8),
           pw.Text(
             _currencyFmt.format(sal),
             style: pw.TextStyle(
-                fontSize: 18, fontWeight: pw.FontWeight.bold, color: _ink),
+              fontSize: 18,
+              fontWeight: pw.FontWeight.bold,
+              color: _ink,
+            ),
           ),
           if (salText != null && salText.trim().isNotEmpty) ...[
             pw.SizedBox(height: 4),
             pw.Text(
               'Bằng chữ: $salText',
               style: pw.TextStyle(
-                  fontSize: 11, fontStyle: pw.FontStyle.italic, color: _ink),
+                fontSize: 11,
+                fontStyle: pw.FontStyle.italic,
+                color: _ink,
+              ),
             ),
           ],
         ],
@@ -373,8 +418,10 @@ class ContractPdfGeneratorWidget {
     return [
       _clauseTitle('Điều 1: Nội dung công việc'),
       _clauseText(
-          'Bên B được giao thực hiện công việc với vị trí $position tại $location, thời gian thử việc tính từ ngày $startDate.'),
-      if (c.jobDescription != null) _clauseBlock('Mô tả công việc', c.jobDescription!),
+        'Bên B được giao thực hiện công việc với vị trí $position tại $location, thời gian thử việc tính từ ngày $startDate.',
+      ),
+      if (c.jobDescription != null)
+        _clauseBlock('Mô tả công việc', c.jobDescription!),
       if (c.probationObjectives != null)
         _clauseBlock('Mục tiêu thử việc', c.probationObjectives!),
       if (c.probationEvaluationCriteria != null)
@@ -382,37 +429,45 @@ class ContractPdfGeneratorWidget {
 
       _clauseTitle('Điều 2: Thời hạn hợp đồng thử việc'),
       _clauseText(
-          'Thời gian thử việc: $probMonths tháng, tối đa không quá 60 ngày (BLL 2019 Điều 27).'),
+        'Thời gian thử việc: $probMonths tháng, tối đa không quá 60 ngày (BLL 2019 Điều 27).',
+      ),
       _clauseText('Ngày bắt đầu: $startDate - Ngày kết thúc: $endDate.'),
       _clauseText(
-          'Mỗi bên có quyền chấm dứt trước thời hạn với thời hạn báo trước là $termDays ngày làm việc.'),
+        'Mỗi bên có quyền chấm dứt trước thời hạn với thời hạn báo trước là $termDays ngày làm việc.',
+      ),
 
       _clauseTitle('Điều 3: Tiền lương và thanh toán'),
       _clauseText(
-          'Mức lương thử việc: ${_currencyFmt.format(c.probationSalary ?? c.salary ?? 0)} / tháng.'),
+        'Mức lương thử việc: ${_currencyFmt.format(c.probationSalary ?? c.salary ?? 0)} / tháng.',
+      ),
+      _clauseText('Hình thức trả lương: ${_paymentLabel(c.paymentMethod)}.'),
       _clauseText(
-          'Hình thức trả lương: ${_paymentLabel(c.paymentMethod)}.'),
-      _clauseText(
-          'Ngày trả lương: Ngày ${c.salaryPaymentDate ?? 10} hàng tháng.'),
+        'Ngày trả lương: Ngày ${c.salaryPaymentDate ?? 10} hàng tháng.',
+      ),
 
       _clauseTitle('Điều 4: Phụ cấp & Lợi ích trong thử việc'),
       _clauseText(
-          'Lưu ý: Trong thời gian thử việc, Bên B không phải tham gia BHXH, BHTN theo quy định pháp luật hiện hành.'),
+        'Lưu ý: Trong thời gian thử việc, Bên B không phải tham gia BHXH, BHTN theo quy định pháp luật hiện hành.',
+      ),
       _clauseText(
-          'Bên B được hưởng chế độ nghỉ phép năm: ${c.annualLeaveDays ?? 0} ngày.'),
+        'Bên B được hưởng chế độ nghỉ phép năm: ${c.annualLeaveDays ?? 0} ngày.',
+      ),
 
       _clauseTitle('Điều 5: Chấm dứt hợp đồng thử việc'),
       _clauseText(
-          'Quyền của Bên A: Đơn phương chấm dứt nếu Bên B không đáp ứng yêu cầu công việc, với thời hạn báo trước $termDays ngày làm việc.'),
+        'Quyền của Bên A: Đơn phương chấm dứt nếu Bên B không đáp ứng yêu cầu công việc, với thời hạn báo trước $termDays ngày làm việc.',
+      ),
       _clauseText(
-          'Quyền của Bên B: Đơn phương chấm dứt với thời hạn báo trước $termDays ngày làm việc.'),
+        'Quyền của Bên B: Đơn phương chấm dứt với thời hạn báo trước $termDays ngày làm việc.',
+      ),
 
       _clauseTitle('Điều 6: Điều khoản bổ sung'),
       if (c.legalText != null)
         _clauseText(c.legalText!)
       else
         _clauseText(
-            'Các điều khoản bổ sung (nếu có) sẽ được ghi nhận tại Phụ lục hợp đồng đính kèm.'),
+          'Các điều khoản bổ sung (nếu có) sẽ được ghi nhận tại Phụ lục hợp đồng đính kèm.',
+        ),
     ];
   }
 
@@ -428,8 +483,7 @@ class ContractPdfGeneratorWidget {
     final whWeek = c.workingHoursPerWeek ?? 40;
     final annualLeave = c.annualLeaveDays ?? 12;
     final termDays = c.terminationNoticeDays ?? 30;
-    final insurance =
-        c.insurancePolicy ?? 'Theo quy định pháp luật hiện hành.';
+    final insurance = c.insurancePolicy ?? 'Theo quy định pháp luật hiện hành.';
 
     return [
       _clauseTitle('Điều 1. Nghĩa vụ của Người Lao động (Bên B)'),
@@ -477,25 +531,33 @@ class ContractPdfGeneratorWidget {
         _clauseBlock('Các phúc lợi khác', c.otherBenefits!),
       if (c.trainingPolicy == null && c.otherBenefits == null)
         _clauseText(
-            'Các chế độ đào tạo, phúc lợi (nếu có) được thực hiện theo quy chế của Bên A.'),
+          'Các chế độ đào tạo, phúc lợi (nếu có) được thực hiện theo quy chế của Bên A.',
+        ),
 
       _clauseTitle('Điều 6. Bảo mật thông tin và sở hữu trí tuệ'),
-      _clauseText(c.confidentialityClause ??
-          'Bên B cam kết bảo mật mọi thông tin liên quan đến hoạt động kinh doanh, kỹ thuật, tài chính và khách hàng của Bên A. Nghĩa vụ bảo mật có hiệu lực trong thời gian làm việc và vô thời hạn sau khi chấm dứt hợp đồng lao động.'),
-      _clauseText(c.ipClause ??
-          'Các sáng chế, sáng kiến, thiết kế, bản quyền do Bên B tạo ra trong quá trình thực hiện công việc thuộc quyền sở hữu của Bên A.'),
+      _clauseText(
+        c.confidentialityClause ??
+            'Bên B cam kết bảo mật mọi thông tin liên quan đến hoạt động kinh doanh, kỹ thuật, tài chính và khách hàng của Bên A. Nghĩa vụ bảo mật có hiệu lực trong thời gian làm việc và vô thời hạn sau khi chấm dứt hợp đồng lao động.',
+      ),
+      _clauseText(
+        c.ipClause ??
+            'Các sáng chế, sáng kiến, thiết kế, bản quyền do Bên B tạo ra trong quá trình thực hiện công việc thuộc quyền sở hữu của Bên A.',
+      ),
 
       _clauseTitle('Điều 7. Trách nhiệm cạnh tranh'),
       if (c.nonCompeteClause != null)
         _clauseText(
-            'Có điều khoản cạnh tranh.${c.nonCompeteDurationMonths != null ? ' Thời gian: ${c.nonCompeteDurationMonths} tháng.' : ''}')
+          'Có điều khoản cạnh tranh.${c.nonCompeteDurationMonths != null ? ' Thời gian: ${c.nonCompeteDurationMonths} tháng.' : ''}',
+        )
       else
         _clauseText(
-            'Trong thời gian làm việc và sau khi nghỉ việc, Bên B không được làm việc cho các tổ chức cạnh tranh trực tiếp với Bên A khi chưa được sự đồng ý bằng văn bản.'),
+          'Trong thời gian làm việc và sau khi nghỉ việc, Bên B không được làm việc cho các tổ chức cạnh tranh trực tiếp với Bên A khi chưa được sự đồng ý bằng văn bản.',
+        ),
 
       _clauseTitle('Điều 8. Chấm dứt hợp đồng lao động'),
       _clauseText(
-          'Thời hạn báo trước khi đơn phương chấm dứt hợp đồng: ít nhất $termDays ngày (theo Điều 35, Điều 36 BLL 2019).'),
+        'Thời hạn báo trước khi đơn phương chấm dứt hợp đồng: ít nhất $termDays ngày (theo Điều 35, Điều 36 BLL 2019).',
+      ),
       if (c.terminationClause != null) _clauseText(c.terminationClause!),
       _bulletList([
         'Hai bên thỏa thuận chấm dứt hợp đồng lao động.',
@@ -506,14 +568,16 @@ class ContractPdfGeneratorWidget {
 
       _clauseTitle('Điều 9. Giải quyết tranh chấp lao động'),
       _clauseText(
-          'Tranh chấp phát sinh từ hợp đồng này được giải quyết thông qua thương lượng, hòa giải giữa hai bên trên tinh thần thiện chí và hợp tác. Trường hợp không thể thương lượng, các bên có quyền yêu cầu giải quyết tại Tòa án nhân dân có thẩm quyền theo quy định pháp luật.'),
+        'Tranh chấp phát sinh từ hợp đồng này được giải quyết thông qua thương lượng, hòa giải giữa hai bên trên tinh thần thiện chí và hợp tác. Trường hợp không thể thương lượng, các bên có quyền yêu cầu giải quyết tại Tòa án nhân dân có thẩm quyền theo quy định pháp luật.',
+      ),
 
       _clauseTitle('Điều 10. Điều khoản bổ sung'),
       if (c.legalText != null)
         _clauseText(c.legalText!)
       else
         _clauseText(
-            'Các điều khoản bổ sung (nếu có) sẽ được ghi nhận tại Phụ lục hợp đồng đính kèm, có giá trị pháp lý như hợp đồng này.'),
+          'Các điều khoản bổ sung (nếu có) sẽ được ghi nhận tại Phụ lục hợp đồng đính kèm, có giá trị pháp lý như hợp đồng này.',
+        ),
     ];
   }
 
@@ -534,14 +598,14 @@ class ContractPdfGeneratorWidget {
 
     return [
       _clauseTitle('Điều 1. Nội dung và thời hạn công việc'),
-      _clauseText(
-          'Bên B được giao thực hiện công việc với vị trí: $position.'),
+      _clauseText('Bên B được giao thực hiện công việc với vị trí: $position.'),
       _clauseText('Thời gian: Từ ngày $startDate đến ngày $endDate.'),
       if (c.jobDescription != null) _clauseText(c.jobDescription!),
 
       _clauseTitle('Điều 2. Thời giờ làm việc'),
       _clauseText(
-          'Bên B làm việc không quá $whWeek giờ/tuần và không quá $whDay giờ/ngày (theo Điều 143 BLL 2019).'),
+        'Bên B làm việc không quá $whWeek giờ/tuần và không quá $whDay giờ/ngày (theo Điều 143 BLL 2019).',
+      ),
       if (c.workingSchedule != null)
         _clauseText('Ca làm việc: ${c.workingSchedule}.'),
 
@@ -554,18 +618,23 @@ class ContractPdfGeneratorWidget {
 
       _clauseTitle('Điều 4. Quyền và nghĩa vụ'),
       _clauseText(
-          'Bên B được hưởng các quyền và thực hiện nghĩa vụ tương tự lao động toàn thời gian, phù hợp với tính chất công việc bán thời gian, theo quy định tại Chương XI BLL 2019.'),
+        'Bên B được hưởng các quyền và thực hiện nghĩa vụ tương tự lao động toàn thời gian, phù hợp với tính chất công việc bán thời gian, theo quy định tại Chương XI BLL 2019.',
+      ),
       if (c.annualLeaveDays != null)
         _clauseText(
-            'Nghỉ phép năm: ${c.annualLeaveDays} ngày/năm (tính theo tỷ lệ thời gian).'),
+          'Nghỉ phép năm: ${c.annualLeaveDays} ngày/năm (tính theo tỷ lệ thời gian).',
+        ),
 
       _clauseTitle('Điều 5. Bảo mật thông tin và sở hữu trí tuệ'),
-      _clauseText(c.confidentialityClause ??
-          'Bên B cam kết bảo mật mọi thông tin liên quan đến hoạt động kinh doanh, kỹ thuật, tài chính và khách hàng của Bên A.'),
+      _clauseText(
+        c.confidentialityClause ??
+            'Bên B cam kết bảo mật mọi thông tin liên quan đến hoạt động kinh doanh, kỹ thuật, tài chính và khách hàng của Bên A.',
+      ),
 
       _clauseTitle('Điều 6. Chấm dứt hợp đồng lao động'),
       _clauseText(
-          'Thời hạn báo trước khi đơn phương chấm dứt hợp đồng: ít nhất $termDays ngày (theo Điều 35, Điều 36 BLL 2019).'),
+        'Thời hạn báo trước khi đơn phương chấm dứt hợp đồng: ít nhất $termDays ngày (theo Điều 35, Điều 36 BLL 2019).',
+      ),
       if (c.terminationClause != null) _clauseText(c.terminationClause!),
 
       _clauseTitle('Điều 7. Điều khoản bổ sung'),
@@ -573,7 +642,8 @@ class ContractPdfGeneratorWidget {
         _clauseText(c.legalText!)
       else
         _clauseText(
-            'Các điều khoản bổ sung (nếu có) sẽ được ghi nhận tại Phụ lục hợp đồng đính kèm.'),
+          'Các điều khoản bổ sung (nếu có) sẽ được ghi nhận tại Phụ lục hợp đồng đính kèm.',
+        ),
     ];
   }
 
@@ -585,16 +655,13 @@ class ContractPdfGeneratorWidget {
     pw.MemoryImage? candidateSig,
   ) {
     return pw.Container(
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: _ink),
-      ),
+      decoration: pw.BoxDecoration(border: pw.Border.all(color: _ink)),
       padding: const pw.EdgeInsets.all(16),
       child: pw.Column(
         children: [
           pw.Text(
             'XÁC NHẬN VÀ CHỮ KÝ CÁC BÊN',
-            style: pw.TextStyle(
-                fontSize: 14, fontWeight: pw.FontWeight.bold),
+            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
             textAlign: pw.TextAlign.center,
           ),
           pw.SizedBox(height: 8),
@@ -622,7 +689,10 @@ class ContractPdfGeneratorWidget {
               pw.Expanded(
                 child: _signatureColumn(
                   title: 'NGƯỜI LAO ĐỘNG (BÊN B)',
-                  subtitle: _norm(c.candidatePosition, fallback: 'Người lao động'),
+                  subtitle: _norm(
+                    c.candidatePosition,
+                    fallback: 'Người lao động',
+                  ),
                   sigImage: candidateSig,
                   name: _norm(c.candidateName),
                   signedAt: c.candidateSignature?.signedAt,
@@ -634,9 +704,10 @@ class ContractPdfGeneratorWidget {
           pw.Text(
             'Hợp đồng được lập thành 02 bản có giá trị pháp lý như nhau, mỗi bên giữ 01 bản để thực hiện.',
             style: pw.TextStyle(
-                fontSize: 10,
-                fontStyle: pw.FontStyle.italic,
-                color: _muted),
+              fontSize: 10,
+              fontStyle: pw.FontStyle.italic,
+              color: _muted,
+            ),
             textAlign: pw.TextAlign.center,
           ),
         ],
@@ -654,17 +725,21 @@ class ContractPdfGeneratorWidget {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
-        pw.Text(title,
-            style: pw.TextStyle(
-                fontSize: 12, fontWeight: pw.FontWeight.bold),
-            textAlign: pw.TextAlign.center),
+        pw.Text(
+          title,
+          style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          textAlign: pw.TextAlign.center,
+        ),
         pw.SizedBox(height: 3),
-        pw.Text(subtitle,
-            style: pw.TextStyle(
-                fontSize: 10,
-                fontStyle: pw.FontStyle.italic,
-                color: _muted),
-            textAlign: pw.TextAlign.center),
+        pw.Text(
+          subtitle,
+          style: pw.TextStyle(
+            fontSize: 10,
+            fontStyle: pw.FontStyle.italic,
+            color: _muted,
+          ),
+          textAlign: pw.TextAlign.center,
+        ),
         pw.SizedBox(height: 12),
         if (sigImage != null)
           pw.Container(
@@ -680,23 +755,28 @@ class ContractPdfGeneratorWidget {
               width: 120,
               decoration: const pw.BoxDecoration(
                 border: pw.Border(
-                    top: pw.BorderSide(
-                        color: _ink,
-                        width: 0.5,
-                        style: pw.BorderStyle.dashed)),
+                  top: pw.BorderSide(
+                    color: _ink,
+                    width: 0.5,
+                    style: pw.BorderStyle.dashed,
+                  ),
+                ),
               ),
             ),
           ),
         pw.SizedBox(height: 8),
-        pw.Text(name,
-            style: pw.TextStyle(
-                fontSize: 12, fontWeight: pw.FontWeight.bold),
-            textAlign: pw.TextAlign.center),
+        pw.Text(
+          name,
+          style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          textAlign: pw.TextAlign.center,
+        ),
         if (signedAt != null) ...[
           pw.SizedBox(height: 3),
-          pw.Text('Ngày ký: ${_fmtDate(signedAt)}',
-              style: pw.TextStyle(fontSize: 10, color: _muted),
-              textAlign: pw.TextAlign.center),
+          pw.Text(
+            'Ngày ký: ${_fmtDate(signedAt)}',
+            style: pw.TextStyle(fontSize: 10, color: _muted),
+            textAlign: pw.TextAlign.center,
+          ),
         ],
       ],
     );
@@ -710,7 +790,10 @@ class ContractPdfGeneratorWidget {
       child: pw.Text(
         text,
         style: pw.TextStyle(
-            fontSize: 13, fontWeight: pw.FontWeight.bold, color: _ink),
+          fontSize: 13,
+          fontWeight: pw.FontWeight.bold,
+          color: _ink,
+        ),
       ),
     );
   }
@@ -732,15 +815,20 @@ class ContractPdfGeneratorWidget {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(label,
-              style: pw.TextStyle(
-                  fontSize: 12,
-                  fontWeight: pw.FontWeight.bold,
-                  color: _ink)),
+          pw.Text(
+            label,
+            style: pw.TextStyle(
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+              color: _ink,
+            ),
+          ),
           pw.SizedBox(height: 2),
-          pw.Text(content,
-              style: const pw.TextStyle(fontSize: 12, color: _ink),
-              textAlign: pw.TextAlign.justify),
+          pw.Text(
+            content,
+            style: const pw.TextStyle(fontSize: 12, color: _ink),
+            textAlign: pw.TextAlign.justify,
+          ),
         ],
       ),
     );
@@ -752,23 +840,27 @@ class ContractPdfGeneratorWidget {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: items
-            .map((item) => pw.Padding(
-                  padding: const pw.EdgeInsets.only(bottom: 4),
-                  child: pw.Row(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('•  ',
-                          style: const pw.TextStyle(
-                              fontSize: 12, color: _ink)),
-                      pw.Expanded(
-                        child: pw.Text(item,
-                            style: const pw.TextStyle(
-                                fontSize: 12, color: _ink),
-                            textAlign: pw.TextAlign.justify),
+            .map(
+              (item) => pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 4),
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      '•  ',
+                      style: const pw.TextStyle(fontSize: 12, color: _ink),
+                    ),
+                    pw.Expanded(
+                      child: pw.Text(
+                        item,
+                        style: const pw.TextStyle(fontSize: 12, color: _ink),
+                        textAlign: pw.TextAlign.justify,
                       ),
-                    ],
-                  ),
-                ))
+                    ),
+                  ],
+                ),
+              ),
+            )
             .toList(),
       ),
     );
@@ -781,7 +873,10 @@ class ContractPdfGeneratorWidget {
       child: pw.Text(
         text,
         style: pw.TextStyle(
-            fontSize: 12, fontWeight: pw.FontWeight.bold, color: _ink),
+          fontSize: 12,
+          fontWeight: pw.FontWeight.bold,
+          color: _ink,
+        ),
         textAlign: pw.TextAlign.center,
       ),
     );
@@ -793,14 +888,19 @@ class ContractPdfGeneratorWidget {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text('$label: ',
-              style: pw.TextStyle(
-                  fontSize: 11,
-                  fontWeight: pw.FontWeight.bold,
-                  color: _ink)),
+          pw.Text(
+            '$label: ',
+            style: pw.TextStyle(
+              fontSize: 11,
+              fontWeight: pw.FontWeight.bold,
+              color: _ink,
+            ),
+          ),
           pw.Expanded(
-            child: pw.Text(value,
-                style: const pw.TextStyle(fontSize: 11, color: _ink)),
+            child: pw.Text(
+              value,
+              style: const pw.TextStyle(fontSize: 11, color: _ink),
+            ),
           ),
         ],
       ),
@@ -812,13 +912,18 @@ class ContractPdfGeneratorWidget {
       padding: const pw.EdgeInsets.only(bottom: 2),
       child: pw.Row(
         children: [
-          pw.Text('$label: ',
-              style: const pw.TextStyle(fontSize: 12, color: _ink)),
-          pw.Text(value,
-              style: pw.TextStyle(
-                  fontSize: 12,
-                  fontWeight: pw.FontWeight.bold,
-                  color: _ink)),
+          pw.Text(
+            '$label: ',
+            style: const pw.TextStyle(fontSize: 12, color: _ink),
+          ),
+          pw.Text(
+            value,
+            style: pw.TextStyle(
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+              color: _ink,
+            ),
+          ),
         ],
       ),
     );

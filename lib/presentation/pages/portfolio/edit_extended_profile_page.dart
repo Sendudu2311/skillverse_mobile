@@ -206,76 +206,80 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
 
     return Scaffold(
       appBar: SkillVerseAppBar(title: '', onBack: () => Navigator.pop(context)),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Stack(
-          children: [
-            // Galaxy Background
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: isDark
-                      ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
-                      : [Colors.grey.shade50, Colors.white],
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Stack(
+            children: [
+              // Galaxy Background
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDark
+                        ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
+                        : [Colors.grey.shade50, Colors.white],
+                  ),
                 ),
               ),
-            ),
-
-            // Content
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    SectionHeader.gradient(
-                      icon: Icons.person,
-                      title: widget.isCreate
-                          ? 'Tạo Extended Profile'
-                          : 'Chỉnh sửa Profile',
-                      gradientColors: const [
-                        AppTheme.themePurpleStart,
-                        AppTheme.themePurpleEnd,
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Basic Info Section
-                    _buildBasicInfoSection(),
-                    const SizedBox(height: 24),
-
-                    // Social Links Section
-                    _buildSocialLinksSection(),
-                    const SizedBox(height: 24),
-
-                    // Expertise Section
-                    _buildExpertiseSection(),
-                    const SizedBox(height: 24),
-
-                    // Experience & Education Section
-                    _buildExperienceAndEducationSection(),
-                    const SizedBox(height: 24),
-
-                    // Privacy Section
-                    _buildPrivacySection(),
-                    const SizedBox(height: 32),
-
-                    // Save Button
-                    _buildSaveButton(),
-                    const SizedBox(height: 24),
-                  ],
+  
+              // Content
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      SectionHeader.gradient(
+                        icon: Icons.person,
+                        title: widget.isCreate
+                            ? 'Tạo Extended Profile'
+                            : 'Chỉnh sửa Profile',
+                        gradientColors: const [
+                          AppTheme.themePurpleStart,
+                          AppTheme.themePurpleEnd,
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+  
+                      // Basic Info Section
+                      _buildBasicInfoSection(),
+                      const SizedBox(height: 24),
+  
+                      // Social Links Section
+                      _buildSocialLinksSection(),
+                      const SizedBox(height: 24),
+  
+                      // Expertise Section
+                      _buildExpertiseSection(),
+                      const SizedBox(height: 24),
+  
+                      // Experience & Education Section
+                      _buildExperienceAndEducationSection(),
+                      const SizedBox(height: 24),
+  
+                      // Privacy Section
+                      _buildPrivacySection(),
+                      const SizedBox(height: 32),
+  
+                      // Save Button
+                      _buildSaveButton(),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
-            ),
-
-            // Loading Overlay
-            if (_isLoading)
-              Container(color: Colors.black54, child: CommonLoading.center()),
-          ],
+  
+              // Loading Overlay
+              if (_isLoading)
+                Container(color: Colors.black54, child: CommonLoading.center()),
+            ],
+          ),
         ),
       ),
     );

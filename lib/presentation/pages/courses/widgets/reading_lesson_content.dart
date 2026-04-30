@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../data/models/lesson_models.dart';
-import '../../core/utils/error_handler.dart';
+import '../../../../data/models/lesson_models.dart';
+import '../../../../core/utils/error_handler.dart';
 
 class ReadingLessonContent extends StatelessWidget {
   final String? content;

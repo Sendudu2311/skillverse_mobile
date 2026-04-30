@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/post_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/post_card.dart';
+import 'widgets/post_card.dart';
 import '../../widgets/skeleton_loaders.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
@@ -74,7 +74,13 @@ class _CommunityPageState extends State<CommunityPage> {
 
           // Filter chips
           SelectableChipRow(
-            labels: const ['Tất cả', 'Thảo luận', 'Mẹo hay', 'Tin tức', 'Đã lưu'],
+            labels: const [
+              'Tất cả',
+              'Thảo luận',
+              'Mẹo hay',
+              'Tin tức',
+              'Đã lưu',
+            ],
             icons: const [
               Icons.dashboard_outlined,
               Icons.forum_outlined,
@@ -82,8 +88,13 @@ class _CommunityPageState extends State<CommunityPage> {
               Icons.newspaper_outlined,
               Icons.bookmark_outline,
             ],
-            selectedIndex: const ['all', 'discussion', 'tips', 'news', 'saved']
-                .indexOf(_selectedFilter),
+            selectedIndex: const [
+              'all',
+              'discussion',
+              'tips',
+              'news',
+              'saved',
+            ].indexOf(_selectedFilter),
             onSelected: (i) {
               const keys = ['all', 'discussion', 'tips', 'news', 'saved'];
               final value = keys[i];
@@ -201,7 +212,9 @@ class _CommunityPageState extends State<CommunityPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Xóa bài viết'),
-        content: const Text('Bạn có chắc chắn muốn xóa bài viết này không? Hành động này không thể hoàn tác.'),
+        content: const Text(
+          'Bạn có chắc chắn muốn xóa bài viết này không? Hành động này không thể hoàn tác.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),

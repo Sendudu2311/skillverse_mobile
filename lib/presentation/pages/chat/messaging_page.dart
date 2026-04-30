@@ -56,44 +56,48 @@ class _MessagingPageState extends State<MessagingPage> {
           ),
         ],
       ),
-      body: Consumer<MessagingProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading && provider.conversations.isEmpty) {
-            return CommonLoading.center();
-          }
-          if (provider.hasError && provider.conversations.isEmpty) {
-            return ErrorStateWidget(
-              message:
-                  provider.errorMessage ?? 'Không thể tải danh sách tin nhắn',
-              onRetry: () => provider.loadConversations(),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<MessagingProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoading && provider.conversations.isEmpty) {
+              return CommonLoading.center();
+            }
+            if (provider.hasError && provider.conversations.isEmpty) {
+              return ErrorStateWidget(
+                message:
+                    provider.errorMessage ?? 'Không thể tải danh sách tin nhắn',
+                onRetry: () => provider.loadConversations(),
+              );
+            }
+            if (provider.conversations.isEmpty) {
+              return const EmptyStateWidget(
+                icon: Icons.chat_bubble_outline,
+                title: 'Chưa có cuộc trò chuyện',
+                subtitle:
+                    'Bắt đầu trò chuyện với người khác từ trang Community hoặc Mentor',
+              );
+            }
+            return RefreshIndicator(
+              onRefresh: () => provider.refreshConversations(),
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: provider.conversations.length,
+                itemBuilder: (context, index) {
+                  final conversation = provider.conversations[index];
+                  return AnimatedListItem(
+                    index: index,
+                    child: _ConversationTile(
+                      conversation: conversation,
+                      onTap: () => _openChat(conversation),
+                    ),
+                  );
+                },
+              ),
             );
-          }
-          if (provider.conversations.isEmpty) {
-            return const EmptyStateWidget(
-              icon: Icons.chat_bubble_outline,
-              title: 'Chưa có cuộc trò chuyện',
-              subtitle:
-                  'Bắt đầu trò chuyện với người khác từ trang Community hoặc Mentor',
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: () => provider.refreshConversations(),
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: provider.conversations.length,
-              itemBuilder: (context, index) {
-                final conversation = provider.conversations[index];
-                return AnimatedListItem(
-                  index: index,
-                  child: _ConversationTile(
-                    conversation: conversation,
-                    onTap: () => _openChat(conversation),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -293,56 +297,60 @@ class _MessagingChatPageState extends State<MessagingChatPage> {
           ),
         ],
       ),
-      body: Consumer<MessagingProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading && provider.messages.isEmpty) {
-            return CommonLoading.center();
-          }
-
-          return Column(
-            children: [
-              // Messages list
-              Expanded(
-                child: provider.messages.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Chưa có tin nhắn nào.\nHãy gửi tin nhắn đầu tiên!',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.5),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<MessagingProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoading && provider.messages.isEmpty) {
+              return CommonLoading.center();
+            }
+  
+            return Column(
+              children: [
+                // Messages list
+                Expanded(
+                  child: provider.messages.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Chưa có tin nhắn nào.\nHãy gửi tin nhắn đầu tiên!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
                           ),
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: provider.messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = provider.messages[index];
+                            final isMe =
+                                msg.senderId ==
+                                context.read<AuthProvider>().user?.id;
+                            return _MessageBubble(
+                              message: msg,
+                              isMe: isMe,
+                              counterpartName:
+                                  widget.conversation?.counterpartName ?? 'User',
+                            );
+                          },
                         ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: provider.messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = provider.messages[index];
-                          final isMe =
-                              msg.senderId ==
-                              context.read<AuthProvider>().user?.id;
-                          return _MessageBubble(
-                            message: msg,
-                            isMe: isMe,
-                            counterpartName:
-                                widget.conversation?.counterpartName ?? 'User',
-                          );
-                        },
+                ),
+  
+                // Input area — locked when session is explicitly closed
+                (widget.conversation?.chatEnabled ?? true)
+                    ? _buildInputArea(provider)
+                    : _buildDisabledBanner(
+                        'Buổi trao đổi này đã kết thúc hoặc bị hủy.',
                       ),
-              ),
-
-              // Input area — locked when session is explicitly closed
-              (widget.conversation?.chatEnabled ?? true)
-                  ? _buildInputArea(provider)
-                  : _buildDisabledBanner(
-                      'Buổi trao đổi này đã kết thúc hoặc bị hủy.',
-                    ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

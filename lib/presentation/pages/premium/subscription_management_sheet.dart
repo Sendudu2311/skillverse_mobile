@@ -89,201 +89,208 @@ class _SubscriptionManagementSheetState
                 : AppTheme.lightCardBackground,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppTheme.darkBorderColor
-                          : AppTheme.lightBorderColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Title
-                Row(
-                  children: [
-                    Icon(
-                      Icons.manage_accounts,
-                      color: AppTheme.accentGold,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Quản lý Subscription',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
                         color: isDark
-                            ? AppTheme.darkTextPrimary
-                            : AppTheme.lightTextPrimary,
+                            ? AppTheme.darkBorderColor
+                            : AppTheme.lightBorderColor,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Subscription details
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppTheme.darkBackgroundSecondary
-                        : AppTheme.lightBackgroundSecondary,
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Column(
+                  const SizedBox(height: 20),
+
+                  // Title
+                  Row(
                     children: [
-                      _detailRow('Gói:', sub.plan.displayName, isDark),
-                      _detailRow(
-                        'Bắt đầu:',
-                        _formatDate(sub.startDate),
-                        isDark,
+                      Icon(
+                        Icons.manage_accounts,
+                        color: AppTheme.accentGold,
+                        size: 28,
                       ),
-                      _detailRow('Kết thúc:', _formatDate(sub.endDate), isDark),
-                      _detailRow(
-                        'Còn lại:',
-                        '${sub.daysRemaining ?? 0} ngày',
-                        isDark,
-                      ),
-                      _detailRow(
-                        'Tự động gia hạn:',
-                        sub.autoRenew == true ? '✅ Có' : '❌ Không',
-                        isDark,
+                      const SizedBox(width: 12),
+                      Text(
+                        'Quản lý Subscription',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                // Success message
-                if (_successMessage != null)
+                  // Subscription details
                   Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppTheme.successColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: isDark
+                          ? AppTheme.darkBackgroundSecondary
+                          : AppTheme.lightBackgroundSecondary,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Row(
+                    child: Column(
                       children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: AppTheme.successColor,
-                          size: 20,
+                        _detailRow('Gói:', sub.plan.displayName, isDark),
+                        _detailRow(
+                          'Bắt đầu:',
+                          _formatDate(sub.startDate),
+                          isDark,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _successMessage!,
-                            style: TextStyle(
-                              color: AppTheme.successColor,
-                              fontSize: 13,
-                            ),
-                          ),
+                        _detailRow(
+                          'Kết thúc:',
+                          _formatDate(sub.endDate),
+                          isDark,
+                        ),
+                        _detailRow(
+                          'Còn lại:',
+                          '${sub.daysRemaining ?? 0} ngày',
+                          isDark,
+                        ),
+                        _detailRow(
+                          'Tự động gia hạn:',
+                          sub.autoRenew == true ? '✅ Có' : '❌ Không',
+                          isDark,
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 20),
 
-                // Error message
-                if (_error != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.errorColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: AppTheme.errorColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _error!,
-                            style: TextStyle(
-                              color: AppTheme.errorColor,
-                              fontSize: 13,
+                  // Success message
+                  if (_successMessage != null)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.successColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: AppTheme.successColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _successMessage!,
+                              style: TextStyle(
+                                color: AppTheme.successColor,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+
+                  // Error message
+                  if (_error != null)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: AppTheme.errorColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _error!,
+                              style: TextStyle(
+                                color: AppTheme.errorColor,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Actions
+                  // Auto-renewal toggle
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading
+                          ? null
+                          : () => _toggleAutoRenewal(provider),
+                      icon: Icon(
+                        sub.autoRenew == true
+                            ? Icons.toggle_on
+                            : Icons.toggle_off,
+                        size: 22,
+                      ),
+                      label: Text(
+                        sub.autoRenew == true
+                            ? 'Tắt tự động gia hạn'
+                            : 'Bật tự động gia hạn',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.accentCyan,
+                        side: BorderSide(
+                          color: AppTheme.accentCyan.withValues(alpha: 0.5),
                         ),
-                      ],
-                    ),
-                  ),
-
-                // Actions
-                // Auto-renewal toggle
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _isLoading
-                        ? null
-                        : () => _toggleAutoRenewal(provider),
-                    icon: Icon(
-                      sub.autoRenew == true
-                          ? Icons.toggle_on
-                          : Icons.toggle_off,
-                      size: 22,
-                    ),
-                    label: Text(
-                      sub.autoRenew == true
-                          ? 'Tắt tự động gia hạn'
-                          : 'Bật tự động gia hạn',
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.accentCyan,
-                      side: BorderSide(
-                        color: AppTheme.accentCyan.withValues(alpha: 0.5),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _openCancelRefundSheet,
-                    icon: const Icon(Icons.cancel, size: 20),
-                    label: const Text('Hủy gói & Hoàn tiền'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.errorColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isLoading ? null : _openCancelRefundSheet,
+                      icon: const Icon(Icons.cancel, size: 20),
+                      label: const Text('Hủy gói & Hoàn tiền'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.errorColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                if (_isLoading)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: CommonLoading.center(),
-                  ),
+                  if (_isLoading)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: CommonLoading.center(),
+                    ),
 
-                const SizedBox(height: 16),
-              ],
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
           ),
         );

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../../core/exceptions/api_exception.dart';
 import '../models/user_models.dart';
+import '../models/recruiter_profile_models.dart';
 import '../../core/network/api_client.dart';
 
 class UserService {
@@ -230,7 +231,7 @@ class UserService {
     }
   }
 
-  // Get Business Profile
+  // Get Business Profile (legacy)
   Future<BusinessProfileResponse> getBusinessProfile(int businessId) async {
     try {
       final response = await _apiClient.dio.get(
@@ -238,6 +239,19 @@ class UserService {
       );
 
       return BusinessProfileResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Get recruiter public profile (public endpoint, no auth needed).
+  /// Calls GET /api/business/{recruiterId}/profile
+  Future<RecruiterProfileResponse> getRecruiterProfile(int recruiterId) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/business/$recruiterId/profile',
+      );
+      return RecruiterProfileResponse.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
     }

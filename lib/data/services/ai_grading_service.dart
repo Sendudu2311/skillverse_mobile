@@ -23,7 +23,7 @@ class AiGradingService {
     } catch (e) {
       debugPrint('❌ Error generating AI grade: $e');
       if (e is ApiException) rethrow;
-      throw ApiException('Chấm điểm AI thất bại: ${e.toString()}');
+      throw ApiException('Chấm điểm AI thất bại');
     }
   }
 
@@ -38,7 +38,7 @@ class AiGradingService {
     } catch (e) {
       debugPrint('❌ Error getting AI grade result: $e');
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy kết quả AI thất bại: ${e.toString()}');
+      throw ApiException('Lấy kết quả AI thất bại');
     }
   }
 
@@ -53,7 +53,7 @@ class AiGradingService {
     } catch (e) {
       debugPrint('❌ Error requesting mentor review: $e');
       if (e is ApiException) rethrow;
-      throw ApiException('Yêu cầu mentor chấm lại thất bại: ${e.toString()}');
+      throw ApiException('Yêu cầu mentor chấm lại thất bại');
     }
   }
 
@@ -68,7 +68,7 @@ class AiGradingService {
     } catch (e) {
       debugPrint('❌ Error toggling trust AI: $e');
       if (e is ApiException) rethrow;
-      throw ApiException('Thay đổi cài đặt AI thất bại: ${e.toString()}');
+      throw ApiException('Thay đổi cài đặt AI thất bại');
     }
   }
 }

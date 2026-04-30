@@ -173,6 +173,19 @@ class RecruitmentChatProvider extends ChangeNotifier {
   }
 
   // ── Cleanup ──────────────────────────────────────────────────────────
+
+  /// Called by app-level logout listener: stop polling and purge all user data.
+  void clearOnLogout() {
+    _stopPolling();
+    _sessions = [];
+    _messages = [];
+    _activeSession = null;
+    _currentUserId = null;
+    _unreadCount = 0;
+    _error = null;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _stopPolling();

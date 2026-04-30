@@ -73,6 +73,8 @@ class Task {
   final String? satisfactionLevel;
   final String? userNotes;
   final List<String>? linkedSessionIds;
+  final double? orderIndex;
+  final bool? archived;
 
   Task({
     required this.id,
@@ -88,6 +90,8 @@ class Task {
     this.satisfactionLevel,
     this.userNotes,
     this.linkedSessionIds,
+    this.orderIndex,
+    this.archived,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => _$TaskFromJson(json);
@@ -107,6 +111,8 @@ class Task {
     String? satisfactionLevel,
     String? userNotes,
     List<String>? linkedSessionIds,
+    double? orderIndex,
+    bool? archived,
   }) {
     return Task(
       id: id ?? this.id,
@@ -122,6 +128,8 @@ class Task {
       satisfactionLevel: satisfactionLevel ?? this.satisfactionLevel,
       userNotes: userNotes ?? this.userNotes,
       linkedSessionIds: linkedSessionIds ?? this.linkedSessionIds,
+      orderIndex: orderIndex ?? this.orderIndex,
+      archived: archived ?? this.archived,
     );
   }
 
@@ -293,6 +301,8 @@ class TaskResponse {
   final String? userNotes;
   final String? columnId;
   final List<String>? linkedSessionIds;
+  final double? orderIndex;
+  final bool? archived;
 
   TaskResponse({
     required this.id,
@@ -308,6 +318,8 @@ class TaskResponse {
     this.userNotes,
     this.columnId,
     this.linkedSessionIds,
+    this.orderIndex,
+    this.archived,
   });
 
   factory TaskResponse.fromJson(Map<String, dynamic> json) =>
@@ -329,6 +341,8 @@ class TaskResponse {
       satisfactionLevel: satisfactionLevel,
       userNotes: userNotes,
       linkedSessionIds: linkedSessionIds,
+      orderIndex: orderIndex,
+      archived: archived,
     );
   }
 

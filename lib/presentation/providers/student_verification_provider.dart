@@ -149,4 +149,7 @@ class StudentVerificationProvider extends ChangeNotifier
     _otpExpiresAt = null;
     resetState();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => reset();
 }

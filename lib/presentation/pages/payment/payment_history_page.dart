@@ -34,50 +34,54 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const SkillVerseAppBar(title: 'Lịch sử thanh toán'),
-      body: Consumer<PaymentProvider>(
-        builder: (context, paymentProvider, child) {
-          if (paymentProvider.isLoading &&
-              paymentProvider.paymentHistory.isEmpty) {
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 5,
-              itemBuilder: (_, __) => const ListItemSkeleton(hasTrailing: true),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<PaymentProvider>(
+          builder: (context, paymentProvider, child) {
+            if (paymentProvider.isLoading &&
+                paymentProvider.paymentHistory.isEmpty) {
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: 5,
+                itemBuilder: (_, __) => const ListItemSkeleton(hasTrailing: true),
+              );
+            }
+  
+            if (paymentProvider.errorMessage != null) {
+              return ErrorStateWidget(
+                message: paymentProvider.errorMessage!,
+                onRetry: _loadHistory,
+              );
+            }
+  
+            final history = paymentProvider.paymentHistory;
+  
+            if (history.isEmpty) {
+              return const EmptyStateWidget(
+                icon: Icons.receipt_long,
+                title: 'Chưa có giao dịch nào',
+                subtitle: 'Các giao dịch thanh toán sẽ hiển thị ở đây',
+                iconGradient: AppTheme.blueGradient,
+              );
+            }
+  
+            return RefreshIndicator(
+              onRefresh: _loadHistory,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16.0),
+                itemCount: history.length,
+                itemBuilder: (context, index) {
+                  final transaction = history[index];
+                  return AnimatedListItem(
+                    index: index,
+                    child: _PaymentHistoryCard(transaction: transaction),
+                  );
+                },
+              ),
             );
-          }
-
-          if (paymentProvider.errorMessage != null) {
-            return ErrorStateWidget(
-              message: paymentProvider.errorMessage!,
-              onRetry: _loadHistory,
-            );
-          }
-
-          final history = paymentProvider.paymentHistory;
-
-          if (history.isEmpty) {
-            return const EmptyStateWidget(
-              icon: Icons.receipt_long,
-              title: 'Chưa có giao dịch nào',
-              subtitle: 'Các giao dịch thanh toán sẽ hiển thị ở đây',
-              iconGradient: AppTheme.blueGradient,
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: _loadHistory,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: history.length,
-              itemBuilder: (context, index) {
-                final transaction = history[index];
-                return AnimatedListItem(
-                  index: index,
-                  child: _PaymentHistoryCard(transaction: transaction),
-                );
-              },
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }

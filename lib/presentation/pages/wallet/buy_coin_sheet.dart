@@ -149,7 +149,10 @@ class _BuyCoinSheetState extends State<BuyCoinSheet> {
 
       widget.onSuccess();
       Navigator.pop(context);
-      ErrorHandler.showSuccessSnackBar(context, '🪙 Mua thành công ${_selectedPackage!.totalCoins} xu!');
+      ErrorHandler.showSuccessSnackBar(
+        context,
+        '🪙 Mua thành công ${_selectedPackage!.totalCoins} xu!',
+      );
     } catch (e) {
       setState(() {
         _error = e.toString().replaceAll('Exception: ', '');
@@ -161,175 +164,271 @@ class _BuyCoinSheetState extends State<BuyCoinSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final viewInsets = MediaQuery.of(context).viewInsets;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
+      padding: EdgeInsets.only(bottom: viewInsets.bottom),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCardBackground : AppTheme.lightCardBackground,
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : AppTheme.lightCardBackground,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                // Handle bar
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Icon(Icons.monetization_on, color: AppTheme.accentGold, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Mua SkillCoin',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Số dư: ${NumberFormatter.formatCurrency(widget.currentCashBalance, currency: 'đ')}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontFamily: 'monospace',
-                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Package list
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: _defaultPackages.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final pkg = _defaultPackages[index];
-                return _buildPackageCard(pkg, isDark);
-              },
-            ),
-          ),
-
-          // Error
-          if (_error != null)
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            // Header
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.errorColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline, color: AppTheme.errorColor, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(_error!, style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // Summary & Buy button
-          if (_selectedPackage != null)
-            Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.darkBackgroundSecondary : AppTheme.lightBackgroundSecondary,
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor,
-                  ),
-                ),
-              ),
               child: Column(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Gói:', style: TextStyle(fontSize: 13, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
-                      Text(_selectedPackage!.title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary)),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Nhận:', style: TextStyle(fontSize: 13, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
-                      Text(
-                        '${NumberFormatter.formatNumber(_selectedPackage!.totalCoins)} xu',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.accentGold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Số dư sau mua:', style: TextStyle(fontSize: 13, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
-                      Text(
-                        NumberFormatter.formatCurrency(widget.currentCashBalance - _selectedPackage!.price, currency: 'đ'),
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'monospace', color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading || widget.currentCashBalance < _selectedPackage!.price ? null : _handleBuy,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accentGold,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: _isLoading
-                          ? CommonLoading.small()
-                          : const Text('🪙 Mua Ngay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  // Handle bar
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppTheme.darkBorderColor
+                          : AppTheme.lightBorderColor,
+                      borderRadius: BorderRadius.circular(2),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.monetization_on,
+                        color: AppTheme.accentGold,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Mua SkillCoin',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? AppTheme.darkTextPrimary
+                                    : AppTheme.lightTextPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Số dư: ${NumberFormatter.formatCurrency(widget.currentCashBalance, currency: 'đ')}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontFamily: 'monospace',
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
 
-          if (_selectedPackage == null)
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text(
-                'Chọn một gói xu để tiếp tục',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                ),
-                textAlign: TextAlign.center,
+            // Package list
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: _defaultPackages.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final pkg = _defaultPackages[index];
+                  return _buildPackageCard(pkg, isDark);
+                },
               ),
             ),
-        ],
+
+            // Error
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: AppTheme.errorColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: TextStyle(
+                            color: AppTheme.errorColor,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Summary & Buy button
+            if (_selectedPackage != null)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppTheme.darkBackgroundSecondary
+                      : AppTheme.lightBackgroundSecondary,
+                  border: Border(
+                    top: BorderSide(
+                      color: isDark
+                          ? AppTheme.darkBorderColor
+                          : AppTheme.lightBorderColor,
+                    ),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Gói:',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                          ),
+                        ),
+                        Text(
+                          _selectedPackage!.title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.lightTextPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Nhận:',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                          ),
+                        ),
+                        Text(
+                          '${NumberFormatter.formatNumber(_selectedPackage!.totalCoins)} xu',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accentGold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Số dư sau mua:',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                          ),
+                        ),
+                        Text(
+                          NumberFormatter.formatCurrency(
+                            widget.currentCashBalance - _selectedPackage!.price,
+                            currency: 'đ',
+                          ),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                            color: isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.lightTextPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed:
+                            _isLoading ||
+                                widget.currentCashBalance <
+                                    _selectedPackage!.price
+                            ? null
+                            : _handleBuy,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.accentGold,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? CommonLoading.small()
+                            : const Text(
+                                '🪙 Mua Ngay',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            if (_selectedPackage == null)
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'Chọn một gói xu để tiếp tục',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -350,10 +449,16 @@ class _BuyCoinSheetState extends State<BuyCoinSheet> {
         decoration: BoxDecoration(
           color: isSelected
               ? pkg.color.withValues(alpha: 0.1)
-              : (isDark ? AppTheme.darkBackgroundSecondary : AppTheme.lightBackgroundSecondary),
+              : (isDark
+                    ? AppTheme.darkBackgroundSecondary
+                    : AppTheme.lightBackgroundSecondary),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? pkg.color : (isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor),
+            color: isSelected
+                ? pkg.color
+                : (isDark
+                      ? AppTheme.darkBorderColor
+                      : AppTheme.lightBorderColor),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -383,34 +488,54 @@ class _BuyCoinSheetState extends State<BuyCoinSheet> {
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
                         ),
                       ),
                       if (pkg.popular) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                            color: const Color(
+                              0xFFF59E0B,
+                            ).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
                             '🔥 HOT',
-                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B)),
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFF59E0B),
+                            ),
                           ),
                         ),
                       ],
                       if (pkg.special) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEC4899).withValues(alpha: 0.2),
+                            color: const Color(
+                              0xFFEC4899,
+                            ).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
                             '✨ ĐẶC BIỆT',
-                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFEC4899)),
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFEC4899),
+                            ),
                           ),
                         ),
                       ],
@@ -421,7 +546,9 @@ class _BuyCoinSheetState extends State<BuyCoinSheet> {
                     '${NumberFormatter.formatNumber(pkg.coins)} xu + ${pkg.bonus} thưởng',
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
                     ),
                   ),
                 ],
@@ -433,7 +560,10 @@ class _BuyCoinSheetState extends State<BuyCoinSheet> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  NumberFormatter.formatCurrency(pkg.price.toDouble(), currency: 'đ'),
+                  NumberFormatter.formatCurrency(
+                    pkg.price.toDouble(),
+                    currency: 'đ',
+                  ),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -449,7 +579,11 @@ class _BuyCoinSheetState extends State<BuyCoinSheet> {
                 if (pkg.discount > 0)
                   Text(
                     '-${pkg.discount}%',
-                    style: TextStyle(fontSize: 11, color: AppTheme.successColor, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.successColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
               ],
             ),

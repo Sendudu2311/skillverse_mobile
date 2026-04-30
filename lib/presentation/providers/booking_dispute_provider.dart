@@ -185,4 +185,7 @@ class BookingDisputeProvider extends ChangeNotifier
     _evidences = [];
     resetState();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => clear();
 }

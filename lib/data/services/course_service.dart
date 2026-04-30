@@ -43,7 +43,7 @@ class CourseService {
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy danh sách khóa học thất bại: ${e.toString()}');
+      throw ApiException('Lấy danh sách khóa học thất bại');
     }
   }
 
@@ -61,7 +61,7 @@ class CourseService {
       return CourseSummaryDto.fromJson(response.data!);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy thông tin khóa học thất bại: ${e.toString()}');
+      throw ApiException('Lấy thông tin khóa học thất bại');
     }
   }
 
@@ -79,7 +79,7 @@ class CourseService {
       return CourseDetailDto.fromJson(response.data!);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy thông tin khóa học thất bại: ${e.toString()}');
+      throw ApiException('Lấy thông tin khóa học thất bại');
     }
   }
 
@@ -105,7 +105,7 @@ class CourseService {
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy khóa học của tác giả thất bại: ${e.toString()}');
+      throw ApiException('Lấy khóa học của tác giả thất bại');
     }
   }
 
@@ -139,7 +139,7 @@ class CourseService {
       return response.data!;
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Mua khóa học bằng ví thất bại: ${e.toString()}');
+      throw ApiException('Mua khóa học bằng ví thất bại');
     }
   }
 }

@@ -9,11 +9,7 @@ class MainLayout extends StatefulWidget {
   final Widget child;
   final String currentPath;
 
-  const MainLayout({
-    super.key,
-    required this.child,
-    required this.currentPath,
-  });
+  const MainLayout({super.key, required this.child, required this.currentPath});
 
   @override
   State<MainLayout> createState() => _MainLayoutState();
@@ -41,12 +37,6 @@ class _MainLayoutState extends State<MainLayout> {
       activeIcon: Icons.work,
       label: 'Việc làm',
       route: '/jobs',
-    ),
-    NavigationItem(
-      icon: Icons.forum_outlined,
-      activeIcon: Icons.forum,
-      label: 'Cộng đồng',
-      route: '/community',
     ),
     NavigationItem(
       icon: Icons.chat_bubble_outline,
@@ -80,8 +70,7 @@ class _MainLayoutState extends State<MainLayout> {
     // Special case: Portfolio page highlights Profile tab
     if (widget.currentPath == '/portfolio') {
       setState(() {
-        _selectedIndex =
-            5; // Profile tab index (updated after adding Community)
+        _selectedIndex = 4; // Profile tab index (after removing Community tab)
       });
       return;
     }

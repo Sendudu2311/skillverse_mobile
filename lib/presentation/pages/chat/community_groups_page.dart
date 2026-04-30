@@ -47,65 +47,69 @@ class _CommunityGroupsPageState extends State<CommunityGroupsPage> {
         title: 'Nhóm Chat',
         centerTitle: true,
       ),
-      body: Consumer<GroupChatProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoadingGroups) {
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 5,
-              itemBuilder: (_, __) => const GroupCardSkeleton(),
-            );
-          }
-
-          if (provider.groups.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.groups_outlined,
-                    size: 64,
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Bạn chưa tham gia nhóm nào',
-                    style: TextStyle(
-                      fontSize: 16,
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<GroupChatProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoadingGroups) {
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: 5,
+                itemBuilder: (_, __) => const GroupCardSkeleton(),
+              );
+            }
+  
+            if (provider.groups.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.groups_outlined,
+                      size: 64,
                       color: isDark
                           ? AppTheme.darkTextSecondary
                           : AppTheme.lightTextSecondary,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tham gia một khóa học để vào nhóm chat',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
+                    const SizedBox(height: 16),
+                    Text(
+                      'Bạn chưa tham gia nhóm nào',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tham gia một khóa học để vào nhóm chat',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+  
+            return RefreshIndicator(
+              onRefresh: () => provider.loadMyGroups(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: provider.groups.length,
+                itemBuilder: (context, index) {
+                  final group = provider.groups[index];
+                  return _GroupCard(group: group);
+                },
               ),
             );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => provider.loadMyGroups(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: provider.groups.length,
-              itemBuilder: (context, index) {
-                final group = provider.groups[index];
-                return _GroupCard(group: group);
-              },
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }

@@ -130,185 +130,206 @@ class _ShortTermSubmitSheetState extends State<ShortTermSubmitSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: DraggableScrollableSheet(
         initialChildSize: 0.9,
         minChildSize: 0.5,
         maxChildSize: 0.95,
         expand: false,
         builder: (context, scrollController) {
-          return Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).dividerColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+          return Container(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppTheme.darkCardBackground
+                  : Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
               ),
-
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.purpleGradient,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.upload_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  // Handle bar
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).dividerColor,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Nộp bài',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.purpleGradient,
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          Text(
-                            widget.jobTitle,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: Theme.of(context).hintColor),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          child: const Icon(
+                            Icons.upload_rounded,
+                            color: Colors.white,
+                            size: 20,
                           ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
-              ),
-
-              const Divider(height: 24),
-
-              // Form content
-              Expanded(
-                child: Form(
-                  key: _formKey,
-                  child: ListView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                    children: [
-                      // ── Existing deliverables ──
-                      if (widget.existingDeliverables != null &&
-                          widget.existingDeliverables!.isNotEmpty) ...[
-                        _buildSectionTitle('Đã nộp trước đó'),
-                        const SizedBox(height: 8),
-                        _buildExistingDeliverables(widget.existingDeliverables!),
-                        const SizedBox(height: 20),
-                      ],
-
-                      // ── Work note ──
-                      _buildSectionTitle('Ghi chú công việc'),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _workNoteController,
-                        maxLines: 4,
-                        maxLength: 5000,
-                        decoration: const InputDecoration(
-                          hintText: 'Mô tả những gì bạn đã hoàn thành...',
-                          alignLabelWithHint: true,
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Nộp bài',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                widget.jobTitle,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context).hintColor,
+                                    ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                  ),
 
-                      const SizedBox(height: 20),
+                  const Divider(height: 24),
 
-                      // ── New deliverables ──
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // Form content
+                  Expanded(
+                    child: Form(
+                      key: _formKey,
+                      child: ListView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                         children: [
-                          _buildSectionTitle('Link bàn giao *'),
-                          TextButton.icon(
-                            onPressed: _addDeliverable,
-                            icon: const Icon(Icons.add, size: 16),
-                            label: const Text(
-                              'Thêm',
-                              style: TextStyle(fontSize: 13),
+                          // ── Existing deliverables ──
+                          if (widget.existingDeliverables != null &&
+                              widget.existingDeliverables!.isNotEmpty) ...[
+                            _buildSectionTitle('Đã nộp trước đó'),
+                            const SizedBox(height: 8),
+                            _buildExistingDeliverables(
+                              widget.existingDeliverables!,
                             ),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppTheme.themeBlueStart,
-                              visualDensity: VisualDensity.compact,
+                            const SizedBox(height: 20),
+                          ],
+
+                          // ── Work note ──
+                          _buildSectionTitle('Ghi chú công việc'),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _workNoteController,
+                            maxLines: 4,
+                            maxLength: 5000,
+                            decoration: const InputDecoration(
+                              hintText: 'Mô tả những gì bạn đã hoàn thành...',
+                              alignLabelWithHint: true,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
 
-                      ...List.generate(
-                        _deliverables.length,
-                        (i) => _buildDeliverableRow(i),
-                      ),
+                          const SizedBox(height: 20),
 
-                      const SizedBox(height: 16),
-
-                      // ── isFinalSubmission toggle ──
-                      _buildFinalSubmissionToggle(),
-
-                      // ── Final submission warning ──
-                      if (_isFinalSubmission) ...[
-                        const SizedBox(height: 12),
-                        _buildFinalSubmissionWarning(),
-                      ],
-
-                      const SizedBox(height: 24),
-
-                      // ── Submit button ──
-                      Consumer<JobProvider>(
-                        builder: (context, provider, _) {
-                          return SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: provider.isSubmittingDeliverable
-                                  ? null
-                                  : _submit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _isFinalSubmission
-                                    ? AppTheme.themeGreenStart
-                                    : AppTheme.themePurpleStart,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                          // ── New deliverables ──
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildSectionTitle('Link bàn giao *'),
+                              TextButton.icon(
+                                onPressed: _addDeliverable,
+                                icon: const Icon(Icons.add, size: 16),
+                                label: const Text(
+                                  'Thêm',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppTheme.themeBlueStart,
+                                  visualDensity: VisualDensity.compact,
                                 ),
                               ),
-                              child: provider.isSubmittingDeliverable
-                                  ? CommonLoading.button()
-                                  : Text(
-                                      _isFinalSubmission
-                                          ? 'Nộp bài lần cuối'
-                                          : 'Nộp bài',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+
+                          ...List.generate(
+                            _deliverables.length,
+                            (i) => _buildDeliverableRow(i),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // ── isFinalSubmission toggle ──
+                          _buildFinalSubmissionToggle(),
+
+                          // ── Final submission warning ──
+                          if (_isFinalSubmission) ...[
+                            const SizedBox(height: 12),
+                            _buildFinalSubmissionWarning(),
+                          ],
+
+                          const SizedBox(height: 24),
+
+                          // ── Submit button ──
+                          Consumer<JobProvider>(
+                            builder: (context, provider, _) {
+                              return SizedBox(
+                                width: double.infinity,
+                                height: 50,
+                                child: ElevatedButton(
+                                  onPressed: provider.isSubmittingDeliverable
+                                      ? null
+                                      : _submit,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isFinalSubmission
+                                        ? AppTheme.themeGreenStart
+                                        : AppTheme.themePurpleStart,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                            ),
-                          );
-                        },
+                                  ),
+                                  child: provider.isSubmittingDeliverable
+                                      ? CommonLoading.button()
+                                      : Text(
+                                          _isFinalSubmission
+                                              ? 'Nộp bài lần cuối'
+                                              : 'Nộp bài',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           );
         },
       ),
@@ -319,8 +340,9 @@ class _ShortTermSubmitSheetState extends State<ShortTermSubmitSheet> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: Theme.of(context).textTheme.titleSmall
-          ?.copyWith(fontWeight: FontWeight.w600),
+      style: Theme.of(
+        context,
+      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
     );
   }
 
@@ -536,19 +558,12 @@ class _ShortTermSubmitSheetState extends State<ShortTermSubmitSheet> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline,
-            size: 16,
-            color: AppTheme.themeOrangeStart,
-          ),
+          Icon(Icons.info_outline, size: 16, color: AppTheme.themeOrangeStart),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Sau khi nộp, bạn sẽ không thể chỉnh sửa trừ khi nhà tuyển dụng yêu cầu sửa lại.',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.themeOrangeStart,
-              ),
+              style: TextStyle(fontSize: 12, color: AppTheme.themeOrangeStart),
             ),
           ),
         ],

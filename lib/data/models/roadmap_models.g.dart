@@ -40,6 +40,9 @@ RoadmapNode _$RoadmapNodeFromJson(Map<String, dynamic> json) => RoadmapNode(
   suggestedCourseIds: (json['suggestedCourseIds'] as List<dynamic>?)
       ?.map((e) => e as String)
       .toList(),
+  suggestedModuleIds: (json['suggestedModuleIds'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
   nodeStatus: json['nodeStatus'] as String?,
 );
 
@@ -62,6 +65,7 @@ Map<String, dynamic> _$RoadmapNodeToJson(RoadmapNode instance) =>
       'isCore': instance.isCore,
       'parentId': instance.parentId,
       'suggestedCourseIds': instance.suggestedCourseIds,
+      'suggestedModuleIds': instance.suggestedModuleIds,
       'nodeStatus': instance.nodeStatus,
     };
 
@@ -419,6 +423,7 @@ RoadmapSessionSummary _$RoadmapSessionSummaryFromJson(
   difficultyLevel: json['difficultyLevel'] as String?,
   schemaVersion: (json['schemaVersion'] as num?)?.toInt(),
   status: json['status'] as String?,
+  roadmapMode: json['roadmapMode'] as String?,
   createdAt: json['createdAt'] as String,
 );
 
@@ -438,6 +443,7 @@ Map<String, dynamic> _$RoadmapSessionSummaryToJson(
   'difficultyLevel': instance.difficultyLevel,
   'schemaVersion': instance.schemaVersion,
   'status': instance.status,
+  'roadmapMode': instance.roadmapMode,
   'createdAt': instance.createdAt,
 };
 

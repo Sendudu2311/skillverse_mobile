@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../themes/app_theme.dart';
 
-/// Widget to render AI response with special formatting
-/// Supports: <thinking>, ** **, <suggestions>
+/// Widget to render AI response with special formatting.
+/// Supports: `<thinking>`, `**bold**`, `<suggestions>`
 class FormattedAIResponse extends StatelessWidget {
   final String content;
   final bool isDark;
@@ -37,70 +37,45 @@ class FormattedAIResponse extends StatelessWidget {
 
   List<ContentSection> _parseContent(String text) {
     final sections = <ContentSection>[];
-    final lines = text.split('\n');
 
-    String currentContent = '';
-    SectionType currentType = SectionType.normal;
-    bool inThinking = false;
-    bool inSuggestions = false;
+    // Match <thinking>...</thinking> and <suggestions>...</suggestions>
+    // multiLine + dotAll so tags can span multiple lines or appear inline.
+    final tagPattern = RegExp(
+      r'<(thinking|suggestions)>([\s\S]*?)<\/\1>',
+      multiLine: true,
+    );
 
-    for (var line in lines) {
-      // Check for thinking tags
-      if (line.contains('<thinking>')) {
-        if (currentContent.isNotEmpty) {
-          sections.add(ContentSection(currentType, currentContent.trim()));
-          currentContent = '';
-        }
-        inThinking = true;
-        currentType = SectionType.thinking;
-        continue;
+    int lastEnd = 0;
+    for (final match in tagPattern.allMatches(text)) {
+      final before = text.substring(lastEnd, match.start);
+      if (before.trim().isNotEmpty) {
+        sections.add(ContentSection(SectionType.normal, before.trim()));
       }
 
-      if (line.contains('</thinking>')) {
-        if (currentContent.isNotEmpty) {
-          sections.add(ContentSection(currentType, currentContent.trim()));
-          currentContent = '';
-        }
-        inThinking = false;
-        currentType = SectionType.normal;
-        continue;
+      final tag = match.group(1)!;
+      final body = match.group(2)!.trim();
+      if (body.isNotEmpty) {
+        sections.add(ContentSection(
+          tag == 'thinking' ? SectionType.thinking : SectionType.suggestions,
+          body,
+        ));
       }
 
-      // Check for suggestions tags
-      if (line.contains('<suggestions>')) {
-        if (currentContent.isNotEmpty) {
-          sections.add(ContentSection(currentType, currentContent.trim()));
-          currentContent = '';
-        }
-        inSuggestions = true;
-        currentType = SectionType.suggestions;
-        continue;
-      }
-
-      if (line.contains('</suggestions>')) {
-        if (currentContent.isNotEmpty) {
-          sections.add(ContentSection(currentType, currentContent.trim()));
-          currentContent = '';
-        }
-        inSuggestions = false;
-        currentType = SectionType.normal;
-        continue;
-      }
-
-      // Add line to current content
-      currentContent += '$line\n';
+      lastEnd = match.end;
     }
 
-    // Add remaining content
-    if (currentContent.isNotEmpty) {
-      sections.add(ContentSection(currentType, currentContent.trim()));
+    final tail = text.substring(lastEnd);
+    if (tail.trim().isNotEmpty) {
+      sections.add(ContentSection(SectionType.normal, tail.trim()));
     }
 
-    return sections;
+    return sections.isEmpty
+        ? [ContentSection(SectionType.normal, text)]
+        : sections;
   }
 
   Widget _buildThinkingSection(String content) {
-    return _ThinkingExpandableBlock(content: content, isDark: isDark);
+    return const SizedBox.shrink(); // Hidden from end users
   }
 
 
@@ -275,109 +250,4 @@ class ContentSection {
   final String content;
 
   ContentSection(this.type, this.content);
-}
-
-/// Collapsible thinking block — defaults to collapsed
-class _ThinkingExpandableBlock extends StatefulWidget {
-  final String content;
-  final bool isDark;
-
-  const _ThinkingExpandableBlock({
-    required this.content,
-    required this.isDark,
-  });
-
-  @override
-  State<_ThinkingExpandableBlock> createState() =>
-      _ThinkingExpandableBlockState();
-}
-
-class _ThinkingExpandableBlockState extends State<_ThinkingExpandableBlock> {
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryBlueDark.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: AppTheme.primaryBlueDark.withValues(alpha: 0.25),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Header — always visible, tappable
-          InkWell(
-            onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: BorderRadius.circular(10),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.psychology,
-                    size: 16,
-                    color: AppTheme.primaryBlueDark,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Quá trình suy nghĩ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.primaryBlueDark,
-                    ),
-                  ),
-                  const Spacer(),
-                  AnimatedRotation(
-                    turns: _expanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 18,
-                      color: AppTheme.primaryBlueDark.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Content — animated expand/collapse
-          AnimatedCrossFade(
-            firstChild: const SizedBox(width: double.infinity, height: 0),
-            secondChild: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryBlueDark.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  widget.content,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
-                    color: widget.isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ),
-            crossFadeState: _expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 250),
-            sizeCurve: Curves.easeInOut,
-          ),
-        ],
-      ),
-    );
-  }
 }

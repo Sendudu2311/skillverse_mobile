@@ -251,7 +251,11 @@ class _CertificateViewPageState extends State<CertificateViewPage> {
           ],
         ],
       ),
-      body: _buildBody(),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: _buildBody(),
+      ),
     );
   }
 

@@ -61,18 +61,19 @@ void main() {
   // ============================================================
   group('ApiException', () {
     test('constructor sets message and statusCode', () {
-      const e = ApiException('Bad request', 400);
+      final e = ApiException('Bad request', 400);
       expect(e.message, 'Bad request');
       expect(e.statusCode, 400);
     });
 
     test('toString returns message', () {
-      const e = ApiException('Error occurred');
+      final e = ApiException('Error occurred');
       expect(e.toString(), 'Error occurred');
     });
 
-    test('implements Exception', () {
-      const e = ApiException('test');
+    test('extends AppException and implements Exception', () {
+      final e = ApiException('test');
+      expect(e, isA<AppException>());
       expect(e, isA<Exception>());
     });
   });
@@ -84,7 +85,7 @@ void main() {
         requestOptions: RequestOptions(path: '/test'),
       );
       final e = ApiException.fromDioException(dioError);
-      expect(e.message, contains('timeout'));
+      expect(e.message, contains('quá lâu'));
     });
 
     test('sendTimeout returns timeout message', () {
@@ -93,7 +94,7 @@ void main() {
         requestOptions: RequestOptions(path: '/test'),
       );
       final e = ApiException.fromDioException(dioError);
-      expect(e.message, contains('timeout'));
+      expect(e.message, contains('quá lâu'));
     });
 
     test('receiveTimeout returns timeout message', () {
@@ -102,7 +103,7 @@ void main() {
         requestOptions: RequestOptions(path: '/test'),
       );
       final e = ApiException.fromDioException(dioError);
-      expect(e.message, contains('timeout'));
+      expect(e.message, contains('quá lâu'));
     });
 
     test('cancel returns cancelled message', () {
@@ -111,7 +112,7 @@ void main() {
         requestOptions: RequestOptions(path: '/test'),
       );
       final e = ApiException.fromDioException(dioError);
-      expect(e.message, contains('cancelled'));
+      expect(e.message, contains('hủy'));
     });
 
     test('badResponse 400 returns bad request', () {
@@ -125,7 +126,7 @@ void main() {
       );
       final e = ApiException.fromDioException(dioError);
       expect(e.statusCode, 400);
-      expect(e.message.toLowerCase(), contains('bad request'));
+      expect(e.message, contains('không hợp lệ'));
     });
 
     test('badResponse 401 returns unauthorized', () {
@@ -139,7 +140,7 @@ void main() {
       );
       final e = ApiException.fromDioException(dioError);
       expect(e.statusCode, 401);
-      expect(e.message.toLowerCase(), contains('unauthorized'));
+      expect(e.message, contains('đăng nhập'));
     });
 
     test('badResponse 403 returns forbidden', () {
@@ -153,7 +154,7 @@ void main() {
       );
       final e = ApiException.fromDioException(dioError);
       expect(e.statusCode, 403);
-      expect(e.message.toLowerCase(), contains('forbidden'));
+      expect(e.message, contains('quyền'));
     });
 
     test('badResponse 404 returns not found', () {
@@ -167,7 +168,7 @@ void main() {
       );
       final e = ApiException.fromDioException(dioError);
       expect(e.statusCode, 404);
-      expect(e.message.toLowerCase(), contains('not found'));
+      expect(e.message, contains('Không tìm thấy'));
     });
 
     test('badResponse 500 returns server error', () {
@@ -181,7 +182,7 @@ void main() {
       );
       final e = ApiException.fromDioException(dioError);
       expect(e.statusCode, 500);
-      expect(e.message.toLowerCase(), contains('server error'));
+      expect(e.message, contains('máy chủ'));
     });
 
     test('unknown with SocketException returns no internet', () {
@@ -191,7 +192,7 @@ void main() {
         message: 'SocketException: Connection refused',
       );
       final e = ApiException.fromDioException(dioError);
-      expect(e.message.toLowerCase(), contains('internet'));
+      expect(e.message, contains('Internet'));
     });
 
     test('unknown without SocketException returns generic error', () {

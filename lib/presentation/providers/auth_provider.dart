@@ -45,7 +45,7 @@ class AuthProvider extends ChangeNotifier with LoadingStateProviderMixin {
         _registerFcmToken();
       }
       notifyListeners();
-    }, errorMessageBuilder: (e) => 'Lỗi khởi tạo: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   /// Đăng nhập

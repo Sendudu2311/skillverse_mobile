@@ -118,6 +118,7 @@ class ExpertChatResponse {
   final String timestamp;
   final ChatMode chatMode;
   final ExpertContext? expertContext;
+  final String? detectedDomain;
 
   const ExpertChatResponse({
     required this.sessionId,
@@ -126,6 +127,7 @@ class ExpertChatResponse {
     required this.timestamp,
     required this.chatMode,
     this.expertContext,
+    this.detectedDomain,
   });
 
   factory ExpertChatResponse.fromJson(Map<String, dynamic> json) =>

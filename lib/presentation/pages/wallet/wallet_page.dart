@@ -40,47 +40,50 @@ class _WalletPageState extends State<WalletPage> {
         useGradientTitle: true,
         onBack: () => context.go('/dashboard'),
       ),
-      body: Consumer<WalletProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading) {
-            return _buildSkeleton(isDark);
-          }
+      body: SafeArea(
+        top: false,
+        child: Consumer<WalletProvider>(
+          builder: (context, provider, child) {
+            if (provider.isLoading) {
+              return _buildSkeleton(isDark);
+            }
 
-          if (provider.errorMessage != null) {
-            return ErrorStateWidget(
-              message: provider.errorMessage!,
-              onRetry: () => provider.refresh(),
-            );
-          }
+            if (provider.errorMessage != null) {
+              return ErrorStateWidget(
+                message: provider.errorMessage!,
+                onRetry: () => provider.refresh(),
+              );
+            }
 
-          return RefreshIndicator(
-            onRefresh: () => provider.refresh(),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Balance card
-                  _buildBalanceSection(context, provider, isDark),
-                  const SizedBox(height: 20),
+            return RefreshIndicator(
+              onRefresh: () => provider.refresh(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Balance card
+                    _buildBalanceSection(context, provider, isDark),
+                    const SizedBox(height: 20),
 
-                  // Action buttons
-                  _buildActionButtons(context, isDark),
-                  const SizedBox(height: 28),
+                    // Action buttons
+                    _buildActionButtons(context, isDark),
+                    const SizedBox(height: 28),
 
-                  // Statistics
-                  _buildStatsSection(context, provider, isDark),
-                  const SizedBox(height: 28),
+                    // Statistics
+                    _buildStatsSection(context, provider, isDark),
+                    const SizedBox(height: 28),
 
-                  // Recent transactions
-                  _buildTransactionsSection(context, provider, isDark),
-                  const SizedBox(height: 20),
-                ],
+                    // Recent transactions
+                    _buildTransactionsSection(context, provider, isDark),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

@@ -167,70 +167,74 @@ class _AddCertificatePageState extends State<AddCertificatePage>
 
     return Scaffold(
       appBar: SkillVerseAppBar(title: '', onBack: () => Navigator.pop(context)),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Stack(
-          children: [
-            // Galaxy Background
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: isDark
-                      ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
-                      : [Colors.grey.shade50, Colors.white],
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Stack(
+            children: [
+              // Galaxy Background
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDark
+                        ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
+                        : [Colors.grey.shade50, Colors.white],
+                  ),
                 ),
               ),
-            ),
-
-            // Content
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    SectionHeader.gradient(
-                      icon: Icons.workspace_premium,
-                      title: 'Thêm chứng chỉ',
-                      gradientColors: const [
-                        AppTheme.themeOrangeStart,
-                        AppTheme.themeOrangeEnd,
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Basic Info Section
-                    _buildBasicInfoSection(),
-                    const SizedBox(height: 24),
-
-                    // Credential Info Section
-                    _buildCredentialSection(),
-                    const SizedBox(height: 24),
-
-                    // Timeline Section
-                    _buildTimelineSection(),
-                    const SizedBox(height: 24),
-
-                    // Additional Info Section
-                    _buildAdditionalInfoSection(),
-                    const SizedBox(height: 32),
-
-                    // Save Button
-                    _buildSaveButton(),
-                    const SizedBox(height: 80),
-                  ],
+  
+              // Content
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      SectionHeader.gradient(
+                        icon: Icons.workspace_premium,
+                        title: 'Thêm chứng chỉ',
+                        gradientColors: const [
+                          AppTheme.themeOrangeStart,
+                          AppTheme.themeOrangeEnd,
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+  
+                      // Basic Info Section
+                      _buildBasicInfoSection(),
+                      const SizedBox(height: 24),
+  
+                      // Credential Info Section
+                      _buildCredentialSection(),
+                      const SizedBox(height: 24),
+  
+                      // Timeline Section
+                      _buildTimelineSection(),
+                      const SizedBox(height: 24),
+  
+                      // Additional Info Section
+                      _buildAdditionalInfoSection(),
+                      const SizedBox(height: 32),
+  
+                      // Save Button
+                      _buildSaveButton(),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
                 ),
               ),
-            ),
-
-            // Loading Overlay
-            if (_isLoading)
-              Container(color: Colors.black54, child: CommonLoading.center()),
-          ],
+  
+              // Loading Overlay
+              if (_isLoading)
+                Container(color: Colors.black54, child: CommonLoading.center()),
+            ],
+          ),
         ),
       ),
     );

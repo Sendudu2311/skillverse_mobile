@@ -17,9 +17,10 @@ class PortfolioProvider with ChangeNotifier, LoadingStateProviderMixin {
   CVDto? _activeCV;
   bool _hasExtendedProfile = false;
 
-  // New: System Certificates & Completed Missions
+  // New: System Certificates, Completed Missions, Verified Skills
   List<SystemCertificateDto> _systemCertificates = [];
   List<CompletedMissionDto> _completedMissions = [];
+  List<UserVerifiedSkillDto> _verifiedSkills = [];
   bool _isSyncing = false;
 
   // CV generation state — separate from the mixin's isLoading so the
@@ -39,6 +40,7 @@ class PortfolioProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool get hasExtendedProfile => _hasExtendedProfile;
   List<SystemCertificateDto> get systemCertificates => _systemCertificates;
   List<CompletedMissionDto> get completedMissions => _completedMissions;
+  List<UserVerifiedSkillDto> get verifiedSkills => _verifiedSkills;
   bool get isSyncing => _isSyncing;
   bool get isCVGenerating => _isCVGenerating;
   CVDto? get lastGeneratedCV => _lastGeneratedCV;
@@ -265,6 +267,76 @@ class PortfolioProvider with ChangeNotifier, LoadingStateProviderMixin {
     }
   }
 
+  // ==================== Verified Skills ====================
+
+  /// Load verified skills from 3 sources:
+  /// 1. Roadmap mentoring (journey-based)
+  /// 2. Student self-verification (admin-approved)
+  /// 3. Mentor-panel verification
+  Future<void> loadVerifiedSkills({int? userId}) async {
+    try {
+      final results = await Future.wait([
+        _portfolioService.getVerifiedSkills().catchError(
+          (_) => <UserVerifiedSkillDto>[],
+        ),
+        userId != null
+            ? _portfolioService.getPublicStudentVerifiedSkillDetails(userId)
+            : Future.value(<Map<String, dynamic>>[]),
+        userId != null
+            ? _portfolioService.getPublicMentorVerifiedSkillDetails(userId)
+            : Future.value(<Map<String, dynamic>>[]),
+      ]);
+
+      final roadmapSkills = results[0] as List<UserVerifiedSkillDto>;
+      final studentRaw = results[1] as List<Map<String, dynamic>>;
+      final mentorRaw = results[2] as List<Map<String, dynamic>>;
+
+      final studentSkills = _mapManualToVerifiedSkill(
+        studentRaw,
+        'STUDENT_MANUAL',
+      );
+      final mentorSkills = _mapManualToVerifiedSkill(
+        mentorRaw,
+        'MENTOR_MANUAL',
+      );
+
+      _verifiedSkills = [...roadmapSkills, ...studentSkills, ...mentorSkills];
+      notifyListeners();
+    } catch (_) {
+      // Non-critical — empty list is acceptable
+    }
+  }
+
+  /// Convert raw student/mentor verification responses to UserVerifiedSkillDto
+  List<UserVerifiedSkillDto> _mapManualToVerifiedSkill(
+    List<Map<String, dynamic>> items,
+    String source,
+  ) {
+    return items
+        .where(
+          (item) =>
+              item['status'] == 'APPROVED' || item['status'] == 'VERIFIED',
+        )
+        .map(
+          (item) => UserVerifiedSkillDto(
+            id: (item['id'] as num?)?.toInt() ?? 0,
+            skillName: item['skillName'] as String? ?? '',
+            skillLevel: item['skillLevel'] as String?,
+            verifiedByMentorId: (item['reviewedById'] as num?)?.toInt(),
+            verifiedByMentorName:
+                item['reviewedByName'] as String? ?? 'SkillVerse System',
+            verificationNote: item['reviewNote'] as String?,
+            verifiedAt: item['reviewedAt'] != null
+                ? DateTime.tryParse(item['reviewedAt'].toString())
+                : (item['requestedAt'] != null
+                      ? DateTime.tryParse(item['requestedAt'].toString())
+                      : null),
+            source: source,
+          ),
+        )
+        .toList();
+  }
+
   // ==================== CV ====================
 
   Future<void> loadCVs() async {
@@ -362,6 +434,7 @@ class PortfolioProvider with ChangeNotifier, LoadingStateProviderMixin {
     _hasExtendedProfile = false;
     _systemCertificates = [];
     _completedMissions = [];
+    _verifiedSkills = [];
     _isSyncing = false;
     resetState();
   }
@@ -374,6 +447,9 @@ class PortfolioProvider with ChangeNotifier, LoadingStateProviderMixin {
       return null;
     }
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => clearAll();
 
   /// Find certificate by ID
   CertificateDto? findCertificateById(int certificateId) {

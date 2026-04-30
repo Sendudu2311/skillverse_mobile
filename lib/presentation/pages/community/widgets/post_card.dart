@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../data/models/post_models.dart';
-import '../themes/app_theme.dart';
-import '../../core/utils/date_time_helper.dart';
-import '../../core/utils/number_formatter.dart';
-import '../../core/utils/html_helper.dart';
+import '../../../../data/models/post_models.dart';
+import '../../../themes/app_theme.dart';
+import '../../../../core/utils/date_time_helper.dart';
+import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/utils/html_helper.dart';
 
 class PostCard extends StatelessWidget {
   final Post post;

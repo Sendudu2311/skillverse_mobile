@@ -11,36 +11,29 @@ import '../../widgets/glass_card.dart';
 // =============================================================================
 
 class DashboardQuickActionsWidget extends StatelessWidget {
-  final bool showAllActions;
-  final VoidCallback onToggleShowAll;
   final bool isDark;
 
   const DashboardQuickActionsWidget({
     super.key,
-    required this.showAllActions,
-    required this.onToggleShowAll,
     required this.isDark,
   });
 
+  // Ordered by learner usage priority.
+  // Items already in bottom nav (Khóa học, AI Chat, Việc làm) are excluded.
   static const _actions = [
     {'icon': Icons.map_outlined, 'label': 'AI Roadmap', 'color': AppTheme.themePurpleStart, 'route': '/roadmap'},
     {'icon': Icons.explore_outlined, 'label': 'Hành trình', 'color': AppTheme.accentCyan, 'route': '/journey'},
-    {'icon': Icons.school_outlined, 'label': 'Khóa học', 'color': AppTheme.themeBlueStart, 'route': '/courses'},
-    {'icon': Icons.chat_bubble_outline, 'label': 'AI Chat', 'color': AppTheme.themeGreenStart, 'route': '/chat'},
     {'icon': Icons.dashboard_customize_outlined, 'label': 'Task Board', 'color': AppTheme.accentCyan, 'route': '/task-board', 'hasBadge': true},
     {'icon': Icons.psychology_outlined, 'label': 'Expert Chat', 'color': AppTheme.secondaryPurple, 'route': '/expert-chat'},
-    {'icon': Icons.people_outline, 'label': 'Cộng đồng', 'color': AppTheme.themeOrangeStart, 'route': '/community'},
     {'icon': Icons.person_outline, 'label': 'Mentor 1:1', 'color': AppTheme.primaryBlueDark, 'route': '/mentors'},
+    {'icon': Icons.people_outline, 'label': 'Cộng đồng', 'color': AppTheme.themeOrangeStart, 'route': '/community'},
     {'icon': Icons.work_outline, 'label': 'Portfolio', 'color': AppTheme.accentPink, 'route': '/portfolio'},
     {'icon': Icons.storefront_outlined, 'label': 'Skin Shop', 'color': AppTheme.accentGold, 'route': '/skins'},
-    {'icon': Icons.work_history_outlined, 'label': 'Việc làm', 'color': AppTheme.successColor, 'route': '/jobs'},
   ];
 
   @override
   Widget build(BuildContext context) {
     final overdueCount = context.watch<TaskBoardProvider>().overdueCount;
-    final visible = showAllActions ? _actions : _actions.sublist(0, 8);
-    final remaining = _actions.length - 8;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,9 +56,9 @@ class DashboardQuickActionsWidget extends StatelessWidget {
             mainAxisSpacing: 10,
             childAspectRatio: 0.85,
           ),
-          itemCount: visible.length,
+          itemCount: _actions.length,
           itemBuilder: (context, index) {
-            final action = visible[index];
+            final action = _actions[index];
             final hasBadge = action['hasBadge'] == true;
             return _QuickActionCell(
               icon: action['icon'] as IconData,
@@ -77,36 +70,6 @@ class DashboardQuickActionsWidget extends StatelessWidget {
             );
           },
         ),
-        if (!showAllActions) ...[
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: onToggleShowAll,
-            child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.expand_more,
-                    size: 16,
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Xem thêm ($remaining)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }

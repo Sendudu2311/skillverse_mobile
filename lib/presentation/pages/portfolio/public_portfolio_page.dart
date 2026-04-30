@@ -64,26 +64,30 @@ class _PublicPortfolioPageState extends State<PublicPortfolioPage> {
         title: '@${widget.slug}',
         onBack: () => Navigator.pop(context),
       ),
-      body: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: isDark
-                    ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
-                    : [Colors.grey.shade50, Colors.white],
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [AppTheme.galaxyDarkest, AppTheme.galaxyDark]
+                      : [Colors.grey.shade50, Colors.white],
+                ),
               ),
             ),
-          ),
-          if (_isLoading)
-            CommonLoading.center()
-          else if (_error != null)
-            _buildError()
-          else if (_profile != null)
-            _buildContent(_profile!),
-        ],
+            if (_isLoading)
+              CommonLoading.center()
+            else if (_error != null)
+              _buildError()
+            else if (_profile != null)
+              _buildContent(_profile!),
+          ],
+        ),
       ),
     );
   }

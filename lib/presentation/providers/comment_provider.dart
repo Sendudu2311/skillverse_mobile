@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/post_models.dart';
 import '../../data/services/post_service.dart';
 import '../../core/utils/pagination_helper.dart';
+import '../../core/utils/error_handler.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
 
 class CommentProvider with ChangeNotifier, LoadingStateProviderMixin {
@@ -86,7 +87,7 @@ class CommentProvider with ChangeNotifier, LoadingStateProviderMixin {
   Future<Comment?> addComment(int postId, String content) async {
     final comment = await executeAsync(() async {
       return await _postService.addComment(postId, content);
-    }, errorMessageBuilder: (e) => 'Lỗi thêm bình luận: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
 
     if (comment != null) {
       // Add to beginning of list using PaginationHelper method
@@ -116,7 +117,7 @@ class CommentProvider with ChangeNotifier, LoadingStateProviderMixin {
         );
         _pagination.updateItem(index, updatedComment);
       }
-    }, errorMessageBuilder: (e) => 'Lỗi ẩn bình luận: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   /// Refresh comments
@@ -130,6 +131,9 @@ class CommentProvider with ChangeNotifier, LoadingStateProviderMixin {
     _currentPostId = null;
     resetState();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => reset();
 
   @override
   void dispose() {

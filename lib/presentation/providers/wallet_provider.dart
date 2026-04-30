@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/dashboard_models.dart';
 import '../../data/models/wallet_models.dart';
 import '../../data/services/wallet_service.dart';
+import '../../core/utils/error_handler.dart';
 
 /// Provider for Wallet page state management
 class WalletProvider extends ChangeNotifier {
@@ -45,9 +46,7 @@ class WalletProvider extends ChangeNotifier {
 
   /// Coin percentage of total assets
   double get coinPercent =>
-      totalAssets > 0
-          ? ((coinBalance * coinToVndRate) / totalAssets) * 100
-          : 0;
+      totalAssets > 0 ? ((coinBalance * coinToVndRate) / totalAssets) * 100 : 0;
 
   /// Coin value in VND
   int get coinValueInVnd => coinBalance * coinToVndRate;
@@ -56,8 +55,10 @@ class WalletProvider extends ChangeNotifier {
   double get netCashFlow => totalDeposited - totalWithdrawn;
 
   // Stats getters (from statistics API)
-  double get statsTotalDeposited => _statistics?.totalDeposited ?? totalDeposited;
-  double get statsTotalWithdrawn => _statistics?.totalWithdrawn ?? totalWithdrawn;
+  double get statsTotalDeposited =>
+      _statistics?.totalDeposited ?? totalDeposited;
+  double get statsTotalWithdrawn =>
+      _statistics?.totalWithdrawn ?? totalWithdrawn;
   int get statsTotalCoinsEarned =>
       _statistics?.totalCoinsEarned ?? totalCoinsEarned;
   int get statsTotalCoinsSpent =>
@@ -82,15 +83,20 @@ class WalletProvider extends ChangeNotifier {
       // Load in parallel
       final results = await Future.wait([
         _walletService.getMyWallet(),
-        _walletService.getStatistics().then<WalletStatistics?>((v) => v).catchError((_) => null),
-        _walletService.getTransactions(page: 0, size: 5).catchError((_) => <WalletTransaction>[]),
+        _walletService
+            .getStatistics()
+            .then<WalletStatistics?>((v) => v)
+            .catchError((_) => null),
+        _walletService
+            .getTransactions(page: 0, size: 5)
+            .catchError((_) => <WalletTransaction>[]),
       ]);
 
       _wallet = results[0] as WalletResponse;
       _statistics = results[1] as WalletStatistics?;
       _transactions = results[2] as List<WalletTransaction>;
     } catch (e) {
-      _errorMessage = 'Không thể tải dữ liệu ví: ${e.toString()}';
+      _errorMessage = ErrorHandler.getErrorMessage(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -100,5 +106,15 @@ class WalletProvider extends ChangeNotifier {
   /// Refresh wallet data
   Future<void> refresh() async {
     await loadAll();
+  }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() {
+    _wallet = null;
+    _statistics = null;
+    _transactions = [];
+    _isLoading = false;
+    _errorMessage = null;
+    notifyListeners();
   }
 }

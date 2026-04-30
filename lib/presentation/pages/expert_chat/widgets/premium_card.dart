@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../themes/app_theme.dart';
+import '../../../themes/app_theme.dart';
 
 /// Premium upgrade card with animated gradient
 class PremiumCard extends StatefulWidget {
@@ -35,13 +35,15 @@ class _PremiumCardState extends State<PremiumCard>
       vsync: this,
     )..repeat(reverse: true);
 
-    _gradientAnimation = Tween<double>(begin: -0.5, end: 1.5).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _gradientAnimation = Tween<double>(
+      begin: -0.5,
+      end: 1.5,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.05,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -140,7 +142,9 @@ class _PremiumCardState extends State<PremiumCard>
                                   Text(
                                     widget.subtitle,
                                     style: TextStyle(
-                                      color: Colors.white.withValues(alpha: 0.9),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.9,
+                                      ),
                                       fontSize: 14,
                                     ),
                                   ),

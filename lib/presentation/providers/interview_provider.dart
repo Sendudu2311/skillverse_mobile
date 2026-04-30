@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../../data/services/interview_service.dart';
 import '../../data/models/interview_models.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/utils/error_handler.dart';
 
 /// Provider for Interview Schedule feature
 /// Manages fetching, cancelling interviews for the current user
@@ -31,7 +32,7 @@ class InterviewProvider extends ChangeNotifier {
     try {
       _myInterviews = await _service.getMyInterviews();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = ErrorHandler.getErrorMessage(e);
       _myInterviews = [];
     } finally {
       _isLoading = false;
@@ -58,7 +59,7 @@ class InterviewProvider extends ChangeNotifier {
         debugPrint('❌ Error loading interview: ${e.message}');
       }
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = ErrorHandler.getErrorMessage(e);
       debugPrint('❌ Error loading interview: $e');
     } finally {
       _isLoading = false;
@@ -76,7 +77,7 @@ class InterviewProvider extends ChangeNotifier {
       _replaceInState(interviewId, updated);
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = ErrorHandler.getErrorMessage(e);
       return false;
     } finally {
       _isSubmittingAction = false;
@@ -97,7 +98,7 @@ class InterviewProvider extends ChangeNotifier {
       _replaceInState(interviewId, updated);
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = ErrorHandler.getErrorMessage(e);
       return false;
     } finally {
       _isSubmittingAction = false;
@@ -113,7 +114,7 @@ class InterviewProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = ErrorHandler.getErrorMessage(e);
       notifyListeners();
       return false;
     }
@@ -131,4 +132,7 @@ class InterviewProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => clearCurrent();
 }

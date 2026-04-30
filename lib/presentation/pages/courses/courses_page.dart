@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/enrollment_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/course_card_v3.dart';
+import 'widgets/course_card_v3.dart';
 import '../../widgets/app_search_bar.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/animated_list_item.dart';
@@ -51,8 +51,7 @@ class _CoursesPageState extends State<CoursesPage> {
 
       // Load enrollment data so cards show "Đã sở hữu" instead of price
       final authProvider = context.read<AuthProvider>();
-      if (authProvider.user != null &&
-          enrollmentProvider.enrollments.isEmpty) {
+      if (authProvider.user != null && enrollmentProvider.enrollments.isEmpty) {
         await enrollmentProvider.fetchUserEnrollments();
       }
 

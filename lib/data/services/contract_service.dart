@@ -30,7 +30,7 @@ class ContractService {
           .toList();
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy danh sách hợp đồng thất bại: ${e.toString()}');
+      throw ApiException('Lấy danh sách hợp đồng thất bại');
     }
   }
 
@@ -48,7 +48,7 @@ class ContractService {
       return ContractResponse.fromJson(response.data!);
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Lấy chi tiết hợp đồng thất bại: ${e.toString()}');
+      throw ApiException('Lấy chi tiết hợp đồng thất bại');
     }
   }
 
@@ -74,7 +74,7 @@ class ContractService {
       throw ApiException(_extractErrorMessage(e, 'Ký hợp đồng thất bại'));
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Ký hợp đồng thất bại: ${e.toString()}');
+      throw ApiException('Ký hợp đồng thất bại');
     }
   }
 
@@ -97,7 +97,7 @@ class ContractService {
       );
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Từ chối hợp đồng thất bại: ${e.toString()}');
+      throw ApiException('Từ chối hợp đồng thất bại');
     }
   }
 

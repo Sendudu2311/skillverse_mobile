@@ -531,23 +531,23 @@ void main() {
   // ============================================================
   group('Flow: API Error Handling', () {
     test('401 Unauthorized → redirect to login', () {
-      const error = ApiException('Unauthorized', 401);
+      final error = ApiException('Unauthorized', 401);
       expect(error.statusCode, 401);
       expect(error.message.toLowerCase(), contains('unauthorized'));
     });
 
     test('403 Forbidden → access denied', () {
-      const error = ApiException('Forbidden', 403);
+      final error = ApiException('Forbidden', 403);
       expect(error.statusCode, 403);
     });
 
     test('404 Not Found → resource missing', () {
-      const error = ApiException('Not Found', 404);
+      final error = ApiException('Not Found', 404);
       expect(error.statusCode, 404);
     });
 
     test('500 Internal Server Error → server error', () {
-      const error = ApiException('Internal Server Error', 500);
+      final error = ApiException('Internal Server Error', 500);
       expect(error.statusCode, 500);
     });
 
@@ -565,7 +565,7 @@ void main() {
     });
 
     test('Network timeout creates appropriate exception', () {
-      const error = ApiException('Connection timeout', 0);
+      final error = ApiException('Connection timeout', 0);
       expect(error.message, contains('timeout'));
     });
   });

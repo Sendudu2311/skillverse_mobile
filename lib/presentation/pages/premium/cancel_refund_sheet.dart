@@ -152,85 +152,88 @@ class _CancelRefundSheetState extends State<CancelRefundSheet> {
             : AppTheme.lightCardBackground,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppTheme.darkBorderColor
-                    : AppTheme.lightBorderColor,
-                borderRadius: BorderRadius.circular(2),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppTheme.darkBorderColor
+                      : AppTheme.lightBorderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Header
-            Icon(
-              Icons.warning_amber_rounded,
-              color: AppTheme.themeOrangeStart,
-              size: 48,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Hủy Gói Premium',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: isDark
-                    ? AppTheme.darkTextPrimary
-                    : AppTheme.lightTextPrimary,
+              // Header
+              Icon(
+                Icons.warning_amber_rounded,
+                color: AppTheme.themeOrangeStart,
+                size: 48,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Bạn có chắc chắn muốn hủy gói đăng ký?',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
+              const SizedBox(height: 12),
+              Text(
+                'Hủy Gói Premium',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 4),
+              Text(
+                'Bạn có chắc chắn muốn hủy gói đăng ký?',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+              ),
+              const SizedBox(height: 20),
 
-            // Content - Loading or Result
-            if (_checking)
-              _buildLoading(isDark)
-            else ...[
-              // Error banner (e.g. cancellation limit)
-              if (_error != null) _buildErrorBanner(isDark),
+              // Content - Loading or Result
+              if (_checking)
+                _buildLoading(isDark)
+              else ...[
+                // Error banner (e.g. cancellation limit)
+                if (_error != null) _buildErrorBanner(isDark),
 
-              // Subscription info
-              _buildSubscriptionInfo(isDark),
-              const SizedBox(height: 16),
-
-              // 3-tier refund card
-              _buildRefundCard(isDark),
-              const SizedBox(height: 16),
-
-              // Reason input (only if refund-eligible)
-              if (_refundPercentage > 0 && _error == null) ...[
-                _buildReasonInput(isDark),
+                // Subscription info
+                _buildSubscriptionInfo(isDark),
                 const SizedBox(height: 16),
-              ],
 
-              // Contextual warnings
-              if (_error == null) ...[
-                _buildWarnings(isDark),
-                const SizedBox(height: 20),
-              ],
+                // 3-tier refund card
+                _buildRefundCard(isDark),
+                const SizedBox(height: 16),
 
-              // Action buttons
-              if (_error == null || !_isCancellationLimitMessage(_error))
-                _buildActions(isDark),
+                // Reason input (only if refund-eligible)
+                if (_refundPercentage > 0 && _error == null) ...[
+                  _buildReasonInput(isDark),
+                  const SizedBox(height: 16),
+                ],
+
+                // Contextual warnings
+                if (_error == null) ...[
+                  _buildWarnings(isDark),
+                  const SizedBox(height: 20),
+                ],
+
+                // Action buttons
+                if (_error == null || !_isCancellationLimitMessage(_error))
+                  _buildActions(isDark),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -45,40 +45,44 @@ class _RecruitmentSessionsPageState extends State<RecruitmentSessionsPage> {
         title: 'Chat Tuyển Dụng',
         centerTitle: true,
       ),
-      body: Consumer<RecruitmentChatProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoadingSessions) {
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 5,
-              itemBuilder: (_, __) => const _SessionCardSkeleton(),
-            );
-          }
-
-          if (provider.sessions.isEmpty) {
-            return Center(
-              child: EmptyStateWidget(
-                icon: Icons.work_outline,
-                title: 'Chưa có cuộc trò chuyện tuyển dụng',
-                subtitle:
-                    'Khi nhà tuyển dụng liên hệ bạn, cuộc trò chuyện sẽ xuất hiện tại đây',
-                iconGradient: AppTheme.blueGradient,
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<RecruitmentChatProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoadingSessions) {
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: 5,
+                itemBuilder: (_, __) => const _SessionCardSkeleton(),
+              );
+            }
+  
+            if (provider.sessions.isEmpty) {
+              return Center(
+                child: EmptyStateWidget(
+                  icon: Icons.work_outline,
+                  title: 'Chưa có cuộc trò chuyện tuyển dụng',
+                  subtitle:
+                      'Khi nhà tuyển dụng liên hệ bạn, cuộc trò chuyện sẽ xuất hiện tại đây',
+                  iconGradient: AppTheme.blueGradient,
+                ),
+              );
+            }
+  
+            return RefreshIndicator(
+              onRefresh: () => provider.loadMySessions(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: provider.sessions.length,
+                itemBuilder: (context, index) {
+                  final session = provider.sessions[index];
+                  return _SessionCard(session: session, isDark: isDark);
+                },
               ),
             );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => provider.loadMySessions(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: provider.sessions.length,
-              itemBuilder: (context, index) {
-                final session = provider.sessions[index];
-                return _SessionCard(session: session, isDark: isDark);
-              },
-            ),
-          );
-        },
+          },
+        ),
       ),
     );
   }

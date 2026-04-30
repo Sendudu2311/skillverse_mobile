@@ -162,6 +162,54 @@ class LearningReportService {
     return '$hours giờ $mins phút';
   }
 
+  // ─── V3 Analytics Endpoints ─────────────────────────────────────────────
+
+  /// GET /student/learning-report/summary?range={range}
+  /// Live summary (deterministic, no AI wait).
+  Future<StudentLearningReportResponse> getSummary(String range) async {
+    try {
+      final response = await _apiClient.get(
+        '$_basePath/summary',
+        queryParameters: {'range': range},
+      );
+      return StudentLearningReportResponse.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// GET /student/learning-report/timeline?range={range}&snapshotId={id}
+  /// Returns raw map — timeline schema varies by backend version.
+  Future<Map<String, dynamic>> getTimeline(
+      String range, int? snapshotId) async {
+    try {
+      final response = await _apiClient.get(
+        '$_basePath/timeline',
+        queryParameters: {
+          'range': range,
+          if (snapshotId != null) 'snapshotId': snapshotId,
+        },
+      );
+      return (response.data as Map<String, dynamic>?) ?? {};
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// POST /student/learning-report/snapshots?range={range}
+  /// Save a snapshot of current analytics state.
+  Future<StudentLearningReportResponse> createSnapshot(String range) async {
+    try {
+      final response = await _apiClient.post(
+        '$_basePath/snapshots',
+        queryParameters: {'range': range},
+      );
+      return StudentLearningReportResponse.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   /// Centralized error handling
   Exception _handleError(dynamic error) {
     return Exception(ErrorHandler.getErrorMessage(error));

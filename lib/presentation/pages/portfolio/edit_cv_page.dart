@@ -300,63 +300,67 @@ class _EditCVPageState extends State<EditCVPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: SkillVerseAppBar(title: 'Chỉnh sửa CV', icon: Icons.edit_note),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _sectionCard('Thông tin cá nhân', Icons.person_outline, [
-                _field(_fullNameCtrl, 'Họ và tên', required: true),
-                _field(_professionalTitleCtrl, 'Chức danh'),
-                _field(_locationCtrl, 'Địa chỉ'),
-              ]),
-              const SizedBox(height: 16),
-              _sectionCard('Liên hệ', Icons.contact_mail_outlined, [
-                _field(
-                  _emailCtrl,
-                  'Email',
-                  keyboard: TextInputType.emailAddress,
-                ),
-                _field(_phoneCtrl, 'Điện thoại', keyboard: TextInputType.phone),
-                _field(
-                  _linkedinCtrl,
-                  'LinkedIn URL',
-                  keyboard: TextInputType.url,
-                ),
-                _field(_githubCtrl, 'GitHub URL', keyboard: TextInputType.url),
-              ]),
-              const SizedBox(height: 16),
-              _sectionCard('Tóm tắt', Icons.summarize_outlined, [
-                _field(_summaryCtrl, 'Giới thiệu bản thân', maxLines: 4),
-              ]),
-              const SizedBox(height: 16),
-              _sectionCard('Kinh nghiệm', Icons.work_outline, [
-                _field(
-                  _experienceCtrl,
-                  'Mô tả kinh nghiệm làm việc',
-                  maxLines: 6,
-                ),
-              ]),
-              const SizedBox(height: 16),
-              _sectionCard('Học vấn', Icons.school_outlined, [
-                _field(_educationCtrl, 'Mô tả học vấn', maxLines: 4),
-              ]),
-              const SizedBox(height: 16),
-              _sectionCard('Kỹ năng', Icons.psychology_outlined, [
-                _field(_skillsCtrl, 'Liệt kê kỹ năng', maxLines: 4),
-              ]),
-              const SizedBox(height: 16),
-              _sectionCard('Dự án', Icons.folder_outlined, [
-                _field(_projectsCtrl, 'Mô tả dự án nổi bật', maxLines: 5),
-              ]),
-              const SizedBox(height: 16),
-              _sectionCard('Chứng chỉ', Icons.verified_outlined, [
-                _field(_certificatesCtrl, 'Liệt kê chứng chỉ', maxLines: 4),
-              ]),
-              const SizedBox(height: 24),
-            ],
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sectionCard('Thông tin cá nhân', Icons.person_outline, [
+                  _field(_fullNameCtrl, 'Họ và tên', required: true),
+                  _field(_professionalTitleCtrl, 'Chức danh'),
+                  _field(_locationCtrl, 'Địa chỉ'),
+                ]),
+                const SizedBox(height: 16),
+                _sectionCard('Liên hệ', Icons.contact_mail_outlined, [
+                  _field(
+                    _emailCtrl,
+                    'Email',
+                    keyboard: TextInputType.emailAddress,
+                  ),
+                  _field(_phoneCtrl, 'Điện thoại', keyboard: TextInputType.phone),
+                  _field(
+                    _linkedinCtrl,
+                    'LinkedIn URL',
+                    keyboard: TextInputType.url,
+                  ),
+                  _field(_githubCtrl, 'GitHub URL', keyboard: TextInputType.url),
+                ]),
+                const SizedBox(height: 16),
+                _sectionCard('Tóm tắt', Icons.summarize_outlined, [
+                  _field(_summaryCtrl, 'Giới thiệu bản thân', maxLines: 4),
+                ]),
+                const SizedBox(height: 16),
+                _sectionCard('Kinh nghiệm', Icons.work_outline, [
+                  _field(
+                    _experienceCtrl,
+                    'Mô tả kinh nghiệm làm việc',
+                    maxLines: 6,
+                  ),
+                ]),
+                const SizedBox(height: 16),
+                _sectionCard('Học vấn', Icons.school_outlined, [
+                  _field(_educationCtrl, 'Mô tả học vấn', maxLines: 4),
+                ]),
+                const SizedBox(height: 16),
+                _sectionCard('Kỹ năng', Icons.psychology_outlined, [
+                  _field(_skillsCtrl, 'Liệt kê kỹ năng', maxLines: 4),
+                ]),
+                const SizedBox(height: 16),
+                _sectionCard('Dự án', Icons.folder_outlined, [
+                  _field(_projectsCtrl, 'Mô tả dự án nổi bật', maxLines: 5),
+                ]),
+                const SizedBox(height: 16),
+                _sectionCard('Chứng chỉ', Icons.verified_outlined, [
+                  _field(_certificatesCtrl, 'Liệt kê chứng chỉ', maxLines: 4),
+                ]),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
