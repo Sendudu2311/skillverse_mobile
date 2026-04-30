@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/error_handler.dart';
 import '../../data/models/task_board_models.dart';
 import '../../data/services/task_board_service.dart';
 
@@ -68,14 +69,18 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
     notifyListeners();
   }
 
-  // Load board data from backend
-  Future<void> loadBoard() async {
+  // Load board data from backend.
+  // Pass [roadmapSessionId] to scope the board to a specific roadmap session.
+  Future<void> loadBoard({int? roadmapSessionId}) async {
     setLoading(true);
+    setError(null);
     try {
-      final boardData = await _taskBoardService.getBoard();
+      final boardData = await _taskBoardService.getBoard(
+        roadmapSessionId: roadmapSessionId,
+      );
       _columns = boardData.map((col) => col.toTaskColumn()).toList();
 
-      // If no columns, initialize with defaults
+      // Only create default columns when the backend returns a valid empty board
       if (_columns.isEmpty) {
         _columns = _buildDefaultColumns();
       }
@@ -83,8 +88,9 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
       setLoading(false);
     } catch (e) {
       debugPrint('Error loading board: $e');
-      // Fallback to default columns on error
-      _columns = _buildDefaultColumns();
+      // Do NOT fall back to fake columns — show error so user can retry
+      _columns = [];
+      setError(ErrorHandler.getErrorMessage(e));
       setLoading(false);
     }
   }
@@ -100,6 +106,11 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
           ),
         )
         .toList();
+  }
+
+  /// Load board scoped to a specific roadmap session (for post-study-plan CTA).
+  Future<void> loadBoardForRoadmap(int roadmapSessionId) async {
+    await loadBoard(roadmapSessionId: roadmapSessionId);
   }
 
   // Get statistics
@@ -154,43 +165,63 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
       },
       errorMessageBuilder: (e) {
         debugPrint('❌ TaskBoardProvider Error: $e');
-        return 'Không thể tạo nhiệm vụ: $e';
+        return ErrorHandler.getErrorMessage(e);
       },
     );
   }
 
-  /// Update a task
+  /// Update a task — handles cross-column moves if columnId changes.
   Future<void> updateTask(String taskId, UpdateTaskRequest request) async {
     await executeAsync(
       () async {
         final response = await _taskBoardService.updateTask(taskId, request);
         final updatedTask = response.toTask();
 
-        // Update in columns
         final newColumns = List<TaskColumn>.from(_columns);
-        bool updated = false;
+        int sourceColIndex = -1;
+        int sourceTaskIndex = -1;
+
+        // Find current location
         for (int i = 0; i < newColumns.length; i++) {
-          final taskIndex = newColumns[i].tasks.indexWhere(
-            (t) => t.id == taskId,
-          );
-          if (taskIndex != -1) {
-            final updatedTasks = List<Task>.from(newColumns[i].tasks);
-            updatedTasks[taskIndex] = updatedTask;
-            newColumns[i] = newColumns[i].copyWith(tasks: updatedTasks);
-            updated = true;
+          final idx = newColumns[i].tasks.indexWhere((t) => t.id == taskId);
+          if (idx != -1) {
+            sourceColIndex = i;
+            sourceTaskIndex = idx;
             break;
           }
         }
 
-        if (updated) {
-          _columns = newColumns;
+        if (sourceColIndex == -1) {
+          // Task not found locally — just reload
+          notifyListeners();
+          return;
         }
 
+        final targetColId = updatedTask.columnId ?? newColumns[sourceColIndex].id;
+        final targetColIndex = newColumns.indexWhere((c) => c.id == targetColId);
+
+        if (targetColIndex != -1 && targetColIndex != sourceColIndex) {
+          // Task moved to a different column
+          final srcTasks = List<Task>.from(newColumns[sourceColIndex].tasks)
+            ..removeAt(sourceTaskIndex);
+          newColumns[sourceColIndex] = newColumns[sourceColIndex].copyWith(tasks: srcTasks);
+
+          final dstTasks = List<Task>.from(newColumns[targetColIndex].tasks)
+            ..add(updatedTask);
+          newColumns[targetColIndex] = newColumns[targetColIndex].copyWith(tasks: dstTasks);
+        } else {
+          // Same column — replace in place
+          final updatedTasks = List<Task>.from(newColumns[sourceColIndex].tasks);
+          updatedTasks[sourceTaskIndex] = updatedTask;
+          newColumns[sourceColIndex] = newColumns[sourceColIndex].copyWith(tasks: updatedTasks);
+        }
+
+        _columns = newColumns;
         notifyListeners();
       },
       errorMessageBuilder: (e) {
         debugPrint('❌ TaskBoardProvider Error: $e');
-        return 'Không thể cập nhật nhiệm vụ: $e';
+        return ErrorHandler.getErrorMessage(e);
       },
     );
   }
@@ -223,7 +254,7 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
       },
       errorMessageBuilder: (e) {
         debugPrint('❌ TaskBoardProvider Error: $e');
-        return 'Không thể xóa nhiệm vụ: $e';
+        return ErrorHandler.getErrorMessage(e);
       },
     );
   }
@@ -280,7 +311,7 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
       debugPrint('✅ Task $taskId moved to $targetColumnId successfully');
     } catch (e) {
       debugPrint('❌ TaskBoardProvider Move Error: $e');
-      setError('Không thể di chuyển nhiệm vụ: $e');
+      setError(ErrorHandler.getErrorMessage(e));
       // Rollback: Reload from server on failure
       await loadBoard();
     }
@@ -319,8 +350,8 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
       _notes.add(note);
       notifyListeners();
     } catch (e) {
-      setError('Không thể tạo ghi chú: $e');
       debugPrint('❌ TaskBoardProvider Error: $e');
+      setError(ErrorHandler.getErrorMessage(e));
     }
   }
 
@@ -331,8 +362,8 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
       _notes.removeWhere((n) => n.id == noteId);
       notifyListeners();
     } catch (e) {
-      setError('Không thể xóa ghi chú: $e');
       debugPrint('❌ TaskBoardProvider Error: $e');
+      setError(ErrorHandler.getErrorMessage(e));
     }
   }
 
@@ -457,5 +488,12 @@ class TaskBoardProvider extends ChangeNotifier with LoadingStateProviderMixin {
       }
       return false;
     }).toList();
+  }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() {
+    _columns = [];
+    _notes = [];
+    resetState();
   }
 }

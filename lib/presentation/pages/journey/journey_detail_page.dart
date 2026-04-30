@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/journey_provider.dart';
+import '../../providers/task_board_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/journey_models.dart';
 import '../../../core/utils/error_handler.dart';
@@ -144,26 +145,38 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
           ),
           body: RefreshIndicator(
             onRefresh: () async => _loadJourney(),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Status Header
-                  _buildStatusHeader(context, journey, isDark),
-                  const SizedBox(height: 20),
+            child: SafeArea(
+              bottom: true,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Status Header
+                    _buildStatusHeader(context, journey, isDark),
+                    const SizedBox(height: 20),
 
-                  // Main Content based on status
-                  _buildContentByStatus(context, journey, provider, isDark),
+                    // Main Content based on status
+                    _buildContentByStatus(context, journey, provider, isDark),
 
-                  // Milestones
-                  if (journey.milestones != null &&
-                      journey.milestones!.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    _buildMilestones(context, journey.milestones!, isDark),
+                    // Milestones
+                    if (journey.milestones != null &&
+                        journey.milestones!.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      _buildMilestones(context, journey.milestones!, isDark),
+                    ],
+
+                    // Final Verification CTA
+                    if (journey.finalVerificationRequired == true &&
+                        (journey.status == JourneyStatus.awaitingVerification ||
+                            journey.status ==
+                                JourneyStatus.completedUnverified)) ...[
+                      const SizedBox(height: 20),
+                      _buildVerificationCta(context, journey),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -173,55 +186,54 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
   }
 
   List<Widget> _buildActions(BuildContext context, JourneySummaryDto journey) {
-    return [
-      if (journey.status == JourneyStatus.active)
-        PopupMenuButton<String>(
-          onSelected: (value) async {
-            final provider = context.read<JourneyProvider>();
-            switch (value) {
-              case 'pause':
-                await provider.pauseJourney(journey.id);
-                break;
-              case 'complete':
-                await provider.completeJourney(journey.id);
-                break;
-              case 'cancel':
-                final confirmed = await _showConfirmDialog(
-                  context,
-                  'Hủy hành trình',
-                  'Bạn có chắc muốn hủy hành trình này?',
-                );
-                if (confirmed == true) await provider.cancelJourney(journey.id);
-                break;
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'pause',
-              child: ListTile(
-                leading: Icon(Icons.pause_circle_outline),
-                title: Text('Tạm dừng'),
-                dense: true,
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'complete',
-              child: ListTile(
-                leading: Icon(Icons.check_circle_outline),
-                title: Text('Hoàn thành'),
-                dense: true,
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'cancel',
-              child: ListTile(
-                leading: Icon(Icons.cancel_outlined, color: Colors.red),
-                title: Text('Hủy'),
-                dense: true,
-              ),
-            ),
-          ],
+    final List<PopupMenuEntry<String>> menuItems = [];
+
+    if (journey.status == JourneyStatus.active) {
+      menuItems.addAll([
+        const PopupMenuItem<String>(
+          value: 'pause',
+          child: ListTile(
+            leading: Icon(Icons.pause_circle_outline),
+            title: Text('Tạm dừng'),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+          ),
         ),
+        const PopupMenuItem<String>(
+          value: 'complete',
+          child: ListTile(
+            leading: Icon(Icons.check_circle_outline),
+            title: Text('Hoàn thành'),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'cancel',
+          child: ListTile(
+            leading: Icon(Icons.cancel_outlined, color: Colors.orange),
+            title: Text('Hủy', style: TextStyle(color: Colors.orange)),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+          ),
+        ),
+        const PopupMenuDivider(),
+      ]);
+    }
+
+    menuItems.add(
+      const PopupMenuItem<String>(
+        value: 'delete',
+        child: ListTile(
+          leading: Icon(Icons.delete_outline, color: Colors.red),
+          title: Text('Xóa', style: TextStyle(color: Colors.red)),
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+        ),
+      ),
+    );
+
+    return [
       if (journey.status == JourneyStatus.paused)
         IconButton(
           icon: const Icon(Icons.play_arrow),
@@ -229,6 +241,56 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
           onPressed: () =>
               context.read<JourneyProvider>().resumeJourney(journey.id),
         ),
+      PopupMenuButton<String>(
+        onSelected: (value) async {
+          final provider = context.read<JourneyProvider>();
+          final taskBoardProvider = context.read<TaskBoardProvider>();
+          switch (value) {
+            case 'pause':
+              await provider.pauseJourney(journey.id);
+              taskBoardProvider.loadBoard(); // Sync archived tasks
+              break;
+            case 'complete':
+              await provider.completeJourney(journey.id);
+              break;
+            case 'cancel':
+              final confirmed = await _showConfirmDialog(
+                context,
+                'Hủy hành trình',
+                'Bạn có chắc muốn hủy hành trình này?',
+              );
+              if (confirmed == true) {
+                await provider.cancelJourney(journey.id);
+                taskBoardProvider.loadBoard(); // Sync archived tasks
+              }
+              break;
+            case 'delete':
+              final confirmed = await _showConfirmDialog(
+                context,
+                'Xóa hành trình',
+                'Bạn có chắc muốn xóa hành trình này? Hành động này không thể hoàn tác.',
+              );
+              if (confirmed == true) {
+                final result = await provider.deleteJourney(journey.id);
+                taskBoardProvider.loadBoard(); // Sync deleted tasks
+                if (result && context.mounted) {
+                  context.go('/journey');
+                  ErrorHandler.showSuccessSnackBar(
+                    context,
+                    'Đã xóa hành trình',
+                  );
+                } else if (context.mounted && provider.errorMessage != null) {
+                  ErrorHandler.showErrorSnackBar(
+                    context,
+                    provider.errorMessage!,
+                  );
+                }
+              }
+              break;
+          }
+        },
+        itemBuilder: (context) => menuItems,
+      ),
     ];
   }
 
@@ -405,6 +467,11 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
         return _buildActive(context, journey, isDark);
 
       case JourneyStatus.completed:
+      case JourneyStatus.completedVerified:
+        return _buildCompleted(context, journey, isDark);
+
+      case JourneyStatus.completedUnverified:
+      case JourneyStatus.awaitingVerification:
         return _buildCompleted(context, journey, isDark);
 
       case JourneyStatus.paused:
@@ -600,6 +667,33 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
   ) {
     final isSubmitting = provider.isLoadingFor('submitTest');
 
+    // ── Full-screen overlay while AI is evaluating ──
+    if (isSubmitting) {
+      return _sectionCard(
+        isDark: isDark,
+        icon: Icons.psychology,
+        title: 'AI đang chấm bài...',
+        child: const AiGenerationLoadingView(
+          speech: 'Meowl đang chấm bài cho bạn, chờ xíu nha! 📝',
+          title: 'Đang đánh giá kết quả',
+          description:
+              'AI đang phân tích câu trả lời, đánh giá năng lực và tạo báo cáo chi tiết.',
+          etaText: 'Thường mất khoảng 15-30 giây',
+          steps: [
+            ('Nhận bài', Icons.inbox_outlined),
+            ('Phân tích', Icons.analytics_outlined),
+            ('Đánh giá', Icons.grading_outlined),
+            ('Hoàn tất', Icons.check_circle_outline),
+          ],
+          avatarSize: 96,
+          topSpacing: 8,
+          padding: EdgeInsets.zero,
+          useSafeArea: false,
+          scrollable: false,
+        ),
+      );
+    }
+
     // Parse questions from state or generated test
     List<dynamic> questions = _loadedQuestions ?? [];
     if (questions.isEmpty && provider.generatedTest?.questionsJson != null) {
@@ -692,38 +786,34 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: isSubmitting
-                      ? null
-                      : () async {
-                          if (_answers.isEmpty) {
-                            ErrorHandler.showWarningSnackBar(
-                              context,
-                              'Vui lòng trả lời ít nhất một câu hỏi',
-                            );
-                            return;
-                          }
-                          try {
-                            final request = SubmitTestRequest(
-                              testId: journey.assessmentTestId ?? 0,
-                              answers: _answers,
-                            );
-                            await provider.submitTest(
-                              journeyId: journey.id,
-                              request: request,
-                            );
-                          } catch (e) {
-                            if (context.mounted) {
-                              ErrorHandler.showErrorSnackBar(
-                                context,
-                                e.toString().replaceAll('Exception: ', ''),
-                              );
-                            }
-                          }
-                        },
-                  icon: isSubmitting
-                      ? CommonLoading.button()
-                      : const Icon(Icons.send),
-                  label: Text(isSubmitting ? 'Đang nộp bài...' : 'Nộp bài'),
+                  onPressed: () async {
+                    if (_answers.isEmpty) {
+                      ErrorHandler.showWarningSnackBar(
+                        context,
+                        'Vui lòng trả lời ít nhất một câu hỏi',
+                      );
+                      return;
+                    }
+                    try {
+                      final request = SubmitTestRequest(
+                        testId: journey.assessmentTestId ?? 0,
+                        answers: _answers,
+                      );
+                      await provider.submitTest(
+                        journeyId: journey.id,
+                        request: request,
+                      );
+                    } catch (e) {
+                      if (context.mounted) {
+                        ErrorHandler.showErrorSnackBar(
+                          context,
+                          ErrorHandler.getErrorMessage(e),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.send),
+                  label: const Text('Nộp bài'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryBlueDark,
                     foregroundColor: Colors.white,
@@ -1438,5 +1528,87 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
       default:
         return milestone;
     }
+  }
+
+  Widget _buildVerificationCta(
+      BuildContext context, JourneySummaryDto journey) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border:
+            Border.all(color: AppTheme.warningColor.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.verified_outlined,
+                  color: AppTheme.warningColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Yêu cầu xác minh hoàn thành',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.warningColor,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Hành trình của bạn cần được mentor xác minh trước khi hoàn thành chính thức.',
+            style: TextStyle(fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          if (journey.status == JourneyStatus.completedUnverified)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final provider = context.read<JourneyProvider>();
+                  final result =
+                      await provider.requestVerification(journey.id);
+                  if (result != null && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Đã gửi yêu cầu xác minh'),
+                      ),
+                    );
+                  } else if (provider.hasError && mounted) {
+                    ErrorHandler.showErrorSnackBar(
+                      context,
+                      provider.errorMessage ?? 'Yêu cầu xác minh thất bại',
+                    );
+                  }
+                },
+                icon: const Icon(Icons.send_outlined, size: 18),
+                label: const Text('Gửi yêu cầu xác minh'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.themeGreenStart,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          if (journey.status == JourneyStatus.awaitingVerification)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () =>
+                    context.push('/journey/${journey.id}/final-verification'),
+                icon: const Icon(Icons.verified_outlined, size: 18),
+                label: const Text('Xem xác minh'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.warningColor,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

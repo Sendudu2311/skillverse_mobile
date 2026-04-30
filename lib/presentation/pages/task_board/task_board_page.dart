@@ -136,6 +136,38 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
           Expanded(
             child: Consumer<TaskBoardProvider>(
               builder: (context, provider, _) {
+                // Show error state on every tab when board failed to load
+                if (provider.hasError && provider.columns.isEmpty) {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.cloud_off_outlined, size: 56,
+                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                          const SizedBox(height: 16),
+                          Text(
+                            provider.errorMessage ?? 'Không thể tải bảng công việc',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            onPressed: () => provider.loadBoard(),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Thử lại'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
                 switch (provider.selectedTabIndex) {
                   case 0:
                     return _buildAIStrategistView();

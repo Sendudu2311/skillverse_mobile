@@ -147,7 +147,8 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                         context,
                         _deadline,
                         'dd/mm/yyyy, --:--',
-                        (date) => setState(() => _deadline = date),
+                        (date) => setState(() => _deadline =
+                            DateTime(date.year, date.month, date.day, 23, 59, 59)),
                       ),
                       const SizedBox(height: 16),
 

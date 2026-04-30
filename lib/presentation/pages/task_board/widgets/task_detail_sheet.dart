@@ -87,14 +87,17 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
           color: AppTheme.primaryBlueDark.withValues(alpha: 0.3),
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildHandle(),
-          _buildHeader(isDark),
-          Flexible(child: _buildFormContent(isDark)),
-          _buildFooter(isDark),
-        ],
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildHandle(),
+            _buildHeader(isDark),
+            Flexible(child: _buildFormContent(isDark)),
+            _buildFooter(isDark),
+          ],
+        ),
       ),
     );
   }
@@ -204,7 +207,16 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                     'HẠN CHÓT',
                     Icons.flag,
                     _deadline,
-                    (d) => setState(() => _deadline = d),
+                    (d) => setState(
+                      () => _deadline = DateTime(
+                        d.year,
+                        d.month,
+                        d.day,
+                        23,
+                        59,
+                        59,
+                      ),
+                    ),
                     firstDate: _startDate,
                   ),
                 ),

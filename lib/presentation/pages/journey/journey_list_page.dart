@@ -39,32 +39,29 @@ class _JourneyListPageState extends State<JourneyListPage> {
         useGradientTitle: true,
         onBack: () => context.go('/dashboard'),
       ),
-      body: Consumer<JourneyProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading) {
-            return _buildLoadingState();
-          }
-
-          if (provider.hasError) {
-            return ErrorStateWidget(
-              message: provider.errorMessage!,
-              onRetry: () => provider.loadJourneys(),
-            );
-          }
-
-          if (provider.journeys.isEmpty) {
-            return _buildEmptyState(context, isDark);
-          }
-
-          return _buildJourneyList(context, provider.journeys, isDark);
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/journey/create'),
-        icon: const Icon(Icons.add),
-        label: const Text('Tạo hành trình'),
-        backgroundColor: AppTheme.primaryBlueDark,
-        foregroundColor: Colors.white,
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<JourneyProvider>(
+          builder: (context, provider, child) {
+            if (provider.isLoading) {
+              return _buildLoadingState();
+            }
+  
+            if (provider.hasError) {
+              return ErrorStateWidget(
+                message: provider.errorMessage!,
+                onRetry: () => provider.loadJourneys(),
+              );
+            }
+  
+            if (provider.journeys.isEmpty) {
+              return _buildEmptyState(context, isDark);
+            }
+  
+            return _buildJourneyList(context, provider.journeys, isDark);
+          },
+        ),
       ),
     );
   }
@@ -94,12 +91,17 @@ class _JourneyListPageState extends State<JourneyListPage> {
     List<JourneySummaryDto> journeys,
     bool isDark,
   ) {
+    final canCreate = !context.read<JourneyProvider>().hasActiveJourney;
+
     return RefreshIndicator(
       onRefresh: () => context.read<JourneyProvider>().refresh(),
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: journeys.length,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        itemCount: journeys.length + (canCreate ? 1 : 0),
         itemBuilder: (context, index) {
+          if (index == journeys.length) {
+            return _buildCreateNewBanner(context, isDark);
+          }
           return AnimatedListItem(
             index: index,
             child: _JourneyCard(
@@ -109,6 +111,70 @@ class _JourneyListPageState extends State<JourneyListPage> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildCreateNewBanner(BuildContext context, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppTheme.primaryBlueDark.withValues(alpha: 0.12),
+              AppTheme.accentCyan.withValues(alpha: 0.08),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.primaryBlueDark.withValues(alpha: 0.25),
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.add_road, size: 32, color: AppTheme.primaryBlueDark),
+            const SizedBox(height: 8),
+            Text(
+              'Bắt đầu hành trình mới',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Hành trình trước đã kết thúc. Sẵn sàng chinh phục mục tiêu tiếp theo?',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => context.push('/journey/create'),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Tạo hành trình mới'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlueDark,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -147,25 +213,29 @@ class _JourneyCard extends StatelessWidget {
               // Header: Domain + Status
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getDomainColor().withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      journey.domain,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _getDomainColor(),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getDomainColor().withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        journey.domain,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _getDomainColor(),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Builder(
                     builder: (_) {
                       final info = _getStatusInfo();
@@ -263,7 +333,11 @@ class _JourneyCard extends StatelessWidget {
   (String, Color, IconData) _getStatusInfo() {
     switch (journey.status) {
       case JourneyStatus.notStarted:
-        return ('Chưa bắt đầu', AppTheme.darkTextSecondary, Icons.hourglass_empty);
+        return (
+          'Chưa bắt đầu',
+          AppTheme.darkTextSecondary,
+          Icons.hourglass_empty,
+        );
       case JourneyStatus.assessmentPending:
         return ('Đang tạo test', AppTheme.warningColor, Icons.pending);
       case JourneyStatus.testInProgress:
@@ -273,11 +347,16 @@ class _JourneyCard extends StatelessWidget {
       case JourneyStatus.roadmapGenerated:
         return ('Có lộ trình', AppTheme.accentCyan, Icons.map);
       case JourneyStatus.studyPlanInProgress:
-        return ('Đang học', AppTheme.indigoDark, Icons.menu_book);
+        return ('Đang học', AppTheme.accentCyan, Icons.menu_book);
       case JourneyStatus.active:
         return ('Đang hoạt động', AppTheme.successColor, Icons.play_circle);
       case JourneyStatus.completed:
+      case JourneyStatus.completedVerified:
         return ('Hoàn thành', AppTheme.successColor, Icons.check_circle);
+      case JourneyStatus.completedUnverified:
+        return ('Hoàn thành (chưa xác minh)', Colors.amber, Icons.pending_actions);
+      case JourneyStatus.awaitingVerification:
+        return ('Đang chờ xác minh', AppTheme.warningColor, Icons.verified_outlined);
       case JourneyStatus.paused:
         return ('Tạm dừng', AppTheme.warningColor, Icons.pause_circle);
       case JourneyStatus.cancelled:

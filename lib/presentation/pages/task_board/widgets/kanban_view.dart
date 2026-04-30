@@ -10,10 +10,42 @@ class KanbanView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Selector<TaskBoardProvider, List<TaskColumn>>(
-      selector: (context, provider) => provider.columns,
-      builder: (context, columns, _) {
+    return Consumer<TaskBoardProvider>(
+      builder: (context, provider, _) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
+
+        // Show error state with retry — never show fake columns on API failure
+        if (provider.hasError && provider.columns.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.cloud_off_outlined, size: 56,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                  const SizedBox(height: 16),
+                  Text(
+                    provider.errorMessage ?? 'Không thể tải bảng công việc',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: () => provider.loadBoard(),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Thử lại'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final columns = provider.columns;
         return ListView.builder(
           padding: const EdgeInsets.all(12),
           itemCount: columns.length + 1,
@@ -24,8 +56,7 @@ class KanbanView extends StatelessWidget {
             final column = columns[index];
             return KanbanColumn(
               column: column,
-              onAddTask: () =>
-                  TaskDetailSheet.show(context, columnId: column.id),
+              onAddTask: () => TaskDetailSheet.show(context, columnId: column.id),
             );
           },
         );
@@ -366,6 +397,17 @@ class DraggableTaskCard extends StatelessWidget {
 
   const DraggableTaskCard({super.key, required this.task});
 
+  /// Strip internal system markers (e.g. [ROADMAP_NODE_LINK:...]) from userNotes
+  /// and return only the human-readable portion, or null if nothing remains.
+  static String? _sanitizeUserNotes(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    // Remove bracketed markers like [ROADMAP_NODE_LINK:xxx] or [ROADMAP_NODE_LINK]
+    final cleaned = raw
+        .replaceAll(RegExp(r'\[ROADMAP_NODE_LINK[^\]]*\]'), '')
+        .trim();
+    return cleaned.isEmpty ? null : cleaned;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -445,8 +487,8 @@ class DraggableTaskCard extends StatelessWidget {
             ),
           ],
 
-          // User Notes
-          if (task.userNotes != null && task.userNotes!.isNotEmpty) ...[
+          // User Notes — sanitized to hide internal system markers
+          if (_sanitizeUserNotes(task.userNotes) != null) ...[
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -467,7 +509,7 @@ class DraggableTaskCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      task.userNotes!,
+                      _sanitizeUserNotes(task.userNotes)!,
                       style: TextStyle(
                         fontSize: 10,
                         fontFamily: 'monospace',
