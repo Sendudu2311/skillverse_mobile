@@ -8,13 +8,21 @@ import '../../themes/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/error_state_widget.dart';
 import 'mentor_booking_sheet.dart';
+import 'roadmap_mentoring_booking_sheet.dart';
 import '../../providers/auth_provider.dart';
 import '../../../core/utils/number_formatter.dart';
 
 class MentorDetailPage extends StatefulWidget {
   final int mentorId;
+  final String? action;
+  final int? journeyId;
 
-  const MentorDetailPage({super.key, required this.mentorId});
+  const MentorDetailPage({
+    super.key,
+    required this.mentorId,
+    this.action,
+    this.journeyId,
+  });
 
   @override
   State<MentorDetailPage> createState() => _MentorDetailPageState();
@@ -264,7 +272,9 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
             context,
             icon: Icons.star,
             label: 'Đánh giá',
-            value: mentor.ratingAverage != null ? NumberFormatter.formatRating(mentor.ratingAverage!) : '0,0',
+            value: mentor.ratingAverage != null
+                ? NumberFormatter.formatRating(mentor.ratingAverage!)
+                : '0,0',
             subValue: '(${mentor.ratingCount ?? 0})',
             iconColor: AppTheme.warningColor,
             isDark: isDark,
@@ -538,6 +548,147 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       );
     }
 
+    if (widget.action == 'roadmap_mentoring') {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          border: Border(
+            top: BorderSide(
+              color: isDark
+                  ? AppTheme.darkBorderColor
+                  : AppTheme.lightBorderColor,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppTheme.successColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppTheme.successColor.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.workspace_premium_outlined,
+                      color: AppTheme.successColor,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Bạn đang ở luồng mentor đồng hành roadmap. Sau bước này, mentor sẽ được gắn trực tiếp vào hành trình đã chọn.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _openRoadmapMentoringSheet(context, mentor),
+                  icon: const Icon(Icons.handshake_outlined),
+                  label: const Text('Thuê đồng hành Roadmap'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: AppTheme.successColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (widget.action == 'journey_mentoring') {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppTheme.darkCardBackground
+              : AppTheme.lightCardBackground,
+          border: Border(
+            top: BorderSide(
+              color: isDark
+                  ? AppTheme.darkBorderColor
+                  : AppTheme.lightBorderColor,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppTheme.infoColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppTheme.infoColor.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.verified_user_outlined,
+                      color: AppTheme.infoColor,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Bạn đang ở luồng thuê Mentor đánh giá cuối khoá. '
+                        'Mentor sẽ phỏng vấn bạn 1 buổi duy nhất để kiểm tra năng lực và cấp chứng chỉ.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _openJourneyMentoringSheet(context, mentor, provider),
+                  icon: const Icon(Icons.verified_outlined),
+                  label: const Text('Đặt lịch phỏng vấn cuối khoá'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: AppTheme.infoColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -583,6 +734,37 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       builder: (context) => MentorBookingSheet(
         mentor: mentor,
         availability: provider.availability,
+      ),
+    );
+  }
+
+  void _openRoadmapMentoringSheet(BuildContext context, MentorProfile mentor) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => RoadmapMentoringBookingSheet(
+        mentor: mentor,
+        journeyId: widget.journeyId,
+        roadmapMentoringPrice: mentor.roadmapMentoringPrice,
+      ),
+    );
+  }
+
+  void _openJourneyMentoringSheet(
+    BuildContext context,
+    MentorProfile mentor,
+    MentorProvider provider,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => MentorBookingSheet(
+        mentor: mentor,
+        availability: provider.availability,
+        action: 'journey_mentoring',
+        journeyId: widget.journeyId,
       ),
     );
   }

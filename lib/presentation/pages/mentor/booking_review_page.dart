@@ -96,11 +96,15 @@ class _BookingReviewPageState extends State<BookingReviewPage> {
       appBar: SkillVerseAppBar(
         title: _existingReview != null ? 'Đánh giá của bạn' : 'Đánh giá mentor',
       ),
-      body: _isCheckingExisting
-          ? CommonLoading.center()
-          : _existingReview != null
-          ? _buildExistingReview(isDark)
-          : _buildReviewForm(isDark),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: _isCheckingExisting
+            ? CommonLoading.center()
+            : _existingReview != null
+            ? _buildExistingReview(isDark)
+            : _buildReviewForm(isDark),
+      ),
     );
   }
 

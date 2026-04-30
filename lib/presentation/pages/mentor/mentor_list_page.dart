@@ -14,7 +14,10 @@ import '../../widgets/animated_list_item.dart';
 import '../../../core/utils/number_formatter.dart';
 
 class MentorListPage extends StatefulWidget {
-  const MentorListPage({super.key});
+  final String? action;
+  final int? journeyId;
+
+  const MentorListPage({super.key, this.action, this.journeyId});
 
   @override
   State<MentorListPage> createState() => _MentorListPageState();
@@ -44,6 +47,7 @@ class _MentorListPageState extends State<MentorListPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isRoadmapContext = widget.action == 'roadmap_mentoring';
 
     return Scaffold(
       appBar: SkillVerseAppBar(
@@ -56,6 +60,40 @@ class _MentorListPageState extends State<MentorListPage> {
         top: false,
         child: Column(
           children: [
+            // V3: Contextual banner when navigating from Roadmap
+            if (isRoadmapContext)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlueDark.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppTheme.primaryBlueDark.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      color: AppTheme.primaryBlueDark,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Chọn mentor để đồng hành cùng Roadmap của bạn.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             AppSearchBar(
               controller: _searchController,
               hintText: 'Tìm kiếm mentor...',
@@ -144,7 +182,17 @@ class _MentorListPageState extends State<MentorListPage> {
     final isFavorite = provider.isMentorFavorite(mentor.id);
 
     return GestureDetector(
-      onTap: () => context.push('/mentors/${mentor.id}'),
+      onTap: () {
+        final base = '/mentors/${mentor.id}';
+        final params = <String, String>{};
+        if (widget.action != null) params['action'] = widget.action!;
+        if (widget.journeyId != null)
+          params['journeyId'] = '${widget.journeyId}';
+        final query = params.isNotEmpty
+            ? '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}'
+            : '';
+        context.push('$base$query');
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         child: GlassCard(
@@ -240,7 +288,9 @@ class _MentorListPageState extends State<MentorListPage> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  NumberFormatter.formatRating(mentor.ratingAverage!),
+                                  NumberFormatter.formatRating(
+                                    mentor.ratingAverage!,
+                                  ),
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,

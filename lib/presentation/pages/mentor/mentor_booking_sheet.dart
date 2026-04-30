@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../../data/models/mentor_models.dart';
-import '../../providers/mentor_provider.dart';
-import '../../../core/utils/error_handler.dart';
 import '../../providers/mentor_booking_provider.dart';
+import '../../providers/mentor_provider.dart';
 import '../../themes/app_theme.dart';
+import '../../widgets/animated_success_overlay.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/glass_card.dart';
 
 class MentorBookingSheet extends StatefulWidget {
   final MentorProfile mentor;
   final List<MentorAvailability> availability;
+  final String? action;
+  final int? journeyId;
 
   const MentorBookingSheet({
     super.key,
     required this.mentor,
     required this.availability,
+    this.action,
+    this.journeyId,
   });
 
   @override
@@ -30,15 +35,12 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
   bool _isLoading = false;
   int _weekOffset = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _selectedDate = DateTime.now();
-  }
-
   List<DateTime> get _weekDates {
     final now = DateTime.now();
-    return List.generate(7, (i) => now.add(Duration(days: i + _weekOffset * 7)));
+    return List.generate(
+      7,
+      (i) => now.add(Duration(days: i + _weekOffset * 7)),
+    );
   }
 
   List<MentorAvailability> get _slotsForSelectedDate {
@@ -48,10 +50,13 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
       _selectedDate.day,
     );
     final now = DateTime.now();
-    return widget.availability.where((a) {
-      final localStart = a.startTime.toLocal();
-      final slotDate = DateTime(localStart.year, localStart.month, localStart.day);
-      // Only show slots for the selected date that haven't started yet
+    return widget.availability.where((availability) {
+      final localStart = availability.startTime.toLocal();
+      final slotDate = DateTime(
+        localStart.year,
+        localStart.month,
+        localStart.day,
+      );
       return slotDate == dateOnly && localStart.isAfter(now);
     }).toList();
   }
@@ -59,6 +64,12 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
   double get _totalPrice {
     if (widget.mentor.hourlyRate == null) return 0;
     return widget.mentor.hourlyRate! * (_durationMinutes / 60);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = DateTime.now();
   }
 
   @override
@@ -116,7 +127,9 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Đặt lịch hẹn',
+            widget.action == 'journey_mentoring'
+                ? 'Đặt lịch phỏng vấn cuối khoá'
+                : 'Đặt lịch hẹn',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
               color: isDark
@@ -163,26 +176,33 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
                           setState(() {
                             _weekOffset--;
                             _selectedSlot = null;
-                            _selectedDate = DateTime.now()
-                                .add(Duration(days: _weekOffset * 7));
+                            _selectedDate = DateTime.now().add(
+                              Duration(days: _weekOffset * 7),
+                            );
                           });
                           context.read<MentorProvider>().loadAvailability(
                             widget.mentor.id,
-                            from: DateTime.now()
-                                .add(Duration(days: _weekOffset * 7)),
-                            to: DateTime.now()
-                                .add(Duration(days: _weekOffset * 7 + 7)),
+                            from: DateTime.now().add(
+                              Duration(days: _weekOffset * 7),
+                            ),
+                            to: DateTime.now().add(
+                              Duration(days: _weekOffset * 7 + 7),
+                            ),
                           );
                         },
                   icon: Icon(
                     Icons.chevron_left,
                     color: _weekOffset == 0
                         ? (isDark
-                            ? AppTheme.darkTextSecondary.withValues(alpha: 0.3)
-                            : AppTheme.lightTextSecondary.withValues(alpha: 0.3))
+                              ? AppTheme.darkTextSecondary.withValues(
+                                  alpha: 0.3,
+                                )
+                              : AppTheme.lightTextSecondary.withValues(
+                                  alpha: 0.3,
+                                ))
                         : (isDark
-                            ? AppTheme.darkTextSecondary
-                            : AppTheme.lightTextSecondary),
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary),
                   ),
                   constraints: const BoxConstraints(
                     minWidth: 32,
@@ -195,15 +215,16 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
                     setState(() {
                       _weekOffset++;
                       _selectedSlot = null;
-                      _selectedDate = DateTime.now()
-                          .add(Duration(days: _weekOffset * 7));
+                      _selectedDate = DateTime.now().add(
+                        Duration(days: _weekOffset * 7),
+                      );
                     });
                     context.read<MentorProvider>().loadAvailability(
                       widget.mentor.id,
-                      from: DateTime.now()
-                          .add(Duration(days: _weekOffset * 7)),
-                      to: DateTime.now()
-                          .add(Duration(days: _weekOffset * 7 + 7)),
+                      from: DateTime.now().add(Duration(days: _weekOffset * 7)),
+                      to: DateTime.now().add(
+                        Duration(days: _weekOffset * 7 + 7),
+                      ),
                     );
                   },
                   icon: Icon(
@@ -235,7 +256,6 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
                     _selectedDate = date;
                     _selectedSlot = null;
                   });
-                  // Reload availability for the new week if needed
                   context.read<MentorProvider>().loadAvailability(
                     widget.mentor.id,
                     from: _selectedDate,
@@ -247,7 +267,7 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppTheme.primaryBlueDark.withOpacity(0.2)
+                        ? AppTheme.primaryBlueDark.withValues(alpha: 0.2)
                         : (isDark
                               ? AppTheme.darkCardBackground
                               : AppTheme.lightCardBackground),
@@ -352,7 +372,7 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
                   ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppTheme.primaryBlueDark.withOpacity(0.2)
+                        ? AppTheme.primaryBlueDark.withValues(alpha: 0.2)
                         : (isDark
                               ? AppTheme.darkCardBackground
                               : AppTheme.lightCardBackground),
@@ -413,6 +433,8 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
   }
 
   Widget _buildBottomButton(BuildContext context, bool isDark) {
+    final canProceed = _selectedSlot != null;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -428,7 +450,7 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _selectedSlot != null && !_isLoading
+            onPressed: canProceed && !_isLoading
                 ? () => _proceedToPayment(context)
                 : null,
             style: ElevatedButton.styleFrom(
@@ -445,7 +467,7 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1,
-                      color: _selectedSlot != null
+                      color: canProceed
                           ? Colors.white
                           : AppTheme.darkTextSecondary,
                     ),
@@ -461,10 +483,10 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
 
     setState(() => _isLoading = true);
 
-    // Capture context-dependent objects before the async gap
     final provider = context.read<MentorBookingProvider>();
     final navigator = Navigator.of(context);
     final router = GoRouter.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     try {
       final booking = await provider.createBookingWithWallet(
@@ -472,23 +494,52 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
         startTime: _selectedSlot!.startTime,
         durationMinutes: _durationMinutes,
         priceVnd: _totalPrice,
+        journeyId: widget.journeyId,
+        bookingType: widget.action == 'journey_mentoring'
+            ? 'JOURNEY_MENTORING'
+            : null,
       );
 
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       if (booking != null) {
         navigator.pop();
-        ErrorHandler.showSuccessSnackBar(context, 'Đặt lịch thành công! Chờ mentor xác nhận.');
-        router.push('/my-bookings');
+        AnimatedSuccessOverlay.show(
+          context: context,
+          title: 'Đặt lịch thành công! 🎉',
+          subtitle: 'Chờ mentor xác nhận lịch hẹn của bạn.',
+          primaryButtonText: 'Xem lịch hẹn',
+          onPrimaryAction: () => router.push('/my-bookings'),
+        );
       } else {
         navigator.pop();
-        ErrorHandler.showErrorSnackBar(context, provider.errorMessage ?? 'Đặt lịch thất bại');
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(provider.errorMessage ?? 'Đặt lịch thất bại'),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         navigator.pop();
-        ErrorHandler.showErrorSnackBar(context, 'Lỗi: ${e.toString()}');
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: ${e.toString()}'),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

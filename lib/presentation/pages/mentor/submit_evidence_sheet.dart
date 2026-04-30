@@ -37,9 +37,7 @@ class _SubmitEvidenceSheetState extends State<SubmitEvidenceSheet> {
   }
 
   Future<void> _pickImage() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-    );
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null && result.files.single.path != null) {
       setState(() {
         _pickedImagePath = result.files.single.path;
@@ -62,7 +60,10 @@ class _SubmitEvidenceSheetState extends State<SubmitEvidenceSheet> {
     if (_selectedType == EvidenceType.image) {
       final userId = context.read<AuthProvider>().user?.id;
       if (userId == null) {
-        ErrorHandler.showErrorSnackBar(context, 'Không xác định được người dùng.');
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Không xác định được người dùng.',
+        );
         return;
       }
       try {
@@ -73,7 +74,10 @@ class _SubmitEvidenceSheetState extends State<SubmitEvidenceSheet> {
         );
       } catch (e) {
         if (mounted) {
-          ErrorHandler.showErrorSnackBar(context, ErrorHandler.getErrorMessage(e));
+          ErrorHandler.showErrorSnackBar(
+            context,
+            ErrorHandler.getErrorMessage(e),
+          );
         }
         return;
       }
@@ -88,8 +92,8 @@ class _SubmitEvidenceSheetState extends State<SubmitEvidenceSheet> {
         fileUrl: _selectedType == EvidenceType.link
             ? _linkController.text.trim()
             : _selectedType == EvidenceType.image
-                ? imageUrl
-                : null,
+            ? imageUrl
+            : null,
         fileName: _selectedType == EvidenceType.image ? _pickedImageName : null,
         description: _descController.text.trim().isEmpty
             ? null
@@ -123,186 +127,195 @@ class _SubmitEvidenceSheetState extends State<SubmitEvidenceSheet> {
             : AppTheme.lightCardBackground,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Handle bar
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppTheme.darkBorderColor
-                        : AppTheme.lightBackgroundSecondary,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-
-              Row(
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.folder_open_outlined,
-                    color: AppTheme.primaryBlueDark,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Gửi bằng chứng',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppTheme.darkBorderColor
+                            : AppTheme.lightBackgroundSecondary,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
 
-              // Evidence type selector
-              Text(
-                'Loại bằng chứng',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<EvidenceType>(
-                initialValue: _selectedType,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: EvidenceType.text,
-                    child: Text('Văn bản'),
-                  ),
-                  DropdownMenuItem(
-                    value: EvidenceType.link,
-                    child: Text('Liên kết'),
-                  ),
-                  DropdownMenuItem(
-                    value: EvidenceType.image,
-                    child: Text('Hình ảnh'),
-                  ),
-                ],
-                onChanged: (v) {
-                  if (v != null) {
-                    setState(() {
-                      _selectedType = v;
-                      _pickedImagePath = null;
-                      _pickedImageName = null;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Content / Link / Image field
-              if (_selectedType == EvidenceType.text)
-                TextFormField(
-                  controller: _contentController,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Nội dung *',
-                    hintText: 'Mô tả bằng chứng của bạn...',
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Vui lòng nhập nội dung bằng chứng.';
-                    }
-                    return null;
-                  },
-                )
-              else if (_selectedType == EvidenceType.link)
-                TextFormField(
-                  controller: _linkController,
-                  keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: 'Đường dẫn *',
-                    hintText: 'https://...',
-                    prefixIcon: Icon(Icons.link),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Vui lòng nhập đường dẫn.';
-                    }
-                    return null;
-                  },
-                )
-              else ...[
-                OutlinedButton.icon(
-                  onPressed: _pickImage,
-                  icon: const Icon(Icons.image_outlined),
-                  label: const Text('Chọn ảnh'),
-                ),
-                if (_pickedImageName != null) ...[
-                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.check_circle, color: AppTheme.successColor, size: 16),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          _pickedImageName!,
-                          style: const TextStyle(fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
+                      const Icon(
+                        Icons.folder_open_outlined,
+                        color: AppTheme.primaryBlueDark,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Gửi bằng chứng',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                ],
-              ],
-              const SizedBox(height: 14),
+                  const SizedBox(height: 20),
 
-              // Optional description
-              TextFormField(
-                controller: _descController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Mô tả (tùy chọn)',
-                  hintText: 'Ghi chú thêm về bằng chứng này...',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              Consumer<BookingDisputeProvider>(
-                builder: (ctx, provider, child) => SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: provider.isBusy ? null : _submit,
-                    icon: provider.isBusy
-                        ? CommonLoading.button()
-                        : const Icon(Icons.send),
-                    label: Text(
-                      provider.isBusy ? 'Đang gửi...' : 'Gửi bằng chứng',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlueDark,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                  // Evidence type selector
+                  Text(
+                    'Loại bằng chứng',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<EvidenceType>(
+                    initialValue: _selectedType,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: EvidenceType.text,
+                        child: Text('Văn bản'),
+                      ),
+                      DropdownMenuItem(
+                        value: EvidenceType.link,
+                        child: Text('Liên kết'),
+                      ),
+                      DropdownMenuItem(
+                        value: EvidenceType.image,
+                        child: Text('Hình ảnh'),
+                      ),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() {
+                          _selectedType = v;
+                          _pickedImagePath = null;
+                          _pickedImageName = null;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Content / Link / Image field
+                  if (_selectedType == EvidenceType.text)
+                    TextFormField(
+                      controller: _contentController,
+                      maxLines: 5,
+                      decoration: const InputDecoration(
+                        labelText: 'Nội dung *',
+                        hintText: 'Mô tả bằng chứng của bạn...',
+                        alignLabelWithHint: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Vui lòng nhập nội dung bằng chứng.';
+                        }
+                        return null;
+                      },
+                    )
+                  else if (_selectedType == EvidenceType.link)
+                    TextFormField(
+                      controller: _linkController,
+                      keyboardType: TextInputType.url,
+                      decoration: const InputDecoration(
+                        labelText: 'Đường dẫn *',
+                        hintText: 'https://...',
+                        prefixIcon: Icon(Icons.link),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Vui lòng nhập đường dẫn.';
+                        }
+                        return null;
+                      },
+                    )
+                  else ...[
+                    OutlinedButton.icon(
+                      onPressed: _pickImage,
+                      icon: const Icon(Icons.image_outlined),
+                      label: const Text('Chọn ảnh'),
+                    ),
+                    if (_pickedImageName != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.check_circle,
+                            color: AppTheme.successColor,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _pickedImageName!,
+                              style: const TextStyle(fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                  const SizedBox(height: 14),
+
+                  // Optional description
+                  TextFormField(
+                    controller: _descController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'Mô tả (tùy chọn)',
+                      hintText: 'Ghi chú thêm về bằng chứng này...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  Consumer<BookingDisputeProvider>(
+                    builder: (ctx, provider, child) => SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: provider.isBusy ? null : _submit,
+                        icon: provider.isBusy
+                            ? CommonLoading.button()
+                            : const Icon(Icons.send),
+                        label: Text(
+                          provider.isBusy ? 'Đang gửi...' : 'Gửi bằng chứng',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlueDark,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

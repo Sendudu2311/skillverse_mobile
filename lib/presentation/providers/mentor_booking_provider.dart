@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/mentor_models.dart';
 import '../../data/services/mentor_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/error_handler.dart';
 import '../../core/utils/pagination_helper.dart';
 
 /// Manages booking operations and pre-chat messaging with mentors.
@@ -54,10 +55,32 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
   // ==================== Booking ====================
 
   Future<void> loadBookings({bool refresh = false}) async {
+    final preservedRoadmapBookings = refresh
+        ? bookings
+              .where(
+                (booking) =>
+                    booking.isRoadmapMentoring &&
+                    (booking.status == BookingStatus.pending ||
+                        booking.status == BookingStatus.confirmed ||
+                        booking.status == BookingStatus.mentoringActive),
+              )
+              .toList()
+        : const <MentorBooking>[];
+
     if (refresh) {
       await _bookingsPagination.refresh();
     } else {
       await _bookingsPagination.loadFirstPage();
+    }
+
+    if (refresh && preservedRoadmapBookings.isNotEmpty) {
+      final serverIds = bookings.map((booking) => booking.id).toSet();
+      for (final booking in preservedRoadmapBookings.reversed) {
+        if (!serverIds.contains(booking.id)) {
+          _bookingsPagination.insertItem(booking);
+          serverIds.add(booking.id);
+        }
+      }
     }
   }
 
@@ -70,6 +93,11 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
     required DateTime startTime,
     required int durationMinutes,
     required double priceVnd,
+    // V3 Phase 1: optional booking context
+    int? journeyId,
+    String? nodeId,
+    int? nodeSkillId,
+    String? bookingType,
   }) async {
     return await executeAsync(() async {
       final request = CreateBookingRequest(
@@ -78,12 +106,16 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
         durationMinutes: durationMinutes,
         priceVnd: priceVnd,
         paymentMethod: 'WALLET',
+        journeyId: journeyId,
+        nodeId: nodeId,
+        nodeSkillId: nodeSkillId,
+        bookingType: bookingType,
       );
       final booking = await _mentorService.createBookingWithWallet(request);
       _bookingsPagination.insertItem(booking);
       notifyListeners();
       return booking;
-    }, errorMessageBuilder: (e) => 'Lỗi đặt lịch: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   // NOTE: createBookingIntent (PayOS) was removed — backend only supports
@@ -96,7 +128,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
       if (index != -1) {
         _bookingsPagination.updateItem(index, updatedBooking);
       }
-    }, errorMessageBuilder: (e) => 'Lỗi hủy booking: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   Future<void> rateBooking(
@@ -119,7 +151,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
           bookings[index].copyWith(status: BookingStatus.completed),
         );
       }
-    }, errorMessageBuilder: (e) => 'Lỗi đánh giá: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   Future<void> confirmComplete(int bookingId) async {
@@ -129,7 +161,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
       if (index != -1) {
         _bookingsPagination.updateItem(index, updatedBooking);
       }
-    }, errorMessageBuilder: (e) => 'Lỗi xác nhận hoàn thành: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   Future<void> refreshBookingDetail(int bookingId) async {
@@ -158,7 +190,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
       }
       notifyListeners();
       return updated;
-    }, errorMessageBuilder: (e) => 'Lỗi bắt đầu cuộc họp: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   /// Mentor marks booking completed → PENDING_COMPLETION
@@ -169,7 +201,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
       if (index != -1) {
         _bookingsPagination.updateItem(index, updated);
       }
-    }, errorMessageBuilder: (e) => 'Lỗi hoàn thành buổi học: ${e.toString()}');
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
   }
 
   // ==================== Pre-Chat ====================
@@ -224,7 +256,7 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
       onSent?.call(message);
       return true;
     } catch (e) {
-      setError('Lỗi gửi tin nhắn: ${e.toString()}');
+      setError(ErrorHandler.getErrorMessage(e));
       return false;
     }
   }
@@ -249,6 +281,9 @@ class MentorBookingProvider with ChangeNotifier, LoadingStateProviderMixin {
     resetState();
     notifyListeners();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => reset();
 
   @override
   void dispose() {

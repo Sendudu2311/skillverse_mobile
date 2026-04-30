@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/mentor_models.dart';
 import '../../data/services/mentor_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/error_handler.dart';
 import '../../core/utils/string_helper.dart';
 
 /// Manages mentor discovery, detail, availability, and favorites.
@@ -67,7 +68,7 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
       _mentors = await _mentorService.getAllMentors();
       _applyFilters();
     } catch (e) {
-      setError('Lỗi tải danh sách mentor: ${e.toString()}');
+      setError(ErrorHandler.getErrorMessage(e));
     } finally {
       _isLoadingMentors = false;
       notifyListeners();
@@ -147,7 +148,7 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
       _selectedMentor = await _mentorService.getMentorProfile(mentorId);
       _isFavorite = await _mentorService.checkFavorite(mentorId);
     } catch (e) {
-      setError('Lỗi tải thông tin mentor: ${e.toString()}');
+      setError(ErrorHandler.getErrorMessage(e));
     } finally {
       _isLoadingDetail = false;
       notifyListeners();
@@ -226,7 +227,7 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
       }
       notifyListeners();
     } catch (e) {
-      setError('Lỗi cập nhật yêu thích: ${e.toString()}');
+      setError(ErrorHandler.getErrorMessage(e));
     }
   }
 
@@ -268,4 +269,7 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
     _isFavorite = false;
     notifyListeners();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => reset();
 }

@@ -65,6 +65,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                   b.status == BookingStatus.pending ||
                   b.status == BookingStatus.confirmed ||
                   b.status == BookingStatus.ongoing ||
+                  b.status == BookingStatus.mentoringActive ||
                   b.status == BookingStatus.pendingCompletion,
             )
             .toList();
@@ -120,26 +121,31 @@ class _MyBookingsPageState extends State<MyBookingsPage>
           dividerColor: Colors.transparent,
         ),
       ),
-      body: Consumer<MentorBookingProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoadingBookings && provider.bookings.isEmpty) {
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 4,
-              itemBuilder: (_, __) => const ListItemSkeleton(hasTrailing: true),
-            );
-          }
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<MentorBookingProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoadingBookings && provider.bookings.isEmpty) {
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: 4,
+                itemBuilder: (_, __) =>
+                    const ListItemSkeleton(hasTrailing: true),
+              );
+            }
 
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _buildBookingList(context, provider, 0, isDark),
-              _buildBookingList(context, provider, 1, isDark),
-              _buildBookingList(context, provider, 2, isDark),
-              _buildBookingList(context, provider, 3, isDark),
-            ],
-          );
-        },
+            return TabBarView(
+              controller: _tabController,
+              children: [
+                _buildBookingList(context, provider, 0, isDark),
+                _buildBookingList(context, provider, 1, isDark),
+                _buildBookingList(context, provider, 2, isDark),
+                _buildBookingList(context, provider, 3, isDark),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -226,6 +232,8 @@ class _MyBookingsPageState extends State<MyBookingsPage>
     bool isDark,
     MentorBookingProvider provider,
   ) {
+    final isRoadmapMentoring = booking.isRoadmapMentoring;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: GlassCard(
@@ -239,7 +247,9 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: AppTheme.primaryBlueDark.withOpacity(0.2),
+                  backgroundColor: AppTheme.primaryBlueDark.withValues(
+                    alpha: 0.2,
+                  ),
                   backgroundImage: booking.mentorAvatar != null
                       ? NetworkImage(booking.mentorAvatar!)
                       : null,
@@ -271,6 +281,19 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                       ),
                       const SizedBox(height: 2),
                       StatusBadge(status: booking.status.name),
+                      if (isRoadmapMentoring) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Đồng hành roadmap'
+                          '${booking.journeyId != null ? ' • Hành trình #${booking.journeyId}' : ''}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -284,55 +307,100 @@ class _MyBookingsPageState extends State<MyBookingsPage>
               ],
             ),
             const SizedBox(height: 16),
-            // Date and time
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    DateTimeHelper.formatDateWithWeekday(booking.startTime),
+            if (isRoadmapMentoring)
+              Row(
+                children: [
+                  Icon(
+                    Icons.workspace_premium_outlined,
+                    size: 16,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      booking.hasRoadmapWorkspace
+                          ? 'Mở không gian mentor để theo dõi follow-up và tiến độ.'
+                          : 'Gói đồng hành sẽ mở workspace sau khi booking vào trạng thái hoạt động.',
+                      style: TextStyle(
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      DateTimeHelper.formatDateWithWeekday(booking.startTime),
+                      style: TextStyle(
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(
+                    Icons.access_time,
+                    size: 16,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${DateTimeHelper.formatTime(booking.startTime)} - ${DateTimeHelper.formatTime(booking.endTime)}',
                     style: TextStyle(
                       color: isDark
                           ? AppTheme.darkTextPrimary
                           : AppTheme.lightTextPrimary,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Icon(
-                  Icons.access_time,
-                  size: 16,
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${DateTimeHelper.formatTime(booking.startTime)} - ${DateTimeHelper.formatTime(booking.endTime)}',
-                  style: TextStyle(
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
-                  ),
-                ),
-              ],
-            ),
+                ],
+              ),
             // Actions
             if (booking.canCancel ||
                 booking.canRate ||
                 booking.canConfirmComplete ||
-                booking.canChat) ...[
+                booking.canChat ||
+                booking.hasRoadmapWorkspace) ...[
               const SizedBox(height: 16),
               Row(
                 children: [
+                  if (booking.hasRoadmapWorkspace)
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => context.push(
+                          '/roadmap/${booking.roadmapSessionId}/workspace?bookingId=${booking.id}&journeyId=${booking.journeyId}',
+                        ),
+                        icon: const Icon(
+                          Icons.workspace_premium_outlined,
+                          size: 16,
+                        ),
+                        label: const Text('Workspace'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.successColor,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  if (booking.hasRoadmapWorkspace && booking.canChat)
+                    const SizedBox(width: 8),
                   if (booking.canChat)
                     Expanded(
                       child: OutlinedButton.icon(
@@ -347,7 +415,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                         ),
                       ),
                     ),
-                  if (booking.canChat &&
+                  if ((booking.canChat || booking.hasRoadmapWorkspace) &&
                       (booking.canCancel ||
                           booking.canConfirmComplete ||
                           booking.canRate))
@@ -364,6 +432,8 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                         child: const Text('Hủy'),
                       ),
                     ),
+                  if (booking.canCancel && booking.canConfirmComplete)
+                    const SizedBox(width: 8),
                   if (booking.canConfirmComplete)
                     Expanded(
                       child: ElevatedButton(
@@ -375,7 +445,10 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.successColor,
                         ),
-                        child: const Text('Xác nhận hoàn thành'),
+                        child: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Xác nhận hoàn thành'),
+                        ),
                       ),
                     ),
                   if (booking.canRate)
