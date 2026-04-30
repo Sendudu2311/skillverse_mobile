@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/roadmap_provider.dart';
-import '../../widgets/ai_roadmap_card.dart';
+import 'widgets/ai_roadmap_card.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
@@ -54,84 +54,88 @@ class _RoadmapPageState extends State<RoadmapPage> {
         useGradientTitle: true,
         onBack: () => context.go('/dashboard'),
       ),
-      body: Column(
-        children: [
-          // Description and Create Button
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: isDark
-                      ? AppTheme.darkBorderColor
-                      : AppTheme.lightBorderColor,
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Column(
+          children: [
+            // Description and Create Button
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark
+                        ? AppTheme.darkBorderColor
+                        : AppTheme.lightBorderColor,
+                  ),
                 ),
               ),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  '>> ',
-                  style: TextStyle(
-                    color: AppTheme.primaryBlueDark,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    'Hệ thống định vị lộ trình học tập AI',
+              child: Row(
+                children: [
+                  Text(
+                    '>> ',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
+                      color: AppTheme.primaryBlueDark,
                       fontFamily: 'monospace',
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: Text(
+                      'Hệ thống định vị lộ trình học tập AI',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // Scope tabs: Learning | Deleted
-          _buildScopeTabs(context, isDark),
+            // Scope tabs: Learning | Deleted
+            _buildScopeTabs(context, isDark),
 
-          // Search & Filters
-          _buildSearchAndFilters(context, isDark),
+            // Search & Filters
+            _buildSearchAndFilters(context, isDark),
 
-          // Roadmap List
-          Expanded(
-            child: Consumer<RoadmapProvider>(
-              builder: (context, provider, child) {
-                // DELETED scope
-                if (_listScope == 1) {
-                  return _buildDeletedScopeContent(context, provider, isDark);
-                }
+            // Roadmap List
+            Expanded(
+              child: Consumer<RoadmapProvider>(
+                builder: (context, provider, child) {
+                  // DELETED scope
+                  if (_listScope == 1) {
+                    return _buildDeletedScopeContent(context, provider, isDark);
+                  }
 
-                // LEARNING scope (default)
-                if (provider.isLoading) {
-                  return _buildLoadingState();
-                }
+                  // LEARNING scope (default)
+                  if (provider.isLoading) {
+                    return _buildLoadingState();
+                  }
 
-                if (provider.errorMessage != null) {
-                  return ErrorStateWidget(
-                    message: provider.errorMessage!,
-                    onRetry: () => provider.loadUserRoadmaps(),
-                  );
-                }
+                  if (provider.errorMessage != null) {
+                    return ErrorStateWidget(
+                      message: provider.errorMessage!,
+                      onRetry: () => provider.loadUserRoadmaps(),
+                    );
+                  }
 
-                final roadmaps = provider.filteredRoadmaps;
+                  final roadmaps = provider.filteredRoadmaps;
 
-                if (roadmaps.isEmpty) {
-                  return _buildEmptyState(context, isDark);
-                }
+                  if (roadmaps.isEmpty) {
+                    return _buildEmptyState(context, isDark);
+                  }
 
-                return _buildRoadmapList(context, roadmaps);
-              },
+                  return _buildRoadmapList(context, roadmaps);
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: _listScope == 0
           ? FloatingActionButton.extended(
@@ -653,15 +657,19 @@ class _RoadmapPageState extends State<RoadmapPage> {
         final success = await provider.restoreRoadmap(sessionId);
         if (mounted) {
           if (success) {
-            messenger.showSnackBar(SnackBar(
-              content: const Text('Đã khôi phục lộ trình'),
-              backgroundColor: Colors.green,
-            ));
+            messenger.showSnackBar(
+              SnackBar(
+                content: const Text('Đã khôi phục lộ trình'),
+                backgroundColor: Colors.green,
+              ),
+            );
           } else {
-            messenger.showSnackBar(SnackBar(
-              content: const Text('Lỗi khôi phục lộ trình'),
-              backgroundColor: Colors.red,
-            ));
+            messenger.showSnackBar(
+              SnackBar(
+                content: const Text('Lỗi khôi phục lộ trình'),
+                backgroundColor: Colors.red,
+              ),
+            );
           }
         }
         break;

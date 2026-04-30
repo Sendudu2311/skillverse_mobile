@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../data/models/roadmap_models.dart';
 import '../../data/services/roadmap_service.dart';
-import '../../data/services/task_board_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
+import '../../core/utils/error_handler.dart';
 import '../../core/utils/string_helper.dart';
 
 enum SortOption { newest, oldest, progress, title }
@@ -150,6 +150,14 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
     notifyListeners();
   }
 
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() {
+    _roadmaps = [];
+    _statusCounts = {};
+    clearFilters();
+    resetState();
+  }
+
   // ============================================================================
   // LOAD
   // ============================================================================
@@ -165,12 +173,7 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
         _roadmaps = data;
         notifyListeners();
       },
-      errorMessageBuilder: (error) {
-        if (error.toString().contains('timeout')) {
-          return 'Không có kết nối Internet';
-        }
-        return 'Lỗi tải danh sách lộ trình: ${error.toString()}';
-      },
+      errorMessageBuilder: (error) => ErrorHandler.getErrorMessage(error),
     );
   }
 
@@ -223,11 +226,6 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
     try {
       await _roadmapService.pauseRoadmap(sessionId);
       await loadUserRoadmaps(force: true);
-      try {
-        await TaskBoardService().archiveRoadmapTasks(sessionId);
-      } catch (e) {
-        debugPrint('Auto-archive failed: $e');
-      }
       return true;
     } catch (e) {
       debugPrint('Error pausing roadmap: $e');
@@ -249,11 +247,6 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
 
       await _roadmapService.softDeleteRoadmap(sessionId);
       await loadStatusCounts();
-      try {
-        await TaskBoardService().archiveRoadmapTasks(sessionId);
-      } catch (e) {
-        debugPrint('Auto-archive failed: $e');
-      }
       return true;
     } catch (e) {
       debugPrint('❌ [RoadmapProvider] Error deleting roadmap $sessionId: $e');
@@ -283,7 +276,8 @@ class RoadmapProvider with ChangeNotifier, LoadingStateProviderMixin {
 
       final index = _roadmaps.indexWhere((r) => r.sessionId == sessionId);
       if (index != -1) {
-        _roadmaps[index] = _roadmaps[index].copyWith(status: 'ACTIVE');
+        // Backend restores to PAUSED, not ACTIVE — reflect the real post-restore state
+        _roadmaps[index] = _roadmaps[index].copyWith(status: 'PAUSED');
         notifyListeners();
       }
 

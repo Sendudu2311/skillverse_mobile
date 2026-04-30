@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/error_handler.dart';
 import '../../data/models/roadmap_models.dart';
 import '../../data/services/roadmap_service.dart';
 import '../../data/services/journey_service.dart';
@@ -44,7 +45,7 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
         if (error.toString().contains('404')) {
           return 'Không tìm thấy lộ trình';
         }
-        return 'Lỗi tải lộ trình: ${error.toString()}';
+        return ErrorHandler.getErrorMessage(error);
       },
     );
   }
@@ -86,9 +87,7 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
         notifyListeners();
         return response;
       },
-      errorMessageBuilder: (error) {
-        return 'Lỗi cập nhật tiến độ: ${error.toString()}';
-      },
+      errorMessageBuilder: (error) => ErrorHandler.getErrorMessage(error),
     );
   }
 
@@ -138,9 +137,7 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
         _progressMap = {};
       }
       notifyListeners();
-    }, errorMessageBuilder: (error) {
-      return 'Lỗi kích hoạt lộ trình: ${error.toString()}';
-    });
+    }, errorMessageBuilder: (error) => ErrorHandler.getErrorMessage(error));
   }
 
   // ============================================================================
@@ -153,9 +150,7 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
       // Reload roadmap data to reflect the completed node status
       _currentRoadmap = await _roadmapService.getRoadmapById(sessionId);
       notifyListeners();
-    }, errorMessageBuilder: (error) {
-      return 'Lỗi hoàn thành chặng: ${error.toString()}';
-    });
+    }, errorMessageBuilder: (error) => ErrorHandler.getErrorMessage(error));
   }
 
   // ============================================================================
@@ -167,4 +162,7 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
     _progressMap = {};
     notifyListeners();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() => clearCurrentRoadmap();
 }

@@ -124,4 +124,12 @@ class RoadmapGenerateProvider with ChangeNotifier, LoadingStateProviderMixin {
     _generationError = null;
     notifyListeners();
   }
+
+  /// Called by app-level logout listener to purge user data.
+  void clearOnLogout() {
+    clearLastResult();
+    clearValidationResults();
+    clearGenerationError();
+    resetState();
+  }
 }
