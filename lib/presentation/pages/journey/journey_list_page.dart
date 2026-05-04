@@ -12,7 +12,9 @@ import '../../widgets/status_badge.dart';
 import '../../../data/models/journey_models.dart';
 
 class JourneyListPage extends StatefulWidget {
-  const JourneyListPage({super.key});
+  final String? blockReason;
+
+  const JourneyListPage({super.key, this.blockReason});
 
   @override
   State<JourneyListPage> createState() => _JourneyListPageState();
@@ -23,8 +25,21 @@ class _JourneyListPageState extends State<JourneyListPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<JourneyProvider>().loadJourneys();
+      context.read<JourneyProvider>().refresh();
+      _showBlockReasonIfNeeded();
     });
+  }
+
+  void _showBlockReasonIfNeeded() {
+    final message = widget.blockReason;
+    if (message == null || message.isEmpty || !mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+    context.replace('/journey');
   }
 
   @override
@@ -47,18 +62,18 @@ class _JourneyListPageState extends State<JourneyListPage> {
             if (provider.isLoading) {
               return _buildLoadingState();
             }
-  
+
             if (provider.hasError) {
               return ErrorStateWidget(
                 message: provider.errorMessage!,
-                onRetry: () => provider.loadJourneys(),
+                onRetry: () => provider.refresh(),
               );
             }
-  
+
             if (provider.journeys.isEmpty) {
               return _buildEmptyState(context, isDark);
             }
-  
+
             return _buildJourneyList(context, provider.journeys, isDark);
           },
         ),
@@ -354,9 +369,17 @@ class _JourneyCard extends StatelessWidget {
       case JourneyStatus.completedVerified:
         return ('Hoàn thành', AppTheme.successColor, Icons.check_circle);
       case JourneyStatus.completedUnverified:
-        return ('Hoàn thành (chưa xác minh)', Colors.amber, Icons.pending_actions);
+        return (
+          'Hoàn thành (chưa xác minh)',
+          Colors.amber,
+          Icons.pending_actions,
+        );
       case JourneyStatus.awaitingVerification:
-        return ('Đang chờ xác minh', AppTheme.warningColor, Icons.verified_outlined);
+        return (
+          'Đang chờ xác minh',
+          AppTheme.warningColor,
+          Icons.verified_outlined,
+        );
       case JourneyStatus.paused:
         return ('Tạm dừng', AppTheme.warningColor, Icons.pause_circle);
       case JourneyStatus.cancelled:

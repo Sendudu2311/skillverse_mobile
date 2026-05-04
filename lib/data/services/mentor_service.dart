@@ -53,6 +53,37 @@ class MentorService {
     }
   }
 
+  // ==================== Verified Skills ====================
+
+  /// Get verified skills for a specific mentor
+  /// GET /api/mentors/{mentorId}/verified-skills → List<String>
+  Future<List<String>> getVerifiedSkillsByMentorId(int mentorId) async {
+    try {
+      final response = await _apiClient.get(
+        '/mentors/$mentorId/verified-skills',
+      );
+      final List<dynamic> data = response.data;
+      return data.map((e) => e.toString()).toList();
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Get mentors who have a specific verified skill
+  /// GET /api/mentors/by-skill/{skillName} → List<MentorProfile>
+  Future<List<MentorProfile>> getMentorsByVerifiedSkill(
+    String skillName,
+  ) async {
+    try {
+      final encoded = Uri.encodeComponent(skillName);
+      final response = await _apiClient.get('/mentors/by-skill/$encoded');
+      final List<dynamic> data = response.data;
+      return data.map((json) => MentorProfile.fromJson(json)).toList();
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   // ==================== Favorites ====================
 
   /// Toggle favorite mentor

@@ -26,7 +26,6 @@ class StudentSkillVerificationPage extends StatefulWidget {
 
 class _StudentSkillVerificationPageState
     extends State<StudentSkillVerificationPage> {
-  bool _showSuccess = false;
 
   @override
   void initState() {
@@ -45,8 +44,12 @@ class _StudentSkillVerificationPageState
         value: context.read<StudentSkillVerificationProvider>(),
         child: _SubmitVerificationSheet(
           onSuccess: () {
-            setState(() => _showSuccess = true);
             context.read<StudentSkillVerificationProvider>().loadVerifications();
+            AnimatedSuccessOverlay.show(
+              context: context,
+              title: 'Đã gửi yêu cầu xác thực!',
+              subtitle: 'Chúng tôi sẽ xét duyệt trong thời gian sớm nhất.',
+            );
           },
         ),
       ),
@@ -112,12 +115,6 @@ class _StudentSkillVerificationPageState
                 );
               },
             ),
-            if (_showSuccess)
-              AnimatedSuccessOverlay(
-                title: 'Đã gửi yêu cầu xác thực!',
-                subtitle: 'Chúng tôi sẽ xét duyệt trong thời gian sớm nhất.',
-                onClose: () => setState(() => _showSuccess = false),
-              ),
           ],
         ),
       ),

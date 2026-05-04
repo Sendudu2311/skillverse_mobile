@@ -10,6 +10,7 @@ class AiRoadmapCard extends StatelessWidget {
   final VoidCallback? onTap;
   final void Function(String action)? onLifecycleAction;
   final bool isDeletedScope;
+  final bool disablePauseAction;
 
   const AiRoadmapCard({
     super.key,
@@ -17,6 +18,7 @@ class AiRoadmapCard extends StatelessWidget {
     this.onTap,
     this.onLifecycleAction,
     this.isDeletedScope = false,
+    this.disablePauseAction = false,
   });
 
   @override
@@ -282,6 +284,7 @@ class AiRoadmapCard extends StatelessWidget {
 
   Widget _buildLifecycleMenu(bool isDark) {
     final currentStatus = (roadmap.status ?? 'ACTIVE').toUpperCase();
+    final shouldDisablePause = currentStatus == 'ACTIVE' && disablePauseAction;
 
     return PopupMenuButton<String>(
       icon: Icon(
@@ -330,15 +333,20 @@ class AiRoadmapCard extends StatelessWidget {
                   ),
                 ),
               if (currentStatus == 'ACTIVE')
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'pause',
+                  enabled: !shouldDisablePause,
                   child: ListTile(
                     dense: true,
                     leading: Icon(
                       Icons.pause_circle_outline,
-                      color: Colors.amber,
+                      color: shouldDisablePause ? Colors.grey : Colors.amber,
                     ),
-                    title: Text('Tạm dừng'),
+                    title: Text(
+                      shouldDisablePause
+                          ? 'Tạm dừng (cần giữ lại 1 roadmap)'
+                          : 'Tạm dừng',
+                    ),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),

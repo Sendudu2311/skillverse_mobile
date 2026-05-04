@@ -26,10 +26,13 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
 
   String? _searchQuery;
   String? _skillFilter;
+  String? _contextSkillName;
+  bool _showVerifiedOnly = true;
 
   bool _isLoadingMentors = false;
   bool _isLoadingDetail = false;
   bool _isLoadingAvailability = false;
+  bool _isEnrichingVerifiedSkills = false;
 
   // ==================== Getters ====================
 
@@ -54,6 +57,17 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool get isLoadingMentors => _isLoadingMentors;
   bool get isLoadingDetail => _isLoadingDetail;
   bool get isLoadingAvailability => _isLoadingAvailability;
+  bool get showVerifiedOnly => _showVerifiedOnly;
+  bool get isEnrichingVerifiedSkills => _isEnrichingVerifiedSkills;
+  String? get contextSkillName => _contextSkillName;
+
+  /// Normalize skill name to match backend SkillNameUtils logic.
+  /// Strips non-alphanumeric → collapses → UPPERCASE.
+  static String _normalizeSkill(String raw) {
+    return raw
+        .replaceAll(RegExp(r'[^a-zA-Z0-9]'), '')
+        .toUpperCase();
+  }
 
   // ==================== Mentor Discovery ====================
 
@@ -67,6 +81,7 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
     try {
       _mentors = await _mentorService.getAllMentors();
       _applyFilters();
+      _enrichVerifiedSkills(); // fire-and-forget parallel enrichment
     } catch (e) {
       setError(ErrorHandler.getErrorMessage(e));
     } finally {
@@ -108,7 +123,26 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
   void clearFilters() {
     _searchQuery = null;
     _skillFilter = null;
+    _showVerifiedOnly = true;
     _filteredMentors = [];
+    notifyListeners();
+  }
+
+  void toggleVerifiedFilter() {
+    _showVerifiedOnly = !_showVerifiedOnly;
+    _applyFilters();
+    notifyListeners();
+  }
+
+  /// Set context skill from roadmap/journey navigation.
+  /// Mentors with this verified skill will be sorted to the top.
+  void setContextSkill(String skillName) {
+    _contextSkillName = skillName.trim();
+  }
+
+  void clearContextSkill() {
+    _contextSkillName = null;
+    _applyFilters();
     notifyListeners();
   }
 
@@ -135,7 +169,52 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
       }).toList();
     }
 
+    // Verified skills filter — only apply when enrichment has completed
+    if (_showVerifiedOnly && !_isEnrichingVerifiedSkills) {
+      filtered = filtered.where((m) => m.hasVerifiedSkills).toList();
+    }
+
     _filteredMentors = filtered;
+
+    // Sort: mentors with context skill match first
+    if (_contextSkillName != null && _contextSkillName!.isNotEmpty) {
+      final normalizedContext = _normalizeSkill(_contextSkillName!);
+      _filteredMentors.sort((a, b) {
+        final aMatch = a.verifiedSkills?.any(
+              (s) => _normalizeSkill(s) == normalizedContext,
+            ) ?? false;
+        final bMatch = b.verifiedSkills?.any(
+              (s) => _normalizeSkill(s) == normalizedContext,
+            ) ?? false;
+        if (aMatch && !bMatch) return -1;
+        if (!aMatch && bMatch) return 1;
+        return 0; // keep original order within same group
+      });
+    }
+  }
+
+  /// Enrich all mentors with verified skills data in parallel.
+  /// Called fire-and-forget after loadMentors() completes.
+  Future<void> _enrichVerifiedSkills() async {
+    if (_mentors.isEmpty) return;
+    _isEnrichingVerifiedSkills = true;
+    notifyListeners();
+
+    try {
+      final futures = _mentors.map((m) async {
+        try {
+          final skills = await _mentorService.getVerifiedSkillsByMentorId(m.id);
+          return m.copyWith(verifiedSkills: skills);
+        } catch (_) {
+          return m.copyWith(verifiedSkills: []);
+        }
+      });
+      _mentors = await Future.wait(futures);
+      _applyFilters();
+    } finally {
+      _isEnrichingVerifiedSkills = false;
+      notifyListeners();
+    }
   }
 
   // ==================== Mentor Detail ====================
@@ -256,9 +335,12 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
     _favoriteMentorIds = {};
     _searchQuery = null;
     _skillFilter = null;
+    _contextSkillName = null;
+    _showVerifiedOnly = true;
     _isLoadingMentors = false;
     _isLoadingDetail = false;
     _isLoadingAvailability = false;
+    _isEnrichingVerifiedSkills = false;
     resetState();
     notifyListeners();
   }

@@ -59,6 +59,28 @@ class NodeMentoringService {
     }
   }
 
+  /// Batch-load evidence for a list of nodeIds in parallel.
+  /// Returns Map<nodeId, NodeEvidenceRecordResponse?>.
+  /// Individual failures are caught and logged — other nodes still load.
+  Future<Map<String, NodeEvidenceRecordResponse?>> getBatchEvidence(
+    int journeyId,
+    List<String> nodeIds,
+  ) async {
+    if (nodeIds.isEmpty) return {};
+
+    final futures = nodeIds.map((nodeId) async {
+      try {
+        return MapEntry(nodeId, await getEvidence(journeyId, nodeId));
+      } catch (e) {
+        debugPrint('⚠️ getBatchEvidence skip $nodeId: $e');
+        return MapEntry<String, NodeEvidenceRecordResponse?>(nodeId, null);
+      }
+    });
+
+    final entries = await Future.wait(futures);
+    return Map.fromEntries(entries);
+  }
+
   /// Submit or update evidence for a node.
   /// POST /api/v1/journeys/{journeyId}/nodes/{nodeId}/evidence
   Future<NodeEvidenceRecordResponse> submitEvidence(

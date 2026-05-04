@@ -33,11 +33,11 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadJourneyAndAutoGenerate();
+      _loadJourneyAndQuestions();
     });
   }
 
-  Future<void> _loadJourneyAndAutoGenerate() async {
+  Future<void> _loadJourneyAndQuestions() async {
     final id = int.tryParse(widget.journeyId);
     if (id == null) return;
 
@@ -47,14 +47,6 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
     final journey = provider.currentJourney;
     if (journey == null) return;
 
-    // Auto-trigger test generation if journey has no test yet
-    // Provider guards against duplicate calls internally
-    if (journey.assessmentTestId == null) {
-      provider.autoGenerateTestIfNeeded(id);
-      return;
-    }
-
-    // Auto-load questions if test exists but questions not yet loaded
     if (_loadedQuestions == null && journey.assessmentTestId != null) {
       await _loadQuestions(journey.id, journey.assessmentTestId!);
     }
@@ -248,29 +240,97 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
           switch (value) {
             case 'pause':
               await provider.pauseJourney(journey.id);
-              taskBoardProvider.loadBoard(); // Sync archived tasks
+              if (context.mounted && provider.hasError) {
+                ErrorHandler.showErrorSnackBar(
+                  context,
+                  provider.errorMessage ?? 'Tạm dừng hành trình thất bại',
+                );
+              } else {
+                taskBoardProvider.loadBoard(); // Sync archived tasks
+                if (context.mounted) {
+                  ErrorHandler.showSuccessSnackBar(
+                    context,
+                    'Đã tạm dừng hành trình. Lưu ý: Lịch hẹn với Mentor vẫn diễn ra theo kế hoạch.',
+                  );
+                }
+              }
               break;
             case 'complete':
               await provider.completeJourney(journey.id);
               break;
             case 'cancel':
+              if (journey.hasActiveMentorBooking == true) {
+                if (context.mounted) {
+                  showDialog(
+                    context: context,
+                    builder:
+                        (ctx) => AlertDialog(
+                          title: const Text('Không thể hủy'),
+                          content: const Text(
+                            'Bạn đang có lịch booking mentor đang hoạt động cho hành trình này. Vui lòng giải quyết booking trước khi hủy.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Đã hiểu'),
+                            ),
+                          ],
+                        ),
+                  );
+                }
+                return;
+              }
               final confirmed = await _showConfirmDialog(
                 context,
                 'Hủy hành trình',
-                'Bạn có chắc muốn hủy hành trình này?',
+                'Nếu hành trình đang có lịch hẹn với Mentor, các lịch hẹn đó cũng sẽ bị ảnh hưởng.\n\nBạn có chắc muốn hủy hành trình này?',
               );
               if (confirmed == true) {
                 await provider.cancelJourney(journey.id);
-                taskBoardProvider.loadBoard(); // Sync archived tasks
+                if (context.mounted && provider.hasError) {
+                  ErrorHandler.showErrorSnackBar(
+                    context,
+                    provider.errorMessage ?? 'Hủy hành trình thất bại',
+                  );
+                } else {
+                  taskBoardProvider.loadBoard(); // Sync archived tasks
+                  if (context.mounted) {
+                    ErrorHandler.showSuccessSnackBar(
+                      context,
+                      'Đã hủy hành trình',
+                    );
+                  }
+                }
               }
               break;
             case 'delete':
-              final confirmed = await _showConfirmDialog(
+              if (journey.hasActiveMentorBooking == true) {
+                if (context.mounted) {
+                  showDialog(
+                    context: context,
+                    builder:
+                        (ctx) => AlertDialog(
+                          title: const Text('Không thể xóa'),
+                          content: const Text(
+                            'Bạn đang có lịch booking mentor đang hoạt động cho hành trình này. Bạn cần hoàn thành lộ trình học và giải phóng tiền cho mentor trước.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Đã hiểu'),
+                            ),
+                          ],
+                        ),
+                  );
+                }
+                return;
+              }
+              final confirmedDelete = await _showConfirmDialog(
                 context,
                 'Xóa hành trình',
                 'Bạn có chắc muốn xóa hành trình này? Hành động này không thể hoàn tác.',
               );
-              if (confirmed == true) {
+              if (confirmedDelete == true) {
                 final result = await provider.deleteJourney(journey.id);
                 taskBoardProvider.loadBoard(); // Sync deleted tasks
                 if (result && context.mounted) {
@@ -327,6 +387,11 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
     JourneySummaryDto journey,
     bool isDark,
   ) {
+    final String mainTitle =
+        journey.type == 'SKILL'
+            ? (journey.skillName ?? journey.domain)
+            : (journey.jobRole ?? journey.domain);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -357,13 +422,18 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  _getGoalLabel(journey.goal),
+                  mainTitle,
                   style: Theme.of(
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _getGoalLabel(journey.goal),
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
           ),
           const SizedBox(height: 12),
           // Progress
@@ -1161,14 +1231,17 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                 Text('Đã hoàn thành ${journey.totalNodesCompleted} node'),
               const SizedBox(height: 12),
               if (journey.roadmapSessionId != null)
-                ElevatedButton.icon(
-                  onPressed: () =>
-                      context.push('/roadmap/${journey.roadmapSessionId}'),
-                  icon: const Icon(Icons.map),
-                  label: const Text('Xem lộ trình'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlueDark,
-                    foregroundColor: Colors.white,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () =>
+                        context.push('/roadmap/${journey.roadmapSessionId}'),
+                    icon: const Icon(Icons.map),
+                    label: const Text('Xem lộ trình'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlueDark,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ),
             ],
@@ -1197,46 +1270,49 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                 ),
                 if (journey.latestTestResult?.resultId != null) ...[
                   const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed:
-                        context.read<JourneyProvider>().isLoadingFor(
-                          'getTestResult',
-                        )
-                        ? null
-                        : () async {
-                            try {
-                              final p = context.read<JourneyProvider>();
-                              final detailedResult = await p.getTestResult(
-                                journeyId: journey.id,
-                                resultId: journey.latestTestResult!.resultId!,
-                              );
-                              if (detailedResult != null && context.mounted) {
-                                EvaluationResultDialog.show(
-                                  context,
-                                  detailedResult,
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ErrorHandler.showErrorSnackBar(
-                                  context,
-                                  e.toString().replaceAll('Exception: ', ''),
-                                );
-                              }
-                            }
-                          },
-                    icon:
-                        context.read<JourneyProvider>().isLoadingFor(
-                          'getTestResult',
-                        )
-                        ? CommonLoading.button(color: AppTheme.primaryBlueDark)
-                        : const Icon(Icons.info_outline),
-                    label: Text(
-                      context.read<JourneyProvider>().isLoadingFor(
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed:
+                          context.read<JourneyProvider>().isLoadingFor(
                             'getTestResult',
                           )
-                          ? 'Đang tải...'
-                          : 'Xem chi tiết phân tích AI',
+                          ? null
+                          : () async {
+                              try {
+                                final p = context.read<JourneyProvider>();
+                                final detailedResult = await p.getTestResult(
+                                  journeyId: journey.id,
+                                  resultId: journey.latestTestResult!.resultId!,
+                                );
+                                if (detailedResult != null && context.mounted) {
+                                  EvaluationResultDialog.show(
+                                    context,
+                                    detailedResult,
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ErrorHandler.showErrorSnackBar(
+                                    context,
+                                    e.toString().replaceAll('Exception: ', ''),
+                                  );
+                                }
+                              }
+                            },
+                      icon:
+                          context.read<JourneyProvider>().isLoadingFor(
+                            'getTestResult',
+                          )
+                          ? CommonLoading.button(color: AppTheme.primaryBlueDark)
+                          : const Icon(Icons.info_outline),
+                      label: Text(
+                        context.read<JourneyProvider>().isLoadingFor(
+                              'getTestResult',
+                            )
+                            ? 'Đang tải...'
+                            : 'Xem chi tiết phân tích AI',
+                      ),
                     ),
                   ),
                 ],
@@ -1382,9 +1458,6 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                   child: Text(
                     _getMilestoneLabel(m.milestone),
                     style: TextStyle(
-                      decoration: m.isCompleted
-                          ? TextDecoration.lineThrough
-                          : null,
                       color: m.isCompleted
                           ? (isDark ? AppTheme.darkTextSecondary : Colors.grey)
                           : (isDark
@@ -1462,6 +1535,8 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
   Widget _statColumn(String label, String value) {
     return Column(
       children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
@@ -1470,7 +1545,6 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
             color: AppTheme.primaryBlueDark,
           ),
         ),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
   }
@@ -1531,30 +1605,34 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
   }
 
   Widget _buildVerificationCta(
-      BuildContext context, JourneySummaryDto journey) {
+    BuildContext context,
+    JourneySummaryDto journey,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.warningColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: AppTheme.warningColor.withValues(alpha: 0.4)),
+        border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.verified_outlined,
-                  color: AppTheme.warningColor, size: 20),
+              const Icon(
+                Icons.verified_outlined,
+                color: AppTheme.warningColor,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Yêu cầu xác minh hoàn thành',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.warningColor,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.warningColor,
+                ),
               ),
             ],
           ),
@@ -1570,15 +1648,14 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
               child: ElevatedButton.icon(
                 onPressed: () async {
                   final provider = context.read<JourneyProvider>();
-                  final result =
-                      await provider.requestVerification(journey.id);
-                  if (result != null && mounted) {
+                  final result = await provider.requestVerification(journey.id);
+                  if (!context.mounted) return;
+
+                  if (result != null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã gửi yêu cầu xác minh'),
-                      ),
+                      const SnackBar(content: Text('Đã gửi yêu cầu xác minh')),
                     );
-                  } else if (provider.hasError && mounted) {
+                  } else if (provider.hasError) {
                     ErrorHandler.showErrorSnackBar(
                       context,
                       provider.errorMessage ?? 'Yêu cầu xác minh thất bại',

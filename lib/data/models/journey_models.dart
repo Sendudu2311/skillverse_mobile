@@ -233,6 +233,9 @@ class JourneySummaryDto {
   final String? skillName;
   final bool? finalVerificationRequired;
 
+  // V3 Phase 3 fields
+  final bool? hasActiveMentorBooking;
+
   // Assessment test info
   final int? assessmentTestId;
   final String? assessmentTestTitle;
@@ -264,6 +267,7 @@ class JourneySummaryDto {
     this.latestTestResult,
     this.skillName,
     this.finalVerificationRequired,
+    this.hasActiveMentorBooking,
     this.assessmentTestId,
     this.assessmentTestTitle,
     this.assessmentTestQuestionCount,

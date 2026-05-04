@@ -797,7 +797,7 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
             child: OutlinedButton.icon(
               onPressed: _isCreatingPlan || _isCompletingNode
                   ? null
-                  : () => _showStudyPlanChoiceSheet(node),
+                  : () => _createStudyPlan(node),
               icon: _isCreatingPlan
                   ? CommonLoading.small()
                   : Icon(
@@ -808,7 +808,9 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
                           : AppTheme.primaryBlue,
                     ),
               label: Text(
-                _isCreatingPlan ? 'Đang tạo KH...' : 'Lên kế hoạch',
+                _isCreatingPlan 
+                    ? 'Đang tạo KH...' 
+                    : (_assignment != null ? 'Tạo Task học tập' : 'Lên kế hoạch'),
                 style: TextStyle(
                   color: _isCreatingPlan || _isCompletingNode
                       ? (widget.isDark
@@ -833,28 +835,30 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
             ),
           ),
         ),
-        const SizedBox(width: 8),
-        SizedBox(
-          height: 48,
-          width: 48,
-          child: ElevatedButton(
-            onPressed: _isCreatingPlan || _isCompletingNode
-                ? null
-                : () => _showCompleteNodeDialog(node),
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.zero,
-              backgroundColor: AppTheme.successColor.withValues(alpha: 0.15),
-              foregroundColor: AppTheme.successColor,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+        if (_assignment == null) ...[
+          const SizedBox(width: 8),
+          SizedBox(
+            height: 48,
+            width: 48,
+            child: ElevatedButton(
+              onPressed: _isCreatingPlan || _isCompletingNode
+                  ? null
+                  : () => _showCompleteNodeDialog(node),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.zero,
+                backgroundColor: AppTheme.successColor.withValues(alpha: 0.15),
+                foregroundColor: AppTheme.successColor,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
+              child: _isCompletingNode
+                  ? CommonLoading.small()
+                  : const Icon(Icons.done_all, size: 20),
             ),
-            child: _isCompletingNode
-                ? CommonLoading.small()
-                : const Icon(Icons.done_all, size: 20),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -968,141 +972,6 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
     } finally {
       if (mounted) setState(() => _isCreatingPlan = false);
     }
-  }
-
-  /// V3: Show bottom sheet offering Self-Study vs Mentor Verification
-  void _showStudyPlanChoiceSheet(RoadmapNode node) {
-    final isDark = widget.isDark;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark
-          ? AppTheme.darkBackgroundPrimary
-          : AppTheme.lightBackgroundPrimary,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Bạn muốn học node này như thế nào?',
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  node.title,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 20),
-                // Option 1: Self-study
-                _buildChoiceOption(
-                  ctx: ctx,
-                  icon: Icons.auto_stories_outlined,
-                  title: 'Tự học',
-                  subtitle:
-                      'Tạo kế hoạch và tự hoàn thành. Bạn có thể nộp minh chứng sau.',
-                  color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _createStudyPlan(node);
-                  },
-                ),
-                const SizedBox(height: 12),
-                // Option 2: Mentor verification
-                _buildChoiceOption(
-                  ctx: ctx,
-                  icon: Icons.verified_user_outlined,
-                  title: 'Xác thực với Mentor',
-                  subtitle:
-                      'Tìm mentor đánh giá và hỗ trợ bạn hoàn thành node này.',
-                  color: AppTheme.warningColor,
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    // Navigate to mentor list with context
-                    context.push('/mentors?action=node_mentoring');
-                  },
-                ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildChoiceOption({
-    required BuildContext ctx,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    final isDark = widget.isDark;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.25)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                      color: isDark
-                          ? AppTheme.darkTextPrimary
-                          : AppTheme.lightTextPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, color: color, size: 20),
-          ],
-        ),
-      ),
-    );
   }
 }
 

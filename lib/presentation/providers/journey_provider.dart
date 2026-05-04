@@ -7,12 +7,17 @@ import '../../core/mixins/provider_loading_mixin.dart';
 class JourneyProvider
     with ChangeNotifier, LoadingStateProviderMixin, MultiLoadingProviderMixin {
   final JourneyService _journeyService = JourneyService();
+  static const String activeJourneyBlockReason =
+      'Bạn đang có một hành trình chưa hoàn thành. Hãy hoàn thành hoặc xóa hành trình cũ trước khi tạo mới.';
 
   // State
   List<JourneySummaryDto> _journeys = [];
+  List<JourneySummaryDto> _activeJourneys = [];
   JourneySummaryDto? _currentJourney;
   GenerateTestResponseDto? _generatedTest;
   TestResultDto? _testResult;
+  JourneySummaryDto? _pendingJourneyForTestGeneration;
+  bool _hasLoadedActiveJourneys = false;
 
   // Wizard state
   int _wizardStep = 1;
@@ -24,6 +29,7 @@ class JourneyProvider
   // ============================================================================
 
   List<JourneySummaryDto> get journeys => _journeys;
+  List<JourneySummaryDto> get activeJourneys => _activeJourneys;
   JourneySummaryDto? get currentJourney => _currentJourney;
   GenerateTestResponseDto? get generatedTest => _generatedTest;
   TestResultDto? get testResult => _testResult;
@@ -31,17 +37,9 @@ class JourneyProvider
   bool get isCreating => _isCreating;
   bool get isAutoGenerating => _isAutoGenerating;
 
-  /// True if any journey is in a non-terminal state (blocks creating a new one).
-  bool get hasActiveJourney => _journeys.any((j) {
-        const terminal = {
-          JourneyStatus.completed,
-          JourneyStatus.completedVerified,
-          JourneyStatus.completedUnverified,
-          JourneyStatus.awaitingVerification,
-          JourneyStatus.cancelled,
-        };
-        return !terminal.contains(j.status);
-      });
+  /// True if any active-journey entry is still non-terminal for creation.
+  bool get hasActiveJourney =>
+      _activeJourneys.any((journey) => !_isTerminalForCreation(journey.status));
 
   // ============================================================================
   // WIZARD CONTROL
@@ -83,31 +81,87 @@ class JourneyProvider
     }, errorMessageBuilder: (error) => error.toString());
   }
 
+  /// Load active journeys from the dedicated backend endpoint.
+  Future<List<JourneySummaryDto>> loadActiveJourneys({
+    bool force = false,
+    bool silent = false,
+  }) async {
+    if (!force && _hasLoadedActiveJourneys) {
+      return _activeJourneys;
+    }
+
+    try {
+      final journeys = await _journeyService.getActiveJourneys();
+      _activeJourneys = journeys;
+      _hasLoadedActiveJourneys = true;
+      if (!silent) {
+        notifyListeners();
+      }
+      return _activeJourneys;
+    } catch (e) {
+      if (!silent) {
+        setError(ErrorHandler.getErrorMessage(e));
+      }
+      rethrow;
+    }
+  }
+
+  /// Returns whether user can create a new journey based on backend-active data.
+  Future<bool> canCreateJourney({
+    bool force = false,
+    bool silent = false,
+  }) async {
+    try {
+      await loadActiveJourneys(force: force, silent: silent);
+      return !hasActiveJourney;
+    } catch (_) {
+      // Allow navigation when pre-check fails; backend still enforces the rule.
+      return true;
+    }
+  }
+
   /// Load a single journey by ID
   Future<JourneySummaryDto?> loadJourneyById(int journeyId) async {
     return await executeAsync(() async {
       _currentJourney = await _journeyService.getJourneyById(journeyId);
+      _syncJourneyInCollections(_currentJourney!);
       notifyListeners();
       return _currentJourney!;
     }, errorMessageBuilder: (error) => error.toString());
   }
 
-  /// Start a new journey (create only, navigate immediately)
-  Future<JourneySummaryDto?> startJourney(StartJourneyRequest request) async {
+  /// Start a new journey and generate its first assessment test before navigating.
+  Future<JourneySummaryDto?> startJourneyAndGenerateTest(
+    StartJourneyRequest request,
+  ) async {
     _isCreating = true;
+    clearError();
+    _generatedTest = null;
+    _testResult = null;
     notifyListeners();
 
+    JourneySummaryDto? journey = _pendingJourneyForTestGeneration;
     try {
-      // 1. Create journey (fast ~1-2s)
-      final journey = await _journeyService.startJourney(request);
+      journey ??= await _journeyService.startJourney(request);
+      _pendingJourneyForTestGeneration = journey;
       _currentJourney = journey;
+      _syncJourneyInCollections(journey);
+
+      _generatedTest = await _journeyService.generateTest(journey.id);
+      _currentJourney = await _journeyService.getJourneyById(journey.id);
+      _pendingJourneyForTestGeneration = null;
+      _syncJourneyInCollections(_currentJourney!);
 
       _isCreating = false;
       notifyListeners();
-      return journey;
+      return _currentJourney;
     } catch (e) {
       _isCreating = false;
-      setError(ErrorHandler.getErrorMessage(e));
+      final fallbackMessage = journey != null
+          ? 'Không thể tạo bài test lúc này. Vui lòng thử lại.'
+          : 'Tạo hành trình thất bại';
+      final errorMessage = ErrorHandler.getErrorMessage(e);
+      setError(errorMessage.isNotEmpty ? errorMessage : fallbackMessage);
       return null;
     }
   }
@@ -147,6 +201,8 @@ class JourneyProvider
       'generateTest',
       () async {
         _generatedTest = await _journeyService.generateTest(journeyId);
+        _currentJourney = await _journeyService.getJourneyById(journeyId);
+        _syncJourneyInCollections(_currentJourney!);
         notifyListeners();
         return _generatedTest!;
       },
@@ -210,6 +266,7 @@ class JourneyProvider
       'generateRoadmap',
       () async {
         _currentJourney = await _journeyService.generateRoadmap(journeyId);
+        _syncJourneyInCollections(_currentJourney!);
         notifyListeners();
         return _currentJourney!;
       },
@@ -259,8 +316,13 @@ class JourneyProvider
   Future<bool> deleteJourney(int journeyId) async {
     // Optimistic removal
     final backup = List<JourneySummaryDto>.from(_journeys);
+    final activeBackup = List<JourneySummaryDto>.from(_activeJourneys);
     _journeys.removeWhere((j) => j.id == journeyId);
+    _activeJourneys.removeWhere((j) => j.id == journeyId);
     if (_currentJourney?.id == journeyId) _currentJourney = null;
+    if (_pendingJourneyForTestGeneration?.id == journeyId) {
+      _pendingJourneyForTestGeneration = null;
+    }
     notifyListeners();
 
     try {
@@ -269,6 +331,7 @@ class JourneyProvider
     } catch (e) {
       // Rollback on failure
       _journeys = backup;
+      _activeJourneys = activeBackup;
       setError(ErrorHandler.getErrorMessage(e));
       notifyListeners();
       return false;
@@ -301,16 +364,43 @@ class JourneyProvider
   ) async {
     return await executeAsync(() async {
       _currentJourney = await action();
-
-      // Update in list
-      final index = _journeys.indexWhere((j) => j.id == journeyId);
-      if (index != -1) {
-        _journeys[index] = _currentJourney!;
-      }
-
+      _syncJourneyInCollections(_currentJourney!);
       notifyListeners();
       return _currentJourney!;
     }, errorMessageBuilder: (error) => error.toString());
+  }
+
+  bool _isTerminalForCreation(JourneyStatus status) {
+    const terminal = {
+      JourneyStatus.completed,
+      JourneyStatus.completedVerified,
+      JourneyStatus.completedUnverified,
+      JourneyStatus.cancelled,
+    };
+    return terminal.contains(status);
+  }
+
+  void _syncJourneyInCollections(JourneySummaryDto journey) {
+    final listIndex = _journeys.indexWhere((j) => j.id == journey.id);
+    if (listIndex == -1) {
+      _journeys.insert(0, journey);
+    } else {
+      _journeys[listIndex] = journey;
+    }
+
+    final activeIndex = _activeJourneys.indexWhere((j) => j.id == journey.id);
+    if (_isTerminalForCreation(journey.status)) {
+      if (activeIndex != -1) {
+        _activeJourneys.removeAt(activeIndex);
+      }
+      return;
+    }
+
+    if (activeIndex == -1) {
+      _activeJourneys.insert(0, journey);
+    } else {
+      _activeJourneys[activeIndex] = journey;
+    }
   }
 
   /// Clear current journey detail
@@ -318,17 +408,32 @@ class JourneyProvider
     _currentJourney = null;
     _generatedTest = null;
     _testResult = null;
+    _pendingJourneyForTestGeneration = null;
+    notifyListeners();
+  }
+
+  void clearPendingJourneyForTestGeneration() {
+    if (_pendingJourneyForTestGeneration == null) return;
+    _pendingJourneyForTestGeneration = null;
     notifyListeners();
   }
 
   /// Refresh all data
   Future<void> refresh() async {
-    await loadJourneys();
+    try {
+      await Future.wait([loadJourneys(), loadActiveJourneys(force: true)]);
+    } catch (_) {
+      // Errors are already surfaced through provider state when not silent.
+    }
   }
 
   /// Called by app-level logout listener to purge user data.
   void clearOnLogout() {
     resetWizard();
     clearCurrentJourney();
+    _journeys = [];
+    _activeJourneys = [];
+    _hasLoadedActiveJourneys = false;
+    clearAllLoading();
   }
 }

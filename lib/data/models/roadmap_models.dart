@@ -89,6 +89,18 @@ class RoadmapNode {
   final List<String>? suggestedModuleIds; // validated module IDs from DB
   final String? nodeStatus; // LOCKED, AVAILABLE, IN_PROGRESS, COMPLETED
 
+  // Node ordering (V3)
+  final String? phaseId;
+  final int? orderIndex;
+  final int? mainPathIndex;
+
+  // Importance scoring (V3 - AI-native or heuristic backfill)
+  final double? importanceScore;   // 0.0–1.0, how critical this node is
+  final double? confidenceScore;   // 0.0–1.0, confidence in the score
+  final String? reason;            // 1-sentence explanation
+  final List<String>? evidence;    // signals: skill gap, job market, prereq chain
+  final String? importanceValidationStatus; // ACCEPTED, ADJUSTED, LOW_CONFIDENCE, FALLBACK
+
   RoadmapNode({
     required this.id,
     required this.title,
@@ -109,6 +121,14 @@ class RoadmapNode {
     this.suggestedCourseIds,
     this.suggestedModuleIds,
     this.nodeStatus,
+    this.phaseId,
+    this.orderIndex,
+    this.mainPathIndex,
+    this.importanceScore,
+    this.confidenceScore,
+    this.reason,
+    this.evidence,
+    this.importanceValidationStatus,
   });
 
   factory RoadmapNode.fromJson(Map<String, dynamic> json) =>
@@ -265,7 +285,7 @@ class RoadmapStatistics {
   final int totalNodes;
   final int mainNodes;
   final int sideNodes;
-  final int totalEstimatedHours;
+  final double totalEstimatedHours;
   final Map<String, int>? difficultyDistribution;
 
   RoadmapStatistics({
@@ -751,10 +771,22 @@ class ProgressStats {
   final int completedQuests;
   final double completionPercentage;
 
+  /// Sum of importanceScore weights for completed nodes (weighted mode only).
+  final double? completedWeight;
+
+  /// Sum of importanceScore weights for all nodes (weighted mode only).
+  final double? totalWeight;
+
+  /// Scoring mode: 'WEIGHTED_IMPORTANCE' or 'COUNT_FALLBACK'.
+  final String? progressMode;
+
   ProgressStats({
     required this.totalQuests,
     required this.completedQuests,
     required this.completionPercentage,
+    this.completedWeight,
+    this.totalWeight,
+    this.progressMode,
   });
 
   factory ProgressStats.fromJson(Map<String, dynamic> json) =>

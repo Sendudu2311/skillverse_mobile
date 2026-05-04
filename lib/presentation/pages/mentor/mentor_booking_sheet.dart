@@ -15,6 +15,7 @@ class MentorBookingSheet extends StatefulWidget {
   final List<MentorAvailability> availability;
   final String? action;
   final int? journeyId;
+  final String? nodeId;
 
   const MentorBookingSheet({
     super.key,
@@ -22,6 +23,7 @@ class MentorBookingSheet extends StatefulWidget {
     required this.availability,
     this.action,
     this.journeyId,
+    this.nodeId,
   });
 
   @override
@@ -495,6 +497,7 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
         durationMinutes: _durationMinutes,
         priceVnd: _totalPrice,
         journeyId: widget.journeyId,
+        nodeId: widget.nodeId,
         bookingType: widget.action == 'journey_mentoring'
             ? 'JOURNEY_MENTORING'
             : null,

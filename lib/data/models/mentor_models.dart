@@ -91,6 +91,14 @@ class MentorProfile {
   @JsonKey(defaultValue: [])
   final List<String>? badges;
 
+  /// Verified skills enriched from GET /api/mentors/{id}/verified-skills.
+  /// Not part of the main mentor list API response — populated by provider.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final List<String>? verifiedSkills;
+
+  /// Whether this mentor has at least one verified skill.
+  bool get hasVerifiedSkills => verifiedSkills?.isNotEmpty == true;
+
   MentorProfile({
     required this.id,
     this.firstName,
@@ -114,6 +122,7 @@ class MentorProfile {
     this.skillPoints,
     this.currentLevel,
     this.badges,
+    this.verifiedSkills,
   });
 
   /// Get full name
@@ -165,6 +174,7 @@ class MentorProfile {
     int? skillPoints,
     int? currentLevel,
     List<String>? badges,
+    List<String>? verifiedSkills,
   }) {
     return MentorProfile(
       id: id ?? this.id,
@@ -190,6 +200,7 @@ class MentorProfile {
       skillPoints: skillPoints ?? this.skillPoints,
       currentLevel: currentLevel ?? this.currentLevel,
       badges: badges ?? this.badges,
+      verifiedSkills: verifiedSkills ?? this.verifiedSkills,
     );
   }
 }
@@ -264,6 +275,8 @@ class MentorBooking {
   final String? bookingType;
   final int? journeyId;
   final int? roadmapSessionId;
+  final String? nodeId;
+  final int? nodeSkillId;
 
   MentorBooking({
     required this.id,
@@ -291,6 +304,8 @@ class MentorBooking {
     this.bookingType,
     this.journeyId,
     this.roadmapSessionId,
+    this.nodeId,
+    this.nodeSkillId,
   });
 
   /// Get calculated duration
@@ -317,7 +332,7 @@ class MentorBooking {
       case BookingStatus.mentoringActive:
         return 'Đang mentoring';
       case BookingStatus.pendingCompletion:
-        return 'Chờ xác nhận hoàn thành';
+        return 'Chờ nghiệm thu';
       case BookingStatus.completed:
         return 'Hoàn thành';
       case BookingStatus.cancelled:
@@ -340,6 +355,9 @@ class MentorBooking {
   /// Backend allows confirm-complete from ONGOING, CONFIRMED, or PENDING_COMPLETION
   /// — for ONGOING/CONFIRMED, the session must have already ended.
   bool get canConfirmComplete {
+    if (learnerCompletedAt != null || learnerConfirmedAt != null || confirmedByLearner == true) {
+      return false;
+    }
     if (status == BookingStatus.pendingCompletion) return true;
     if (status == BookingStatus.ongoing || status == BookingStatus.confirmed) {
       return DateTime.now().isAfter(endTime);
@@ -351,6 +369,9 @@ class MentorBooking {
   /// PENDING_COMPLETION / MENTORING_ACTIVE: always allowed.
   /// ONGOING/CONFIRMED: only after endTime.
   bool get canOpenDispute {
+    if (learnerCompletedAt != null || learnerConfirmedAt != null || confirmedByLearner == true) {
+      return false;
+    }
     if (status == BookingStatus.pendingCompletion) return true;
     if (status == BookingStatus.mentoringActive) return true;
     if (status == BookingStatus.ongoing || status == BookingStatus.confirmed) {
@@ -369,6 +390,9 @@ class MentorBooking {
   }
 
   bool get isRoadmapMentoring => bookingType == 'ROADMAP_MENTORING';
+
+  bool get isJourneyMentoring => bookingType == 'JOURNEY_MENTORING';
+
 
   bool get hasRoadmapWorkspace =>
       isRoadmapMentoring &&
@@ -410,6 +434,8 @@ class MentorBooking {
     String? bookingType,
     int? journeyId,
     int? roadmapSessionId,
+    String? nodeId,
+    int? nodeSkillId,
   }) {
     return MentorBooking(
       id: id ?? this.id,
@@ -437,6 +463,8 @@ class MentorBooking {
       bookingType: bookingType ?? this.bookingType,
       journeyId: journeyId ?? this.journeyId,
       roadmapSessionId: roadmapSessionId ?? this.roadmapSessionId,
+      nodeId: nodeId ?? this.nodeId,
+      nodeSkillId: nodeSkillId ?? this.nodeSkillId,
     );
   }
 }
@@ -445,7 +473,7 @@ String _dateTimeToUtcIso8601String(DateTime time) =>
     time.toUtc().toIso8601String();
 
 /// Create booking intent request
-/// V3 Phase 1: optional context fields for ROADMAP_MENTORING, NODE_MENTORING, etc.
+/// V3 Phase 1: optional context fields for ROADMAP_MENTORING, JOURNEY_MENTORING, etc.
 @JsonSerializable()
 class CreateBookingRequest {
   final int mentorId;
@@ -462,7 +490,7 @@ class CreateBookingRequest {
   final String? nodeId;
   final int? nodeSkillId;
   final String?
-  bookingType; // "GENERAL" | "NODE_MENTORING" | "JOURNEY_MENTORING" | "ROADMAP_MENTORING"
+  bookingType; // "GENERAL" | "JOURNEY_MENTORING" | "ROADMAP_MENTORING"
 
   CreateBookingRequest({
     required this.mentorId,

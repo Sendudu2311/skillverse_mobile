@@ -830,6 +830,10 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
   // ─── Pending Completion Banner ───────────────────────────────────────────
 
   Widget _buildPendingCompletionBanner(bool isDark) {
+    final hasLearnerConfirmed = _booking!.learnerCompletedAt != null ||
+        _booking!.learnerConfirmedAt != null ||
+        _booking!.confirmedByLearner == true;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -848,10 +852,12 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Mentor đã đánh dấu hoàn tất. Bạn có thể:\n'
-              '• "Xác nhận hoàn thành" → tiền sẽ được giải phóng cho Mentor.\n'
-              '• "Khiếu nại" → chuyển sang Admin xem xét, tiền vẫn được giữ.\n'
-              'Nếu không thao tác, hệ thống sẽ tự xác nhận sau 24h.',
+              hasLearnerConfirmed
+                  ? 'Bạn đã xác nhận hoàn thành. Vui lòng chờ mentor xác nhận để hoàn tất.'
+                  : 'Mentor đã đánh dấu hoàn tất. Bạn có thể:\n'
+                      '• "Xác nhận hoàn thành" → tiền sẽ được giải phóng cho Mentor.\n'
+                      '• "Khiếu nại" → chuyển sang Admin xem xét, tiền vẫn được giữ.\n'
+                      'Nếu không thao tác, hệ thống sẽ tự xác nhận sau 24h.',
               style: TextStyle(
                 fontSize: 13,
                 color: isDark ? Colors.white70 : AppTheme.lightTextPrimary,
@@ -1026,10 +1032,35 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
               '/roadmap/${booking.roadmapSessionId}/workspace?bookingId=${booking.id}&journeyId=${booking.journeyId}',
             ),
             icon: const Icon(Icons.workspace_premium_outlined, size: 18),
-            label: const Text('Không gian Mentor'),
+            label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Không gian Mentor')),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.successColor,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+          ),
+        ),
+      );
+      actions.add(const SizedBox(width: 8));
+    }
+
+    // JOURNEY_MENTORING: shortcut back to Final Verification page
+    // for learner to view gate / submit assessment / see history.
+    if (booking.isJourneyMentoring &&
+        booking.journeyId != null &&
+        _isLearner) {
+      actions.add(
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => context.push(
+              '/journey/${booking.journeyId}/final-verification',
+            ),
+            icon: const Icon(Icons.verified_outlined, size: 18),
+            label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Xem xác minh')),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.infoColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
             ),
           ),
         ),
@@ -1067,11 +1098,13 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
                       }
                     },
               icon: const Icon(Icons.video_call, size: 18),
-              label: Text(
-                booking.meetingLink != null ? 'Vào phòng' : 'Bắt đầu',
+              label: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(booking.meetingLink != null ? 'Vào phòng' : 'Bắt đầu'),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.successColor,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
               ),
             ),
           ),
@@ -1096,9 +1129,10 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
             child: ElevatedButton.icon(
               onPressed: _isBusy ? null : _handleStartMeeting,
               icon: const Icon(Icons.video_call, size: 18),
-              label: const Text('Bắt đầu'),
+              label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Bắt đầu')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.successColor,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
               ),
             ),
           ),
@@ -1114,10 +1148,11 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
           child: OutlinedButton.icon(
             onPressed: _isBusy ? null : () => _showCancelDialog(),
             icon: const Icon(Icons.close, size: 18),
-            label: const Text('Hủy'),
+            label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Hủy')),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.errorColor,
               side: const BorderSide(color: AppTheme.errorColor),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
             ),
           ),
         ),
@@ -1136,9 +1171,10 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
                 : () =>
                       _showConfirmCompleteDialog(earlyConfirm: isEarlyConfirm),
             icon: const Icon(Icons.check_circle_outline, size: 18),
-            label: const Text('Xác nhận hoàn thành'),
+            label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Hoàn thành')),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.successColor,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
             ),
           ),
         ),
@@ -1155,7 +1191,10 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
               '/booking-review/${booking.id}?mentorName=${Uri.encodeComponent(booking.mentorName ?? '')}',
             ),
             icon: const Icon(Icons.star_outline, size: 18),
-            label: const Text('Đánh giá'),
+            label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Đánh giá')),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
           ),
         ),
       );
@@ -1169,10 +1208,11 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
           child: OutlinedButton.icon(
             onPressed: _isBusy ? null : _showOpenDisputeSheet,
             icon: const Icon(Icons.gavel, size: 18),
-            label: const Text('Khiếu nại'),
+            label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Khiếu nại')),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.warningColor,
               side: const BorderSide(color: AppTheme.warningColor),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
             ),
           ),
         ),
@@ -1188,10 +1228,11 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
             onPressed: () =>
                 context.push('/booking-dispute/${booking.disputeId}'),
             icon: const Icon(Icons.gavel, size: 18),
-            label: const Text('Xem khiếu nại'),
+            label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Xem khiếu nại')),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.warningColor,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
             ),
           ),
         ),

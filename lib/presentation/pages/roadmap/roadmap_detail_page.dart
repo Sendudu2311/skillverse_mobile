@@ -37,7 +37,7 @@ class _RoadmapDerivedStats {
   });
 
   factory _RoadmapDerivedStats.from(RoadmapResponse roadmap) {
-    final hours = roadmap.statistics.totalEstimatedHours;
+    final hours = roadmap.statistics.totalEstimatedHours.round();
     final dailyMinutes = _parseDailyMinutes(roadmap.metadata.dailyTime);
     final approxDays = dailyMinutes > 0
         ? (hours * 60 / dailyMinutes).round()
@@ -210,9 +210,26 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
   Future<void> _openMentorDiscoveryFlow(BuildContext context) async {
     final journeyId = _resolvedJourneyId;
     if (journeyId == null) return;
-    await context.push(
-      '/mentors?action=roadmap_mentoring&journeyId=$journeyId',
-    );
+
+    // Resolve skill name: journey.skillName > roadmap.metadata.skillMode > target
+    String? skillName;
+    final journey = context.read<JourneyProvider>().journeys
+        .where((j) => j.id == journeyId)
+        .firstOrNull;
+    if (journey?.skillName != null && journey!.skillName!.isNotEmpty) {
+      skillName = journey.skillName;
+    } else {
+      final roadmap = context.read<RoadmapDetailProvider>().currentRoadmap;
+      skillName = roadmap?.metadata.skillMode?.skillName
+          ?? roadmap?.metadata.target;
+    }
+
+    var url = '/mentors?action=roadmap_mentoring&journeyId=$journeyId';
+    if (skillName != null && skillName.isNotEmpty) {
+      url += '&skillName=${Uri.encodeComponent(skillName)}';
+    }
+
+    await context.push(url);
     if (!mounted) return;
     await _resolveMentorBooking(journeyId, refresh: true);
   }
@@ -421,6 +438,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
 
               // Entry-point CTA row
               _buildActionRow(context, isDark),
+              const SizedBox(height: 20),
 
               // Metadata section
               _buildMetadataSection(context, roadmap, isDark),
@@ -606,9 +624,9 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
                   child: _buildStatCard(
                     context,
                     icon: Icons.star_outline,
-                    label: 'Nhiệm vụ',
+                    label: 'Mục tiêu chính',
                     value: '${roadmap.statistics.mainNodes}',
-                    subValue: 'Chính',
+                    subValue: null,
                     isDark: isDark,
                   ),
                 ),
@@ -617,9 +635,9 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
                   child: _buildStatCard(
                     context,
                     icon: Icons.tag,
-                    label: 'Nhiệm vụ',
+                    label: 'Mục tiêu phụ',
                     value: '${roadmap.statistics.sideNodes}',
-                    subValue: 'Phụ',
+                    subValue: null,
                     isDark: isDark,
                   ),
                 ),
@@ -815,9 +833,25 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
               Expanded(
                 child: OutlinedButton(
                   onPressed: _resolvedJourneyId != null
-                      ? () => context.push(
-                          '/journey/${_resolvedJourneyId!}/final-verification',
-                        )
+                      ? () {
+                          final roadmap = context
+                              .read<RoadmapDetailProvider>()
+                              .currentRoadmap;
+                          context.push(
+                            '/journey/${_resolvedJourneyId!}/final-verification',
+                            extra: roadmap != null
+                                ? {
+                                    'nodeIds': roadmap.roadmap
+                                        .map((n) => n.id)
+                                        .toList(),
+                                    'nodeTitles': {
+                                      for (final n in roadmap.roadmap)
+                                        n.id: n.title,
+                                    },
+                                  }
+                                : null,
+                          );
+                        }
                       : null,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: isDark
@@ -843,7 +877,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
           ),
           // V3: Dynamic Mentor button
           if (_resolvedJourneyId != null) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
             _buildMentorActionButton(context, isDark),
           ],
         ],
@@ -1204,7 +1238,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Mục tiêu chiến dịch',
+                        'MỤC TIÊU HỌC TẬP',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: isDark
                               ? AppTheme.primaryBlueDark

@@ -6,7 +6,10 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/final_verification_provider.dart';
+import '../../providers/journey_provider.dart';
+import '../../providers/mentor_booking_provider.dart';
 import '../../../data/models/final_verification_models.dart';
+import '../../../data/models/mentor_models.dart';
 import '../../../core/utils/date_time_helper.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../themes/app_theme.dart';
@@ -19,11 +22,19 @@ import '../../widgets/common_loading.dart';
 import '../../widgets/animated_success_overlay.dart';
 import '../../widgets/ai_generation_loading_view.dart';
 import '../../widgets/error_dialog.dart';
+import 'journey_verification_dossier_section.dart';
 
 class FinalVerificationPage extends StatefulWidget {
   final int journeyId;
+  final List<String>? nodeIds;
+  final Map<String, String>? nodeTitles;
 
-  const FinalVerificationPage({super.key, required this.journeyId});
+  const FinalVerificationPage({
+    super.key,
+    required this.journeyId,
+    this.nodeIds,
+    this.nodeTitles,
+  });
 
   @override
   State<FinalVerificationPage> createState() => _FinalVerificationPageState();
@@ -33,8 +44,20 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<FinalVerificationProvider>().load(widget.journeyId);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = context.read<FinalVerificationProvider>();
+      await provider.load(widget.journeyId);
+      // Trigger dossier load if nodeIds are available
+      if (widget.nodeIds != null && widget.nodeIds!.isNotEmpty) {
+        provider.loadDossier(widget.journeyId, widget.nodeIds!);
+      }
+      // Refresh bookings so the duplicate-check below sees up-to-date state.
+      if (mounted) {
+        final bookingProvider = context.read<MentorBookingProvider>();
+        if (bookingProvider.bookings.isEmpty) {
+          await bookingProvider.loadBookings();
+        }
+      }
     });
   }
 
@@ -101,6 +124,16 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
                     const SizedBox(height: 16),
                     _buildOutputAssessmentSection(
                         context, provider, gate, isDark),
+                    // Dossier section (all node evidences)
+                    if (widget.nodeIds != null &&
+                        widget.nodeIds!.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      JourneyVerificationDossierSection(
+                        nodeEvidences: provider.nodeEvidences,
+                        nodeTitles: widget.nodeTitles ?? {},
+                        isLoading: provider.isLoadingDossier,
+                      ),
+                    ],
                     if (provider.history.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _buildHistorySection(
@@ -183,23 +216,7 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
               ),
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  context.push(
-                    '/mentors?action=journey_mentoring&journeyId=${widget.journeyId}',
-                  );
-                },
-                icon: const Icon(Icons.person_search),
-                label: const Text('Thuê Mentor phỏng vấn (1 buổi)'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
+            _buildJourneyMentoringCta(context),
           ] else ...[
             if (gate.blockingReasons != null &&
                 gate.blockingReasons!.isNotEmpty) ...[
@@ -254,6 +271,112 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
   }
 
   // ─── Output assessment ───────────────────────────────────────────────────
+
+  /// Smart CTA for Self-Study journeys to hire a mentor for the
+  /// 1-shot final interview. Reflects active JOURNEY_MENTORING booking state.
+  Widget _buildJourneyMentoringCta(BuildContext context) {
+    return Consumer<MentorBookingProvider>(
+      builder: (_, bookingProvider, __) {
+        final activeBooking = bookingProvider.bookings
+            .where(
+              (b) =>
+                  b.isJourneyMentoring &&
+                  b.journeyId == widget.journeyId &&
+                  (b.status == BookingStatus.pending ||
+                      b.status == BookingStatus.confirmed ||
+                      b.status == BookingStatus.ongoing ||
+                      b.status == BookingStatus.mentoringActive),
+            )
+            .firstOrNull;
+
+        if (activeBooking != null) {
+          // Already has an active booking — show status + link to detail.
+          final statusLabel = switch (activeBooking.status) {
+            BookingStatus.pending => 'Đang chờ Mentor xác nhận',
+            BookingStatus.confirmed => 'Mentor đã xác nhận — chờ vào buổi phỏng vấn',
+            BookingStatus.ongoing => 'Buổi phỏng vấn đang diễn ra',
+            BookingStatus.mentoringActive => 'Mentor đang theo sát',
+            _ => 'Đã đặt lịch',
+          };
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.successColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border:
+                  Border.all(color: AppTheme.successColor.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline,
+                        color: AppTheme.successColor, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        statusLabel,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.successColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push(
+                      '/mentor-booking-detail/${activeBooking.id}',
+                    ),
+                    icon: const Icon(Icons.event_note, size: 18),
+                    label: const Text('Xem chi tiết booking'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // No active booking yet — show original hire CTA.
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () {
+              // Resolve skill name from journey for mentor matching
+              String? skillName;
+              try {
+                final jp = context.read<JourneyProvider>();
+                final journey = jp.journeys
+                    .where((j) => j.id == widget.journeyId)
+                    .firstOrNull;
+                skillName = journey?.skillName;
+              } catch (_) {}
+
+              var url =
+                  '/mentors?action=journey_mentoring&journeyId=${widget.journeyId}';
+              if (skillName != null && skillName.isNotEmpty) {
+                url += '&skillName=${Uri.encodeComponent(skillName)}';
+              }
+              context.push(url);
+            },
+            icon: const Icon(Icons.person_search),
+            label: const Text('Thuê Mentor phỏng vấn (1 buổi)'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   Widget _buildOutputAssessmentSection(
     BuildContext context,
@@ -557,13 +680,15 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 16,
-        ),
+      builder: (ctx) => ChangeNotifierProvider.value(
+        value: provider,
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
         child: StatefulBuilder(
           builder: (ctx, setSheetState) {
             return Consumer<FinalVerificationProvider>(
@@ -709,6 +834,7 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
             );
           },
         ),
+      ),
       ),
     );
   }

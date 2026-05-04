@@ -18,6 +18,8 @@ class JourneyCreatePage extends StatefulWidget {
 }
 
 class _JourneyCreatePageState extends State<JourneyCreatePage> {
+  late final JourneyProvider _journeyProvider;
+
   // ── Step navigation ────────────────────────────────────────────────────────
   // Main step: 0 = JourneyType, 1 = SkillForm (domain→industry→role→skills), 2 = Config
   int _currentStep = 0;
@@ -25,7 +27,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   int _skillStep = 1; // 1: Domain, 2: Industry, 3: Role, 4: Skills
 
   // ── Step 0: Journey type ─────────────────────────────────────────────────
-  JourneyType _selectedType = JourneyType.skill;
+  final JourneyType _selectedType = JourneyType.skill;
 
   // ── Step 1: SkillForm state ───────────────────────────────────────────────
   String _selectedDomain = '';
@@ -56,19 +58,31 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
 
   static IconData _domainIcon(String enumVal) {
     switch (enumVal) {
-      case 'IT': return Icons.computer;
-      case 'BUSINESS': return Icons.business;
-      case 'DESIGN': return Icons.palette;
-      default: return Icons.school;
+      case 'IT':
+        return Icons.computer;
+      case 'BUSINESS':
+        return Icons.business;
+      case 'DESIGN':
+        return Icons.palette;
+      default:
+        return Icons.school;
     }
   }
 
   /// Convert display domain name from API → backend enum (IT / BUSINESS / DESIGN).
   static String _mapDomainToEnum(String domain) {
     final u = domain.toUpperCase();
-    if (u == 'IT' || u.contains('INFORMATION') || u.contains('CÔNG NGHỆ')) return 'IT';
-    if (u == 'BUSINESS' || u.contains('KINH DOANH') || u.contains('MARKETING')) return 'BUSINESS';
-    if (u == 'DESIGN' || u.contains('THIẾT KẾ') || u.contains('SÁNG TẠO')) return 'DESIGN';
+    if (u == 'IT' || u.contains('INFORMATION') || u.contains('CÔNG NGHỆ')) {
+      return 'IT';
+    }
+    if (u == 'BUSINESS' ||
+        u.contains('KINH DOANH') ||
+        u.contains('MARKETING')) {
+      return 'BUSINESS';
+    }
+    if (u == 'DESIGN' || u.contains('THIẾT KẾ') || u.contains('SÁNG TẠO')) {
+      return 'DESIGN';
+    }
     return u;
   }
 
@@ -95,17 +109,45 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   }
 
   static const List<Map<String, String>> _goalOptions = [
-    {'value': 'EXPLORE', 'label': 'Khám phá ngành', 'desc': 'Tìm hiểu tổng quan về lĩnh vực'},
-    {'value': 'INTERNSHIP', 'label': 'Chuẩn bị thực tập', 'desc': 'Sẵn sàng cho cơ hội thực tập'},
-    {'value': 'CAREER_CHANGE', 'label': 'Chuyển ngành', 'desc': 'Chuyển sang lĩnh vực mới'},
-    {'value': 'UPSKILL', 'label': 'Nâng cao kỹ năng', 'desc': 'Phát triển kỹ năng hiện tại'},
-    {'value': 'FROM_SCRATCH', 'label': 'Bắt đầu từ đầu', 'desc': 'Học từ kiến thức cơ bản'},
+    {
+      'value': 'EXPLORE',
+      'label': 'Khám phá ngành',
+      'desc': 'Tìm hiểu tổng quan về lĩnh vực',
+    },
+    {
+      'value': 'INTERNSHIP',
+      'label': 'Chuẩn bị thực tập',
+      'desc': 'Sẵn sàng cho cơ hội thực tập',
+    },
+    {
+      'value': 'CAREER_CHANGE',
+      'label': 'Chuyển ngành',
+      'desc': 'Chuyển sang lĩnh vực mới',
+    },
+    {
+      'value': 'UPSKILL',
+      'label': 'Nâng cao kỹ năng',
+      'desc': 'Phát triển kỹ năng hiện tại',
+    },
+    {
+      'value': 'FROM_SCRATCH',
+      'label': 'Bắt đầu từ đầu',
+      'desc': 'Học từ kiến thức cơ bản',
+    },
   ];
 
   static const List<Map<String, String>> _levelOptions = [
-    {'value': 'BEGINNER', 'label': 'Mới bắt đầu', 'desc': 'Chưa có kinh nghiệm'},
+    {
+      'value': 'BEGINNER',
+      'label': 'Mới bắt đầu',
+      'desc': 'Chưa có kinh nghiệm',
+    },
     {'value': 'ELEMENTARY', 'label': 'Sơ cấp', 'desc': 'Biết cơ bản'},
-    {'value': 'INTERMEDIATE', 'label': 'Trung cấp', 'desc': '1-2 năm kinh nghiệm'},
+    {
+      'value': 'INTERMEDIATE',
+      'label': 'Trung cấp',
+      'desc': '1-2 năm kinh nghiệm',
+    },
     {'value': 'ADVANCED', 'label': 'Nâng cao', 'desc': '3+ năm kinh nghiệm'},
     {'value': 'EXPERT', 'label': 'Chuyên gia', 'desc': '5+ năm kinh nghiệm'},
   ];
@@ -120,16 +162,21 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
 
   /// Keywords from selected role to suggest as skills.
   List<String> get _roleKeywordSuggestions {
-    if (_selectedDomain.isEmpty || _selectedIndustry.isEmpty || _selectedJobRole.isEmpty) {
+    if (_selectedDomain.isEmpty ||
+        _selectedIndustry.isEmpty ||
+        _selectedJobRole.isEmpty) {
       return [];
     }
     try {
-      final domainData =
-          _expertFields.firstWhere((e) => e.domain == _selectedDomain);
-      final industryData =
-          domainData.industries.firstWhere((e) => e.industry == _selectedIndustry);
-      final role =
-          industryData.roles.firstWhere((r) => r.jobRole == _selectedJobRole);
+      final domainData = _expertFields.firstWhere(
+        (e) => e.domain == _selectedDomain,
+      );
+      final industryData = domainData.industries.firstWhere(
+        (e) => e.industry == _selectedIndustry,
+      );
+      final role = industryData.roles.firstWhere(
+        (r) => r.jobRole == _selectedJobRole,
+      );
       if (role.keywords != null && role.keywords!.isNotEmpty) {
         return role.keywords!
             .split(',')
@@ -159,11 +206,13 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   @override
   void initState() {
     super.initState();
+    _journeyProvider = context.read<JourneyProvider>();
     _loadExpertFields();
   }
 
   @override
   void dispose() {
+    _journeyProvider.clearPendingJourneyForTestGeneration();
     _customSkillCtrl.dispose();
     _existingSkillCtrl.dispose();
     super.dispose();
@@ -211,8 +260,6 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   }
 
   Future<void> _handleSubmit() async {
-    final provider = context.read<JourneyProvider>();
-
     final request = StartJourneyRequest(
       type: _selectedType,
       domain: _mapDomainToEnum(_selectedDomain),
@@ -227,14 +274,14 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
       duration: _selectedDuration,
     );
 
-    final journey = await provider.startJourney(request);
+    final journey = await _journeyProvider.startJourneyAndGenerateTest(request);
 
     if (journey != null && mounted) {
       context.push('/journey/${journey.id}');
-    } else if (provider.hasError && mounted) {
+    } else if (_journeyProvider.hasError && mounted) {
       ErrorHandler.showErrorSnackBar(
         context,
-        provider.errorMessage ?? 'Tạo hành trình thất bại',
+        _journeyProvider.errorMessage ?? 'Không thể tạo bài test lúc này',
       );
     }
   }
@@ -261,14 +308,14 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                     CommonLoading(size: 64, color: AppTheme.primaryBlueDark),
                     const SizedBox(height: 24),
                     Text(
-                      'AI đang tạo bài test...',
+                      'AI đang tạo hành trình và bài test...',
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Vui lòng chờ trong giây lát.\nAI đang phân tích và tạo bài đánh giá phù hợp với bạn.',
+                      'Vui lòng chờ trong giây lát.\nHệ thống đang khởi tạo Journey và chuẩn bị bài đánh giá đầu vào cho bạn.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: isDark
@@ -311,8 +358,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
 
   Widget _buildStepIndicator(bool isDark) {
     const labels = ['Loại', 'Kỹ năng', 'Cấu hình'];
-    final connectorColor =
-        isDark ? AppTheme.darkBorderColor : Colors.grey.shade300;
+    final connectorColor = isDark
+        ? AppTheme.darkBorderColor
+        : Colors.grey.shade300;
 
     final items = <Widget>[];
     for (int i = 0; i < 3; i++) {
@@ -326,8 +374,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
           children: [
             CircleAvatar(
               radius: 14,
-              backgroundColor:
-                  isActive ? AppTheme.primaryBlueDark : connectorColor,
+              backgroundColor: isActive
+                  ? AppTheme.primaryBlueDark
+                  : connectorColor,
               child: isCompleted
                   ? const Icon(Icons.check, size: 14, color: Colors.white)
                   : Text(
@@ -428,13 +477,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   }
 
   Widget _subStepConnector() => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Container(
-          width: 24,
-          height: 1,
-          color: Colors.grey.shade300,
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Container(width: 24, height: 1, color: Colors.grey.shade300),
+  );
 
   // ============================================================================
   // Step Content Router
@@ -445,16 +490,18 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Chọn loại hành trình',
+          'Bắt đầu Journey theo kỹ năng',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+            color: isDark
+                ? AppTheme.darkTextPrimary
+                : AppTheme.lightTextPrimary,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Bạn muốn phát triển theo hướng nào?',
+          'Phiên bản Mobile hiện đang hỗ trợ luồng Journey skill-first để đồng bộ với backend và bài test đầu vào.',
           style: TextStyle(
             fontSize: 14,
             color: isDark
@@ -467,18 +514,42 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
           isDark: isDark,
           icon: Icons.auto_awesome,
           title: 'Học kỹ năng mới',
-          description: 'Tập trung phát triển một kỹ năng cụ thể với lộ trình được cá nhân hóa.',
-          isSelected: _selectedType == JourneyType.skill,
-          onTap: () => setState(() => _selectedType = JourneyType.skill),
+          description:
+              'Tập trung phát triển một kỹ năng cụ thể với lộ trình được cá nhân hóa.',
+          isSelected: true,
+          onTap: () {},
         ),
         const SizedBox(height: 12),
-        _buildTypeCard(
-          isDark: isDark,
-          icon: Icons.trending_up,
-          title: 'Phát triển sự nghiệp',
-          description: 'Xây dựng lộ trình sự nghiệp toàn diện với nhiều kỹ năng phối hợp.',
-          isSelected: _selectedType == JourneyType.career,
-          onTap: () => setState(() => _selectedType = JourneyType.career),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkCardBackground : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? AppTheme.darkBorderColor : Colors.grey.shade300,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                size: 18,
+                color: AppTheme.primaryBlueDark,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Journey theo hướng nghề nghiệp sẽ được mở lại khi Mobile có flow riêng thay vì dùng chung wizard kỹ năng.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -610,10 +681,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
       children: [
         Text(
           'Chọn lĩnh vực',
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
@@ -723,10 +793,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
       children: [
         Text(
           'Chọn ngành chi tiết',
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
@@ -795,8 +864,11 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                         ),
                       ),
                       if (isSelected)
-                        Icon(Icons.check_circle,
-                            color: AppTheme.primaryBlueDark, size: 20),
+                        Icon(
+                          Icons.check_circle,
+                          color: AppTheme.primaryBlueDark,
+                          size: 20,
+                        ),
                     ],
                   ),
                 ),
@@ -819,10 +891,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
       children: [
         Text(
           'Chọn vị trí công việc',
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
@@ -904,8 +975,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                                           color: isDark
                                               ? AppTheme.darkBorderColor
                                               : Colors.grey.shade200,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Text(
                                           k.trim(),
@@ -920,8 +992,11 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                         ),
                       ),
                       if (isSelected)
-                        Icon(Icons.check_circle,
-                            color: AppTheme.primaryBlueDark, size: 24),
+                        Icon(
+                          Icons.check_circle,
+                          color: AppTheme.primaryBlueDark,
+                          size: 24,
+                        ),
                     ],
                   ),
                 ),
@@ -946,10 +1021,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
       children: [
         Text(
           'Kỹ năng mục tiêu',
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
@@ -970,11 +1044,13 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                 .map(
                   (skill) => Chip(
                     label: Text(skill),
-                    backgroundColor:
-                        AppTheme.primaryBlueDark.withValues(alpha: 0.1),
+                    backgroundColor: AppTheme.primaryBlueDark.withValues(
+                      alpha: 0.1,
+                    ),
                     labelStyle: const TextStyle(
-                        color: AppTheme.primaryBlueDark,
-                        fontWeight: FontWeight.w600),
+                      color: AppTheme.primaryBlueDark,
+                      fontWeight: FontWeight.w600,
+                    ),
                     deleteIcon: const Icon(Icons.close, size: 16),
                     deleteIconColor: AppTheme.primaryBlueDark,
                     onDeleted: () =>
@@ -1005,8 +1081,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                 .map(
                   (k) => ActionChip(
                     label: Text('+ $k'),
-                    onPressed: () =>
-                        setState(() => _selectedSkills.add(k)),
+                    onPressed: () => setState(() => _selectedSkills.add(k)),
                     backgroundColor: isDark
                         ? AppTheme.darkCardBackground
                         : Colors.grey.shade100,
@@ -1091,10 +1166,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
       children: [
         Text(
           'Cấu hình bài đánh giá',
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
         Text(
@@ -1140,8 +1214,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                         children: [
                           Text(
                             goal['label']!,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -1157,8 +1230,11 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                       ),
                     ),
                     if (_selectedGoal == goal['value'])
-                      Icon(Icons.check_circle,
-                          color: AppTheme.primaryBlueDark, size: 20),
+                      Icon(
+                        Icons.check_circle,
+                        color: AppTheme.primaryBlueDark,
+                        size: 20,
+                      ),
                   ],
                 ),
               ),
@@ -1180,16 +1256,16 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
               label: Text(
                 level['label']!,
                 style: TextStyle(
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   color: isSelected ? Colors.white : null,
                   fontSize: 13,
                 ),
               ),
               selected: isSelected,
               selectedColor: AppTheme.primaryBlueDark,
-              backgroundColor:
-                  isDark ? AppTheme.darkCardBackground : Colors.grey.shade100,
+              backgroundColor: isDark
+                  ? AppTheme.darkCardBackground
+                  : Colors.grey.shade100,
               onSelected: (_) =>
                   setState(() => _selectedLevel = level['value']!),
             );
@@ -1209,8 +1285,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(12),
-                  onTap: () =>
-                      setState(() => _selectedDuration = d['value']!),
+                  onTap: () => setState(() => _selectedDuration = d['value']!),
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -1235,9 +1310,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                             fontWeight: isSelected
                                 ? FontWeight.w600
                                 : FontWeight.normal,
-                            color: isSelected
-                                ? AppTheme.primaryBlueDark
-                                : null,
+                            color: isSelected ? AppTheme.primaryBlueDark : null,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -1294,8 +1367,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
               .map(
                 (s) => Chip(
                   label: Text(s),
-                  backgroundColor:
-                      AppTheme.primaryBlueDark.withValues(alpha: 0.1),
+                  backgroundColor: AppTheme.primaryBlueDark.withValues(
+                    alpha: 0.1,
+                  ),
                   labelStyle: const TextStyle(
                     color: AppTheme.primaryBlueDark,
                     fontWeight: FontWeight.w600,
@@ -1330,8 +1404,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                   (s) => Chip(
                     label: Text(s, style: const TextStyle(fontSize: 12)),
                     deleteIcon: const Icon(Icons.close, size: 14),
-                    onDeleted: () =>
-                        setState(() => _existingSkills.remove(s)),
+                    onDeleted: () => setState(() => _existingSkills.remove(s)),
                   ),
                 )
                 .toList(),
@@ -1387,10 +1460,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
             children: [
               Text(
                 'Tóm tắt',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               _summaryRow('Lĩnh vực', _selectedDomain),
@@ -1414,13 +1486,15 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                 ),
               _summaryRow(
                 'Trình độ',
-                _levelOptions
-                    .firstWhere((l) => l['value'] == _selectedLevel)['label']!,
+                _levelOptions.firstWhere(
+                  (l) => l['value'] == _selectedLevel,
+                )['label']!,
               ),
               _summaryRow(
                 'Thời lượng',
-                _durationOptions
-                    .firstWhere((d) => d['value'] == _selectedDuration)['label']!,
+                _durationOptions.firstWhere(
+                  (d) => d['value'] == _selectedDuration,
+                )['label']!,
               ),
               _summaryRow(
                 'Ngôn ngữ',
@@ -1437,7 +1511,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
     final trimmed = _existingSkillCtrl.text.trim();
     if (trimmed.isEmpty ||
         _existingSkills.contains(trimmed) ||
-        _selectedSkills.contains(trimmed)) return;
+        _selectedSkills.contains(trimmed)) {
+      return;
+    }
     setState(() {
       _existingSkills.add(trimmed);
       _existingSkillCtrl.clear();
@@ -1449,12 +1525,11 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   // ============================================================================
 
   Widget _sectionLabel(String text) => Text(
-        text,
-        style: Theme.of(context)
-            .textTheme
-            .titleSmall
-            ?.copyWith(fontWeight: FontWeight.w600),
-      );
+    text,
+    style: Theme.of(
+      context,
+    ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+  );
 
   Widget _langChip(String value, String label, bool isDark) {
     final isSelected = _selectedLanguage == value;

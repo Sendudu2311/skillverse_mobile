@@ -125,12 +125,19 @@ class _RoadmapPageState extends State<RoadmapPage> {
                   }
 
                   final roadmaps = provider.filteredRoadmaps;
+                  final totalRoadmapCount =
+                      (provider.statusCounts['active'] ?? 0) +
+                      (provider.statusCounts['paused'] ?? 0);
 
                   if (roadmaps.isEmpty) {
                     return _buildEmptyState(context, isDark);
                   }
 
-                  return _buildRoadmapList(context, roadmaps);
+                  return _buildRoadmapList(
+                    context,
+                    roadmaps,
+                    totalRoadmapCount: totalRoadmapCount,
+                  );
                 },
               ),
             ),
@@ -139,7 +146,7 @@ class _RoadmapPageState extends State<RoadmapPage> {
       ),
       floatingActionButton: _listScope == 0
           ? FloatingActionButton.extended(
-              onPressed: () => context.push('/roadmap/generate'),
+              onPressed: () => context.push('/journey'),
               icon: const Icon(Icons.add),
               label: const Text('Tạo lộ trình mới'),
             )
@@ -339,7 +346,7 @@ class _RoadmapPageState extends State<RoadmapPage> {
               roadmap: roadmap,
               isDeletedScope: true,
               onLifecycleAction: (action) =>
-                  _handleDeletedScopeAction(context, action, roadmap.sessionId),
+                  _handleDeletedScopeAction(action, roadmap.sessionId),
             ),
           );
         },
@@ -574,14 +581,18 @@ class _RoadmapPageState extends State<RoadmapPage> {
           _searchController.clear();
           provider.clearFilters();
         } else {
-          _navigateToGenerate(context);
+          _navigateToGenerate();
         }
       },
       iconGradient: AppTheme.blueGradient,
     );
   }
 
-  Widget _buildRoadmapList(BuildContext context, List roadmaps) {
+  Widget _buildRoadmapList(
+    BuildContext context,
+    List roadmaps, {
+    required int totalRoadmapCount,
+  }) {
     return RefreshIndicator(
       onRefresh: () => context.read<RoadmapProvider>().refresh(),
       child: ListView.builder(
@@ -593,9 +604,10 @@ class _RoadmapPageState extends State<RoadmapPage> {
             index: index,
             child: AiRoadmapCard(
               roadmap: roadmap,
-              onTap: () => _navigateToDetail(context, roadmap.sessionId),
+              disablePauseAction: totalRoadmapCount <= 1,
+              onTap: () => _navigateToDetail(roadmap.sessionId),
               onLifecycleAction: (action) =>
-                  _handleLifecycleAction(context, action, roadmap.sessionId),
+                  _handleLifecycleAction(action, roadmap.sessionId),
             ),
           );
         },
@@ -603,11 +615,7 @@ class _RoadmapPageState extends State<RoadmapPage> {
     );
   }
 
-  Future<void> _handleLifecycleAction(
-    BuildContext context,
-    String action,
-    int sessionId,
-  ) async {
+  Future<void> _handleLifecycleAction(String action, int sessionId) async {
     final provider = context.read<RoadmapProvider>();
     bool success = false;
     String message = '';
@@ -627,59 +635,55 @@ class _RoadmapPageState extends State<RoadmapPage> {
         break;
     }
 
-    if (mounted) {
-      if (success) {
-        ErrorHandler.showSuccessSnackBar(context, message);
-      } else {
-        ErrorHandler.showErrorSnackBar(context, message);
-      }
+    if (!mounted) return;
+
+    if (success) {
+      ErrorHandler.showSuccessSnackBar(context, message);
+    } else {
+      ErrorHandler.showErrorSnackBar(context, message);
     }
   }
 
-  void _navigateToGenerate(BuildContext context) {
-    context.push('/roadmap/generate');
+  void _navigateToGenerate() {
+    context.push('/journey');
   }
 
-  void _navigateToDetail(BuildContext context, int sessionId) {
+  void _navigateToDetail(int sessionId) {
     context.push('/roadmap/$sessionId');
   }
 
-  Future<void> _handleDeletedScopeAction(
-    BuildContext context,
-    String action,
-    int sessionId,
-  ) async {
+  Future<void> _handleDeletedScopeAction(String action, int sessionId) async {
     final provider = context.read<RoadmapProvider>();
-    final messenger = ScaffoldMessenger.of(context);
 
     switch (action) {
       case 'restore':
         final success = await provider.restoreRoadmap(sessionId);
-        if (mounted) {
-          if (success) {
-            messenger.showSnackBar(
-              SnackBar(
-                content: const Text('Đã khôi phục lộ trình'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          } else {
-            messenger.showSnackBar(
-              SnackBar(
-                content: const Text('Lỗi khôi phục lộ trình'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+        if (!mounted) return;
+
+        final messenger = ScaffoldMessenger.of(context);
+        if (success) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: const Text('Đã khôi phục lộ trình'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          messenger.showSnackBar(
+            SnackBar(
+              content: const Text('Lỗi khôi phục lộ trình'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
         break;
       case 'permanent_delete':
-        _showPermanentDeleteDialog(context, sessionId);
+        _showPermanentDeleteDialog(sessionId);
         break;
     }
   }
 
-  void _showPermanentDeleteDialog(BuildContext context, int sessionId) {
+  void _showPermanentDeleteDialog(int sessionId) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
@@ -726,15 +730,15 @@ class _RoadmapPageState extends State<RoadmapPage> {
               Navigator.of(dialogContext).pop();
               final provider = context.read<RoadmapProvider>();
               final success = await provider.permanentDeleteRoadmap(sessionId);
-              if (mounted) {
-                if (success) {
-                  ErrorHandler.showSuccessSnackBar(
-                    context,
-                    'Đã xóa vĩnh viễn lộ trình',
-                  );
-                } else {
-                  ErrorHandler.showErrorSnackBar(context, 'Lỗi xóa vĩnh viễn');
-                }
+              if (!mounted) return;
+
+              if (success) {
+                ErrorHandler.showSuccessSnackBar(
+                  context,
+                  'Đã xóa vĩnh viễn lộ trình',
+                );
+              } else {
+                ErrorHandler.showErrorSnackBar(context, 'Lỗi xóa vĩnh viễn');
               }
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),

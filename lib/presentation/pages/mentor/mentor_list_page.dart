@@ -16,8 +16,10 @@ import '../../../core/utils/number_formatter.dart';
 class MentorListPage extends StatefulWidget {
   final String? action;
   final int? journeyId;
+  final String? skillName;
+  final String? nodeId;
 
-  const MentorListPage({super.key, this.action, this.journeyId});
+  const MentorListPage({super.key, this.action, this.journeyId, this.skillName, this.nodeId});
 
   @override
   State<MentorListPage> createState() => _MentorListPageState();
@@ -32,6 +34,9 @@ class _MentorListPageState extends State<MentorListPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<MentorProvider>();
+      if (widget.skillName != null) {
+        provider.setContextSkill(widget.skillName!);
+      }
       provider.loadMentors();
       provider.loadAvailableSkills();
       provider.loadFavorites();
@@ -48,6 +53,7 @@ class _MentorListPageState extends State<MentorListPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isRoadmapContext = widget.action == 'roadmap_mentoring';
+    final isJourneyContext = widget.action == 'journey_mentoring';
 
     return Scaffold(
       appBar: SkillVerseAppBar(
@@ -82,7 +88,45 @@ class _MentorListPageState extends State<MentorListPage> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Chọn mentor để đồng hành cùng Roadmap của bạn.',
+                        widget.skillName != null
+                            ? 'Ưu tiên mentor đã xác thực skill "${widget.skillName}" cho Roadmap của bạn.'
+                            : 'Chọn mentor để đồng hành cùng Roadmap của bạn.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // V3: Contextual banner for Journey Mentoring (Self-Study verification)
+            if (isJourneyContext)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.infoColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppTheme.infoColor.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.verified_user_outlined,
+                      size: 20,
+                      color: AppTheme.infoColor,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        widget.skillName != null
+                            ? 'Ưu tiên mentor đã xác thực skill "${widget.skillName}". Mentor sẽ đánh giá năng lực và cấp Verified Skills cho Portfolio của bạn.'
+                            : 'Chọn mentor để đặt 1 buổi phỏng vấn cuối khoá. Mentor sẽ đánh giá năng lực và cấp Verified Skills cho Portfolio của bạn.',
                         style: TextStyle(
                           fontSize: 13,
                           color: isDark
@@ -126,6 +170,84 @@ class _MentorListPageState extends State<MentorListPage> {
                 );
               },
             ),
+            // Verified skills toggle
+            Consumer<MentorProvider>(
+              builder: (context, provider, _) {
+                final isActive = provider.showVerifiedOnly;
+                final isEnriching = provider.isEnrichingVerifiedSkills;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 4,
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: isEnriching
+                        ? null
+                        : () => provider.toggleVerifiedFilter(),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? AppTheme.successColor.withValues(alpha: 0.1)
+                            : (isDark
+                                ? Colors.white.withValues(alpha: 0.05)
+                                : Colors.grey.withValues(alpha: 0.08)),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isActive
+                              ? AppTheme.successColor.withValues(alpha: 0.4)
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.verified_user_outlined,
+                            size: 16,
+                            color: isActive
+                                ? AppTheme.successColor
+                                : (isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Chỉ mentor đã xác thực',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight:
+                                  isActive ? FontWeight.w600 : FontWeight.w400,
+                              color: isActive
+                                  ? AppTheme.successColor
+                                  : (isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary),
+                            ),
+                          ),
+                          if (isEnriching) ...[
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: AppTheme.successColor,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
             Expanded(child: _buildMentorList(context, isDark)),
           ],
         ),
@@ -145,6 +267,20 @@ class _MentorListPageState extends State<MentorListPage> {
         }
 
         if (provider.mentors.isEmpty) {
+          // Special empty state when verified filter is active
+          if (provider.showVerifiedOnly && !provider.isEnrichingVerifiedSkills) {
+            return EmptyStateWidget(
+              icon: Icons.verified_user_outlined,
+              title: 'Chưa có mentor đã xác thực',
+              subtitle:
+                  'Không tìm thấy mentor nào đã verified skills. Tắt bộ lọc để xem tất cả.',
+              ctaLabel: 'Tắt bộ lọc xác thực',
+              onCtaPressed: () => provider.toggleVerifiedFilter(),
+              iconGradient: const LinearGradient(
+                colors: [AppTheme.successColor, AppTheme.infoColor],
+              ),
+            );
+          }
           return EmptyStateWidget(
             icon: Icons.person_search,
             title: 'Không tìm thấy mentor',
@@ -188,6 +324,8 @@ class _MentorListPageState extends State<MentorListPage> {
         if (widget.action != null) params['action'] = widget.action!;
         if (widget.journeyId != null)
           params['journeyId'] = '${widget.journeyId}';
+        if (widget.nodeId != null)
+          params['nodeId'] = widget.nodeId!;
         final query = params.isNotEmpty
             ? '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}'
             : '';
@@ -395,7 +533,136 @@ class _MentorListPageState extends State<MentorListPage> {
                           );
                         }).toList(),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // Roadmap mentoring badge
+                    if (mentor.roadmapMentoringPrice != null &&
+                        mentor.roadmapMentoringPrice! > 0) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.successColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color:
+                                AppTheme.successColor.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.workspace_premium_outlined,
+                              size: 14,
+                              color: AppTheme.successColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Hỗ trợ đồng hành Roadmap',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.successColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // Verified skills chips
+                    if (provider.isEnrichingVerifiedSkills &&
+                        mentor.verifiedSkills == null) ...[
+                      // Skeleton chips while enriching
+                      Row(
+                        children: List.generate(
+                          2,
+                          (_) => Container(
+                            margin: const EdgeInsets.only(right: 6),
+                            width: 70,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.08)
+                                  : Colors.grey.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ] else if (mentor.hasVerifiedSkills) ...[
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          ...mentor.verifiedSkills!.take(3).map((skill) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.successColor
+                                    .withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: AppTheme.successColor
+                                      .withValues(alpha: 0.25),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_outline,
+                                    size: 12,
+                                    color: AppTheme.successColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    skill,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.successColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                          if (mentor.verifiedSkills!.length > 3)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.06)
+                                    : Colors.grey.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '+${mentor.verifiedSkills!.length - 3}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                     ],
 
                     // Price and action buttons
@@ -424,6 +691,20 @@ class _MentorListPageState extends State<MentorListPage> {
                                   color: AppTheme.successColor,
                                 ),
                               ),
+                              if (mentor.roadmapMentoringPrice != null &&
+                                  mentor.roadmapMentoringPrice! > 0) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Đồng hành: ${mentor.formattedRoadmapMentoringPrice}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDark
+                                        ? AppTheme.darkTextSecondary
+                                        : AppTheme.lightTextSecondary,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),

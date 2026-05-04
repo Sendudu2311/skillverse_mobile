@@ -16,12 +16,14 @@ class MentorDetailPage extends StatefulWidget {
   final int mentorId;
   final String? action;
   final int? journeyId;
+  final String? nodeId;
 
   const MentorDetailPage({
     super.key,
     required this.mentorId,
     this.action,
     this.journeyId,
+    this.nodeId,
   });
 
   @override
@@ -456,11 +458,14 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     MentorProfile mentor,
     bool isDark,
   ) {
+    final hasRoadmapPrice = mentor.roadmapMentoringPrice != null &&
+        mentor.roadmapMentoringPrice! > 0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Đơn giá',
+          'Dịch vụ & Bảng giá',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: isDark
@@ -469,41 +474,151 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
           ),
         ),
         const SizedBox(height: 8),
+        // 1:1 session pricing
         GlassCard(
           padding: const EdgeInsets.all(16),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Phí tư vấn 1:1',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    mentor.formattedHourlyRate,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.successColor,
-                    ),
-                  ),
-                ],
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlueDark.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.videocam_outlined,
+                  color: AppTheme.primaryBlueDark,
+                  size: 20,
+                ),
               ),
-              Icon(
-                Icons.access_time,
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tư vấn theo buổi',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Đặt lịch 1:1 qua video call',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                mentor.formattedHourlyRate,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.successColor,
+                ),
               ),
             ],
           ),
         ),
+        // Roadmap mentoring pricing (if available)
+        if (hasRoadmapPrice) ...[
+          const SizedBox(height: 8),
+          GlassCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.successColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.workspace_premium_outlined,
+                        color: AppTheme.successColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Đồng hành Roadmap',
+                            style:
+                                Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? AppTheme.darkTextPrimary
+                                  : AppTheme.lightTextPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Mentor review từng node trong lộ trình',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      mentor.formattedRoadmapMentoringPrice,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.successColor,
+                      ),
+                    ),
+                  ],
+                ),
+                if (widget.action == null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.infoColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 14,
+                          color: AppTheme.infoColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Vào trang lộ trình → "Tìm Mentor đồng hành" để book gói này.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.infoColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -734,6 +849,9 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       builder: (context) => MentorBookingSheet(
         mentor: mentor,
         availability: provider.availability,
+        action: widget.action,
+        journeyId: widget.journeyId,
+        nodeId: widget.nodeId,
       ),
     );
   }
@@ -765,6 +883,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
         availability: provider.availability,
         action: 'journey_mentoring',
         journeyId: widget.journeyId,
+        nodeId: widget.nodeId,
       ),
     );
   }

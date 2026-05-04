@@ -44,6 +44,16 @@ RoadmapNode _$RoadmapNodeFromJson(Map<String, dynamic> json) => RoadmapNode(
       ?.map((e) => e as String)
       .toList(),
   nodeStatus: json['nodeStatus'] as String?,
+  phaseId: json['phaseId'] as String?,
+  orderIndex: (json['orderIndex'] as num?)?.toInt(),
+  mainPathIndex: (json['mainPathIndex'] as num?)?.toInt(),
+  importanceScore: (json['importanceScore'] as num?)?.toDouble(),
+  confidenceScore: (json['confidenceScore'] as num?)?.toDouble(),
+  reason: json['reason'] as String?,
+  evidence: (json['evidence'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
+  importanceValidationStatus: json['importanceValidationStatus'] as String?,
 );
 
 Map<String, dynamic> _$RoadmapNodeToJson(RoadmapNode instance) =>
@@ -67,6 +77,14 @@ Map<String, dynamic> _$RoadmapNodeToJson(RoadmapNode instance) =>
       'suggestedCourseIds': instance.suggestedCourseIds,
       'suggestedModuleIds': instance.suggestedModuleIds,
       'nodeStatus': instance.nodeStatus,
+      'phaseId': instance.phaseId,
+      'orderIndex': instance.orderIndex,
+      'mainPathIndex': instance.mainPathIndex,
+      'importanceScore': instance.importanceScore,
+      'confidenceScore': instance.confidenceScore,
+      'reason': instance.reason,
+      'evidence': instance.evidence,
+      'importanceValidationStatus': instance.importanceValidationStatus,
     };
 
 const _$NodeTypeEnumMap = {NodeType.main: 'MAIN', NodeType.side: 'SIDE'};
@@ -225,7 +243,7 @@ RoadmapStatistics _$RoadmapStatisticsFromJson(Map<String, dynamic> json) =>
       totalNodes: (json['totalNodes'] as num).toInt(),
       mainNodes: (json['mainNodes'] as num).toInt(),
       sideNodes: (json['sideNodes'] as num).toInt(),
-      totalEstimatedHours: (json['totalEstimatedHours'] as num).toInt(),
+      totalEstimatedHours: (json['totalEstimatedHours'] as num).toDouble(),
       difficultyDistribution:
           (json['difficultyDistribution'] as Map<String, dynamic>?)?.map(
             (k, e) => MapEntry(k, (e as num).toInt()),
@@ -580,6 +598,9 @@ ProgressStats _$ProgressStatsFromJson(Map<String, dynamic> json) =>
       totalQuests: (json['totalQuests'] as num).toInt(),
       completedQuests: (json['completedQuests'] as num).toInt(),
       completionPercentage: (json['completionPercentage'] as num).toDouble(),
+      completedWeight: (json['completedWeight'] as num?)?.toDouble(),
+      totalWeight: (json['totalWeight'] as num?)?.toDouble(),
+      progressMode: json['progressMode'] as String?,
     );
 
 Map<String, dynamic> _$ProgressStatsToJson(ProgressStats instance) =>
@@ -587,6 +608,9 @@ Map<String, dynamic> _$ProgressStatsToJson(ProgressStats instance) =>
       'totalQuests': instance.totalQuests,
       'completedQuests': instance.completedQuests,
       'completionPercentage': instance.completionPercentage,
+      'completedWeight': instance.completedWeight,
+      'totalWeight': instance.totalWeight,
+      'progressMode': instance.progressMode,
     };
 
 ValidationResult _$ValidationResultFromJson(Map<String, dynamic> json) =>

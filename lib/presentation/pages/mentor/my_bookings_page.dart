@@ -233,6 +233,7 @@ class _MyBookingsPageState extends State<MyBookingsPage>
     MentorBookingProvider provider,
   ) {
     final isRoadmapMentoring = booking.isRoadmapMentoring;
+    final isJourneyMentoring = booking.isJourneyMentoring;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -291,6 +292,17 @@ class _MyBookingsPageState extends State<MyBookingsPage>
                             color: isDark
                                 ? AppTheme.darkTextSecondary
                                 : AppTheme.lightTextSecondary,
+                          ),
+                        ),
+                      ] else if (isJourneyMentoring) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Phỏng vấn xác minh cuối'
+                          '${booking.journeyId != null ? ' • Hành trình #${booking.journeyId}' : ''}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.infoColor,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],

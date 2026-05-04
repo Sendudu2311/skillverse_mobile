@@ -305,8 +305,16 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
             clipBehavior: Clip.none,
             children: [
               IconButton(
-                onPressed: () =>
-                    context.push('/journey/$journeyId/final-verification'),
+                onPressed: () => context.push(
+                  '/journey/$journeyId/final-verification',
+                  extra: {
+                    'nodeIds': _nodes.map((n) => n['id'] as String).toList(),
+                    'nodeTitles': {
+                      for (final n in _nodes)
+                        n['id'] as String: n['title'] as String,
+                    },
+                  },
+                ),
                 icon: Icon(icon, color: color, size: 22),
               ),
               if (!isPassed && gate.blockingReasons.isNotEmpty)

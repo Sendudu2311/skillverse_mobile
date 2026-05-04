@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../data/models/final_verification_models.dart';
+import '../../data/models/node_mentoring_models.dart'
+    show NodeEvidenceRecordResponse;
 import '../../data/services/final_verification_service.dart';
 import '../../data/services/node_mentoring_service.dart';
 
@@ -19,6 +21,10 @@ class FinalVerificationProvider extends ChangeNotifier {
   JourneyOutputAssessmentResponse? _outputAssessment;
   List<VerificationEvidenceReportResponse> _history = [];
 
+  // Dossier (batch node evidence)
+  Map<String, NodeEvidenceRecordResponse?> _nodeEvidences = {};
+  bool _isLoadingDossier = false;
+
   // ─── Getters ─────────────────────────────────────────────────────────────
 
   bool get isLoading => _isLoading;
@@ -29,6 +35,16 @@ class FinalVerificationProvider extends ChangeNotifier {
   JourneyCompletionGateResponse? get gate => _gate;
   JourneyOutputAssessmentResponse? get outputAssessment => _outputAssessment;
   List<VerificationEvidenceReportResponse> get history => _history;
+
+  Map<String, NodeEvidenceRecordResponse?> get nodeEvidences => _nodeEvidences;
+  bool get isLoadingDossier => _isLoadingDossier;
+
+  /// Only entries where evidence was actually submitted (non-null).
+  List<MapEntry<String, NodeEvidenceRecordResponse>> get submittedEvidences =>
+      _nodeEvidences.entries
+          .where((e) => e.value != null)
+          .map((e) => MapEntry(e.key, e.value!))
+          .toList();
 
   // ─── Load ─────────────────────────────────────────────────────────────────
 
@@ -126,5 +142,27 @@ class FinalVerificationProvider extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // ─── Dossier (batch node evidence) ────────────────────────────────────────
+
+  /// Load evidence for all given nodeIds in parallel.
+  /// Call after gate/main data is loaded.
+  Future<void> loadDossier(int journeyId, List<String> nodeIds) async {
+    if (nodeIds.isEmpty) return;
+    _isLoadingDossier = true;
+    notifyListeners();
+    try {
+      _nodeEvidences = await _uploadService.getBatchEvidence(
+        journeyId,
+        nodeIds,
+      );
+    } catch (e) {
+      debugPrint('⚠️ loadDossier error: $e');
+      // Non-fatal: dossier is supplementary, don't overwrite _error
+    } finally {
+      _isLoadingDossier = false;
+      notifyListeners();
+    }
   }
 }
