@@ -28,7 +28,6 @@ import '../pages/community/community_page.dart';
 import '../pages/community/post_detail_page.dart';
 import '../pages/community/post_form_page.dart';
 import '../pages/roadmap/roadmap_page.dart';
-import '../pages/roadmap/roadmap_generate_page.dart';
 import '../pages/roadmap/roadmap_detail_page.dart';
 import '../pages/roadmap/roadmap_workspace_page.dart';
 import '../pages/mentor/mentor_list_page.dart';
@@ -66,6 +65,7 @@ import '../pages/student_verification/student_verification_page.dart';
 import '../pages/business/recruiter_profile_page.dart';
 import '../widgets/main_layout.dart';
 import '../providers/auth_provider.dart';
+import '../providers/journey_provider.dart';
 
 class AppRouter {
   static GoRouter createRouter(BuildContext context) {
@@ -82,8 +82,9 @@ class AppRouter {
       // via its route matching system. Incoming Android/iOS intents with URIs
       // (e.g. from FCM notifications) are automatically matched against defined routes.
       // The `redirect` callback below handles auth guard for all routes including deep links.
-      redirect: (context, state) {
+      redirect: (context, state) async {
         final authProvider = context.read<AuthProvider>();
+        final journeyProvider = context.read<JourneyProvider>();
         final isAuthenticated = authProvider.isAuthenticated;
         final isLoading = authProvider.isLoading;
 
@@ -116,6 +117,19 @@ class AppRouter {
           ];
           if (authPages.contains(state.matchedLocation)) {
             return '/dashboard';
+          }
+        }
+
+        if (isAuthenticated && state.matchedLocation == '/journey/create') {
+          final canCreate = await journeyProvider.canCreateJourney(
+            force: true,
+            silent: true,
+          );
+          if (!canCreate) {
+            final reason = Uri.encodeComponent(
+              JourneyProvider.activeJourneyBlockReason,
+            );
+            return '/journey?blockReason=$reason';
           }
         }
 
@@ -336,14 +350,10 @@ class AppRouter {
           },
         ),
 
-        // Community Routes
         GoRoute(
           path: '/community',
           name: 'community',
-          builder: (context, state) => MainLayout(
-            currentPath: state.matchedLocation,
-            child: const CommunityPage(),
-          ),
+          builder: (context, state) => const CommunityPage(),
         ),
         GoRoute(
           path: '/community/create',
@@ -371,7 +381,9 @@ class AppRouter {
         GoRoute(
           path: '/journey',
           name: 'journey',
-          builder: (context, state) => const JourneyListPage(),
+          builder: (context, state) => JourneyListPage(
+            blockReason: state.uri.queryParameters['blockReason'],
+          ),
         ),
         GoRoute(
           path: '/journey/create',
@@ -391,9 +403,17 @@ class AppRouter {
           name: 'journey-final-verification',
           builder: (context, state) {
             final journeyId = int.parse(state.pathParameters['journeyId']!);
+            // Optional: pass nodeIds & nodeTitles via state.extra
+            final extra = state.extra as Map<String, dynamic>?;
+            final nodeIds = extra?['nodeIds'] as List<String>?;
+            final nodeTitles = extra?['nodeTitles'] as Map<String, String>?;
             return ChangeNotifierProvider(
               create: (_) => FinalVerificationProvider(),
-              child: FinalVerificationPage(journeyId: journeyId),
+              child: FinalVerificationPage(
+                journeyId: journeyId,
+                nodeIds: nodeIds,
+                nodeTitles: nodeTitles,
+              ),
             );
           },
         ),
@@ -407,7 +427,7 @@ class AppRouter {
         GoRoute(
           path: '/roadmap/generate',
           name: 'roadmap-generate',
-          builder: (context, state) => const RoadmapGeneratePage(),
+          redirect: (context, state) => '/journey',
         ),
         GoRoute(
           path: '/roadmap/:sessionId',
@@ -443,9 +463,13 @@ class AppRouter {
           builder: (context, state) {
             final action = state.uri.queryParameters['action'];
             final journeyId = state.uri.queryParameters['journeyId'];
+            final skillName = state.uri.queryParameters['skillName'];
+            final nodeId = state.uri.queryParameters['nodeId'];
             return MentorListPage(
               action: action,
               journeyId: journeyId != null ? int.tryParse(journeyId) : null,
+              skillName: skillName,
+              nodeId: nodeId,
             );
           },
         ),
@@ -456,10 +480,12 @@ class AppRouter {
             final mentorId = int.parse(state.pathParameters['mentorId']!);
             final action = state.uri.queryParameters['action'];
             final journeyId = state.uri.queryParameters['journeyId'];
+            final nodeId = state.uri.queryParameters['nodeId'];
             return MentorDetailPage(
               mentorId: mentorId,
               action: action,
               journeyId: journeyId != null ? int.tryParse(journeyId) : null,
+              nodeId: nodeId,
             );
           },
         ),

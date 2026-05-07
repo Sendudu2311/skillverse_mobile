@@ -28,14 +28,14 @@ class ValidationHelper {
     return null;
   }
 
-  /// Validate URL format
+  /// Validate URL format (accepts both http and https)
   static String? url(String? value, {bool isRequired = false}) {
     if (value == null || value.trim().isEmpty) {
       return isRequired ? 'URL không được để trống' : null;
     }
 
     final urlRegex = RegExp(
-      r'^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$',
+      r'^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?\&//=]*)$',
     );
 
     if (!urlRegex.hasMatch(value.trim())) {
@@ -45,24 +45,138 @@ class ValidationHelper {
     return null;
   }
 
-  /// Validate slug format (lowercase, numbers, hyphens only)
+  /// Validate HTTPS-only URL (matches backend ValidPortfolioUrlValidator)
+  static String? httpsUrl(String? value, {bool isRequired = false}) {
+    if (value == null || value.trim().isEmpty) {
+      return isRequired ? 'URL không được để trống' : null;
+    }
+
+    final trimmed = value.trim();
+
+    try {
+      final uri = Uri.parse(trimmed);
+      if (uri.scheme != 'https') {
+        return 'URL phải sử dụng HTTPS';
+      }
+      if (uri.host.isEmpty) {
+        return 'URL không hợp lệ';
+      }
+      return null;
+    } catch (_) {
+      return 'URL không hợp lệ';
+    }
+  }
+
+  /// Validate GitHub URL (matches backend ValidGitHubUrlValidator)
+  /// Requires https and github.com domain
+  static String? githubUrl(String? value, {bool isRequired = false}) {
+    if (value == null || value.trim().isEmpty) {
+      return isRequired ? 'GitHub URL không được để trống' : null;
+    }
+
+    final trimmed = value.trim();
+
+    try {
+      final uri = Uri.parse(trimmed);
+      if (uri.host.isEmpty || !uri.host.contains('github.com')) {
+        return 'URL GitHub không hợp lệ. Vui lòng nhập URL từ github.com';
+      }
+      if (uri.scheme != 'https') {
+        return 'URL phải sử dụng HTTPS';
+      }
+      return null;
+    } catch (_) {
+      return 'URL không hợp lệ';
+    }
+  }
+
+  /// Validate Behance URL (matches backend ValidBehanceUrlValidator)
+  /// Requires https and behance.net domain
+  static String? behanceUrl(String? value, {bool isRequired = false}) {
+    if (value == null || value.trim().isEmpty) {
+      return isRequired ? 'Behance URL không được để trống' : null;
+    }
+
+    final trimmed = value.trim();
+
+    try {
+      final uri = Uri.parse(trimmed);
+      if (uri.host.isEmpty || !uri.host.contains('behance.net')) {
+        return 'URL Behance không hợp lệ. Vui lòng nhập URL từ behance.net';
+      }
+      if (uri.scheme != 'https') {
+        return 'URL phải sử dụng HTTPS';
+      }
+      return null;
+    } catch (_) {
+      return 'URL không hợp lệ';
+    }
+  }
+
+  /// Validate Dribbble URL (matches backend ValidDribbbleUrlValidator)
+  /// Requires https and dribbble.com domain
+  static String? dribbbleUrl(String? value, {bool isRequired = false}) {
+    if (value == null || value.trim().isEmpty) {
+      return isRequired ? 'Dribbble URL không được để trống' : null;
+    }
+
+    final trimmed = value.trim();
+
+    try {
+      final uri = Uri.parse(trimmed);
+      if (uri.host.isEmpty || !uri.host.contains('dribbble.com')) {
+        return 'URL Dribbble không hợp lệ. Vui lòng nhập URL từ dribbble.com';
+      }
+      if (uri.scheme != 'https') {
+        return 'URL phải sử dụng HTTPS';
+      }
+      return null;
+    } catch (_) {
+      return 'URL không hợp lệ';
+    }
+  }
+
+  /// Reserved slugs that match backend ValidSlugValidator
+  static const _reservedSlugs = {'create', 'api', 'admin', 'www', 'portfolio'};
+
+  /// Validate slug format (matches backend ValidSlugValidator)
+  /// Rules: lowercase + numbers + hyphens, min 3, max 60,
+  /// no reserved words, no all-numeric, no leading/trailing/consecutive hyphens
   static String? slug(String? value, {bool isRequired = false}) {
     if (value == null || value.trim().isEmpty) {
-      return isRequired ? 'Slug không được để trống' : null;
+      return isRequired
+          ? 'Đường dẫn tùy chỉnh là bắt buộc'
+          : null;
     }
 
-    final slugRegex = RegExp(r'^[a-z0-9-]+$');
+    final cleanSlug = value.trim().toLowerCase();
 
-    if (!slugRegex.hasMatch(value.trim())) {
-      return 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang';
+    if (cleanSlug.length < 3) {
+      return 'Đường dẫn tùy chỉnh phải có ít nhất 3 ký tự';
     }
 
-    if (value.startsWith('-') || value.endsWith('-')) {
-      return 'Slug không được bắt đầu hoặc kết thúc bằng dấu gạch ngang';
+    if (cleanSlug.length > 60) {
+      return 'Đường dẫn tùy chỉnh không được quá 60 ký tự';
     }
 
-    if (value.contains('--')) {
-      return 'Slug không được chứa nhiều dấu gạch ngang liên tiếp';
+    if (RegExp(r'^[0-9-]+$').hasMatch(cleanSlug)) {
+      return 'Đường dẫn tùy chỉnh không được chỉ chứa số và dấu gạch ngang';
+    }
+
+    if (cleanSlug.startsWith('-') || cleanSlug.endsWith('-')) {
+      return 'Đường dẫn tùy chỉnh không được bắt đầu hoặc kết thúc bằng dấu gạch ngang';
+    }
+
+    if (cleanSlug.contains('--')) {
+      return 'Đường dẫn tùy chỉnh không được có hai dấu gạch ngang liên tiếp';
+    }
+
+    if (!RegExp(r'^[a-z0-9-]+$').hasMatch(cleanSlug)) {
+      return 'Đường dẫn tùy chỉnh chỉ được chứa chữ thường, số và dấu gạch ngang';
+    }
+
+    if (_reservedSlugs.contains(cleanSlug)) {
+      return '"$cleanSlug" là đường dẫn dự trữ của hệ thống. Vui lòng chọn đường dẫn khác';
     }
 
     return null;
@@ -123,16 +237,19 @@ class ValidationHelper {
   }
 
   /// Validate phone number (Vietnamese format)
+  /// Matches backend VietnamesePhoneValidator: ^(0|\+84)[3-9][0-9]{8}$
   static String? phoneNumber(String? value, {bool isRequired = false}) {
     if (value == null || value.trim().isEmpty) {
       return isRequired ? 'Số điện thoại không được để trống' : null;
     }
 
-    // Vietnamese phone number: starts with 0, followed by 9 digits
-    final phoneRegex = RegExp(r'^0[0-9]{9}$');
+    final cleanPhone = value.trim().replaceAll(RegExp(r'\s'), '');
 
-    if (!phoneRegex.hasMatch(value.trim())) {
-      return 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0)';
+    // Vietnamese phone: starts with 0 or +84, then digit 3-9, then 8 digits
+    final phoneRegex = RegExp(r'^(0|\+84)[3-9][0-9]{8}$');
+
+    if (!phoneRegex.hasMatch(cleanPhone)) {
+      return 'Số điện thoại không hợp lệ (vd: 0912345678 hoặc +84912345678)';
     }
 
     return null;

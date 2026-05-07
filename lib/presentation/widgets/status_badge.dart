@@ -44,6 +44,8 @@ class StatusBadge extends StatelessWidget {
       'OFFER_ACCEPTED' => ('Nhận đề nghị', AppTheme.themeGreenStart),
       'OFFER_REJECTED' => ('Từ chối đề nghị', Colors.red),
       'CONTRACT_SIGNED' => ('Đã ký HĐ', AppTheme.themePurpleStart),
+      'AWAITING_ONBOARDING_INFO' => ('Chờ Onboarding', AppTheme.warningColor),
+      'HIRED' => ('Đã tuyển dụng', AppTheme.successColor),
       'ACCEPTED' || 'APPROVED' => ('Đã chấp nhận', AppTheme.themeGreenStart),
       'REJECTED' => ('Bị từ chối', Colors.red),
       'IN_PROGRESS' => ('Đang làm', AppTheme.themeBlueStart),
@@ -69,7 +71,7 @@ class StatusBadge extends StatelessWidget {
       'ONGOING' => ('Đang diễn ra', AppTheme.infoColor),
       'MENTORING_ACTIVE' || 'MENTORINGACTIVE' => ('Đang mentoring', AppTheme.infoColor),
       'PENDING_COMPLETION' ||
-      'PENDINGCOMPLETION' => ('Chờ xác nhận hoàn thành', AppTheme.warningColor),
+      'PENDINGCOMPLETION' => ('Chờ nghiệm thu', AppTheme.warningColor),
       'DISPUTED' => ('Tranh chấp', AppTheme.errorColor),
       'REFUNDED' => ('Đã hoàn tiền', AppTheme.warningColor),
 

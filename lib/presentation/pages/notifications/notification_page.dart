@@ -210,8 +210,13 @@ class _NotificationPageState extends State<NotificationPage> {
         return '/mentors';
 
       case NotificationType.prechatMessage:
-      case NotificationType.recruitmentMessage:
         return '/chat';
+
+      case NotificationType.recruitmentMessage:
+        if (n.relatedId != null) {
+          return '/recruitment-chat/${n.relatedId}';
+        }
+        return '/recruitment-sessions';
 
       default:
         return null; // stay on notification page

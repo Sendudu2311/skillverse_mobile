@@ -18,6 +18,9 @@ extension JobApplicationStatusX on JobApplicationStatus {
         JobApplicationStatus.offerRejected => 'OFFER_REJECTED',
         JobApplicationStatus.accepted => 'ACCEPTED',
         JobApplicationStatus.contractSigned => 'CONTRACT_SIGNED',
+        JobApplicationStatus.awaitingOnboardingInfo =>
+          'AWAITING_ONBOARDING_INFO',
+        JobApplicationStatus.hired => 'HIRED',
         JobApplicationStatus.rejected => 'REJECTED',
       };
 }

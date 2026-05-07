@@ -103,7 +103,7 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = context.watch<ThemeProvider>().isDarkMode;
+    final isDarkMode = context.watch<ThemeProvider>().isDarkModeResolved(context);
     final body = SafeArea(child: widget.child);
 
     return Scaffold(

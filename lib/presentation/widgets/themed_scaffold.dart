@@ -17,7 +17,7 @@ class ThemedScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = context.watch<ThemeProvider>().isDarkMode;
+    final isDarkMode = context.watch<ThemeProvider>().isDarkModeResolved(context);
 
     // In dark mode with galaxy enabled, wrap with GalaxyBackground
     if (isDarkMode && showGalaxyBackground) {
