@@ -9,9 +9,10 @@ import '../../widgets/empty_state_widget.dart';
 import '../../widgets/error_state_widget.dart';
 import '../../widgets/app_search_bar.dart';
 import '../../widgets/common_loading.dart';
-import '../../widgets/selectable_chip_row.dart';
-import 'widgets/community_stats_widget.dart';
+
+
 import '../../themes/app_theme.dart';
+import '../../widgets/skillverse_app_bar.dart';
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
@@ -23,7 +24,7 @@ class CommunityPage extends StatefulWidget {
 class _CommunityPageState extends State<CommunityPage> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-  String _selectedFilter = 'all'; // all, my_posts, saved
+
 
   @override
   void initState() {
@@ -61,6 +62,7 @@ class _CommunityPageState extends State<CommunityPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+      appBar: const SkillVerseAppBar(title: 'Cộng đồng'),
       body: Column(
         children: [
           // Search bar
@@ -72,46 +74,6 @@ class _CommunityPageState extends State<CommunityPage> {
             onClear: () => context.read<PostProvider>().searchPosts(''),
           ),
 
-          // Filter chips
-          SelectableChipRow(
-            labels: const [
-              'Tất cả',
-              'Thảo luận',
-              'Mẹo hay',
-              'Tin tức',
-              'Đã lưu',
-            ],
-            icons: const [
-              Icons.dashboard_outlined,
-              Icons.forum_outlined,
-              Icons.lightbulb_outline,
-              Icons.newspaper_outlined,
-              Icons.bookmark_outline,
-            ],
-            selectedIndex: const [
-              'all',
-              'discussion',
-              'tips',
-              'news',
-              'saved',
-            ].indexOf(_selectedFilter),
-            onSelected: (i) {
-              const keys = ['all', 'discussion', 'tips', 'news', 'saved'];
-              final value = keys[i];
-              setState(() => _selectedFilter = value);
-              final provider = context.read<PostProvider>();
-              switch (value) {
-                case 'all':
-                  provider.clearFilters();
-                case 'discussion':
-                case 'tips':
-                case 'news':
-                  provider.filterByCategory(value);
-                case 'saved':
-                  provider.showSavedPosts();
-              }
-            },
-          ),
 
           // Post list
           Expanded(
@@ -173,13 +135,9 @@ class _CommunityPageState extends State<CommunityPage> {
       padding: const EdgeInsets.only(bottom: 80), // Padding for FAB
       itemCount: provider.posts.length + (provider.isLoadingMore ? 1 : 0) + 1,
       itemBuilder: (context, index) {
-        // Header (Stats & Trends)
+        // Header spacer (stats/trends removed)
         if (index == 0) {
-          return CommunityStatsWidget(
-            stats: provider.stats,
-            trends: provider.trends,
-            isLoading: provider.isLoadingStats,
-          );
+          return const SizedBox.shrink();
         }
 
         final postIndex = index - 1;

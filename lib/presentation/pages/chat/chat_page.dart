@@ -67,6 +67,37 @@ class _ChatPageState extends State<ChatPage> {
     context.read<ChatProvider>().sendMessage(message);
   }
 
+  /// Helper to sanitize web-prototype routes to mobile equivalents
+  String _sanitizeAiRoute(String url) {
+    if (url.isEmpty || url == '/') return '/dashboard';
+    
+    // Skill & Study Planner -> Task Board
+    if (url.contains('/skill') || url.contains('/study-planner')) {
+      if (url.contains('verification')) return '/student/skill-verifications';
+      return '/task-board';
+    }
+    
+    // Chatbot -> Mobile Chat
+    if (url.startsWith('/chatbot/expert')) return '/expert-chat';
+    if (url.startsWith('/chatbot')) return '/chat';
+    if (url.startsWith('/messages')) return '/messaging';
+    
+    // Booking & Mentorship
+    if (url.startsWith('/bookings')) return '/my-bookings';
+    if (url.startsWith('/mentorship')) return '/mentors';
+    
+    // Learning & Portfolio
+    if (url.startsWith('/learning-report')) return '/profile/learning-report';
+    if (url.startsWith('/my-skill-verification')) return '/student/skill-verifications';
+    if (url.startsWith('/cv') || url.startsWith('/certificate')) return '/portfolio';
+    
+    // Gamification & Explore
+    if (url.startsWith('/gamification')) return '/skins';
+    if (url.startsWith('/explore')) return '/courses';
+    
+    return url;
+  }
+
   /// Shows a fallback message when guard blocks the user input
   void _showFallbackMessage(String userMessage, String fallbackContent) {
     final chatProvider = context.read<ChatProvider>();
@@ -265,7 +296,8 @@ class _ChatPageState extends State<ChatPage> {
                 label: action.label,
                 onTap: () {
                   if (action.actionType == 'NAVIGATE') {
-                    context.push(action.actionValue);
+                    final safeUrl = _sanitizeAiRoute(action.actionValue);
+                    context.push(safeUrl);
                   } else {
                     _sendQuickMessage(action.actionValue);
                   }
@@ -381,7 +413,7 @@ class _ChatPageState extends State<ChatPage> {
             ...message.reminders!.map(
               (reminder) => Padding(
                 padding: const EdgeInsets.only(bottom: 6),
-                child: _ReminderCard(reminder: reminder),
+                child: _ReminderCard(reminder: reminder, sanitizeRoute: _sanitizeAiRoute),
               ),
             ),
           ],
@@ -711,7 +743,8 @@ class _ThinkingDotsState extends State<_ThinkingDots>
 /// G4: Reminder card displayed below AI response
 class _ReminderCard extends StatelessWidget {
   final ChatReminder reminder;
-  const _ReminderCard({required this.reminder});
+  final String Function(String) sanitizeRoute;
+  const _ReminderCard({required this.reminder, required this.sanitizeRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -759,7 +792,10 @@ class _ReminderCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           TextButton(
-            onPressed: () => context.push(reminder.actionUrl),
+            onPressed: () {
+              final safeUrl = sanitizeRoute(reminder.actionUrl);
+              context.push(safeUrl);
+            },
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               minimumSize: Size.zero,

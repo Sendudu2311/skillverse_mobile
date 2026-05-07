@@ -15,6 +15,7 @@ import '../../widgets/skillverse_app_bar.dart';
 import 'package:provider/provider.dart';
 import '../../providers/ai_grading_provider.dart';
 import '../../providers/auth_provider.dart';
+import 'dart:async';
 
 /// AssignmentPage — student submits assignments and views grading results
 /// Navigates from: CourseLearningPage → push('/assignment/:assignmentId')
@@ -52,6 +53,9 @@ class _AssignmentPageState extends State<AssignmentPage> {
   PlatformFile? _selectedFile;
   bool _showHistory = false;
 
+  Timer? _aiPollingTimer;
+  bool _isPolling = false;
+
   @override
   void initState() {
     super.initState();
@@ -60,6 +64,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
 
   @override
   void dispose() {
+    _aiPollingTimer?.cancel();
     _textController.dispose();
     _linkController.dispose();
     super.dispose();
@@ -84,12 +89,56 @@ class _AssignmentPageState extends State<AssignmentPage> {
         _submissions = results[1] as List<AssignmentSubmissionDetailDto>;
         _isLoading = false;
       });
+
+      if (_isAiPendingSubmission) {
+        _startAiPolling();
+      } else {
+        _stopAiPolling();
+      }
     } catch (e) {
       setState(() {
         _errorMessage = ErrorHandler.getErrorMessage(e);
         _isLoading = false;
       });
     }
+  }
+
+  void _startAiPolling() {
+    if (_aiPollingTimer != null) return;
+    
+    // Poll every 10 seconds for AI grading results
+    _aiPollingTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      if (_isPolling || !mounted) return;
+      _isPolling = true;
+      try {
+        final submissions = await _assignmentService.getMySubmissions(widget.assignmentId);
+        if (!mounted) return;
+        
+        setState(() {
+          _submissions = submissions;
+        });
+        
+        final latest = _submissions.isNotEmpty ? _submissions.first : null;
+        if (latest != null && 
+            (latest.isAiGraded == true || 
+             latest.status == SubmissionStatus.graded || 
+             latest.status == SubmissionStatus.lateGraded)) {
+          timer.cancel();
+          _aiPollingTimer = null;
+          ErrorHandler.showSuccessSnackBar(context, 'AI đã chấm xong bài tập!');
+        }
+      } catch (e) {
+        // silently ignore polling errors
+      } finally {
+        _isPolling = false;
+      }
+    });
+  }
+
+  void _stopAiPolling() {
+    _aiPollingTimer?.cancel();
+    _aiPollingTimer = null;
+    _isPolling = false;
   }
 
   // ── Grading Mode Helpers ──────────────────────────────────────────────────
@@ -111,7 +160,8 @@ class _AssignmentPageState extends State<AssignmentPage> {
     final latest = _submissions.first;
     final isBlocked =
         latest.status == SubmissionStatus.pending ||
-        latest.status == SubmissionStatus.latePending;
+        latest.status == SubmissionStatus.latePending ||
+        latest.status == SubmissionStatus.aiPending;
     final isPassed = latest.isPassed == true;
     return !isBlocked && !isPassed;
   }
@@ -427,7 +477,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
       case SubmissionStatus.latePending:
         return 'Nộp muộn - Đang chờ';
       case SubmissionStatus.aiPending:
-        return 'AI đã chấm, chờ Mentor xác nhận';
+        return 'Bài nộp đang được AI chấm điểm...';
       case SubmissionStatus.graded:
         return 'Đã chấm';
       case SubmissionStatus.lateGraded:
@@ -625,10 +675,18 @@ class _AssignmentPageState extends State<AssignmentPage> {
             const SizedBox(height: 16),
           ],
 
-          // Latest submission result (if exists and is graded or late-graded)
+          // Latest submission result — shown for:
+          //   • Mentor-graded submissions (_hasMentorReviewed)
+          //   • Non-AI graded submissions (mentor-only courses)
+          //   • AI auto-confirmed (trustAi path)
+          // NOT shown for pure AI-graded submissions that have not been reviewed
+          // by a mentor — those are rendered by _buildAiGradingSection below.
           if (latest != null &&
               (latest.status == SubmissionStatus.graded ||
-                  latest.status == SubmissionStatus.lateGraded)) ...[
+                  latest.status == SubmissionStatus.lateGraded) &&
+              (_hasMentorReviewed(latest) ||
+                  _isAiAutoConfirmed(latest) ||
+                  latest.isAiGraded != true)) ...[
             GlassCard(
               padding: const EdgeInsets.all(16),
               borderColor: AppTheme.successColor.withValues(alpha: 0.3),
@@ -956,9 +1014,7 @@ class _AssignmentPageState extends State<AssignmentPage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      latest?.isPassed == true
-                          ? 'AI đã chấm xong bài này và đây là kết quả hiện tại của bạn. Nếu chưa đồng ý, bạn có thể yêu cầu Mentor chấm tay.'
-                          : 'AI đã chấm xong lần nộp này. Bạn có thể nộp lại bài mới để cải thiện kết quả, hoặc yêu cầu Mentor chấm tay nếu không đồng ý.',
+                      'Bài nộp của bạn đang được hệ thống AI chấm điểm tự động. Vui lòng chờ trong giây lát. Trang sẽ tự động làm mới khi có kết quả.',
                       style: const TextStyle(
                         color: Colors.deepPurple,
                         fontSize: 13,
@@ -1605,10 +1661,9 @@ class _AssignmentPageState extends State<AssignmentPage> {
 
   Widget _buildAiGradingSection(AssignmentSubmissionDetailDto submission) {
     // Hide when not AI-graded.
-    // Hide when a REAL mentor has overridden (graderId is set by human grader).
-    // NOTE: Do NOT use _hasMentorReviewed() here because graderName may be
-    // populated by the backend even for AI-only submissions.
-    if (submission.isAiGraded != true || submission.graderId != null) {
+    // Hide when a mentor has overridden — checked via BOTH graderId AND graderName
+    // because some backend flows set graderName without setting graderId.
+    if (submission.isAiGraded != true || _hasMentorReviewed(submission)) {
       return const SizedBox.shrink();
     }
 

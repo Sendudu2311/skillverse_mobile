@@ -3,6 +3,7 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../data/models/lesson_models.dart';
 import '../../../../core/utils/error_handler.dart';
+import '../../../../core/utils/html_helper.dart';
 
 class ReadingLessonContent extends StatelessWidget {
   final String? content;
@@ -44,107 +45,149 @@ class ReadingLessonContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (hasContent)
-          Card(
-            elevation: 1,
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Html(
-                data: content!,
-                style: {
-                  'body': Style(
-                    fontSize: FontSize(16),
-                    lineHeight: LineHeight.number(1.6),
-                    margin: Margins.zero,
-                    padding: HtmlPaddings.zero,
-                  ),
-                  'h1': Style(
-                    fontSize: FontSize(28),
-                    fontWeight: FontWeight.bold,
-                    margin: Margins.only(bottom: 16, top: 8),
-                  ),
-                  'h2': Style(
-                    fontSize: FontSize(24),
-                    fontWeight: FontWeight.bold,
-                    margin: Margins.only(bottom: 14, top: 8),
-                  ),
-                  'h3': Style(
-                    fontSize: FontSize(20),
-                    fontWeight: FontWeight.bold,
-                    margin: Margins.only(bottom: 12, top: 8),
-                  ),
-                  'p': Style(margin: Margins.only(bottom: 12)),
-                  'ul': Style(margin: Margins.only(left: 16, bottom: 12)),
-                  'ol': Style(margin: Margins.only(left: 16, bottom: 12)),
-                  'li': Style(margin: Margins.only(bottom: 8)),
-                  'code': Style(
-                    backgroundColor: Colors.grey[200],
-                    padding: HtmlPaddings.symmetric(horizontal: 8, vertical: 4),
-                    fontFamily: 'monospace',
-                    fontSize: FontSize(14),
-                  ),
-                  'pre': Style(
-                    backgroundColor: Colors.grey[100],
-                    padding: HtmlPaddings.all(16),
-                    margin: Margins.only(bottom: 16),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  'blockquote': Style(
-                    backgroundColor: Colors.blue[50],
-                    border: Border(
-                      left: BorderSide(color: Colors.blue[700]!, width: 4),
-                    ),
-                    padding: HtmlPaddings.all(16),
-                    margin: Margins.only(bottom: 16, left: 0),
-                  ),
-                  'a': Style(
-                    color: Colors.blue[700],
-                    textDecoration: TextDecoration.underline,
-                  ),
-                  'img': Style(margin: Margins.only(bottom: 16)),
-                  'table': Style(
-                    border: Border.all(color: Colors.grey[300]!),
-                    margin: Margins.only(bottom: 16),
-                  ),
-                  'th': Style(
-                    backgroundColor: Colors.grey[200],
-                    padding: HtmlPaddings.all(8),
-                    border: Border.all(color: Colors.grey[300]!),
-                    fontWeight: FontWeight.bold,
-                  ),
-                  'td': Style(
-                    padding: HtmlPaddings.all(8),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                },
-                onLinkTap: (url, attributes, element) async {
-                  if (url != null) {
-                    try {
-                      final uri = Uri.tryParse(url);
-                      if (uri != null && await canLaunchUrl(uri)) {
-                        await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        );
-                      } else {
-                        if (context.mounted) {
-                          ErrorHandler.showWarningSnackBar(
-                            context,
-                            'Không thể mở liên kết',
-                          );
+          Builder(
+            builder: (context) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+              final headingColor =
+                  Theme.of(context).textTheme.headlineMedium?.color;
+              final codeBg =
+                  isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+              final codeText =
+                  isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF);
+              final preBg =
+                  isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+              final preBorder =
+                  isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+              final blockquoteBg =
+                  isDark ? const Color(0xFF1E3A5F) : const Color(0xFFEFF6FF);
+              final blockquoteBorder =
+                  isDark ? const Color(0xFF3B82F6) : const Color(0xFF1D4ED8);
+              final linkColor =
+                  isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB);
+              final tableBorder =
+                  isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+              final thBg =
+                  isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+
+              return Card(
+                elevation: 1,
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Html(
+                    data: HtmlHelper.sanitizeForDisplay(content!),
+                    style: {
+                      'body': Style(
+                        fontSize: FontSize(16),
+                        lineHeight: LineHeight.number(1.6),
+                        margin: Margins.zero,
+                        padding: HtmlPaddings.zero,
+                        color: textColor,
+                      ),
+                      'h1': Style(
+                        fontSize: FontSize(28),
+                        fontWeight: FontWeight.bold,
+                        margin: Margins.only(bottom: 16, top: 8),
+                        color: headingColor,
+                      ),
+                      'h2': Style(
+                        fontSize: FontSize(24),
+                        fontWeight: FontWeight.bold,
+                        margin: Margins.only(bottom: 14, top: 8),
+                        color: headingColor,
+                      ),
+                      'h3': Style(
+                        fontSize: FontSize(20),
+                        fontWeight: FontWeight.bold,
+                        margin: Margins.only(bottom: 12, top: 8),
+                        color: headingColor,
+                      ),
+                      'p': Style(margin: Margins.only(bottom: 12)),
+                      'ul': Style(margin: Margins.only(left: 16, bottom: 12)),
+                      'ol': Style(margin: Margins.only(left: 16, bottom: 12)),
+                      'li': Style(margin: Margins.only(bottom: 8)),
+                      'code': Style(
+                        backgroundColor: codeBg,
+                        color: codeText,
+                        padding:
+                            HtmlPaddings.symmetric(horizontal: 6, vertical: 3),
+                        fontFamily: 'monospace',
+                        fontSize: FontSize(14),
+                      ),
+                      'pre': Style(
+                        backgroundColor: preBg,
+                        padding: HtmlPaddings.all(16),
+                        margin: Margins.only(bottom: 16),
+                        border: Border.all(color: preBorder),
+                      ),
+                      'pre code': Style(
+                        backgroundColor: Colors.transparent,
+                        color: textColor,
+                        padding: HtmlPaddings.zero,
+                      ),
+                      'blockquote': Style(
+                        backgroundColor: blockquoteBg,
+                        border: Border(
+                          left: BorderSide(color: blockquoteBorder, width: 4),
+                        ),
+                        padding: HtmlPaddings.all(16),
+                        margin: Margins.only(bottom: 16, left: 0),
+                      ),
+                      'a': Style(
+                        color: linkColor,
+                        textDecoration: TextDecoration.underline,
+                      ),
+                      'img': Style(margin: Margins.only(bottom: 16)),
+                      'table': Style(
+                        border: Border.all(color: tableBorder),
+                        margin: Margins.only(bottom: 16),
+                      ),
+                      'th': Style(
+                        backgroundColor: thBg,
+                        padding: HtmlPaddings.all(8),
+                        border: Border.all(color: tableBorder),
+                        fontWeight: FontWeight.bold,
+                      ),
+                      'td': Style(
+                        padding: HtmlPaddings.all(8),
+                        border: Border.all(color: tableBorder),
+                      ),
+                      // Hide unsupported tags that cause blank space
+                      'iframe': Style(display: Display.none),
+                      'script': Style(display: Display.none),
+                      'style': Style(display: Display.none),
+                    },
+                    onLinkTap: (url, attributes, element) async {
+                      if (url != null) {
+                        try {
+                          final uri = Uri.tryParse(url);
+                          if (uri != null && await canLaunchUrl(uri)) {
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          } else {
+                            if (context.mounted) {
+                              ErrorHandler.showWarningSnackBar(
+                                context,
+                                'Không thể mở liên kết',
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ErrorHandler.showErrorSnackBar(
+                              context,
+                              'Lỗi khi mở liên kết: $e',
+                            );
+                          }
                         }
                       }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ErrorHandler.showErrorSnackBar(
-                          context,
-                          'Lỗi khi mở liên kết: $e',
-                        );
-                      }
-                    }
-                  }
-                },
-              ),
-            ),
+                    },
+                  ),
+                ),
+              );
+            },
           ),
 
         // Legacy single resource URL (fallback if no structured attachments)

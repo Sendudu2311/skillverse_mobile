@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_html/flutter_html.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../providers/post_provider.dart';
 import '../../providers/comment_provider.dart';
 
@@ -219,7 +222,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
           // Title
           if (_post!.title != null && _post!.title!.isNotEmpty) ...[
             Text(
-              HtmlHelper.cleanHtml(_post!.title!),
+              HtmlHelper.cleanHtml(
+                HtmlHelper.decodeHtmlEntities(_post!.title!),
+              ),
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
@@ -228,9 +233,29 @@ class _PostDetailPageState extends State<PostDetailPage> {
           ],
 
           // Content
-          Text(
-            HtmlHelper.cleanHtml(_post!.content),
-            style: Theme.of(context).textTheme.bodyLarge,
+          Html(
+            data: HtmlHelper.decodeHtmlEntities(_post!.content),
+            style: {
+              'body': Style(
+                fontSize: FontSize(16),
+                lineHeight: LineHeight.number(1.6),
+                margin: Margins.zero,
+                padding: HtmlPaddings.zero,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+              'p': Style(margin: Margins.only(bottom: 8)),
+              'img': Style(margin: Margins.only(top: 8, bottom: 8)),
+            },
+            onLinkTap: (url, attributes, element) async {
+              if (url != null) {
+                try {
+                  final uri = Uri.tryParse(url);
+                  if (uri != null && await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                } catch (_) {}
+              }
+            },
           ),
           const SizedBox(height: 20),
 
@@ -408,7 +433,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    comment.content,
+                    HtmlHelper.cleanHtml(
+                      HtmlHelper.decodeHtmlEntities(comment.content),
+                    ),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -484,14 +511,15 @@ class _PostDetailPageState extends State<PostDetailPage> {
     try {
       await provider.addComment(widget.postId, content);
       if (!mounted) return;
-      // Update comment count in post
-      final postIndex = postProvider.posts.indexWhere(
+      // Update comment count in post list via provider (not direct list mutation)
+      final postIndex = postProvider.pagination.findIndex(
         (p) => p.id == widget.postId,
       );
       if (postIndex != -1) {
-        final post = postProvider.posts[postIndex];
-        postProvider.posts[postIndex] = post.copyWith(
-          commentCount: post.commentCount + 1,
+        final post = postProvider.pagination.items[postIndex];
+        postProvider.pagination.updateItem(
+          postIndex,
+          post.copyWith(commentCount: post.commentCount + 1),
         );
       }
     } catch (e) {

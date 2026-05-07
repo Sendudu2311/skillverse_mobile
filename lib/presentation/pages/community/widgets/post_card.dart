@@ -43,7 +43,9 @@ class PostCard extends StatelessWidget {
               // Post title (if available)
               if (post.title != null && post.title!.isNotEmpty) ...[
                 Text(
-                  HtmlHelper.cleanHtml(post.title!),
+                  HtmlHelper.cleanHtml(
+                    HtmlHelper.decodeHtmlEntities(post.title!),
+                  ),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -55,7 +57,9 @@ class PostCard extends StatelessWidget {
 
               // Post content preview
               Text(
-                HtmlHelper.cleanHtml(post.content),
+                HtmlHelper.cleanHtml(
+                  HtmlHelper.decodeHtmlEntities(post.content),
+                ),
                 style: Theme.of(context).textTheme.bodyMedium,
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,

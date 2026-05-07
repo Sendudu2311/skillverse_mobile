@@ -1452,6 +1452,7 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
     final isQuiz = item.itemType == 'quiz';
     final isAssignment = item.itemType == 'assignment';
     final isInlineItem = isQuiz || isAssignment;
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     // Determine complete button state
     String completeLabel;
@@ -1482,6 +1483,43 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       onCompletePressed = null;
     }
 
+    final completeBtn = !isInlineItem
+        ? ElevatedButton.icon(
+            onPressed: canComplete ? onCompletePressed : null,
+            icon: _isMarkingComplete
+                ? CommonLoading.button()
+                : Icon(
+                    isLesson ? Icons.check : Icons.laptop_mac_outlined,
+                    size: 20,
+                  ),
+            label: Text(
+              completeLabel,
+              style: const TextStyle(fontSize: 13),
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          )
+        : const SizedBox.shrink();
+
+    final prevBtn = OutlinedButton.icon(
+      onPressed: _activeCurriculumIndex > 0 ? _goToPreviousItem : null,
+      icon: const Icon(Icons.chevron_left, size: 20),
+      label: const Text('Trước'),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+      ),
+    );
+
+    final nextBtn = OutlinedButton.icon(
+      onPressed: _canGoToNextFromActive() ? _goToNextItem : null,
+      icon: const Icon(Icons.chevron_right, size: 20),
+      label: const Text('Sau'),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+      ),
+    );
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -1495,57 +1533,37 @@ class _CourseLearningPageState extends State<CourseLearningPage> {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: SafeArea(
-        child: Row(
-          children: [
-            // Previous button
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _activeCurriculumIndex > 0
-                    ? _goToPreviousItem
-                    : null,
-                icon: const Icon(Icons.chevron_left, size: 20),
-                label: const Text('Trước'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-            // Complete/Action button (Hidden for inline Quiz/Assignment to avoid redundancy)
-            if (!isInlineItem) const SizedBox(width: 12),
-            if (!isInlineItem)
-              Expanded(
-                flex: 2,
-                child: ElevatedButton.icon(
-                  onPressed: canComplete ? onCompletePressed : null,
-                  icon: _isMarkingComplete
-                      ? CommonLoading.button()
-                      : Icon(
-                          isLesson ? Icons.check : Icons.laptop_mac_outlined,
-                          size: 20,
-                        ),
-                  label: Text(
-                    completeLabel,
-                    style: const TextStyle(fontSize: 13),
+        top: false,
+        left: !isLandscape,
+        right: true,
+        bottom: true,
+        child: isLandscape
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (!isInlineItem) ...[
+                    completeBtn,
+                    const SizedBox(height: 12),
+                  ],
+                  Row(
+                    children: [
+                      Expanded(child: prevBtn),
+                      const SizedBox(width: 12),
+                      Expanded(child: nextBtn),
+                    ],
                   ),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(child: prevBtn),
+                  if (!isInlineItem) const SizedBox(width: 12),
+                  if (!isInlineItem) Expanded(flex: 2, child: completeBtn),
+                  const SizedBox(width: 12),
+                  Expanded(child: nextBtn),
+                ],
               ),
-            const SizedBox(width: 12),
-            // Next button
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _canGoToNextFromActive() ? _goToNextItem : null,
-                icon: const Icon(Icons.chevron_right, size: 20),
-                label: const Text('Sau'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

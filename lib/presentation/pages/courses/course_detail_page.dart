@@ -883,26 +883,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                   isDark: isDark,
                                 ),
                               ),
-                              if (_course!.rating != null) ...[
-                                Container(
-                                  width: 1,
-                                  height: 40,
-                                  color: isDark
-                                      ? AppTheme.darkBorderColor
-                                      : AppTheme.lightBorderColor,
-                                ),
-                                Expanded(
-                                  child: CourseStatItem(
-                                    icon: Icons.star_outline,
-                                    label: 'Đánh giá',
-                                    value: NumberFormatter.formatRating(
-                                      _course!.rating!,
-                                    ),
-                                    color: Colors.amber,
-                                    isDark: isDark,
-                                  ),
-                                ),
-                              ],
+
                             ],
                           ),
                         ),
@@ -1081,61 +1062,99 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                         ),
                         const SizedBox(height: 20),
 
-                        // Learning Objectives
-                        if (_course!.learningObjectives != null &&
-                            _course!.learningObjectives!.isNotEmpty)
-                          GlassCard(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildSectionHeader(
-                                  context,
-                                  icon: Icons.lightbulb_outline,
-                                  title: 'Bạn sẽ học được',
-                                  isDark: isDark,
-                                  color: gradientColors[0],
-                                ),
-                                const SizedBox(height: 16),
-                                ..._course!.learningObjectives!.map(
-                                  (objective) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Icon(
-                                          Icons.check_circle,
-                                          color: AppTheme.themeGreenStart,
-                                          size: 18,
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Text(
-                                            objective,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.copyWith(
-                                                  color: isDark
-                                                      ? AppTheme
-                                                            .darkTextSecondary
-                                                      : AppTheme
-                                                            .lightTextSecondary,
-                                                  height: 1.5,
+                        // Learning Objectives & Course Skills
+                        Builder(
+                          builder: (context) {
+                            final hasObjectives = _course!.learningObjectives != null && _course!.learningObjectives!.isNotEmpty;
+                            final validSkills = (_course!.courseSkills ?? []).where((s) => s.trim().isNotEmpty && s.trim().toUpperCase() != 'EMPTY').toList();
+                            final hasSkills = validSkills.isNotEmpty;
+
+                            if (!hasObjectives && !hasSkills) return const SizedBox.shrink();
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 20),
+                              child: GlassCard(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildSectionHeader(
+                                      context,
+                                      icon: Icons.lightbulb_outline,
+                                      title: 'Bạn sẽ học được',
+                                      isDark: isDark,
+                                      color: gradientColors[0],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    
+                                    if (hasObjectives) ...[
+                                      ..._course!.learningObjectives!.map(
+                                        (objective) => Padding(
+                                          padding: const EdgeInsets.only(bottom: 10),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Icon(
+                                                Icons.check_circle,
+                                                color: AppTheme.themeGreenStart,
+                                                size: 18,
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: Text(
+                                                  objective,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(
+                                                        color: isDark
+                                                            ? AppTheme.darkTextSecondary
+                                                            : AppTheme.lightTextSecondary,
+                                                        height: 1.5,
+                                                      ),
                                                 ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
+                                      ),
+                                    ],
+
+                                    if (hasObjectives && hasSkills)
+                                      const SizedBox(height: 8),
+
+                                    if (hasSkills)
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: validSkills.map((skill) {
+                                          return Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: (isDark ? Colors.white : AppTheme.primaryBlue).withValues(alpha: 0.1),
+                                              border: Border.all(
+                                                color: (isDark ? Colors.white : AppTheme.primaryBlue).withValues(alpha: 0.2),
+                                              ),
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              skill.trim(),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: isDark ? Colors.white : AppTheme.primaryBlue,
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        if (_course!.learningObjectives != null &&
-                            _course!.learningObjectives!.isNotEmpty)
-                          const SizedBox(height: 20),
+                              ),
+                            );
+                          },
+                        ),
 
                         // Requirements
                         if (_course!.requirements != null &&
@@ -1245,7 +1264,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                                 isDark: isDark,
                                 color: gradientColors[0],
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 8),
                               if (_isLoadingModules)
                                 CommonLoading.center()
                               else if (_fullModules.isEmpty)
@@ -1260,6 +1279,7 @@ class _CourseDetailPageState extends State<CourseDetailPage>
                               else
                                 ListView.builder(
                                   shrinkWrap: true,
+                                  padding: EdgeInsets.zero,
                                   physics: const NeverScrollableScrollPhysics(),
                                   itemCount: _fullModules.length,
                                   itemBuilder: (context, index) {
