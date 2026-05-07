@@ -11,12 +11,14 @@ import '../../../core/utils/date_time_helper.dart';
 import 'job_apply_sheet.dart';
 import 'interview_schedule_page.dart';
 import 'short_term_submit_sheet.dart';
+import 'onboarding_info_page.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/contract_provider.dart';
 import '../../widgets/status_badge.dart';
 import '../../../data/models/contract_models.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/enum_helper.dart';
+import '../../widgets/formatted_ai_response.dart';
 
 class JobDetailPage extends StatefulWidget {
   final int jobId;
@@ -232,32 +234,11 @@ class _JobDetailPageState extends State<JobDetailPage> {
 
               const SizedBox(height: 16),
 
-              // Skills
               if (job.requiredSkills != null &&
                   job.requiredSkills!.isNotEmpty) ...[
                 _buildSectionTitle('Kỹ Năng Yêu Cầu'),
                 const SizedBox(height: 8),
-                GlassCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: job.requiredSkills!.map((skill) {
-                      return Chip(
-                        label: Text(
-                          skill,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        backgroundColor: AppTheme.themeBlueStart.withValues(
-                          alpha: 0.1,
-                        ),
-                        side: BorderSide(
-                          color: AppTheme.themeBlueStart.withValues(alpha: 0.3),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
+                _buildSkillChips(job.requiredSkills!, AppTheme.themeBlueStart),
               ],
 
               const SizedBox(height: 16),
@@ -267,11 +248,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
               const SizedBox(height: 8),
               GlassCard(
                 padding: const EdgeInsets.all(16),
-                child: Text(
-                  job.description ?? 'Không có mô tả',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(height: 1.6),
+                child: FormattedAIResponse(
+                  content: job.description ?? 'Không có mô tả',
+                  isDark: Theme.of(context).brightness == Brightness.dark,
                 ),
               ),
 
@@ -486,29 +465,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                   job.requiredSkills!.isNotEmpty) ...[
                 _buildSectionTitle('Kỹ Năng Yêu Cầu'),
                 const SizedBox(height: 8),
-                GlassCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: job.requiredSkills!.map((skill) {
-                      return Chip(
-                        label: Text(
-                          skill,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        backgroundColor: AppTheme.themePurpleStart.withValues(
-                          alpha: 0.1,
-                        ),
-                        side: BorderSide(
-                          color: AppTheme.themePurpleStart.withValues(
-                            alpha: 0.3,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
+                _buildSkillChips(job.requiredSkills!, AppTheme.themePurpleStart),
               ],
 
               const SizedBox(height: 16),
@@ -518,11 +475,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
               const SizedBox(height: 8),
               GlassCard(
                 padding: const EdgeInsets.all(16),
-                child: Text(
-                  job.description ?? 'Không có mô tả',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(height: 1.6),
+                child: FormattedAIResponse(
+                  content: job.description ?? 'Không có mô tả',
+                  isDark: Theme.of(context).brightness == Brightness.dark,
                 ),
               ),
 
@@ -1319,6 +1274,8 @@ class _JobDetailPageState extends State<JobDetailPage> {
             JobApplicationStatus.offerRejected: 3,
             JobApplicationStatus.accepted: 2,
             JobApplicationStatus.contractSigned: 4,
+            JobApplicationStatus.awaitingOnboardingInfo: 4,
+            JobApplicationStatus.hired: 4,
             JobApplicationStatus.rejected: 1,
           }
         : {
@@ -1328,6 +1285,8 @@ class _JobDetailPageState extends State<JobDetailPage> {
             JobApplicationStatus.interviewed: 2,
             JobApplicationStatus.accepted: 3,
             JobApplicationStatus.contractSigned: 4,
+            JobApplicationStatus.awaitingOnboardingInfo: 4,
+            JobApplicationStatus.hired: 4,
             JobApplicationStatus.rejected: 1,
           };
 
@@ -1369,7 +1328,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
         label: 'Ký HĐ',
         time: null,
         icon: Icons.description_outlined,
-        isCompleted: status == JobApplicationStatus.contractSigned,
+        isCompleted: status == JobApplicationStatus.contractSigned ||
+            status == JobApplicationStatus.awaitingOnboardingInfo ||
+            status == JobApplicationStatus.hired,
       ),
     ];
 
@@ -1382,7 +1343,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
 
     final borderColor = isAnyFail
         ? Colors.red.withValues(alpha: 0.3)
-        : status == JobApplicationStatus.contractSigned
+        : (status == JobApplicationStatus.contractSigned ||
+            status == JobApplicationStatus.awaitingOnboardingInfo ||
+            status == JobApplicationStatus.hired)
         ? AppTheme.themeGreenStart.withValues(alpha: 0.3)
         : AppTheme.themeBlueStart.withValues(alpha: 0.3);
 
@@ -1817,10 +1780,13 @@ class _JobDetailPageState extends State<JobDetailPage> {
   List<Widget> _buildOfferSummaryContent(JobApplicationResponse app) {
     final widgets = <Widget>[];
 
-    if (app.offerDetails?.trim().isNotEmpty ?? false) {
+    final details = app.offerDetails?.trim() ?? '';
+    final additional = app.offerAdditionalRequirements?.trim() ?? '';
+
+    if (details.isNotEmpty) {
       widgets.add(
         Text(
-          app.offerDetails!.trim(),
+          details,
           style: const TextStyle(fontSize: 13, height: 1.5),
         ),
       );
@@ -1839,7 +1805,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
       );
     }
 
-    if (app.offerAdditionalRequirements?.trim().isNotEmpty ?? false) {
+    if (additional.isNotEmpty && additional.toLowerCase() != details.toLowerCase()) {
       if (widgets.isNotEmpty) {
         widgets.add(const SizedBox(height: 8));
       }
@@ -1847,7 +1813,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
         _buildOfferMetaRow(
           icon: Icons.assignment_outlined,
           label: 'Điều kiện thêm',
-          value: app.offerAdditionalRequirements!.trim(),
+          value: additional,
         ),
       );
     }
@@ -2038,6 +2004,34 @@ class _JobDetailPageState extends State<JobDetailPage> {
         label: 'Đơn đã bị từ chối',
         icon: Icons.cancel_outlined,
         color: Colors.red,
+      ),
+      JobApplicationStatus.awaitingOnboardingInfo => _DetailActionState(
+        label: 'Cung cấp thông tin Onboarding',
+        icon: Icons.assignment_ind_outlined,
+        color: AppTheme.warningColor,
+        enabled: true,
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OnboardingInfoPage(
+                applicationId: app.id!,
+              ),
+            ),
+          );
+          if (result == true) {
+            if (context.mounted) {
+              context.read<JobProvider>().loadMyLongTermApplications();
+              // If we need to reload job details, we'd need jobId, but app.jobId is available
+              context.read<JobProvider>().loadJobDetails(app.jobId!);
+            }
+          }
+        },
+      ),
+      JobApplicationStatus.hired => const _DetailActionState(
+        label: 'Đã được tuyển dụng 🎉',
+        icon: Icons.verified_outlined,
+        color: AppTheme.successColor,
       ),
     };
   }
@@ -2510,6 +2504,47 @@ class _JobDetailPageState extends State<JobDetailPage> {
       style: Theme.of(
         context,
       ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+    );
+  }
+
+  Widget _buildSkillChips(List<String> skills, Color accentColor) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: skills.map((skill) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: accentColor.withValues(alpha: isDark ? 0.12 : 0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: accentColor.withValues(alpha: isDark ? 0.45 : 0.35),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.code_rounded,
+                size: 13,
+                color: accentColor,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                skill,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: accentColor,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 

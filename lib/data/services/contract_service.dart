@@ -101,6 +101,81 @@ class ContractService {
     }
   }
 
+  // ==================== ONBOARDING ====================
+
+  /// Submit onboarding info (CCCD text + bank account).
+  Future<OnboardingInfoResponse> submitOnboardingInfo(
+    int applicationId,
+    OnboardingInfoRequest request,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/contracts/applications/$applicationId/onboarding',
+        data: request.toJson(),
+      );
+
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+
+      return OnboardingInfoResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException(
+        _extractErrorMessage(e, 'Cập nhật thông tin Onboarding thất bại'),
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Cập nhật thông tin Onboarding thất bại');
+    }
+  }
+
+  /// Get onboarding info for an application.
+  Future<OnboardingInfoResponse?> getOnboardingInfo(int applicationId) async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/contracts/applications/$applicationId/onboarding',
+      );
+
+      if (response.data == null) return null;
+
+      return OnboardingInfoResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      final message = _extractErrorMessage(e, '');
+      if (message.contains('No onboarding data found')) {
+        return null;
+      }
+      throw ApiException(
+        _extractErrorMessage(e, 'Lấy thông tin Onboarding thất bại'),
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Lấy thông tin Onboarding thất bại');
+    }
+  }
+
+  /// Get the most recently submitted onboarding info for the candidate to reuse.
+  Future<OnboardingInfoResponse?> getLatestOnboardingInfo() async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/contracts/onboarding-info/me',
+      );
+
+      if (response.data == null) return null;
+
+      return OnboardingInfoResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 204 || e.response?.statusCode == 404) {
+        return null;
+      }
+      throw ApiException(
+        _extractErrorMessage(e, 'Lấy thông tin Onboarding gần nhất thất bại'),
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Lấy thông tin Onboarding gần nhất thất bại');
+    }
+  }
+
   // ==================== HELPERS ====================
 
   String _extractErrorMessage(DioException e, String fallback) {

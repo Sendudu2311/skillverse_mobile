@@ -75,6 +75,10 @@ enum JobApplicationStatus {
   accepted,
   @JsonValue('CONTRACT_SIGNED')
   contractSigned,
+  @JsonValue('AWAITING_ONBOARDING_INFO')
+  awaitingOnboardingInfo,
+  @JsonValue('HIRED')
+  hired,
   @JsonValue('REJECTED')
   rejected,
 }

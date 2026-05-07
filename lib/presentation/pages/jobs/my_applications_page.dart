@@ -1203,11 +1203,14 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     required bool compact,
   }) {
     final widgets = <Widget>[];
+    
+    final details = app.offerDetails?.trim() ?? '';
+    final additional = app.offerAdditionalRequirements?.trim() ?? '';
 
-    if (app.offerDetails?.trim().isNotEmpty ?? false) {
+    if (details.isNotEmpty) {
       widgets.add(
         Text(
-          app.offerDetails!.trim(),
+          details,
           style: TextStyle(fontSize: compact ? 12 : 13, height: 1.5),
           maxLines: compact ? 4 : null,
           overflow: compact ? TextOverflow.ellipsis : null,
@@ -1228,7 +1231,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
       );
     }
 
-    if (app.offerAdditionalRequirements?.trim().isNotEmpty ?? false) {
+    if (additional.isNotEmpty && additional.toLowerCase() != details.toLowerCase()) {
       if (widgets.isNotEmpty) {
         widgets.add(const SizedBox(height: 8));
       }
@@ -1236,7 +1239,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
         _buildOfferMetaRow(
           icon: Icons.assignment_outlined,
           label: 'Điều kiện thêm',
-          value: app.offerAdditionalRequirements!.trim(),
+          value: additional,
         ),
       );
     }

@@ -269,3 +269,65 @@ class SignContractRequest {
       _$SignContractRequestFromJson(json);
   Map<String, dynamic> toJson() => _$SignContractRequestToJson(this);
 }
+
+@JsonSerializable()
+class OnboardingInfoRequest {
+  final String idCardNumber;
+  final String fullName;
+  final String? dateOfBirth;
+  final String idCardDate;
+  final String idCardPlace;
+  final String? address;
+  final String bankAccountNumber;
+  final String bankName;
+  final String bankAccountHolder;
+
+  OnboardingInfoRequest({
+    required this.idCardNumber,
+    required this.fullName,
+    this.dateOfBirth,
+    required this.idCardDate,
+    required this.idCardPlace,
+    this.address,
+    required this.bankAccountNumber,
+    required this.bankName,
+    required this.bankAccountHolder,
+  });
+
+  factory OnboardingInfoRequest.fromJson(Map<String, dynamic> json) =>
+      _$OnboardingInfoRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$OnboardingInfoRequestToJson(this);
+}
+
+@JsonSerializable()
+class OnboardingInfoResponse {
+  final int applicationId;
+  final String status;
+  final String idCardNumber;
+  final String fullName;
+  final String? dateOfBirth;
+  final String? idCardDate;
+  final String idCardPlace;
+  final String? address;
+  final String bankAccountNumber;
+  final String bankName;
+  final String bankAccountHolder;
+
+  OnboardingInfoResponse({
+    required this.applicationId,
+    required this.status,
+    required this.idCardNumber,
+    required this.fullName,
+    this.dateOfBirth,
+    this.idCardDate,
+    required this.idCardPlace,
+    this.address,
+    required this.bankAccountNumber,
+    required this.bankName,
+    required this.bankAccountHolder,
+  });
+
+  factory OnboardingInfoResponse.fromJson(Map<String, dynamic> json) =>
+      _$OnboardingInfoResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$OnboardingInfoResponseToJson(this);
+}
