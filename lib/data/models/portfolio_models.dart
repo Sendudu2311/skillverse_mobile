@@ -259,6 +259,8 @@ class ExtendedProfileDto {
 // Field names here match backend UserProfileDTO (sent as JSON part of multipart).
 @JsonSerializable()
 class CreateExtendedProfileRequest {
+  // Backend field: fullName (required by backend validation)
+  final String? fullName;
   // Backend field: customUrlSlug
   final String? customUrlSlug;
   // Backend field: professionalTitle
@@ -292,6 +294,7 @@ class CreateExtendedProfileRequest {
   final List<PortfolioEducationDto>? educationHistory;
 
   CreateExtendedProfileRequest({
+    this.fullName,
     this.customUrlSlug,
     this.professionalTitle,
     this.basicBio,
@@ -312,6 +315,7 @@ class CreateExtendedProfileRequest {
 
   /// Factory that accepts OLD field names from existing UI pages.
   factory CreateExtendedProfileRequest.fromOldFields({
+    String? fullName,
     String? slug,
     String? headline,
     String? bio,
@@ -331,6 +335,7 @@ class CreateExtendedProfileRequest {
         ? jsonEncode(expertiseAreas)
         : null;
     return CreateExtendedProfileRequest(
+      fullName: fullName,
       customUrlSlug: slug,
       professionalTitle: headline,
       basicBio: bio,

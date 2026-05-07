@@ -38,6 +38,33 @@ class PortfolioOverviewPage extends StatefulWidget {
 class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
   late bool isDark;
 
+  /// Simplified fuzzy match for skill verification status.
+  /// Normalizes both strings (lowercase, strip separators) then checks containment.
+  /// Handles: "React" ↔ "REACT", "Java Spring Boot" ↔ "JAVA_SPRING_BOOT", etc.
+  bool _isSkillFuzzyVerified(
+    String skillInput,
+    List<UserVerifiedSkillDto> verifiedSkills,
+  ) {
+    if (skillInput.trim().isEmpty || verifiedSkills.isEmpty) return false;
+    final normalizedInput = _normalizeSkillName(skillInput);
+    return verifiedSkills.any((vs) {
+      final normalizedVerified = _normalizeSkillName(vs.skillName);
+      // Exact match after normalization
+      if (normalizedInput == normalizedVerified) return true;
+      // Containment match (e.g., "react" in "reactjs")
+      if (normalizedInput.contains(normalizedVerified) ||
+          normalizedVerified.contains(normalizedInput)) return true;
+      return false;
+    });
+  }
+
+  String _normalizeSkillName(String name) {
+    return name
+        .toLowerCase()
+        .replaceAll(RegExp(r'[_\-.\s]+'), '')
+        .replaceAll(RegExp(r'js$'), ''); // "reactjs" → "react"
+  }
+
   @override
   void initState() {
     super.initState();
@@ -340,7 +367,6 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
           ),
         ],
       ),
-      floatingActionButton: _buildFloatingActionButton(context),
     );
   }
 
@@ -574,7 +600,7 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
             ),
           ],
 
-          // Expertise Areas
+          // Expertise Areas (with verified/unverified state — synced with Web Prototype)
           if (profile.expertiseAreas != null &&
               profile.expertiseAreas!.isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -587,31 +613,91 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
               ),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: profile.expertiseAreas!
-                  .map(
-                    (area) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.purpleGradient,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        area,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+            Consumer<PortfolioProvider>(
+              builder: (context, portfolioProvider, _) {
+                final verifiedSkills = portfolioProvider.verifiedSkills;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: profile.expertiseAreas!.map((area) {
+                    final isVerified = _isSkillFuzzyVerified(area, verifiedSkills);
+                    if (isVerified) {
+                      // ✅ Verified: purple gradient + checkmark (same as before but with icon)
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
                         ),
-                      ),
-                    ),
-                  )
-                  .toList(),
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.purpleGradient,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.themePurpleStart.withValues(alpha: 0.35),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.verified, size: 14, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              area,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      // ⏳ Unverified: outlined chip with dashed-style border
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.2)
+                                : Colors.grey.shade400,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.pending_outlined,
+                              size: 14,
+                              color: isDark ? Colors.white54 : Colors.grey.shade600,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              area,
+                              style: TextStyle(
+                                color: isDark ? Colors.white70 : Colors.grey.shade700,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  }).toList(),
+                );
+              },
             ),
           ],
 
@@ -1738,113 +1824,6 @@ class _PortfolioOverviewPageState extends State<PortfolioOverviewPage> {
     );
   }
 
-  Widget _buildFloatingActionButton(BuildContext context) {
-    return Consumer<PortfolioProvider>(
-      builder: (context, provider, child) {
-        if (!provider.hasExtendedProfile) {
-          return const SizedBox.shrink();
-        }
-
-        return FloatingActionButton(
-          onPressed: () => _showQuickActionMenu(context),
-          backgroundColor: AppTheme.themePurpleStart,
-          child: const Icon(Icons.add),
-        );
-      },
-    );
-  }
-
-  void _showQuickActionMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark
-          ? AppTheme.darkCardBackground
-          : AppTheme.lightCardBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppTheme.darkTextSecondary
-                    : AppTheme.lightTextSecondary,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.blueGradient,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.work, color: Colors.white),
-              ),
-              title: Text(
-                'Thêm dự án',
-                style: TextStyle(
-                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToAddProject();
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.orangeGradient,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.card_membership, color: Colors.white),
-              ),
-              title: Text(
-                'Thêm chứng chỉ',
-                style: TextStyle(
-                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToAddCertificate();
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.purpleGradient,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.auto_awesome, color: Colors.white),
-              ),
-              title: Text(
-                'Quản lý CV',
-                style: TextStyle(
-                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToCVBuilder();
-              },
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ─── Verified Skills ─────────────────────────────────────────────────────
 

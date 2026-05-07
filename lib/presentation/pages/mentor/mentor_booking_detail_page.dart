@@ -1046,7 +1046,7 @@ class _MentorBookingDetailPageState extends State<MentorBookingDetailPage> {
 
     // JOURNEY_MENTORING: shortcut back to Final Verification page
     // for learner to view gate / submit assessment / see history.
-    if (booking.isJourneyMentoring &&
+    if (booking.isRoadmapMentoring &&
         booking.journeyId != null &&
         _isLearner) {
       actions.add(

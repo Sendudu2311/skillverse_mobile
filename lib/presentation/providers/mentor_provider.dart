@@ -210,9 +210,9 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
         }
       });
       _mentors = await Future.wait(futures);
-      _applyFilters();
     } finally {
       _isEnrichingVerifiedSkills = false;
+      _applyFilters();
       notifyListeners();
     }
   }

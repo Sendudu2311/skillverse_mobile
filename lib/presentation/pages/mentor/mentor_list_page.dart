@@ -53,7 +53,6 @@ class _MentorListPageState extends State<MentorListPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isRoadmapContext = widget.action == 'roadmap_mentoring';
-    final isJourneyContext = widget.action == 'journey_mentoring';
 
     return Scaffold(
       appBar: SkillVerseAppBar(
@@ -102,42 +101,6 @@ class _MentorListPageState extends State<MentorListPage> {
                   ],
                 ),
               ),
-            // V3: Contextual banner for Journey Mentoring (Self-Study verification)
-            if (isJourneyContext)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.infoColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: AppTheme.infoColor.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.verified_user_outlined,
-                      size: 20,
-                      color: AppTheme.infoColor,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        widget.skillName != null
-                            ? 'Ưu tiên mentor đã xác thực skill "${widget.skillName}". Mentor sẽ đánh giá năng lực và cấp Verified Skills cho Portfolio của bạn.'
-                            : 'Chọn mentor để đặt 1 buổi phỏng vấn cuối khoá. Mentor sẽ đánh giá năng lực và cấp Verified Skills cho Portfolio của bạn.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.lightTextPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             AppSearchBar(
               controller: _searchController,
               hintText: 'Tìm kiếm mentor...',
@@ -154,96 +117,104 @@ class _MentorListPageState extends State<MentorListPage> {
                 final selectedIndex = _selectedSkill == null
                     ? 0
                     : provider.availableSkills.indexOf(_selectedSkill!) + 1;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 4, bottom: 4),
-                  child: SelectableChipRow(
-                    labels: labels,
-                    selectedIndex: selectedIndex.clamp(0, labels.length - 1),
-                    onSelected: (i) {
-                      final skill = i == 0
-                          ? null
-                          : provider.availableSkills[i - 1];
-                      setState(() => _selectedSkill = skill);
-                      provider.filterBySkill(skill);
-                    },
-                  ),
-                );
-              },
-            ),
-            // Verified skills toggle
-            Consumer<MentorProvider>(
-              builder: (context, provider, _) {
+                    
                 final isActive = provider.showVerifiedOnly;
                 final isEnriching = provider.isEnrichingVerifiedSkills;
+
                 return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 4,
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: isEnriching
-                        ? null
-                        : () => provider.toggleVerifiedFilter(),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? AppTheme.successColor.withValues(alpha: 0.1)
-                            : (isDark
-                                ? Colors.white.withValues(alpha: 0.05)
-                                : Colors.grey.withValues(alpha: 0.08)),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isActive
-                              ? AppTheme.successColor.withValues(alpha: 0.4)
-                              : Colors.transparent,
+                  padding: const EdgeInsets.only(top: 8, bottom: 8, left: 20),
+                  child: Row(
+                    children: [
+                      // Verified skills toggle
+                      InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: isEnriching
+                            ? null
+                            : () => provider.toggleVerifiedFilter(),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? AppTheme.successColor.withValues(alpha: 0.1)
+                                : (isDark
+                                    ? Colors.white.withValues(alpha: 0.05)
+                                    : Colors.grey.withValues(alpha: 0.08)),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isActive
+                                  ? AppTheme.successColor.withValues(alpha: 0.4)
+                                  : (isDark
+                                      ? Colors.white.withValues(alpha: 0.1)
+                                      : AppTheme.lightBorderColor),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.verified_user_outlined,
+                                size: 16,
+                                color: isActive
+                                    ? AppTheme.successColor
+                                    : (isDark
+                                        ? AppTheme.darkTextSecondary
+                                        : AppTheme.lightTextSecondary),
+                              ),
+                              if (isActive) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Đã xác thực',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.successColor,
+                                  ),
+                                ),
+                              ],
+                              if (isEnriching) ...[
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.5,
+                                    color: AppTheme.successColor,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.verified_user_outlined,
-                            size: 16,
-                            color: isActive
-                                ? AppTheme.successColor
-                                : (isDark
-                                    ? AppTheme.darkTextSecondary
-                                    : AppTheme.lightTextSecondary),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Chỉ mentor đã xác thực',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight:
-                                  isActive ? FontWeight.w600 : FontWeight.w400,
-                              color: isActive
-                                  ? AppTheme.successColor
-                                  : (isDark
-                                      ? AppTheme.darkTextSecondary
-                                      : AppTheme.lightTextSecondary),
-                            ),
-                          ),
-                          if (isEnriching) ...[
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              width: 12,
-                              height: 12,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 1.5,
-                                color: AppTheme.successColor,
-                              ),
-                            ),
-                          ],
-                        ],
+                      
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Container(
+                          width: 1,
+                          height: 24,
+                          color: isDark ? Colors.white24 : Colors.black12,
+                        ),
                       ),
-                    ),
+                      
+                      Expanded(
+                        child: SelectableChipRow(
+                          labels: labels,
+                          padding: const EdgeInsets.only(right: 20),
+                          selectedIndex: selectedIndex.clamp(0, labels.length - 1),
+                          onSelected: (i) {
+                            final skill = i == 0
+                                ? null
+                                : provider.availableSkills[i - 1];
+                            setState(() => _selectedSkill = skill);
+                            provider.filterBySkill(skill);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },

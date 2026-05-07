@@ -733,76 +733,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       );
     }
 
-    if (widget.action == 'journey_mentoring') {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppTheme.darkCardBackground
-              : AppTheme.lightCardBackground,
-          border: Border(
-            top: BorderSide(
-              color: isDark
-                  ? AppTheme.darkBorderColor
-                  : AppTheme.lightBorderColor,
-            ),
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppTheme.infoColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppTheme.infoColor.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.verified_user_outlined,
-                      color: AppTheme.infoColor,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Bạn đang ở luồng thuê Mentor đánh giá cuối khoá. '
-                        'Mentor sẽ phỏng vấn bạn 1 buổi duy nhất để kiểm tra năng lực và cấp chứng chỉ.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.lightTextPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _openJourneyMentoringSheet(context, mentor, provider),
-                  icon: const Icon(Icons.verified_outlined),
-                  label: const Text('Đặt lịch phỏng vấn cuối khoá'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    backgroundColor: AppTheme.infoColor,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -869,22 +800,5 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     );
   }
 
-  void _openJourneyMentoringSheet(
-    BuildContext context,
-    MentorProfile mentor,
-    MentorProvider provider,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => MentorBookingSheet(
-        mentor: mentor,
-        availability: provider.availability,
-        action: 'journey_mentoring',
-        journeyId: widget.journeyId,
-        nodeId: widget.nodeId,
-      ),
-    );
-  }
+
 }

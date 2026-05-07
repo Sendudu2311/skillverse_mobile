@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/portfolio_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/skillverse_app_bar.dart';
@@ -131,7 +132,9 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
     });
 
     try {
+      final authProvider = context.read<AuthProvider>();
       final request = CreateExtendedProfileRequest.fromOldFields(
+        fullName: authProvider.user?.fullName,
         slug: _slugController.text.trim().isEmpty
             ? null
             : _slugController.text.trim(),
@@ -373,7 +376,7 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             prefixIcon: Icons.language,
             keyboardType: TextInputType.url,
             validator: (value) =>
-                ValidationHelper.url(value, isRequired: false),
+                ValidationHelper.httpsUrl(value, isRequired: false),
           ),
           const SizedBox(height: 16),
 
@@ -385,7 +388,7 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             prefixIcon: Icons.code,
             keyboardType: TextInputType.url,
             validator: (value) =>
-                ValidationHelper.url(value, isRequired: false),
+                ValidationHelper.githubUrl(value, isRequired: false),
           ),
           const SizedBox(height: 16),
 
@@ -409,7 +412,7 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             prefixIcon: Icons.palette,
             keyboardType: TextInputType.url,
             validator: (value) =>
-                ValidationHelper.url(value, isRequired: false),
+                ValidationHelper.behanceUrl(value, isRequired: false),
           ),
           const SizedBox(height: 16),
 
@@ -421,7 +424,7 @@ class _EditExtendedProfilePageState extends State<EditExtendedProfilePage>
             prefixIcon: Icons.sports_basketball,
             keyboardType: TextInputType.url,
             validator: (value) =>
-                ValidationHelper.url(value, isRequired: false),
+                ValidationHelper.dribbbleUrl(value, isRequired: false),
           ),
         ],
       ),

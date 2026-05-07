@@ -129,9 +129,7 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            widget.action == 'journey_mentoring'
-                ? 'Đặt lịch phỏng vấn cuối khoá'
-                : 'Đặt lịch hẹn',
+            'Đặt lịch hẹn',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
               color: isDark
@@ -498,9 +496,7 @@ class _MentorBookingSheetState extends State<MentorBookingSheet> {
         priceVnd: _totalPrice,
         journeyId: widget.journeyId,
         nodeId: widget.nodeId,
-        bookingType: widget.action == 'journey_mentoring'
-            ? 'JOURNEY_MENTORING'
-            : null,
+        bookingType: null,
       );
 
       if (!context.mounted) return;

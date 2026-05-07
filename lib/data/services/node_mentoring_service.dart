@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import '../../core/error/exceptions.dart';
 import '../../core/network/api_client.dart';
 import '../models/node_mentoring_models.dart';
+import '../models/final_verification_models.dart'
+    show JourneyCompletionReportResponse;
 
 /// Service for Per-Node Mentoring API calls.
 /// Base: /api/v1/journeys/{journeyId}/nodes/{nodeId}
@@ -173,6 +175,27 @@ class NodeMentoringService {
   }
 
   // ─── Verification History ──────────────────────────────────────────────
+
+  /// Get the latest completion report (PASS/FAIL gate decision from mentor).
+  /// GET /api/v1/journeys/{journeyId}/completion-report/latest
+  Future<JourneyCompletionReportResponse?> getLatestCompletionReport(
+    int journeyId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/v1/journeys/$journeyId/completion-report/latest',
+      );
+      if (response.data == null) return null;
+      return JourneyCompletionReportResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      throw _handleDioError(e, 'Lấy báo cáo hoàn thành thất bại');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định');
+    }
+  }
+
 
   /// Get full verification history (all attempts) for a journey.
   /// GET /api/v1/journeys/{journeyId}/verification-history

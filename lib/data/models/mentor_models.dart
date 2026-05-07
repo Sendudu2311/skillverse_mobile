@@ -382,6 +382,9 @@ class MentorBooking {
 
   /// Check if chat is allowed. Prefer backend-provided chatAllowed when present.
   bool get canChat {
+    // Roadmap mentoring uses the Workspace, not 1:1 chat.
+    if (isRoadmapMentoring) return false;
+    
     if (chatAllowed != null) return chatAllowed!;
     return status == BookingStatus.pending ||
         status == BookingStatus.confirmed ||
@@ -390,9 +393,6 @@ class MentorBooking {
   }
 
   bool get isRoadmapMentoring => bookingType == 'ROADMAP_MENTORING';
-
-  bool get isJourneyMentoring => bookingType == 'JOURNEY_MENTORING';
-
 
   bool get hasRoadmapWorkspace =>
       isRoadmapMentoring &&
@@ -473,7 +473,7 @@ String _dateTimeToUtcIso8601String(DateTime time) =>
     time.toUtc().toIso8601String();
 
 /// Create booking intent request
-/// V3 Phase 1: optional context fields for ROADMAP_MENTORING, JOURNEY_MENTORING, etc.
+/// V3 Phase 1: optional context fields for ROADMAP_MENTORING, etc.
 @JsonSerializable()
 class CreateBookingRequest {
   final int mentorId;
@@ -489,8 +489,7 @@ class CreateBookingRequest {
   final int? journeyId;
   final String? nodeId;
   final int? nodeSkillId;
-  final String?
-  bookingType; // "GENERAL" | "JOURNEY_MENTORING" | "ROADMAP_MENTORING"
+  final String? bookingType; // "GENERAL" | "ROADMAP_MENTORING"
 
   CreateBookingRequest({
     required this.mentorId,

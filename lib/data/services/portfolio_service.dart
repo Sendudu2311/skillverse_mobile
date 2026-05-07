@@ -494,14 +494,14 @@ class PortfolioService {
     }
   }
 
-  /// GET /api/v1/public/mentor-verifications/{userId}/verified-skills/details
+  /// GET /api/v1/public/mentors/{mentorId}/verified-skills/details
   /// Returns mentor-panel verified skills with full evidence details.
   Future<List<Map<String, dynamic>>> getPublicMentorVerifiedSkillDetails(
     int userId,
   ) async {
     try {
       final response = await _apiClient.dio.get(
-        '/v1/public/mentor-verifications/$userId/verified-skills/details',
+        '/v1/public/mentors/$userId/verified-skills/details',
       );
       final data = response.data;
       if (data is List) {
