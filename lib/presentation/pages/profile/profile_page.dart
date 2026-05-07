@@ -866,13 +866,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           _buildMenuItem(
             context,
-            'Cài đặt tài khoản',
-            Icons.settings_outlined,
-            () => context.push('/profile/settings'),
-            isDark,
-          ),
-          _buildMenuItem(
-            context,
             'Gói Premium',
             Icons.workspace_premium_outlined,
             () => context.push('/premium'),

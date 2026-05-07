@@ -202,7 +202,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 // 1. Hero: greeting + streak + weekly dots + Meowl
                 _buildHeroCard(
                   context,
-                  user?.fullName ?? 'Pilot',
+                  (user?.fullName?.trim().split(' ').last) ?? 'Pilot',
                   dashboardProvider,
                   isDark,
                 ),
@@ -444,28 +444,34 @@ class _DashboardPageState extends State<DashboardPage> {
                   builder: (context, skinProvider, _) {
                     final skin = skinProvider.selectedSkin;
                     if (skin != null && skin.imageUrl != null) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.secondaryPurple.withValues(
-                                alpha: 0.4,
+                      return GestureDetector(
+                        onTap: () => context.push('/skins'),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.secondaryPurple.withValues(
+                                  alpha: 0.4,
+                                ),
+                                blurRadius: 16,
+                                spreadRadius: 2,
                               ),
-                              blurRadius: 16,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Image.network(
-                          skin.imageUrl!,
-                          width: 92,
-                          height: 92,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+                            ],
+                          ),
+                          child: Image.network(
+                            skin.imageUrl!,
+                            width: 92,
+                            height: 92,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+                          ),
                         ),
                       );
                     }
-                    return _buildDefaultAvatar();
+                    return GestureDetector(
+                      onTap: () => context.push('/skins'),
+                      child: _buildDefaultAvatar(),
+                    );
                   },
                 ),
               ],

@@ -12,6 +12,9 @@ import '../../widgets/empty_state_widget.dart';
 import '../../widgets/ai_generation_loading_view.dart';
 import '../../widgets/learning_report/meowl_avatar_widget.dart';
 import '../../widgets/learning_report/stats_grid_widget.dart';
+import '../../widgets/learning_report/timeline_chart_widget.dart';
+import '../../widgets/learning_report/recommendation_cards_widget.dart';
+import '../../widgets/learning_report/report_breakdown_widget.dart';
 import '../../widgets/learning_report/trend_banner_widget.dart';
 import '../../widgets/learning_report/report_type_selector_widget.dart';
 import '../../widgets/learning_report/section_navigation_widget.dart';
@@ -21,6 +24,7 @@ import '../../widgets/learning_report/skeleton_widgets.dart';
 import '../../widgets/learning_report/animated_transitions.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/shimmer_loading.dart';
+import 'package:go_router/go_router.dart';
 
 class LearningReportPage extends StatefulWidget {
   const LearningReportPage({super.key});
@@ -369,6 +373,11 @@ class _LearningReportPageState extends State<LearningReportPage>
     final sections = provider.getAvailableSections();
     final activeSection = provider.activeSection;
 
+    final hasV2Features = (report.timeline != null && report.timeline!.isNotEmpty) ||
+        (report.overview?.recommendations != null && report.overview!.recommendations!.isNotEmpty) ||
+        (report.roadmapBreakdown != null && report.roadmapBreakdown!.isNotEmpty) ||
+        (report.courseBreakdown != null && report.courseBreakdown!.isNotEmpty);
+
     return RefreshIndicator(
       onRefresh: () => provider.loadLatestReport(),
       child: CustomScrollView(
@@ -387,37 +396,80 @@ class _LearningReportPageState extends State<LearningReportPage>
                   StaggeredSlideFade(
                     index: 1,
                     child: StatsGridWidget(
-                      metrics: report.metrics,
+                      report: report,
                       streakInfo: provider.streakInfo,
-                      overallProgress: report.overallProgress ?? 0,
                       streakDisplay: provider.getStreakDisplay(),
                       isDark: isDark,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  StaggeredSlideFade(
-                    index: 2,
-                    child: TrendBannerWidget(
-                      learningTrend: report.learningTrend,
-                      isDark: isDark,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (report.recommendedFocus != null &&
-                      report.recommendedFocus!.isNotEmpty)
+                  if (hasV2Features) ...[
+                    // V2 Components
+                    if (report.timeline != null && report.timeline!.isNotEmpty) ...[
+                      StaggeredSlideFade(
+                        index: 2,
+                        child: TimelineChartWidget(
+                          timeline: report.timeline!,
+                          isDark: isDark,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    if (report.overview?.recommendations != null && report.overview!.recommendations!.isNotEmpty) ...[
+                      StaggeredSlideFade(
+                        index: 3,
+                        child: RecommendationCardsWidget(
+                          recommendations: report.overview!.recommendations!,
+                          isDark: isDark,
+                          onNavigate: (path) {
+                            String target = path;
+                            if (path.contains('study-planner') || path.contains('skill')) {
+                               target = '/task-board';
+                            }
+                            context.push(target);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    if (report.roadmapBreakdown != null || report.courseBreakdown != null || report.jobBreakdown != null) ...[
+                      StaggeredSlideFade(
+                        index: 4,
+                        child: ReportBreakdownWidget(
+                          roadmaps: report.roadmapBreakdown,
+                          courses: report.courseBreakdown,
+                          jobs: report.jobBreakdown,
+                          isDark: isDark,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ] else ...[
+                    // Legacy Components
                     StaggeredSlideFade(
-                      index: 3,
-                      child: _buildFocusCard(report, isDark),
+                      index: 2,
+                      child: TrendBannerWidget(
+                        learningTrend: report.learningTrend,
+                        isDark: isDark,
+                      ),
                     ),
-                  if (report.recommendedFocus != null &&
-                      report.recommendedFocus!.isNotEmpty)
                     const SizedBox(height: 16),
-                  StaggeredSlideFade(
-                    index: 4,
-                    child: _buildSummaryCard(report, provider, isDark),
-                  ),
-                  const SizedBox(height: 16),
-                  if (sections.isNotEmpty) ...[
+                    if (report.recommendedFocus != null &&
+                        report.recommendedFocus!.isNotEmpty)
+                      StaggeredSlideFade(
+                        index: 3,
+                        child: _buildFocusCard(report, isDark),
+                      ),
+                    if (report.recommendedFocus != null &&
+                        report.recommendedFocus!.isNotEmpty)
+                      const SizedBox(height: 16),
+                    StaggeredSlideFade(
+                      index: 4,
+                      child: _buildSummaryCard(report, provider, isDark),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (!hasV2Features && sections.isNotEmpty) ...[
                     StaggeredSlideFade(
                       index: 5,
                       child: Column(

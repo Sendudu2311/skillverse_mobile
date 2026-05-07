@@ -219,22 +219,26 @@ class SkeletonSectionNav extends StatelessWidget {
           ? Colors.white.withValues(alpha: 0.16)
           : Colors.grey.shade100,
       period: const Duration(milliseconds: 1500),
-      child: Row(
-        children: List.generate(5, (_) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Container(
-              width: 70,
-              height: 36,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(20),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        child: Row(
+          children: List.generate(5, (_) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Container(
+                width: 70,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }

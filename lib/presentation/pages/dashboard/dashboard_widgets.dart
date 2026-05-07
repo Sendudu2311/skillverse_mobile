@@ -24,11 +24,9 @@ class DashboardQuickActionsWidget extends StatelessWidget {
     {'icon': Icons.map_outlined, 'label': 'AI Roadmap', 'color': AppTheme.themePurpleStart, 'route': '/roadmap'},
     {'icon': Icons.explore_outlined, 'label': 'Hành trình', 'color': AppTheme.accentCyan, 'route': '/journey'},
     {'icon': Icons.dashboard_customize_outlined, 'label': 'Task Board', 'color': AppTheme.accentCyan, 'route': '/task-board', 'hasBadge': true},
-    {'icon': Icons.psychology_outlined, 'label': 'Expert Chat', 'color': AppTheme.secondaryPurple, 'route': '/expert-chat'},
     {'icon': Icons.person_outline, 'label': 'Mentor 1:1', 'color': AppTheme.primaryBlueDark, 'route': '/mentors'},
     {'icon': Icons.people_outline, 'label': 'Cộng đồng', 'color': AppTheme.themeOrangeStart, 'route': '/community'},
     {'icon': Icons.work_outline, 'label': 'Portfolio', 'color': AppTheme.accentPink, 'route': '/portfolio'},
-    {'icon': Icons.storefront_outlined, 'label': 'Skin Shop', 'color': AppTheme.accentGold, 'route': '/skins'},
   ];
 
   @override
@@ -51,10 +49,10 @@ class DashboardQuickActionsWidget extends StatelessWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
+            crossAxisCount: 3,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
-            childAspectRatio: 0.85,
+            childAspectRatio: 0.95,
           ),
           itemCount: _actions.length,
           itemBuilder: (context, index) {

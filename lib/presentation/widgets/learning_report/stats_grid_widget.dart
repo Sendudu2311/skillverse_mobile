@@ -4,28 +4,32 @@ import '../../../data/services/streak_service.dart';
 import '../../themes/app_theme.dart';
 import '../glass_card.dart';
 
-/// 2×2 stats grid with animated entrance, gradient accent bars,
+/// 8-item stats grid with animated entrance, gradient accent bars,
 /// and animated progress indicator — matches Web Prototype's premium stats.
 class StatsGridWidget extends StatelessWidget {
-  final StudentMetrics? metrics;
+  final StudentLearningReportResponse report;
   final StreakInfo? streakInfo;
-  final int overallProgress;
   final ({int value, String emoji, String description}) streakDisplay;
   final bool isDark;
 
   const StatsGridWidget({
     super.key,
-    this.metrics,
+    required this.report,
     this.streakInfo,
-    required this.overallProgress,
     required this.streakDisplay,
     required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    final studyHours = metrics?.studyHours ?? 0;
-    final tasksCompleted = metrics?.tasksCompleted ?? 0;
+    final overallProgress = report.overview?.overallProgress ?? 0;
+    final studyHours = report.studyStats?.totalStudyHours ?? 0;
+    final inProgressRoadmaps = report.roadmapStats?.inProgressRoadmaps ?? 0;
+    final completedMissions = report.roadmapStats?.completedMissions ?? 0;
+    final completedTasks = report.taskStats?.completedTasks ?? 0;
+    final activeCourses = report.courseStats?.activeCourses ?? 0;
+    final completedJobs = report.jobStats?.completedJobs ?? 0;
+
     final statCards = [
       _StatCard(
         icon: Icons.speed,
@@ -57,13 +61,49 @@ class StatsGridWidget extends StatelessWidget {
         delay: 2,
       ),
       _StatCard(
-        icon: Icons.task_alt,
-        iconColor: AppTheme.successColor,
-        gradientColors: [AppTheme.successColor, const Color(0xFF059669)],
-        value: '$tasksCompleted',
-        label: 'Tasks hoàn thành',
+        icon: Icons.map_outlined,
+        iconColor: AppTheme.secondaryPurple,
+        gradientColors: [AppTheme.secondaryPurple, Colors.deepPurpleAccent],
+        value: '$inProgressRoadmaps',
+        label: 'Roadmap đang học',
         isDark: isDark,
         delay: 3,
+      ),
+      _StatCard(
+        icon: Icons.flag_circle,
+        iconColor: AppTheme.successColor,
+        gradientColors: [AppTheme.successColor, const Color(0xFF059669)],
+        value: '$completedMissions',
+        label: 'Node hoàn thành',
+        isDark: isDark,
+        delay: 4,
+      ),
+      _StatCard(
+        icon: Icons.task_alt,
+        iconColor: AppTheme.primaryBlueDark,
+        gradientColors: [AppTheme.primaryBlueDark, Colors.blueAccent],
+        value: '$completedTasks',
+        label: 'Tasks đã xong',
+        isDark: isDark,
+        delay: 5,
+      ),
+      _StatCard(
+        icon: Icons.school_outlined,
+        iconColor: AppTheme.accentGold,
+        gradientColors: [AppTheme.accentGold, Colors.orangeAccent],
+        value: '$activeCourses',
+        label: 'Khóa học',
+        isDark: isDark,
+        delay: 6,
+      ),
+      _StatCard(
+        icon: Icons.work_outline,
+        iconColor: Colors.teal,
+        gradientColors: [Colors.teal, Colors.tealAccent.shade700],
+        value: '$completedJobs',
+        label: 'Jobs hoàn thành',
+        isDark: isDark,
+        delay: 7,
       ),
     ];
 
@@ -105,9 +145,9 @@ class StatsGridWidget extends StatelessWidget {
               builder: (context, constraints) {
                 final isCompact = constraints.maxWidth < 420;
                 final spacing = 12.0;
-                final cardWidth = isCompact
-                    ? constraints.maxWidth
-                    : (constraints.maxWidth - spacing) / 2;
+                // With 8 items, let's use 2 columns or 3 depending on width
+                int columns = isCompact ? 2 : 3;
+                final cardWidth = (constraints.maxWidth - (spacing * (columns - 1))) / columns;
 
                 return Wrap(
                   spacing: spacing,
@@ -120,8 +160,8 @@ class StatsGridWidget extends StatelessWidget {
               },
             ),
             // Additional mini stats row
-            if (metrics?.averageSessionDuration != null ||
-                metrics?.totalStudySessions != null ||
+            if (report.studyStats?.studyMinutesWeek != null ||
+                report.studyStats?.studyMinutesMonth != null ||
                 (streakInfo?.longestStreak ?? 0) > 0) ...[
               const SizedBox(height: 14),
               Divider(
@@ -131,48 +171,39 @@ class StatsGridWidget extends StatelessWidget {
                     : Colors.black.withValues(alpha: 0.06),
               ),
               const SizedBox(height: 10),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final miniStats = <Widget>[
-                    if (metrics?.averageSessionDuration != null)
-                      _MiniStat(
-                        label: 'Phiên TB',
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (report.studyStats?.studyMinutesWeek != null)
+                    Expanded(
+                      child: _MiniStat(
+                        label: 'Học tuần này',
                         value: _formatDuration(
-                          metrics!.averageSessionDuration!,
+                          report.studyStats!.studyMinutesWeek!,
                         ),
                         isDark: isDark,
                       ),
-                    if (metrics?.totalStudySessions != null)
-                      _MiniStat(
-                        label: 'Tổng phiên',
-                        value: '${metrics!.totalStudySessions}',
+                    ),
+                  if (report.studyStats?.studyMinutesMonth != null)
+                    Expanded(
+                      child: _MiniStat(
+                        label: 'Học tháng này',
+                        value: _formatDuration(
+                          report.studyStats!.studyMinutesMonth!,
+                        ),
                         isDark: isDark,
                       ),
-                    if ((streakInfo?.longestStreak ?? 0) > 0)
-                      _MiniStat(
+                    ),
+                  if ((streakInfo?.longestStreak ?? 0) > 0)
+                    Expanded(
+                      child: _MiniStat(
                         label: 'Streak dài nhất',
                         value: '${streakInfo!.longestStreak} ngày',
                         isDark: isDark,
                       ),
-                  ];
-
-                  if (constraints.maxWidth < 420) {
-                    return Column(
-                      children: [
-                        for (var i = 0; i < miniStats.length; i++) ...[
-                          miniStats[i],
-                          if (i < miniStats.length - 1)
-                            const SizedBox(height: 10),
-                        ],
-                      ],
-                    );
-                  }
-
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: miniStats,
-                  );
-                },
+                    ),
+                ],
               ),
             ],
           ],
@@ -217,7 +248,7 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 500 + delay * 120),
+      duration: Duration(milliseconds: 500 + (delay % 4) * 120),
       curve: Curves.easeOutCubic,
       builder: (context, anim, child) {
         return Opacity(
@@ -229,7 +260,7 @@ class _StatCard extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isPrimary
               ? iconColor.withValues(alpha: 0.08)
@@ -261,15 +292,15 @@ class _StatCard extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, size: 18, color: iconColor),
+              child: Icon(icon, size: 16, color: iconColor),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: isPrimary ? 22 : 18,
+                fontSize: isPrimary ? 20 : 16,
                 fontWeight: FontWeight.bold,
                 color: isDark
                     ? AppTheme.darkTextPrimary
@@ -283,7 +314,7 @@ class _StatCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 color: isDark
                     ? AppTheme.darkTextSecondary
                     : AppTheme.lightTextSecondary,

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../../../data/models/learning_report_model.dart';
+import '../../../core/utils/number_formatter.dart';
 
 /// Premium Branded PDF generator for Learning Reports.
 /// Creates a high-end A4 PDF with a Galaxy/Glassmorphism theme reflecting the Super App aesthetic.
@@ -866,8 +867,28 @@ class PdfGeneratorWidget {
       widgets.add(pw.SizedBox(height: 32));
     }
 
-    // Roadmap details
-    if (metrics?.roadmapDetails != null && metrics!.roadmapDetails!.isNotEmpty) {
+    // Timeline Summary Table
+    if (report.timeline != null && report.timeline!.isNotEmpty) {
+      widgets.add(_metricsSectionTitle('CHI TIẾT HOẠT ĐỘNG HỌC TẬP'));
+      widgets.add(pw.SizedBox(height: 16));
+      widgets.add(_buildTimelineTable(report.timeline!));
+      widgets.add(pw.SizedBox(height: 32));
+    }
+
+    // Roadmap details (V2 first, then V1 fallback)
+    if (report.roadmapBreakdown != null && report.roadmapBreakdown!.isNotEmpty) {
+      widgets.add(_metricsSectionTitle('TIẾN ĐỘ THEO LỘ TRÌNH'));
+      widgets.add(pw.SizedBox(height: 16));
+      final roadmapWidgets = <pw.Widget>[];
+      for (final r in report.roadmapBreakdown!) {
+        roadmapWidgets.add(_buildRoadmapBreakdownItem(r));
+      }
+      for (final w in roadmapWidgets) {
+        widgets.add(w);
+        widgets.add(pw.SizedBox(height: 16));
+      }
+      widgets.add(pw.SizedBox(height: 16));
+    } else if (metrics?.roadmapDetails != null && metrics!.roadmapDetails!.isNotEmpty) {
       widgets.add(_metricsSectionTitle('TIẾN ĐỘ THEO LỘ TRÌNH'));
       widgets.add(pw.SizedBox(height: 16));
       
@@ -969,9 +990,268 @@ class PdfGeneratorWidget {
           widgets.add(roadmapWidgets[i]);
           widgets.add(pw.SizedBox(height: 16));
       }
+      widgets.add(pw.SizedBox(height: 16));
+    }
+
+    // Courses Breakdown
+    if (report.courseBreakdown != null && report.courseBreakdown!.isNotEmpty) {
+      widgets.add(_metricsSectionTitle('KHÓA HỌC ĐÃ ĐĂNG KÝ'));
+      widgets.add(pw.SizedBox(height: 16));
+      for (final c in report.courseBreakdown!) {
+        widgets.add(_buildCourseBreakdownItem(c));
+        widgets.add(pw.SizedBox(height: 16));
+      }
+      widgets.add(pw.SizedBox(height: 16));
+    }
+
+    // Jobs Breakdown
+    if (report.jobBreakdown != null && report.jobBreakdown!.isNotEmpty) {
+      widgets.add(_metricsSectionTitle('CƠ HỘI NGHỀ NGHIỆP PHÙ HỢP'));
+      widgets.add(pw.SizedBox(height: 16));
+      for (final j in report.jobBreakdown!) {
+        widgets.add(_buildJobBreakdownItem(j));
+        widgets.add(pw.SizedBox(height: 16));
+      }
+      widgets.add(pw.SizedBox(height: 16));
     }
 
     return widgets;
+  }
+
+  static pw.Widget _buildTimelineTable(List<TimelinePoint> timeline) {
+    final rows = <pw.TableRow>[
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: _primaryBlue.shade(.05)),
+        children: [
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(10),
+            child: pw.Text('Ngày', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: _primaryBlue)),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(10),
+            child: pw.Text('Phút học', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: _primaryBlue)),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(10),
+            child: pw.Text('Nhiệm vụ', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: _primaryBlue)),
+          ),
+        ],
+      )
+    ];
+
+    for (final t in timeline) {
+      rows.add(pw.TableRow(
+        children: [
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(10),
+            child: pw.Text(t.bucketLabel ?? '-', style: pw.TextStyle(fontSize: 11, color: _textPrimary)),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(10),
+            child: pw.Text('${t.studyMinutes ?? 0}', style: pw.TextStyle(fontSize: 11, color: _textPrimary)),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(10),
+            child: pw.Text('${t.missionsCompleted ?? 0}', style: pw.TextStyle(fontSize: 11, color: _textPrimary)),
+          ),
+        ],
+      ));
+    }
+
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: _borderColor, width: 1),
+      ),
+      child: pw.ClipRRect(
+        horizontalRadius: 8,
+        verticalRadius: 8,
+        child: pw.Table(
+          border: pw.TableBorder.symmetric(inside: pw.BorderSide(color: _borderColor, width: 0.5)),
+          children: rows,
+        ),
+      ),
+    );
+  }
+
+  static pw.Widget _buildRoadmapBreakdownItem(RoadmapBreakdownItem r) {
+    final pct = r.progressPercent ?? 0;
+    return pw.Wrap(
+      children: [
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(16),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.white,
+            borderRadius: pw.BorderRadius.circular(12),
+            border: pw.Border.all(color: _borderColor, width: 1),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Expanded(
+                    child: pw.Text(
+                      r.title ?? 'Lộ trình',
+                      style: pw.TextStyle(
+                        fontSize: 13,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _textPrimary,
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(width: 12),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: pw.BoxDecoration(
+                      color: _secondaryPurple.shade(.1),
+                      borderRadius: pw.BorderRadius.circular(6),
+                    ),
+                    child: pw.Text(
+                      '$pct%',
+                      style: pw.TextStyle(
+                        fontSize: 11,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _secondaryPurple,
+                      ),
+                    ),
+                  )
+                ],
+              ),
+              if (r.goal != null && r.goal!.isNotEmpty) ...[
+                pw.SizedBox(height: 8),
+                pw.Text(
+                  r.goal!,
+                  style: pw.TextStyle(fontSize: 11, color: _textSecondary),
+                ),
+              ],
+              pw.SizedBox(height: 16),
+              pw.Stack(
+                children: [
+                  pw.Container(
+                    height: 6,
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.grey100,
+                      borderRadius: pw.BorderRadius.circular(3),
+                    ),
+                  ),
+                  pw.Container(
+                    width: pct / 100 * 250,
+                    height: 6,
+                    decoration: pw.BoxDecoration(
+                      gradient: pw.LinearGradient(
+                        colors: [_secondaryPurple, _primaryBlue],
+                      ),
+                      borderRadius: pw.BorderRadius.circular(3),
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 12),
+              pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'Quests: ${r.totalMissions != null ? ((r.totalMissions! - (r.pendingMissions ?? 0))) : 0}/${r.totalMissions ?? 0}',
+                      style: pw.TextStyle(fontSize: 11, color: _textSecondary),
+                    ),
+                    pw.Text(
+                      'Trạng thái: ${r.status ?? "N/A"}',
+                      style: pw.TextStyle(fontSize: 11, color: _textSecondary),
+                    ),
+                  ]
+              )
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildCourseBreakdownItem(CourseBreakdownItem c) {
+    final pct = c.progressPercent ?? 0;
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(color: _borderColor, width: 1),
+      ),
+      child: pw.Row(
+        children: [
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  c.courseTitle ?? 'Khóa học',
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: _textPrimary),
+                ),
+                pw.SizedBox(height: 6),
+                pw.Text(
+                  'Đăng ký: ${c.enrolledAt != null ? _formatDate(c.enrolledAt!) : "N/A"} | Trạng thái: ${c.status ?? "N/A"}',
+                  style: pw.TextStyle(fontSize: 10, color: _textSecondary),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(width: 16),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: pw.BoxDecoration(
+              color: _accentCyan.shade(.1),
+              borderRadius: pw.BorderRadius.circular(6),
+            ),
+            child: pw.Text(
+              '$pct%',
+              style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: _primaryBlue),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildJobBreakdownItem(JobBreakdownItem j) {
+    final budgetStr = j.budget != null ? NumberFormatter.formatCurrency(j.budget!) : 'Thỏa thuận';
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(color: _borderColor, width: 1),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(
+                child: pw.Text(
+                  j.jobTitle ?? 'Vị trí công việc',
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: _textPrimary),
+                ),
+              ),
+              pw.Text(
+                budgetStr,
+                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: _successColor),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 6),
+          pw.Text(
+            '${j.recruiterName ?? "Nhà tuyển dụng"} | ${j.status ?? "N/A"}',
+            style: pw.TextStyle(fontSize: 10, color: _textSecondary),
+          ),
+        ],
+      ),
+    );
   }
 
   // ==================== Helpers ====================
