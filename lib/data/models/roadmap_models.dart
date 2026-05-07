@@ -601,6 +601,7 @@ class RoadmapSessionSummary {
   /// Get experience level display text in Vietnamese
   String get experienceLevelDisplay {
     switch (experienceLevel.toLowerCase()) {
+      case 'zero':
       case 'beginner':
       case 'mới bắt đầu':
         return 'Mới bắt đầu';

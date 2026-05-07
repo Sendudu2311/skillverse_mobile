@@ -21,11 +21,12 @@ import 'roadmap_node_card.dart';
 /// `derivedStats` (commitment vs effort, approx duration).
 class _RoadmapDerivedStats {
   final int totalEstimatedHours;
-  final int? approxMonths;
+  final double? approxMonths;
   final double? commitmentMonths;
   final bool commitmentMet;
   final double? commitmentGapMonths; // positive = over commitment
   final int dailyMinutes;
+  final int? approxDays;
 
   const _RoadmapDerivedStats({
     required this.totalEstimatedHours,
@@ -34,6 +35,7 @@ class _RoadmapDerivedStats {
     required this.commitmentMet,
     required this.commitmentGapMonths,
     required this.dailyMinutes,
+    required this.approxDays,
   });
 
   factory _RoadmapDerivedStats.from(RoadmapResponse roadmap) {
@@ -43,7 +45,7 @@ class _RoadmapDerivedStats {
         ? (hours * 60 / dailyMinutes).round()
         : null;
     final approxMonths = approxDays != null
-        ? (approxDays / 30).round()
+        ? (approxDays / 30)
         : null;
     final commitmentMonths = _parseCommitmentMonths(roadmap.metadata.duration);
     final commitmentMet = approxMonths != null &&
@@ -59,6 +61,7 @@ class _RoadmapDerivedStats {
       commitmentMet: commitmentMet,
       commitmentGapMonths: gap,
       dailyMinutes: dailyMinutes,
+      approxDays: approxDays,
     );
   }
 
@@ -165,6 +168,11 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
     }
   }
 
+  Future<void> _loadRoadmapData() async {
+    await context.read<RoadmapDetailProvider>().loadRoadmapById(widget.sessionId);
+    await _resolveJourneyId();
+  }
+
   /// V3: Check if there's an active ROADMAP_MENTORING booking for this journey
   Future<void> _resolveMentorBooking(
     int journeyId, {
@@ -189,7 +197,9 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
               b.journeyId == journeyId &&
               (b.status == BookingStatus.pending ||
                   b.status == BookingStatus.confirmed ||
-                  b.status == BookingStatus.mentoringActive),
+                  b.status == BookingStatus.mentoringActive ||
+                  b.status == BookingStatus.pendingCompletion ||
+                  b.status == BookingStatus.completed),
         )
         .firstOrNull;
     if (!mounted) return;
@@ -410,8 +420,11 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
     RoadmapDetailProvider provider,
     bool isDark,
   ) {
-    return CustomScrollView(
-      slivers: [
+    return RefreshIndicator(
+      onRefresh: _loadRoadmapData,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
         // App Bar
         SliverAppBar(
           expandedHeight: 250,
@@ -440,12 +453,14 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
               _buildActionRow(context, isDark),
               const SizedBox(height: 20),
 
-              // Metadata section
-              _buildMetadataSection(context, roadmap, isDark),
-
               // V2 Overview section
               if (roadmap.overview != null)
-                _buildOverviewSection(context, roadmap.overview!, isDark),
+                _buildOverviewSection(
+                  context,
+                  roadmap.overview!,
+                  isDark,
+                  metadataPrerequisites: roadmap.metadata.prerequisites,
+                ),
 
               // Validation notes
               if (roadmap.metadata.validationNotes != null)
@@ -468,6 +483,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
           ),
         ),
       ],
+      ),
     );
   }
 
@@ -545,7 +561,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
               const SizedBox(height: 8),
               Row(
                 children: [
-                  StatusBadge(status: roadmap.roadmapStatus ?? 'ACTIVE'),
+                  StatusBadge(status: roadmap.progressPercentage >= 100 ? 'COMPLETED' : (roadmap.roadmapStatus ?? 'ACTIVE')),
                   const SizedBox(width: 12),
                   const Icon(
                     Icons.signal_cellular_alt,
@@ -554,7 +570,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    roadmap.metadata.experienceLevel,
+                    _mapExperienceLevel(roadmap.metadata.experienceLevel),
                     style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                   const SizedBox(width: 16),
@@ -583,9 +599,20 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
     bool isDark,
   ) {
     final stats = _RoadmapDerivedStats.from(roadmap);
-    final durationValue = stats.approxMonths != null
-        ? '~${stats.approxMonths} tháng'
-        : roadmap.metadata.duration;
+    
+    String durationValue = roadmap.metadata.duration;
+    if (stats.approxDays != null) {
+      if (stats.approxDays! < 7) {
+        durationValue = '~${stats.approxDays} ngày';
+      } else if (stats.approxDays! < 30) {
+        final w = (stats.approxDays! / 7).round();
+        durationValue = '~$w tuần';
+      } else {
+        final m = (stats.approxDays! / 30 * 10).round() / 10;
+        durationValue = '~${m.toString().replaceAll(RegExp(r'\.0$'), '')} tháng';
+      }
+    }
+
     final durationSub = stats.totalEstimatedHours > 0
         ? '~${stats.totalEstimatedHours}h @ ${stats.dailyMinutes}m/ngày'
         : roadmap.metadata.duration;
@@ -694,111 +721,6 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
           ),
         ],
       ),
-    );
-  }
-
-  /// Top status bar of metadata section: active dot + mode tag + difficulty badge.
-  /// Mirror prototype's `rm-status-bar`.
-  Widget _buildStatusBar(
-    BuildContext context,
-    bool isSkillBased,
-    String? difficultyLevel,
-    bool isDark,
-  ) {
-    final modeTag = isSkillBased ? 'Kỹ năng' : 'Sự nghiệp';
-    Color difficultyColor() {
-      switch ((difficultyLevel ?? '').toLowerCase()) {
-        case 'beginner':
-        case 'easy':
-          return AppTheme.successColor;
-        case 'intermediate':
-        case 'medium':
-          return AppTheme.warningColor;
-        case 'advanced':
-        case 'hard':
-        case 'expert':
-          return AppTheme.errorColor;
-        default:
-          return AppTheme.primaryBlue;
-      }
-    }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        // Active dot + label
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: AppTheme.successColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppTheme.successColor.withValues(alpha: 0.4),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: AppTheme.successColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              const Text(
-                'Hoạt động',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.successColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Mode tag
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: (isDark ? AppTheme.accentCyan : AppTheme.primaryBlue)
-                .withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            modeTag,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
-            ),
-          ),
-        ),
-        // Difficulty badge
-        if (difficultyLevel != null && difficultyLevel.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: difficultyColor().withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: difficultyColor().withValues(alpha: 0.4),
-              ),
-            ),
-            child: Text(
-              difficultyLevel,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: difficultyColor(),
-              ),
-            ),
-          ),
-      ],
     );
   }
 
@@ -952,7 +874,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
       );
     }
 
-    // MENTORING_ACTIVE or CONFIRMED: show Workspace button
+    // COMPLETED / MENTORING_ACTIVE / CONFIRMED: show Workspace button
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -1067,16 +989,6 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
   }
 
   /// Strip markdown bold/italic markers from AI-generated text
-  /// Return the first non-empty string, or [fallback] if all empty/null.
-  /// Mirror JS `||` semantics — falls through both null AND empty strings,
-  /// unlike Dart `??` which only handles null.
-  String _firstNonEmpty(List<String?> values, String fallback) {
-    for (final v in values) {
-      if (v != null && v.trim().isNotEmpty) return v;
-    }
-    return fallback;
-  }
-
   String _cleanAiText(String text) {
     return text
         .replaceAll(RegExp(r'\*{2,}'), '') // ** or ***
@@ -1085,350 +997,31 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
         .trim();
   }
 
-  /// Check if metadata value contains structured key=value pairs
-  bool _hasStructuredSpec(String? value) {
-    if (value == null || value.trim().isEmpty) return false;
-    return value.contains('=') || value.contains('\n') || value.contains(';');
-  }
-
-  /// Format camelCase/snake_case key to readable Vietnamese-friendly label
-  String _formatSpecKey(String key) {
-    const knownLabels = <String, String>{
-      'assessmentscore': 'Assessment score',
-      'level': 'Cấp độ',
-      'scoreband': 'Score band',
-      'recommendation': 'Khuyến nghị',
-      'recommendationmode': 'Khuyến nghị',
-      'strengths': 'Thế mạnh',
-      'gaps': 'Khoảng trống',
-      'background': 'Nền tảng',
-    };
-    final normalized = key
-        .replaceAll(RegExp(r'[^a-z0-9]', caseSensitive: false), '')
-        .toLowerCase();
-    if (knownLabels.containsKey(normalized)) return knownLabels[normalized]!;
-    return key
-        .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (m) => '${m[1]} ${m[2]}')
-        .replaceAll(RegExp(r'[_-]+'), ' ')
-        .trim()
-        .split(' ')
-        .map(
-          (w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '',
-        )
-        .join(' ');
-  }
-
-  /// Parse and render structured key=value metadata with chips
-  Widget _buildStructuredSpecValue(
-    BuildContext context,
-    String value,
-    bool isDark,
-  ) {
-    final tokens = value
-        .split(RegExp(r'[\n;]+|,\s*'))
-        .map((t) => t.trim())
-        .where((t) => t.isNotEmpty)
-        .toList();
-
-    final entries = <MapEntry<String, String>>[];
-    for (final token in tokens) {
-      final eqIdx = token.indexOf('=');
-      if (eqIdx >= 0) {
-        final k = token.substring(0, eqIdx).trim();
-        final v = token.substring(eqIdx + 1).trim();
-        if (k.isNotEmpty && v.isNotEmpty) {
-          entries.add(MapEntry(k, v));
-          continue;
-        }
-      }
-      // Append to last entry or add as standalone
-      if (entries.isNotEmpty) {
-        final last = entries.removeLast();
-        entries.add(MapEntry(last.key, '${last.value}, $token'));
-      } else {
-        entries.add(MapEntry('', token));
-      }
+  /// Map backend experience level to Vietnamese display text
+  String _mapExperienceLevel(String level) {
+    switch (level.toLowerCase()) {
+      case 'zero':
+      case 'beginner':
+      case 'mới bắt đầu':
+        return 'Mới bắt đầu';
+      case 'intermediate':
+      case 'trung cấp':
+        return 'Trung cấp';
+      case 'advanced':
+      case 'nâng cao':
+        return 'Nâng cao';
+      default:
+        return level;
     }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: entries.map((e) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (e.key.isNotEmpty) ...[
-                Text(
-                  _formatSpecKey(e.key),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(width: 6),
-              ],
-              Expanded(
-                child: Text(
-                  e.value,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildMetadataSection(
-    BuildContext context,
-    RoadmapResponse roadmap,
-    bool isDark,
-  ) {
-    final metadata = roadmap.metadata;
-    final isSkillBased =
-        metadata.roadmapType == 'SKILL_BASED' ||
-        metadata.roadmapType == 'skill';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: GlassCard(
-        padding: const EdgeInsets.all(20),
-        borderRadius: 16,
-        backgroundColor: isDark
-            ? AppTheme.darkCardBackground
-            : AppTheme.lightCardBackground,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status bar: active dot + mode tag + difficulty badge
-            _buildStatusBar(context, isSkillBased, metadata.difficultyLevel, isDark),
-            const SizedBox(height: 16),
-            // Goal + Mode badge row
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color:
-                        (isDark
-                                ? AppTheme.primaryBlueDark
-                                : AppTheme.primaryBlue)
-                            .withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.flag_rounded,
-                    size: 20,
-                    color: isDark
-                        ? AppTheme.primaryBlueDark
-                        : AppTheme.primaryBlue,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'MỤC TIÊU HỌC TẬP',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isDark
-                              ? AppTheme.primaryBlueDark
-                              : AppTheme.primaryBlue,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _cleanAiText(
-                          _firstNonEmpty(
-                            [metadata.validatedGoal, metadata.originalGoal],
-                            'AI chưa xác định mục tiêu cụ thể.',
-                          ),
-                        ),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.lightTextPrimary,
-                          height: 1.5,
-                          fontStyle: _firstNonEmpty(
-                                    [metadata.validatedGoal, metadata.originalGoal],
-                                    '',
-                                  ) ==
-                                  ''
-                              ? FontStyle.italic
-                              : FontStyle.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Divider(
-              height: 1,
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : Colors.black.withValues(alpha: 0.05),
-            ),
-            const SizedBox(height: 24),
-
-            // Mode-specific metadata grid
-            Wrap(
-              spacing: 24,
-              runSpacing: 24,
-              children: isSkillBased
-                  ? [
-                      _buildMetadataItem(
-                        context,
-                        'Kỹ năng trọng tâm',
-                        _firstNonEmpty(
-                          [metadata.target, metadata.skillMode?.skillName],
-                          'Chưa xác định',
-                        ),
-                        isDark,
-                      ),
-                      _buildMetadataItem(
-                        context,
-                        'Cấp độ hiện tại',
-                        _firstNonEmpty(
-                          [
-                            metadata.currentLevel,
-                            metadata.skillMode?.currentSkillLevel,
-                          ],
-                          'Chưa xác định',
-                        ),
-                        isDark,
-                      ),
-                      _buildMetadataItem(
-                        context,
-                        'Thời gian/ngày',
-                        _firstNonEmpty(
-                          [metadata.dailyTime],
-                          'Chưa xác định',
-                        ),
-                        isDark,
-                      ),
-                      _buildMetadataItem(
-                        context,
-                        'Phong cách học',
-                        _firstNonEmpty(
-                          [metadata.learningStyle],
-                          'Chưa xác định',
-                        ),
-                        isDark,
-                      ),
-                    ]
-                  : [
-                      _buildMetadataItem(
-                        context,
-                        'Vị trí mục tiêu',
-                        _firstNonEmpty(
-                          [metadata.target, metadata.careerMode?.targetRole],
-                          'Chưa xác định',
-                        ),
-                        isDark,
-                      ),
-                      _buildMetadataItem(
-                        context,
-                        'Background',
-                        _firstNonEmpty(
-                          [metadata.currentLevel, metadata.background],
-                          'Chưa xác định',
-                        ),
-                        isDark,
-                      ),
-                      _buildMetadataItem(
-                        context,
-                        'Thời gian cam kết',
-                        _firstNonEmpty(
-                          [
-                            metadata.careerMode?.timelineToWork,
-                            metadata.duration,
-                          ],
-                          'Chưa xác định',
-                        ),
-                        isDark,
-                      ),
-                      _buildMetadataItem(
-                        context,
-                        'Môi trường',
-                        _firstNonEmpty(
-                          [
-                            metadata.targetEnvironment,
-                            metadata.careerMode?.companyType,
-                          ],
-                          'Chưa xác định',
-                        ),
-                        isDark,
-                      ),
-                    ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetadataItem(
-    BuildContext context,
-    String label,
-    String value,
-    bool isDark,
-  ) {
-    final isStructured = _hasStructuredSpec(value);
-
-    return SizedBox(
-      width: isStructured
-          ? MediaQuery.of(context).size.width -
-                80 // full width for structured
-          : MediaQuery.of(context).size.width * 0.4 - 32,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: isDark
-                  ? AppTheme.darkTextSecondary
-                  : AppTheme.lightTextSecondary,
-              fontSize: 10,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          if (isStructured)
-            _buildStructuredSpecValue(context, value, isDark)
-          else
-            Text(
-              _cleanAiText(value),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isDark
-                    ? AppTheme.darkTextPrimary
-                    : AppTheme.lightTextPrimary,
-              ),
-            ),
-        ],
-      ),
-    );
   }
 
   /// V2 Overview section — shows purpose, audience, expected outcomes
   Widget _buildOverviewSection(
     BuildContext context,
     RoadmapOverview overview,
-    bool isDark,
-  ) {
+    bool isDark, {
+    List<String>? metadataPrerequisites,
+  }) {
     final items = <MapEntry<String, String>>[
       if (overview.purpose != null && overview.purpose!.isNotEmpty)
         MapEntry('Mục đích', overview.purpose!),
@@ -1437,6 +1030,8 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
       if (overview.postRoadmapState != null &&
           overview.postRoadmapState!.isNotEmpty)
         MapEntry('Kết quả mong đợi', overview.postRoadmapState!),
+      if (metadataPrerequisites != null && metadataPrerequisites.isNotEmpty)
+        MapEntry('Yêu cầu', metadataPrerequisites.join(', ')),
     ];
 
     if (items.isEmpty) return const SizedBox.shrink();

@@ -187,6 +187,15 @@ class TestResultSummaryDto {
   final int strengthsCount;
   final String? evaluatedAt;
 
+  // Adaptive testing fields (V4)
+  @JsonKey(unknownEnumValue: SkillLevel.beginner)
+  final SkillLevel? baseLevel;
+  @JsonKey(unknownEnumValue: SkillLevel.beginner)
+  final SkillLevel? testedLevel;
+  final bool? provisional;
+  final bool? challengeRequired;
+  final bool? challengeAvailable;
+
   const TestResultSummaryDto({
     this.resultId,
     required this.scorePercentage,
@@ -194,6 +203,11 @@ class TestResultSummaryDto {
     required this.skillGapsCount,
     required this.strengthsCount,
     this.evaluatedAt,
+    this.baseLevel,
+    this.testedLevel,
+    this.provisional,
+    this.challengeRequired,
+    this.challengeAvailable,
   });
 
   factory TestResultSummaryDto.fromJson(Map<String, dynamic> json) =>
@@ -332,6 +346,15 @@ class AssessmentTestDto {
   final String? createdAt;
   final bool? showResults;
 
+  // Adaptive testing fields (V4)
+  final String? assessmentPhase;
+  @JsonKey(unknownEnumValue: SkillLevel.beginner)
+  final SkillLevel? baseLevel;
+  @JsonKey(unknownEnumValue: SkillLevel.beginner)
+  final SkillLevel? testedLevel;
+  final int? parentTestId;
+  final String? questionSource;
+
   const AssessmentTestDto({
     required this.id,
     required this.title,
@@ -344,6 +367,11 @@ class AssessmentTestDto {
     this.questionsJson,
     this.createdAt,
     this.showResults,
+    this.assessmentPhase,
+    this.baseLevel,
+    this.testedLevel,
+    this.parentTestId,
+    this.questionSource,
   });
 
   factory AssessmentTestDto.fromJson(Map<String, dynamic> json) =>
@@ -352,34 +380,140 @@ class AssessmentTestDto {
   Map<String, dynamic> toJson() => _$AssessmentTestDtoToJson(this);
 }
 
+/// Skill gap or strength analysis breakdown per skill area
+@JsonSerializable()
+class SkillAnalysisDto {
+  final String skillName;
+  @JsonKey(unknownEnumValue: SkillLevel.beginner)
+  final SkillLevel currentLevel;
+  @JsonKey(unknownEnumValue: SkillLevel.beginner)
+  final SkillLevel? targetLevel;
+  final double? gap;
+  @JsonKey(defaultValue: [])
+  final List<String> strengths;
+  @JsonKey(defaultValue: [])
+  final List<String> weaknesses;
+  @JsonKey(defaultValue: [])
+  final List<String> recommendations;
+
+  const SkillAnalysisDto({
+    required this.skillName,
+    required this.currentLevel,
+    this.targetLevel,
+    this.gap,
+    this.strengths = const [],
+    this.weaknesses = const [],
+    this.recommendations = const [],
+  });
+
+  factory SkillAnalysisDto.fromJson(Map<String, dynamic> json) =>
+      _$SkillAnalysisDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SkillAnalysisDtoToJson(this);
+}
+
+/// Per-question review item returned with test result
+@JsonSerializable()
+class QuestionReviewItemDto {
+  final int questionId;
+  final String question;
+  final String? skillArea;
+  final String? difficulty;
+  @JsonKey(defaultValue: [])
+  final List<String> options;
+  final String? userAnswer;
+  final String? correctAnswer;
+  final bool isCorrect;
+  final String? explanation;
+
+  const QuestionReviewItemDto({
+    required this.questionId,
+    required this.question,
+    this.skillArea,
+    this.difficulty,
+    this.options = const [],
+    this.userAnswer,
+    this.correctAnswer,
+    required this.isCorrect,
+    this.explanation,
+  });
+
+  factory QuestionReviewItemDto.fromJson(Map<String, dynamic> json) =>
+      _$QuestionReviewItemDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$QuestionReviewItemDtoToJson(this);
+}
+
 /// Detailed test result with AI evaluation
 @JsonSerializable()
 class TestResultDto {
   final int id;
   final int? journeyId;
   final int? assessmentTestId;
+  // Web uses 'score', mobile was 'scorePercentage' — backend may return either
+  @JsonKey(name: 'scorePercentage')
   final int scorePercentage;
   @JsonKey(unknownEnumValue: SkillLevel.beginner)
   final SkillLevel evaluatedLevel;
-  final String? skillGapsJson;
-  final String? strengthsJson;
   final String? evaluationSummary;
   final String? detailedFeedback;
-  final String? highlightKeywordsJson;
   final String? userAnswersJson;
   final String? correctAnswersJson;
   final String? evaluatedAt;
   final String? createdAt;
 
-  // Computed fields from backend
+  // Computed metrics
   final int? totalQuestions;
   final int? correctAnswers;
   final int? incorrectAnswers;
   final int? answeredQuestions;
+  final int? passingScore;
+  @JsonKey(defaultValue: false)
+  final bool passed;
   final String? scoreBand;
+  final String? scoreBandLabel;
   final String? recommendationMode;
+  final String? recommendationLabel;
   final int? assessmentConfidence;
   final bool? reassessmentRecommended;
+
+  // Adaptive testing fields (V4)
+  final String? assessmentPhase;
+  @JsonKey(unknownEnumValue: SkillLevel.beginner)
+  final SkillLevel? baseLevel;
+  @JsonKey(unknownEnumValue: SkillLevel.beginner)
+  final SkillLevel? testedLevel;
+  @JsonKey(defaultValue: false)
+  final bool provisional;
+  @JsonKey(defaultValue: false)
+  final bool challengeRequired;
+  @JsonKey(defaultValue: false)
+  final bool challengeAvailable;
+  final int? challengeTestId;
+
+  // Detailed analysis (new Web V2 fields)
+  @JsonKey(defaultValue: [])
+  final List<SkillAnalysisDto> skillAnalysis;
+  @JsonKey(defaultValue: [])
+  final List<QuestionReviewItemDto> questionReviews;
+  @JsonKey(defaultValue: [])
+  final List<String> overallStrengths;
+  @JsonKey(defaultValue: [])
+  final List<String> overallWeaknesses;
+  @JsonKey(defaultValue: [])
+  final List<String> skillGaps;
+  @JsonKey(defaultValue: [])
+  final List<String> highlightKeywords;
+  @JsonKey(defaultValue: [])
+  final List<String> improvementTips;
+
+  // Legacy JSON string fields (kept for backward compat, may be null)
+  final String? skillGapsJson;
+  final String? strengthsJson;
+  final String? highlightKeywordsJson;
+
+  // resultId alias for use in inline summary
+  int? get resultId => id;
 
   const TestResultDto({
     required this.id,
@@ -387,11 +521,8 @@ class TestResultDto {
     this.assessmentTestId,
     required this.scorePercentage,
     required this.evaluatedLevel,
-    this.skillGapsJson,
-    this.strengthsJson,
     this.evaluationSummary,
     this.detailedFeedback,
-    this.highlightKeywordsJson,
     this.userAnswersJson,
     this.correctAnswersJson,
     this.evaluatedAt,
@@ -400,10 +531,31 @@ class TestResultDto {
     this.correctAnswers,
     this.incorrectAnswers,
     this.answeredQuestions,
+    this.passingScore,
+    this.passed = false,
     this.scoreBand,
+    this.scoreBandLabel,
     this.recommendationMode,
+    this.recommendationLabel,
     this.assessmentConfidence,
     this.reassessmentRecommended,
+    this.assessmentPhase,
+    this.baseLevel,
+    this.testedLevel,
+    this.provisional = false,
+    this.challengeRequired = false,
+    this.challengeAvailable = false,
+    this.challengeTestId,
+    this.skillAnalysis = const [],
+    this.questionReviews = const [],
+    this.overallStrengths = const [],
+    this.overallWeaknesses = const [],
+    this.skillGaps = const [],
+    this.highlightKeywords = const [],
+    this.improvementTips = const [],
+    this.skillGapsJson,
+    this.strengthsJson,
+    this.highlightKeywordsJson,
   });
 
   factory TestResultDto.fromJson(Map<String, dynamic> json) =>

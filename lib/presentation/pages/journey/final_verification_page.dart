@@ -150,137 +150,190 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
     );
   }
 
-  // ─── Gate status card ────────────────────────────────────────────────────
-
   Widget _buildGateStatusCard(
     BuildContext context,
     JourneyCompletionGateResponse gate,
     bool isDark,
   ) {
-    final statusStr = switch (gate.finalGateStatus) {
-      FinalGateStatus.notRequired => 'NOT_REQUIRED',
-      FinalGateStatus.passed => 'COMPLETED_VERIFIED',
-      FinalGateStatus.blocked => 'AWAITING_VERIFICATION',
-    };
+    final isPassed = gate.finalGateStatus == FinalGateStatus.passed;
+    final isBlocked = gate.finalGateStatus == FinalGateStatus.blocked;
+    final isNotRequired = gate.finalGateStatus == FinalGateStatus.notRequired;
 
-    return GlassCard(
+    final Color cardColor;
+    final Color borderColor;
+    final IconData statusIcon;
+    final String statusTitle;
+    final String statusSubtitle;
+
+    if (isPassed) {
+      cardColor = AppTheme.successColor.withValues(alpha: 0.08);
+      borderColor = AppTheme.successColor.withValues(alpha: 0.4);
+      statusIcon = Icons.verified;
+      statusTitle = 'Hành trình đã xác minh';
+      statusSubtitle = 'Bạn đã hoàn thành và được xác nhận bởi Mentor. Chúc mừng!';
+    } else if (isBlocked) {
+      cardColor = AppTheme.warningColor.withValues(alpha: 0.07);
+      borderColor = AppTheme.warningColor.withValues(alpha: 0.35);
+      statusIcon = Icons.pending_outlined;
+      statusTitle = 'Đang chờ xác minh';
+      statusSubtitle = 'Hoàn thành các bước bên dưới để được xác nhận hoàn thành hành trình.';
+    } else {
+      cardColor = AppTheme.infoColor.withValues(alpha: 0.07);
+      borderColor = AppTheme.infoColor.withValues(alpha: 0.3);
+      statusIcon = Icons.school_outlined;
+      statusTitle = 'Chế độ Tự học';
+      statusSubtitle = 'Lộ trình này không bắt buộc xác minh. Bạn có thể thuê Mentor để nhận Chứng chỉ kỹ năng.';
+    }
+
+    final Color accentColor = isPassed
+        ? AppTheme.successColor
+        : isBlocked
+            ? AppTheme.warningColor
+            : AppTheme.infoColor;
+
+    return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Status header
           Row(
             children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(statusIcon, color: accentColor, size: 22),
+              ),
+              const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  'Trạng thái xác minh',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      statusTitle,
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? AppTheme.darkTextPrimary
-                            : AppTheme.lightTextPrimary,
+                        fontSize: 15,
+                        color: accentColor,
                       ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      statusSubtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              StatusBadge(status: statusStr),
             ],
           ),
-          if (gate.finalGateStatus == FinalGateStatus.notRequired) ...[
+
+          // Blocking reasons as friendly checklist
+          if (isBlocked &&
+              gate.blockingReasons != null &&
+              gate.blockingReasons!.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.infoColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppTheme.infoColor.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.info_outline, color: AppTheme.infoColor, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Lộ trình này đang ở chế độ Tự học (Self-Study). Bạn không bắt buộc phải xác minh để hoàn thành. Tuy nhiên, nếu bạn muốn nhận Chứng chỉ kỹ năng (Verified Skills) cho Portfolio, bạn cần thuê Mentor phỏng vấn 1 buổi duy nhất để đánh giá tổng kết.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark
-                            ? AppTheme.darkTextPrimary
-                            : AppTheme.lightTextPrimary,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            Text(
+              'Còn thiếu:',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
               ),
             ),
-            const SizedBox(height: 16),
-            _buildJourneyMentoringCta(context),
-          ] else ...[
-            if (gate.blockingReasons != null &&
-                gate.blockingReasons!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ...gate.blockingReasons!.map(
-                (reason) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.warning_amber_outlined,
-                          size: 16, color: AppTheme.warningColor),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          reason,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.lightTextSecondary,
-                          ),
+            const SizedBox(height: 8),
+            ...gate.blockingReasons!.map(
+              (reason) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 2),
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.warningColor.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.close,
+                          size: 10, color: AppTheme.warningColor),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _translateBlockingReason(reason),
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.4,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-            if (gate.finalGateStatus == FinalGateStatus.passed) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.check_circle,
-                      color: AppTheme.successColor, size: 18),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'Hành trình đã được xác minh hoàn thành!',
-                    style: TextStyle(
-                      color: AppTheme.successColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
+          ],
+
+          // Self-study CTA
+          if (isNotRequired) ...[
+            const SizedBox(height: 16),
+            _buildJourneyMentoringCta(context),
           ],
         ],
       ),
     );
   }
 
+  /// Dịch blocking reason kỹ thuật → tiếng Việt thân thiện
+  String _translateBlockingReason(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('mentor completion report') && lower.contains('pass')) {
+      return 'Chưa có báo cáo hoàn thành từ Mentor (Mentor cần đánh giá PASS)';
+    }
+    if (lower.contains('journey output') && lower.contains('approved')) {
+      return 'Sản phẩm nộp chưa được Mentor phê duyệt';
+    }
+    if (lower.contains('output') && lower.contains('submitted')) {
+      return 'Bạn chưa nộp sản phẩm cuối khoá';
+    }
+    if (lower.contains('evidence')) {
+      return 'Minh chứng hoàn thành chưa đủ điều kiện';
+    }
+    // Fallback: return as-is
+    return raw;
+  }
+
   // ─── Output assessment ───────────────────────────────────────────────────
 
   /// Smart CTA for Self-Study journeys to hire a mentor for the
-  /// 1-shot final interview. Reflects active JOURNEY_MENTORING booking state.
+  /// 1-shot final interview. Reflects active ROADMAP_MENTORING booking state.
   Widget _buildJourneyMentoringCta(BuildContext context) {
     return Consumer<MentorBookingProvider>(
       builder: (_, bookingProvider, __) {
         final activeBooking = bookingProvider.bookings
             .where(
               (b) =>
-                  b.isJourneyMentoring &&
+                  b.isRoadmapMentoring &&
                   b.journeyId == widget.journeyId &&
                   (b.status == BookingStatus.pending ||
                       b.status == BookingStatus.confirmed ||
@@ -359,7 +412,7 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
               } catch (_) {}
 
               var url =
-                  '/mentors?action=journey_mentoring&journeyId=${widget.journeyId}';
+                  '/mentors?action=roadmap_mentoring&journeyId=${widget.journeyId}';
               if (skillName != null && skillName.isNotEmpty) {
                 url += '&skillName=${Uri.encodeComponent(skillName)}';
               }

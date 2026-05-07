@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../data/models/node_mentoring_models.dart';
+import '../../data/models/final_verification_models.dart'
+    show JourneyCompletionReportResponse;
 import '../../data/services/node_mentoring_service.dart';
 import '../../data/services/mentor_roadmap_workspace_service.dart';
 import '../../core/utils/error_handler.dart';
@@ -28,8 +30,9 @@ class WorkspaceProvider extends ChangeNotifier {
   JourneyOutputAssessmentResponse? _outputAssessment;
   List<RoadmapFollowUpMeetingDTO> _meetings = [];
 
-  // Completion Gate + Verification + Skills
+  // Completion Gate + Verification + Skills + Completion Report
   JourneyCompletionGateResponse? _completionGate;
+  JourneyCompletionReportResponse? _completionReport;
   List<VerificationEvidenceReportResponse> _verificationHistory = [];
   List<UserVerifiedSkillDTO> _verifiedSkills = [];
   bool _isLoadingGate = false;
@@ -37,6 +40,9 @@ class WorkspaceProvider extends ChangeNotifier {
   bool _isLoadingSkills = false;
   bool _hasLoadedVerificationHistory = false;
   bool _hasLoadedVerifiedSkills = false;
+
+  // Final Assessment context: stores finalNodeId for loading assignment in FA mode
+  String? _finalNodeId;
 
   // ─── Getters ────────────────────────────────────────────────────────────
 
@@ -56,6 +62,7 @@ class WorkspaceProvider extends ChangeNotifier {
   List<RoadmapFollowUpMeetingDTO> get meetings => _meetings;
 
   JourneyCompletionGateResponse? get completionGate => _completionGate;
+  JourneyCompletionReportResponse? get completionReport => _completionReport;
   List<VerificationEvidenceReportResponse> get verificationHistory =>
       _verificationHistory;
   List<UserVerifiedSkillDTO> get verifiedSkills => _verifiedSkills;
@@ -64,6 +71,7 @@ class WorkspaceProvider extends ChangeNotifier {
   bool get isLoadingSkills => _isLoadingSkills;
   bool get hasLoadedVerificationHistory => _hasLoadedVerificationHistory;
   bool get hasLoadedVerifiedSkills => _hasLoadedVerifiedSkills;
+  String? get finalNodeId => _finalNodeId;
 
   bool get isFinalAssessmentMode => _selectedNodeId == null;
 
@@ -80,7 +88,14 @@ class WorkspaceProvider extends ChangeNotifier {
       _verifiedSkills = [];
       _hasLoadedVerificationHistory = false;
       _hasLoadedVerifiedSkills = false;
+      _completionReport = null;
+      _finalNodeId = null;
     }
+  }
+
+  /// Set the final CORE node id (last non-SIDE node) for Final Assessment mode.
+  void setFinalNodeId(String? nodeId) {
+    _finalNodeId = nodeId;
   }
 
   // ─── Node Selection ─────────────────────────────────────────────────────
@@ -109,9 +124,21 @@ class WorkspaceProvider extends ChangeNotifier {
         _assignment = results[0] as NodeAssignmentResponse?;
         _evidence = results[1] as NodeEvidenceRecordResponse?;
       } else {
-        // Final Assessment mode
-        _outputAssessment = await _nodeMentoringService
-            .getLatestOutputAssessment(_journeyId!);
+        // Final Assessment mode — load output assessment
+        // AND try to load final node assignment if we know the finalNodeId
+        final futures = <Future>[
+          _nodeMentoringService.getLatestOutputAssessment(_journeyId!),
+        ];
+        if (_finalNodeId != null) {
+          futures.add(
+            _nodeMentoringService.getAssignment(_journeyId!, _finalNodeId!),
+          );
+        }
+        final results = await Future.wait(futures);
+        _outputAssessment = results[0] as JourneyOutputAssessmentResponse?;
+        if (results.length > 1) {
+          _assignment = results[1] as NodeAssignmentResponse?;
+        }
       }
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
@@ -181,6 +208,11 @@ class WorkspaceProvider extends ChangeNotifier {
             evidenceUrl: evidenceUrl,
             attachmentUrl: attachmentUrl,
           ),
+        );
+        // Reload assignment to capture auto-generated SYSTEM_GENERATED assignments
+        _assignment = await _nodeMentoringService.getAssignment(
+          _journeyId!,
+          _selectedNodeId!,
         );
       } else {
         _outputAssessment = await _nodeMentoringService.submitOutputAssessment(
@@ -293,7 +325,7 @@ class WorkspaceProvider extends ChangeNotifier {
 
   // ─── Completion Gate ────────────────────────────────────────────────
 
-  /// Load completion gate status for the journey.
+  /// Load completion gate status + latest completion report.
   Future<void> loadCompletionGate() async {
     if (_journeyId == null) return;
 
@@ -301,12 +333,16 @@ class WorkspaceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _completionGate = await _nodeMentoringService.getCompletionGate(
-        _journeyId!,
-      );
+      final results = await Future.wait([
+        _nodeMentoringService.getCompletionGate(_journeyId!),
+        _nodeMentoringService.getLatestCompletionReport(_journeyId!),
+      ]);
+      _completionGate = results[0] as JourneyCompletionGateResponse?;
+      _completionReport = results[1] as JourneyCompletionReportResponse?;
     } catch (e) {
       debugPrint('Load completion gate error: $e');
       _completionGate = null;
+      _completionReport = null;
     } finally {
       _isLoadingGate = false;
       notifyListeners();

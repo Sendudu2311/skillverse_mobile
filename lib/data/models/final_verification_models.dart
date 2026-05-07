@@ -248,3 +248,55 @@ class AssessJourneyOutputRequest {
         if (score != null) 'score': score,
       };
 }
+
+// ============================================================
+// Completion Report (Mentor xác nhận PASS/FAIL cho toàn bộ lộ trình)
+// ============================================================
+
+/// Maps JourneyCompletionReportResponse from backend.
+class JourneyCompletionReportResponse {
+  final int id;
+  final int journeyId;
+  final int mentorId;
+  final int? bookingId;
+  final GateDecision? gateDecision;
+  final String? completionNote;
+  final DateTime? confirmedAt;
+
+  JourneyCompletionReportResponse({
+    required this.id,
+    required this.journeyId,
+    required this.mentorId,
+    this.bookingId,
+    this.gateDecision,
+    this.completionNote,
+    this.confirmedAt,
+  });
+
+  factory JourneyCompletionReportResponse.fromJson(Map<String, dynamic> json) {
+    return JourneyCompletionReportResponse(
+      id: (json['id'] as num).toInt(),
+      journeyId: (json['journeyId'] as num).toInt(),
+      mentorId: (json['mentorId'] as num).toInt(),
+      bookingId: (json['bookingId'] as num?)?.toInt(),
+      gateDecision: _parseGateDecision(json['gateDecision']),
+      completionNote: json['completionNote'] as String?,
+      confirmedAt: json['confirmedAt'] != null
+          ? DateTime.tryParse(json['confirmedAt'].toString())
+          : null,
+    );
+  }
+
+  static GateDecision? _parseGateDecision(dynamic value) {
+    switch (value?.toString()) {
+      case 'PASS':
+        return GateDecision.pass;
+      case 'FAIL':
+        return GateDecision.fail;
+      case 'PENDING':
+        return GateDecision.pending;
+      default:
+        return null;
+    }
+  }
+}

@@ -80,7 +80,7 @@ class AiRoadmapCard extends StatelessWidget {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              StatusBadge(status: roadmap.status ?? 'ACTIVE'),
+                              StatusBadge(status: roadmap.progressPercentage >= 100 ? 'COMPLETED' : (roadmap.status ?? 'ACTIVE')),
                               const SizedBox(width: 8),
                               _buildExperienceBadge(
                                 context,
@@ -164,6 +164,7 @@ class AiRoadmapCard extends StatelessWidget {
     String displayText;
 
     switch (experience.toLowerCase()) {
+      case 'zero':
       case 'beginner':
       case 'mới bắt đầu':
         badgeColor = AppTheme.themeGreenStart;

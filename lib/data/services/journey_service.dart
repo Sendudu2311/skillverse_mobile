@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/error/exceptions.dart';
 import '../../core/network/api_client.dart';
 import '../models/journey_models.dart';
+import 'test_result_mapper.dart';
 
 /// Service for Journey API calls
 /// Handles the guided learning journey lifecycle:
@@ -225,7 +226,7 @@ class JourneyService {
           data: request.toJson(),
           options: Options(sendTimeout: _aiTimeout, receiveTimeout: _aiTimeout),
         );
-        return TestResultDto.fromJson(response.data as Map<String, dynamic>);
+        return TestResultDto.fromJson(TestResultMapper.enrich(response.data as Map<String, dynamic>));
       },
       errorMessage: 'Nộp bài đánh giá thất bại',
     );
@@ -241,7 +242,7 @@ class JourneyService {
       final response = await _apiClient.dio.get(
         '/v1/journey/$journeyId/result/$resultId',
       );
-      return TestResultDto.fromJson(response.data as Map<String, dynamic>);
+      return TestResultDto.fromJson(TestResultMapper.enrich(response.data as Map<String, dynamic>));
     } on DioException catch (e) {
       throw _handleDioError(e, 'Lấy kết quả bài đánh giá thất bại');
     } catch (e) {

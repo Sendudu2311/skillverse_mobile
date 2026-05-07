@@ -13,6 +13,10 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/common_loading.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/date_time_helper.dart';
+import '../../widgets/formatted_ai_response.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../providers/auth_provider.dart';
 
 /// Collapsible node card for the roadmap detail page.
 ///
@@ -118,6 +122,15 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
       'COMPLETED' => Icons.check_circle_outline,
       _ => Icons.help_outline,
     };
+  }
+
+  /// Resolves prerequisite node IDs to human-readable titles.
+  List<String> _resolvePrerequisiteLabels(List<String> prerequisites) {
+    final provider = context.read<RoadmapDetailProvider>();
+    final allNodes = provider.currentRoadmap?.roadmap;
+    if (allNodes == null || allNodes.isEmpty) return prerequisites;
+    final byId = {for (final n in allNodes) n.id: n.title};
+    return prerequisites.map((item) => byId[item] ?? item).toList();
   }
 
   // ============================================================================
@@ -388,6 +401,22 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
               Icons.link,
               node.suggestedResources!,
             ),
+          if (node.successCriteria != null &&
+              node.successCriteria!.isNotEmpty)
+            _buildExpandedSection(
+              context,
+              'Tiêu chí hoàn thành',
+              Icons.verified_outlined,
+              node.successCriteria!,
+            ),
+          if (node.prerequisites != null &&
+              node.prerequisites!.isNotEmpty)
+            _buildExpandedSection(
+              context,
+              'Điều kiện tiên quyết',
+              Icons.account_tree_outlined,
+              _resolvePrerequisiteLabels(node.prerequisites!),
+            ),
           // ── Feature B: Assignment + Evidence ─────────────────────────────
           if (_isLoadingMentoring)
             Padding(
@@ -409,6 +438,10 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
 
   Widget _buildAssignmentSection(BuildContext context) {
     final a = _assignment!;
+    final isMentor = a.assignmentSource == AssignmentSource.mentorRefined;
+    final sourceLabel = isMentor ? 'Mentor cập nhật' : 'Hệ thống gợi ý';
+    final sourceColor = isMentor ? AppTheme.primaryBlue : AppTheme.warningColor;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
@@ -429,7 +462,7 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Bài tập từ mentor',
+                      'Nhiệm vụ chi tiết',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -439,28 +472,42 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
                       ),
                     ),
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: sourceColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      sourceLabel,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: sourceColor,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                a.title ?? 'Bài tập',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: widget.isDark
-                      ? AppTheme.darkTextPrimary
-                      : AppTheme.lightTextPrimary,
+              if (a.title != null)
+                Text(
+                  a.title!,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: widget.isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
                 ),
-              ),
               if (a.description != null) ...[
                 const SizedBox(height: 4),
-                Text(
-                  a.description!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: widget.isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                    height: 1.4,
-                  ),
+                FormattedAIResponse(
+                  content: a.description!,
+                  isDark: widget.isDark,
                 ),
               ],
             ],
@@ -525,19 +572,22 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
                 children: [
                   const Icon(Icons.fact_check_outlined, size: 16),
                   const SizedBox(width: 6),
-                  Text(
-                    'Bằng chứng đã nộp',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: widget.isDark
-                          ? AppTheme.darkTextPrimary
-                          : AppTheme.lightTextPrimary,
+                  Expanded(
+                    child: Text(
+                      'Bằng chứng đã nộp',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: widget.isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.lightTextPrimary,
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  if (ev.submissionStatus != null)
-                    StatusBadge(status: ev.submissionStatus!.name),
+                  if (ev.submissionStatus != null && ev.latestReview == null)
+                    Flexible(
+                      child: StatusBadge(status: ev.submissionStatus!.name),
+                    ),
                 ],
               ),
               if (ev.submittedAt != null) ...[
@@ -1001,8 +1051,67 @@ class _NodeEvidenceSubmissionSheetState
   final _textCtrl = TextEditingController();
   final _evidenceUrlCtrl = TextEditingController();
   final _attachmentUrlCtrl = TextEditingController();
+  final _nodeMentoringService = NodeMentoringService();
   bool _isBusy = false;
   bool _submitted = false;
+  bool _isUploading = false;
+  double _uploadProgress = 0.0;
+  PlatformFile? _pickedAttachment;
+  String? _attachmentPickError;
+
+  static const _maxAttachmentBytes = 10 * 1024 * 1024; // 10MB
+  static const _allowedExtensions = [
+    'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'zip', 'rar'
+  ];
+
+  String _formatBytes(int bytes) {
+    if (bytes <= 0) return '0 B';
+    const suffixes = ['B', 'KB', 'MB', 'GB'];
+    var i = (bytes.toDouble() == 0) ? 0 : (bytes.toDouble().abs().toString().length / 3).floor();
+    if (i >= suffixes.length) i = suffixes.length - 1;
+    final value = bytes / (1024 * i);
+    return '${value.toStringAsFixed(1)} ${suffixes[i]}';
+  }
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _onPickAttachment() async {
+    setState(() => _attachmentPickError = null);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: _allowedExtensions,
+        withData: false,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      if (file.size > _maxAttachmentBytes) {
+        setState(() => _attachmentPickError = 'File vượt quá 10MB');
+        return;
+      }
+      final ext = (file.extension ?? '').toLowerCase();
+      if (!_allowedExtensions.contains(ext)) {
+        setState(() => _attachmentPickError =
+            'Định dạng không hỗ trợ. Cho phép: ${_allowedExtensions.join(", ")}');
+        return;
+      }
+      setState(() => _pickedAttachment = file);
+    } catch (e) {
+      setState(() => _attachmentPickError = 'Lỗi chọn file: $e');
+    }
+  }
+
+  void _onRemoveAttachment() {
+    setState(() {
+      _pickedAttachment = null;
+      _attachmentPickError = null;
+    });
+  }
 
   @override
   void initState() {
@@ -1027,6 +1136,28 @@ class _NodeEvidenceSubmissionSheetState
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _isBusy = true);
     try {
+      if (_pickedAttachment != null && _pickedAttachment!.path != null) {
+        final actorId = context.read<AuthProvider>().user?.id;
+        if (actorId == null) {
+          ErrorHandler.showErrorSnackBar(context, 'Bạn cần đăng nhập lại.');
+          setState(() => _isBusy = false);
+          return;
+        }
+
+        setState(() {
+          _isUploading = true;
+          _uploadProgress = 0;
+        });
+
+        final uploadedUrl = await _nodeMentoringService.uploadAttachment(
+          filePath: _pickedAttachment!.path!,
+          fileName: _pickedAttachment!.name,
+          actorId: actorId,
+          onProgress: (p) => setState(() => _uploadProgress = p),
+        );
+        _attachmentUrlCtrl.text = uploadedUrl;
+      }
+
       await widget.onSubmit(
         SubmitNodeEvidenceRequest(
           submissionText: _textCtrl.text.trim(),
@@ -1053,8 +1184,174 @@ class _NodeEvidenceSubmissionSheetState
         );
       }
     } finally {
-      if (mounted) setState(() => _isBusy = false);
+      if (mounted) {
+        setState(() {
+          _isBusy = false;
+          _isUploading = false;
+        });
+      }
     }
+  }
+
+  Widget _buildAttachmentZone() {
+    final picked = _pickedAttachment;
+    final existingUrl = widget.existingEvidence?.attachmentUrl;
+    final isDark = widget.isDark;
+    final borderColor = isDark ? AppTheme.darkBorderColor : AppTheme.lightBorderColor;
+    final accent = isDark ? AppTheme.accentCyan : AppTheme.primaryBlue;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: _isBusy || _isUploading || picked != null ? null : _onPickAttachment,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: picked != null
+                  ? accent.withValues(alpha: 0.06)
+                  : (isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade50),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: picked != null ? accent : borderColor,
+                width: picked != null ? 1.5 : 1,
+              ),
+            ),
+            child: picked != null
+                ? Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          (picked.extension ?? 'FILE').toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: accent,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              picked.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatBytes(picked.size),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (!_isBusy && !_isUploading)
+                        IconButton(
+                          onPressed: _onRemoveAttachment,
+                          icon: const Icon(Icons.close, size: 18),
+                          tooltip: 'Bỏ file',
+                        ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      Icon(
+                        Icons.upload_file_outlined,
+                        size: 28,
+                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Đính kèm file (PDF / DOCX / Ảnh)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tối đa 10MB',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        if (_attachmentPickError != null) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.error_outline, size: 14, color: AppTheme.errorColor),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  _attachmentPickError!,
+                  style: const TextStyle(fontSize: 12, color: AppTheme.errorColor),
+                ),
+              ),
+            ],
+          ),
+        ],
+        if (_isUploading) ...[
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: _uploadProgress > 0 ? _uploadProgress : null,
+              minHeight: 6,
+              backgroundColor: borderColor,
+              valueColor: AlwaysStoppedAnimation<Color>(accent),
+            ),
+          ),
+        ],
+        if (picked == null && existingUrl != null && existingUrl.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () => _openUrl(existingUrl),
+            child: Row(
+              children: [
+                const Icon(Icons.attach_file, size: 14, color: AppTheme.primaryBlue),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    'File đã đính kèm — Tải xuống',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.primaryBlue,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   @override
@@ -1184,19 +1481,7 @@ class _NodeEvidenceSubmissionSheetState
                                 },
                               ),
                               const SizedBox(height: 16),
-                              // Attachment URL
-                              TextFormField(
-                                controller: _attachmentUrlCtrl,
-                                keyboardType: TextInputType.url,
-                                decoration: InputDecoration(
-                                  labelText: 'Tệp đính kèm (tuỳ chọn)',
-                                  hintText: 'https://...',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  prefixIcon: const Icon(Icons.attach_file),
-                                ),
-                              ),
+                              _buildAttachmentZone(),
                               const SizedBox(height: 24),
                               // Submit button
                               SizedBox(
@@ -1211,7 +1496,7 @@ class _NodeEvidenceSubmissionSheetState
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                  child: _isBusy
+                                  child: _isBusy || _isUploading
                                       ? CommonLoading.small()
                                       : const Text(
                                           'Nộp bằng chứng',

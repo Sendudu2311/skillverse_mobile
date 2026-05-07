@@ -1065,6 +1065,20 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                     color: AppTheme.primaryBlueDark,
                   ),
                 ),
+                // Adaptive: show testedLevel if different
+                if (result.testedLevel != null &&
+                    result.testedLevel != result.evaluatedLevel) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Độ khó bài test: ${_getLevelLabel(result.testedLevel!)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1082,6 +1096,65 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                     ),
                   ],
                 ),
+                // Adaptive: provisional status message
+                if (result.provisional == true) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: AppTheme.warningColor.withValues(alpha: 0.1),
+                      border: Border.all(
+                        color: AppTheme.warningColor.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: AppTheme.warningColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            result.challengeRequired == true
+                                ? 'Kết quả tạm tính. Bạn cần làm bài challenge-up để xác nhận trình độ.'
+                                : 'Kết quả tạm tính. AI đang chuẩn bị bài đánh giá bổ sung.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                // Adaptive: Challenge-up / Retake buttons
+                if (result.challengeAvailable == true ||
+                    result.challengeRequired == true) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // Re-trigger test generation for challenge-up
+                        provider.generateTest(journey.id);
+                      },
+                      icon: const Icon(Icons.trending_up, size: 18),
+                      label: const Text('Làm bài Challenge-up'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlueDark,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
                 if (result.resultId != null) ...[
                   const SizedBox(height: 16),
                   OutlinedButton.icon(

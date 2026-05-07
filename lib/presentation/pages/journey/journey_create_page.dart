@@ -9,6 +9,87 @@ import '../../../core/utils/error_handler.dart';
 import '../../../data/models/journey_models.dart';
 import '../../../data/models/expert_chat_models.dart';
 import '../../../data/services/expert_chat_service.dart';
+import '../../../data/services/question_bank_service.dart';
+
+class JourneyCompatibilityWarning {
+  final String title;
+  final List<String> lines;
+  final String? ctaLabel;
+  final String? ctaGoal;
+
+  JourneyCompatibilityWarning({
+    required this.title,
+    required this.lines,
+    this.ctaLabel,
+    this.ctaGoal,
+  });
+}
+
+JourneyCompatibilityWarning? _getJourneyCompatibilityWarning(String? goal, String? level) {
+  if (goal == null || level == null) return null;
+
+  if (goal == "REVIEW" && level == "BEGINNER") {
+    return JourneyCompatibilityWarning(
+      title: "Có vẻ bạn chưa có nền tảng với kỹ năng này",
+      lines: [
+        "Bạn có thể bắt đầu với lộ trình học từ đầu để đạt hiệu quả tốt hơn.",
+        "Bạn vẫn có thể tiếp tục."
+      ],
+      ctaLabel: 'Chuyển sang "Học từ đầu"',
+      ctaGoal: "FROM_SCRATCH",
+    );
+  }
+
+  if (goal == "INTERNSHIP" && level == "BEGINNER") {
+    return JourneyCompatibilityWarning(
+      title: "Mục tiêu này thường cần thêm nền tảng",
+      lines: [
+        "Bạn có thể bắt đầu từ cơ bản và dần hướng tới internship.",
+        "Bạn vẫn có thể tiếp tục."
+      ],
+    );
+  }
+
+  if (goal == "FROM_SCRATCH" && level == "INTERMEDIATE") {
+    return JourneyCompatibilityWarning(
+      title: "Bạn đã làm được dự án thực tế",
+      lines: [
+        "Lộ trình 'Học từ đầu' lúc này có thể dài hơn mức cần thiết.",
+        "Bạn có thể tiết kiệm thời gian nếu chuyển sang lộ trình phù hợp hơn.",
+        "Bạn vẫn có thể tiếp tục."
+      ],
+      ctaLabel: 'Chuyển sang "Tăng tốc lên cấp độ tiếp theo"',
+      ctaGoal: "LEVEL_UP",
+    );
+  }
+
+  if (goal == "FROM_SCRATCH" && level == "ADVANCED") {
+    return JourneyCompatibilityWarning(
+      title: "Bạn đã có thể xử lý công việc phức tạp",
+      lines: [
+        "Lộ trình 'Học từ đầu' lúc này có thể không còn tối ưu về thời gian.",
+        "Bạn có thể tiết kiệm thời gian nếu chọn một lộ trình phù hợp hơn.",
+        "Bạn vẫn có thể tiếp tục."
+      ],
+      ctaLabel: 'Chuyển sang "Tăng tốc lên cấp độ tiếp theo"',
+      ctaGoal: "LEVEL_UP",
+    );
+  }
+
+  if (goal == "CAREER_CHANGE" && (level == "INTERMEDIATE" || level == "ADVANCED")) {
+    return JourneyCompatibilityWarning(
+      title: "Bạn đã có nền tảng thực tế với kỹ năng này",
+      lines: [
+        "Bạn có thể phù hợp hơn với mục tiêu nâng cao hoặc phát triển chuyên sâu.",
+        "Bạn vẫn có thể tiếp tục."
+      ],
+      ctaLabel: 'Chuyển sang "Tăng tốc lên cấp độ tiếp theo"',
+      ctaGoal: "LEVEL_UP",
+    );
+  }
+
+  return null;
+}
 
 class JourneyCreatePage extends StatefulWidget {
   const JourneyCreatePage({super.key});
@@ -21,9 +102,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   late final JourneyProvider _journeyProvider;
 
   // ── Step navigation ────────────────────────────────────────────────────────
-  // Main step: 0 = JourneyType, 1 = SkillForm (domain→industry→role→skills), 2 = Config
+  // Main step: 0 = SkillForm (domain→industry→role→skills), 1 = Config
   int _currentStep = 0;
-  // Sub-step within step 1
+  // Sub-step within step 0 (SkillForm)
   int _skillStep = 1; // 1: Domain, 2: Industry, 3: Role, 4: Skills
 
   // ── Step 0: Journey type ─────────────────────────────────────────────────
@@ -35,6 +116,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   String _selectedJobRole = '';
   final List<String> _selectedSkills = [];
   final _customSkillCtrl = TextEditingController();
+  bool _isResolvingSkill = false;
 
   // ── Step 2: Config state ──────────────────────────────────────────────────
   String _selectedGoal = '';
@@ -111,52 +193,52 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   static const List<Map<String, String>> _goalOptions = [
     {
       'value': 'EXPLORE',
-      'label': 'Khám phá ngành',
-      'desc': 'Tìm hiểu tổng quan về lĩnh vực',
+      'label': 'Khám phá trình độ hiện tại',
+      'desc': 'Đánh giá nhanh điểm mạnh, điểm yếu và xuất phát điểm',
     },
     {
       'value': 'INTERNSHIP',
-      'label': 'Chuẩn bị thực tập',
-      'desc': 'Sẵn sàng cho cơ hội thực tập',
+      'label': 'Chuẩn bị cho internship / fresher job',
+      'desc': 'Sẵn sàng ứng tuyển vị trí đầu sự nghiệp',
     },
     {
       'value': 'CAREER_CHANGE',
       'label': 'Chuyển ngành',
-      'desc': 'Chuyển sang lĩnh vực mới',
-    },
-    {
-      'value': 'UPSKILL',
-      'label': 'Nâng cao kỹ năng',
-      'desc': 'Phát triển kỹ năng hiện tại',
+      'desc': 'Xác định khoảng cách năng lực và lộ trình chuyển đổi',
     },
     {
       'value': 'FROM_SCRATCH',
-      'label': 'Bắt đầu từ đầu',
-      'desc': 'Học từ kiến thức cơ bản',
+      'label': 'Xây lộ trình học từ đầu',
+      'desc': 'Bắt đầu từ nền tảng với roadmap có thứ tự ưu tiên rõ ràng',
+    },
+    {
+      'value': 'LEVEL_UP',
+      'label': 'Tăng tốc lên cấp độ tiếp theo',
+      'desc': 'Nâng tầm năng lực hiện tại để xử lý bài toán khó hơn',
+    },
+    {
+      'value': 'REVIEW',
+      'label': 'Ôn lại kiến thức',
+      'desc': 'Rà soát kiến thức quan trọng trước kỳ thi hoặc phỏng vấn',
     },
   ];
 
   static const List<Map<String, String>> _levelOptions = [
     {
       'value': 'BEGINNER',
-      'label': 'Mới bắt đầu',
-      'desc': 'Chưa có kinh nghiệm',
+      'label': 'Beginner',
+      'desc': 'Mới bắt đầu, chưa có kinh nghiệm',
     },
-    {'value': 'ELEMENTARY', 'label': 'Sơ cấp', 'desc': 'Biết cơ bản'},
+    {'value': 'ELEMENTARY', 'label': 'Elementary', 'desc': 'Có kiến thức cơ bản'},
     {
       'value': 'INTERMEDIATE',
-      'label': 'Trung cấp',
-      'desc': '1-2 năm kinh nghiệm',
+      'label': 'Intermediate',
+      'desc': 'Làm được dự án thực tế',
     },
-    {'value': 'ADVANCED', 'label': 'Nâng cao', 'desc': '3+ năm kinh nghiệm'},
-    {'value': 'EXPERT', 'label': 'Chuyên gia', 'desc': '5+ năm kinh nghiệm'},
+    {'value': 'ADVANCED', 'label': 'Advanced', 'desc': 'Xử lý được công việc phức tạp'},
   ];
 
-  static const List<Map<String, String>> _durationOptions = [
-    {'value': 'QUICK', 'label': 'Nhanh', 'desc': '~10 câu'},
-    {'value': 'STANDARD', 'label': 'Tiêu chuẩn', 'desc': '~20 câu'},
-    {'value': 'DEEP', 'label': 'Chuyên sâu', 'desc': '~30 câu'},
-  ];
+
 
   // ── Computed ──────────────────────────────────────────────────────────────
 
@@ -188,18 +270,36 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
     return [];
   }
 
+  /// All unique skills across all domains/industries/roles
+  List<String> get _allSystemSkills {
+    final Set<String> allSkills = {};
+    for (final domain in _expertFields) {
+      for (final ind in domain.industries) {
+        for (final role in ind.roles) {
+          if (role.keywords != null && role.keywords!.isNotEmpty) {
+            allSkills.addAll(
+              role.keywords!
+                  .split(',')
+                  .map((k) => k.trim())
+                  .where((k) => k.isNotEmpty),
+            );
+          }
+        }
+      }
+    }
+    return allSkills.toList()..sort();
+  }
+
   bool get _canProceed {
-    if (_currentStep == 0) return true; // type always has a default
-    if (_currentStep == 1) {
+    if (_currentStep == 0) {
       return switch (_skillStep) {
         1 => _selectedDomain.isNotEmpty,
         2 => _selectedIndustry.isNotEmpty,
-        3 => _selectedJobRole.isNotEmpty,
-        4 => _selectedSkills.isNotEmpty,
+        3 => _selectedJobRole.isNotEmpty && _selectedSkills.isNotEmpty,
         _ => false,
       };
     }
-    // Step 2: goal required
+    // Step 1: goal required
     return _selectedGoal.isNotEmpty;
   }
 
@@ -233,27 +333,23 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   void _handleNext() {
     if (!_canProceed) return;
     if (_currentStep == 0) {
-      setState(() => _currentStep = 1);
-    } else if (_currentStep == 1) {
-      if (_skillStep < 4) {
+      if (_skillStep < 3) {
         setState(() => _skillStep++);
       } else {
-        setState(() => _currentStep = 2);
+        setState(() => _currentStep = 1);
       }
     }
-    // Step 2 next = submit (handled by button directly)
+    // Step 1 next = submit (handled by button directly)
   }
 
   void _handleBack() {
-    if (_currentStep == 2) {
+    if (_currentStep == 1) {
       setState(() {
-        _currentStep = 1;
-        _skillStep = 4;
+        _currentStep = 0;
+        _skillStep = 3;
       });
-    } else if (_currentStep == 1 && _skillStep > 1) {
+    } else if (_currentStep == 0 && _skillStep > 1) {
       setState(() => _skillStep--);
-    } else if (_currentStep == 1 && _skillStep == 1) {
-      setState(() => _currentStep = 0);
     } else {
       context.pop();
     }
@@ -308,7 +404,8 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                     CommonLoading(size: 64, color: AppTheme.primaryBlueDark),
                     const SizedBox(height: 24),
                     Text(
-                      'AI đang tạo hành trình và bài test...',
+                      'AI đang tạo hành trình và bài test',
+                      textAlign: TextAlign.center,
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -357,13 +454,13 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   // ============================================================================
 
   Widget _buildStepIndicator(bool isDark) {
-    const labels = ['Loại', 'Kỹ năng', 'Cấu hình'];
+    const labels = ['Chọn Kỹ năng', 'Cấu hình test'];
     final connectorColor = isDark
         ? AppTheme.darkBorderColor
         : Colors.grey.shade300;
 
     final items = <Widget>[];
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       final step = i;
       final isActive = _currentStep >= step;
       final isCompleted = _currentStep > step;
@@ -406,7 +503,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
         ),
       );
 
-      if (i < 2) {
+      if (i < 1) {
         items.add(
           Expanded(
             child: Container(
@@ -430,8 +527,8 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
             children: items,
           ),
         ),
-        // Sub-step breadcrumb for step 1
-        if (_currentStep == 1)
+        // Sub-step breadcrumb for step 0 (SkillForm)
+        if (_currentStep == 0)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
@@ -441,9 +538,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                 _subStepConnector(),
                 _subStepDot(2, 'Ngành'),
                 _subStepConnector(),
-                _subStepDot(3, 'Vị trí'),
-                _subStepConnector(),
-                _subStepDot(4, 'Kỹ năng'),
+                _subStepDot(3, 'Vị trí & Kỹ năng'),
               ],
             ),
           ),
@@ -485,157 +580,12 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   // Step Content Router
   // ============================================================================
 
-  Widget _buildStep0JourneyType(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Bắt đầu Journey theo kỹ năng',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: isDark
-                ? AppTheme.darkTextPrimary
-                : AppTheme.lightTextPrimary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Phiên bản Mobile hiện đang hỗ trợ luồng Journey skill-first để đồng bộ với backend và bài test đầu vào.',
-          style: TextStyle(
-            fontSize: 14,
-            color: isDark
-                ? AppTheme.darkTextSecondary
-                : AppTheme.lightTextSecondary,
-          ),
-        ),
-        const SizedBox(height: 24),
-        _buildTypeCard(
-          isDark: isDark,
-          icon: Icons.auto_awesome,
-          title: 'Học kỹ năng mới',
-          description:
-              'Tập trung phát triển một kỹ năng cụ thể với lộ trình được cá nhân hóa.',
-          isSelected: true,
-          onTap: () {},
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.darkCardBackground : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDark ? AppTheme.darkBorderColor : Colors.grey.shade300,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.info_outline,
-                size: 18,
-                color: AppTheme.primaryBlueDark,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Journey theo hướng nghề nghiệp sẽ được mở lại khi Mobile có flow riêng thay vì dùng chung wizard kỹ năng.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTypeCard({
-    required bool isDark,
-    required IconData icon,
-    required String title,
-    required String description,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    final borderColor = isSelected
-        ? AppTheme.primaryBlueDark
-        : (isDark ? AppTheme.darkBorderColor : Colors.grey.shade300);
-    final bgColor = isSelected
-        ? AppTheme.primaryBlueDark.withValues(alpha: 0.08)
-        : (isDark ? AppTheme.darkCardBackground : Colors.white);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppTheme.primaryBlueDark.withValues(alpha: 0.15)
-                    : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: isSelected ? AppTheme.primaryBlueDark : Colors.grey,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? AppTheme.darkTextPrimary
-                          : AppTheme.lightTextPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected)
-              const Icon(Icons.check_circle, color: AppTheme.primaryBlueDark),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildCurrentStepContent(bool isDark) {
-    if (_currentStep == 0) return _buildStep0JourneyType(isDark);
-    if (_currentStep == 2) return _buildStep2Config(isDark);
+    if (_currentStep == 1) return _buildStep2Config(isDark);
 
     // Step 1 sub-steps
+    // Step 0 sub-steps (SkillForm)
     if (_isLoadingExpertFields && _skillStep > 1) {
       return Center(
         child: Padding(
@@ -665,8 +615,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
     return switch (_skillStep) {
       1 => _buildDomainSelection(isDark),
       2 => _buildIndustrySelection(isDark),
-      3 => _buildRoleSelection(isDark),
-      4 => _buildSkillsSelection(isDark),
+      3 => _buildRoleAndSkillsSelection(isDark),
       _ => const SizedBox(),
     };
   }
@@ -880,20 +829,24 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   }
 
   // ============================================================================
-  // Step 1 — Sub-step 3: Job Role
+  // Step 1 — Sub-step 3: Job Role + Skills (merged)
   // ============================================================================
 
-  Widget _buildRoleSelection(bool isDark) {
+  Widget _buildRoleAndSkillsSelection(bool isDark) {
     final roles = _rolesForIndustry(_selectedDomain, _selectedIndustry);
+    final suggestions = _roleKeywordSuggestions
+        .where((k) => !_selectedSkills.contains(k))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Chọn vị trí công việc',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context)
+              .textTheme
+              .headlineSmall
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
@@ -923,10 +876,21 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
               final isSelected = _selectedJobRole == role.jobRole;
               return InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: () => setState(() {
-                  _selectedJobRole = role.jobRole;
-                  _selectedSkills.clear();
-                }),
+                onTap: () {
+                  // Auto-fill skills from role keywords on selection
+                  final keywords = role.keywords
+                          ?.split(',')
+                          .map((k) => k.trim())
+                          .where((k) => k.isNotEmpty)
+                          .toList() ??
+                      [];
+                  setState(() {
+                    _selectedJobRole = role.jobRole;
+                    _selectedSkills
+                      ..clear()
+                      ..addAll(keywords.take(3));
+                  });
+                },
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -935,13 +899,15 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                       color: isSelected
                           ? AppTheme.primaryBlueDark
                           : (isDark
-                                ? AppTheme.darkBorderColor
-                                : Colors.grey.shade300),
+                              ? AppTheme.darkBorderColor
+                              : Colors.grey.shade300),
                       width: isSelected ? 2 : 1,
                     ),
                     color: isSelected
                         ? AppTheme.primaryBlueDark.withValues(alpha: 0.08)
-                        : (isDark ? AppTheme.darkCardBackground : Colors.white),
+                        : (isDark
+                            ? AppTheme.darkCardBackground
+                            : Colors.white),
                   ),
                   child: Row(
                     children: [
@@ -975,13 +941,13 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                                           color: isDark
                                               ? AppTheme.darkBorderColor
                                               : Colors.grey.shade200,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: Text(
                                           k.trim(),
-                                          style: const TextStyle(fontSize: 10),
+                                          style:
+                                              const TextStyle(fontSize: 10),
                                         ),
                                       ),
                                     )
@@ -1003,157 +969,197 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
               );
             },
           ),
-      ],
-    );
-  }
 
-  // ============================================================================
-  // Step 1 — Sub-step 4: Skills
-  // ============================================================================
-
-  Widget _buildSkillsSelection(bool isDark) {
-    final suggestions = _roleKeywordSuggestions
-        .where((k) => !_selectedSkills.contains(k))
-        .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Kỹ năng mục tiêu',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Chọn ít nhất 1 kỹ năng bạn muốn phát triển',
-          style: TextStyle(
-            color: isDark
-                ? AppTheme.darkTextSecondary
-                : AppTheme.lightTextSecondary,
+        // ── Inline skill section (shown after a role is selected) ────────────
+        if (_selectedJobRole.isNotEmpty) ...[
+          const SizedBox(height: 28),
+          Divider(
+            color: isDark ? AppTheme.darkBorderColor : Colors.grey.shade200,
           ),
-        ),
-        // Selected skills chips
-        if (_selectedSkills.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _selectedSkills
-                .map(
-                  (skill) => Chip(
-                    label: Text(skill),
-                    backgroundColor: AppTheme.primaryBlueDark.withValues(
-                      alpha: 0.1,
-                    ),
-                    labelStyle: const TextStyle(
-                      color: AppTheme.primaryBlueDark,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    deleteIcon: const Icon(Icons.close, size: 16),
-                    deleteIconColor: AppTheme.primaryBlueDark,
-                    onDeleted: () =>
-                        setState(() => _selectedSkills.remove(skill)),
-                  ),
-                )
-                .toList(),
-          ),
-        ],
-        // Suggestions from role keywords
-        if (suggestions.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(
-            'Gợi ý từ vị trí ${_selectedJobRole.isNotEmpty ? _selectedJobRole : "đã chọn"}',
+            'Kỹ năng mục tiêu',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Chọn hoặc chỉnh sửa kỹ năng bạn muốn phát triển',
             style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontSize: 12,
               color: isDark
                   ? AppTheme.darkTextSecondary
                   : AppTheme.lightTextSecondary,
             ),
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: suggestions
-                .map(
-                  (k) => ActionChip(
-                    label: Text('+ $k'),
-                    onPressed: () => setState(() => _selectedSkills.add(k)),
-                    backgroundColor: isDark
-                        ? AppTheme.darkCardBackground
-                        : Colors.grey.shade100,
-                  ),
-                )
-                .toList(),
-          ),
-        ],
-        const SizedBox(height: 20),
-        // Custom skill input
-        Text(
-          'Thêm kỹ năng khác',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isDark
-                ? AppTheme.darkTextSecondary
-                : AppTheme.lightTextSecondary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _customSkillCtrl,
-                decoration: InputDecoration(
-                  hintText: 'Nhập tên kỹ năng...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                ),
-                onSubmitted: (_) => _addCustomSkill(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: _addCustomSkill,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlueDark,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text('Thêm'),
+          // Selected chips
+          if (_selectedSkills.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _selectedSkills
+                  .map(
+                    (skill) => Chip(
+                      label: Text(skill),
+                      backgroundColor:
+                          AppTheme.primaryBlueDark.withValues(alpha: 0.1),
+                      labelStyle: const TextStyle(
+                        color: AppTheme.primaryBlueDark,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      deleteIcon: const Icon(Icons.close, size: 16),
+                      deleteIconColor: AppTheme.primaryBlueDark,
+                      onDeleted: () =>
+                          setState(() => _selectedSkills.remove(skill)),
+                    ),
+                  )
+                  .toList(),
             ),
           ],
-        ),
-        if (_selectedSkills.isEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            '* Chọn ít nhất 1 kỹ năng để tiếp tục',
-            style: TextStyle(fontSize: 12, color: AppTheme.errorColor),
+          // Suggestion chips (remaining keywords not yet selected)
+          if (suggestions.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Thêm từ gợi ý:',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestions
+                  .map(
+                    (k) => ActionChip(
+                      label: Text('+ $k'),
+                      onPressed: () =>
+                          setState(() => _selectedSkills.add(k)),
+                      backgroundColor: isDark
+                          ? AppTheme.darkCardBackground
+                          : Colors.grey.shade100,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          // Custom input
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _customSkillCtrl,
+                  enabled: !_isResolvingSkill,
+                  decoration: InputDecoration(
+                    hintText: 'Thêm kỹ năng khác (VD: Java)...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
+                  onSubmitted: (_) => _addCustomSkill(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: _isResolvingSkill ? null : _addCustomSkill,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlueDark,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: _isResolvingSkill
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Thêm'),
+              ),
+            ],
           ),
+          if (_selectedSkills.isEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              '* Chọn ít nhất 1 kỹ năng để tiếp tục',
+              style: TextStyle(fontSize: 12, color: AppTheme.errorColor),
+            ),
+          ],
+          const SizedBox(height: 8),
         ],
       ],
     );
   }
 
-  void _addCustomSkill() {
+  Future<void> _addCustomSkill() async {
     final trimmed = _customSkillCtrl.text.trim();
     if (trimmed.isEmpty || _selectedSkills.contains(trimmed)) return;
-    setState(() {
-      _selectedSkills.add(trimmed);
-      _customSkillCtrl.clear();
-    });
+    
+    // Check locally first if it matches exactly any system skill to avoid API call
+    if (_allSystemSkills.any((s) => s.toLowerCase() == trimmed.toLowerCase())) {
+      setState(() {
+        _selectedSkills.add(trimmed);
+        _customSkillCtrl.clear();
+      });
+      return;
+    }
+
+    setState(() => _isResolvingSkill = true);
+    try {
+      final res = await QuestionBankService().resolveSkill(trimmed);
+      
+      if (res.confidence >= 0.3 && res.skillName.isNotEmpty) {
+        setState(() {
+          _selectedSkills.add(res.skillName);
+          _customSkillCtrl.clear();
+        });
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Kỹ năng không hợp lệ hoặc không nhận diện được.'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('AI Resolve failed, falling back to manual add: $e');
+      // If the API fails (e.g., 403 Forbidden or 404), fallback to allowing the user
+      // to add the skill anyway, to prevent blocking the Journey creation flow.
+      if (mounted) {
+        setState(() {
+          _selectedSkills.add(trimmed);
+          _customSkillCtrl.clear();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã thêm kỹ năng (Bỏ qua AI kiểm duyệt do lỗi hệ thống).'),
+            backgroundColor: AppTheme.warningColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isResolvingSkill = false);
+      }
+    }
   }
 
   // ============================================================================
@@ -1247,105 +1253,165 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
         // ── Level ────────────────────────────────────────────────────────────
         _sectionLabel('Trình độ hiện tại'),
         const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _levelOptions.map((level) {
-            final isSelected = _selectedLevel == level['value'];
-            return ChoiceChip(
-              label: Text(
-                level['label']!,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected ? Colors.white : null,
-                  fontSize: 13,
+        ..._levelOptions.map(
+          (level) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => setState(() => _selectedLevel = level['value']!),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _selectedLevel == level['value']
+                        ? AppTheme.primaryBlueDark
+                        : (isDark
+                              ? AppTheme.darkBorderColor
+                              : Colors.grey.shade300),
+                    width: _selectedLevel == level['value'] ? 2 : 1,
+                  ),
+                  color: _selectedLevel == level['value']
+                      ? AppTheme.primaryBlueDark.withValues(alpha: 0.08)
+                      : (isDark ? AppTheme.darkCardBackground : Colors.white),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            level['label']!,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            level['desc']!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_selectedLevel == level['value'])
+                      Icon(
+                        Icons.check_circle,
+                        color: AppTheme.primaryBlueDark,
+                        size: 20,
+                      ),
+                  ],
                 ),
               ),
-              selected: isSelected,
-              selectedColor: AppTheme.primaryBlueDark,
-              backgroundColor: isDark
-                  ? AppTheme.darkCardBackground
-                  : Colors.grey.shade100,
-              onSelected: (_) =>
-                  setState(() => _selectedLevel = level['value']!),
-            );
-          }).toList(),
+            ),
+          ),
         ),
 
-        const SizedBox(height: 20),
+        // Cảnh báo tương thích
+        Builder(builder: (context) {
+          final warning = _getJourneyCompatibilityWarning(_selectedGoal, _selectedLevel);
+          if (warning == null) return const SizedBox.shrink();
 
-        // ── Duration ─────────────────────────────────────────────────────────
-        _sectionLabel('Thời lượng bài test'),
-        const SizedBox(height: 10),
-        Row(
-          children: _durationOptions.map((d) {
-            final isSelected = _selectedDuration == d['value'];
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => setState(() => _selectedDuration = d['value']!),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppTheme.primaryBlueDark
-                            : (isDark
-                                  ? AppTheme.darkBorderColor
-                                  : Colors.grey.shade300),
-                        width: isSelected ? 2 : 1,
-                      ),
-                      color: isSelected
-                          ? AppTheme.primaryBlueDark.withValues(alpha: 0.08)
-                          : null,
+          return Container(
+            margin: const EdgeInsets.only(top: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.orange.withValues(alpha: 0.1)
+                  : Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark
+                    ? Colors.orange.withValues(alpha: 0.3)
+                    : Colors.orange.shade200,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.orange,
+                      size: 20,
                     ),
-                    child: Column(
-                      children: [
-                        Text(
-                          d['label']!,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        warning.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.orange.shade300 : Colors.orange.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...warning.lines.map((line) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6, right: 6),
+                        child: Icon(
+                          Icons.circle,
+                          size: 4,
+                          color: isDark ? Colors.orange.shade300 : Colors.orange.shade800,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          line,
                           style: TextStyle(
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                            color: isSelected ? AppTheme.primaryBlueDark : null,
+                            fontSize: 13,
+                            color: isDark ? Colors.orange.shade200 : Colors.orange.shade900,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          d['desc']!,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.lightTextSecondary,
-                          ),
+                      ),
+                    ],
+                  ),
+                )),
+                if (warning.ctaLabel != null && warning.ctaGoal != null) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.orange.shade800,
+                        side: BorderSide(color: Colors.orange.shade400),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ],
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _selectedGoal = warning.ctaGoal!;
+                        });
+                      },
+                      child: Text(
+                        warning.ctaLabel!,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.orange.shade300 : Colors.orange.shade800,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
+                ]
+              ],
+            ),
+          );
+        }),
 
-        const SizedBox(height: 20),
 
-        // ── Language ─────────────────────────────────────────────────────────
-        _sectionLabel('Ngôn ngữ bài test'),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            _langChip('VI', 'Tiếng Việt', isDark),
-            const SizedBox(width: 8),
-            _langChip('EN', 'English', isDark),
-          ],
-        ),
-
-        const SizedBox(height: 20),
 
         // ── Target skills (read-only display) ────────────────────────────────
         _sectionLabel('Kỹ năng mục tiêu đang học'),
@@ -1490,16 +1556,6 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                   (l) => l['value'] == _selectedLevel,
                 )['label']!,
               ),
-              _summaryRow(
-                'Thời lượng',
-                _durationOptions.firstWhere(
-                  (d) => d['value'] == _selectedDuration,
-                )['label']!,
-              ),
-              _summaryRow(
-                'Ngôn ngữ',
-                _selectedLanguage == 'VI' ? 'Tiếng Việt' : 'English',
-              ),
             ],
           ),
         ),
@@ -1531,38 +1587,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
     ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
   );
 
-  Widget _langChip(String value, String label, bool isDark) {
-    final isSelected = _selectedLanguage == value;
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: () => setState(() => _selectedLanguage = value),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isSelected
-                  ? AppTheme.primaryBlueDark
-                  : (isDark ? AppTheme.darkBorderColor : Colors.grey.shade300),
-              width: isSelected ? 2 : 1,
-            ),
-            color: isSelected
-                ? AppTheme.primaryBlueDark.withValues(alpha: 0.08)
-                : null,
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              color: isSelected ? AppTheme.primaryBlueDark : null,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _summaryRow(String label, String value) {
     return Padding(
@@ -1593,7 +1618,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   // ============================================================================
 
   Widget _buildBottomNav(bool isDark) {
-    final isLastStep = _currentStep == 2;
+    final isLastStep = _currentStep == 1;
     final showBack = _currentStep > 0 || _skillStep > 1;
 
     return Container(

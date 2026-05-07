@@ -12,6 +12,9 @@ import '../../providers/roadmap_detail_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/mentor_models.dart';
 import '../../../data/models/node_mentoring_models.dart';
+import '../../../data/models/roadmap_models.dart';
+import '../../../data/models/final_verification_models.dart'
+    show JourneyCompletionReportResponse;
 import '../../widgets/glass_card.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/empty_state_widget.dart';
@@ -125,6 +128,16 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
       final jId = widget.journeyId ?? match?.journeyId;
       if (jId != null && match != null) {
         workspaceProvider.init(journeyId: jId, bookingId: match.id);
+
+        // Determine finalNodeId = last CORE node
+        final coreNodes =
+            _nodes.where((n) => n['type'] == 'CORE').toList();
+        if (coreNodes.isNotEmpty) {
+          workspaceProvider.setFinalNodeId(
+            coreNodes.last['id'] as String?,
+          );
+        }
+
         await Future.wait([
           workspaceProvider.loadMeetings(),
           workspaceProvider.loadCompletionGate(),
@@ -199,6 +212,10 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
     if (evidence.latestVerification?.nodeVerificationStatus ==
             NodeVerificationStatus.verified ||
         evidence.verificationStatus == NodeVerificationStatus.verified) {
+      return true;
+    }
+
+    if (evidence.roadmapProgressStatus == 'COMPLETED') {
       return true;
     }
 
@@ -469,20 +486,6 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                 ],
               ),
             ),
-            IconButton(
-              onPressed: booking.meetingLink != null
-                  ? () => _launchUrl(booking.meetingLink!)
-                  : null,
-              icon: Icon(
-                Icons.videocam_outlined,
-                color: booking.meetingLink != null
-                    ? AppTheme.primaryBlueDark
-                    : (isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary),
-              ),
-              tooltip: 'Tham gia video call',
-            ),
           ],
         ),
       ),
@@ -502,67 +505,73 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
       final type = node['type'] as String?;
       final status = node['status'] as String?;
 
+      final isLocked = status == 'LOCKED';
+
       items.add(
         DropdownMenuItem<String?>(
           value: id,
-          child: Row(
-            children: [
-              Container(
-                width: 22,
-                height: 22,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: (isDark ? AppTheme.accentCyan : AppTheme.primaryBlue)
-                      .withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '${i + 1}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  title,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
-                  ),
-                ),
-              ),
-              if (type == 'SIDE') ...[
-                const SizedBox(width: 6),
+          enabled: !isLocked,
+          child: Opacity(
+            opacity: isLocked ? 0.4 : 1.0,
+            child: Row(
+              children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 1,
-                  ),
+                  width: 22,
+                  height: 22,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppTheme.warningColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(3),
+                    color: (isDark ? AppTheme.accentCyan : AppTheme.primaryBlue)
+                        .withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text(
-                    'Phụ',
-                    style: TextStyle(fontSize: 9, color: AppTheme.warningColor),
+                  child: Text(
+                    '${i + 1}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.lightTextPrimary,
+                    ),
+                  ),
+                ),
+                if (type == 'SIDE') ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.warningColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: const Text(
+                      'Phụ',
+                      style: TextStyle(fontSize: 9, color: AppTheme.warningColor),
+                    ),
+                  ),
+                ],
+                if (status == 'COMPLETED') ...[
+                  const SizedBox(width: 6),
+                  const Icon(Icons.check_circle, size: 14, color: AppTheme.successColor),
+                ] else if (isLocked) ...[
+                  const SizedBox(width: 6),
+                  Icon(Icons.lock_outline, size: 14, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                ],
               ],
-              if (status == 'COMPLETED') ...[
-                const SizedBox(width: 6),
-                const Icon(Icons.check_circle, size: 14, color: AppTheme.successColor),
-              ] else if (status == 'LOCKED') ...[
-                const SizedBox(width: 6),
-                Icon(Icons.lock_outline, size: 14, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-              ],
-            ],
+            ),
           ),
         ),
       );
@@ -612,73 +621,531 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
           return Center(child: CommonLoading.small());
         }
 
-        final assignment = wp.assignment;
-        if (assignment == null) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: EmptyStateWidget(
-              icon: Icons.assignment_outlined,
-              title: 'Mentor chưa giao nhiệm vụ',
-              subtitle:
-                  'Khi mentor thiết lập yêu cầu cho node này,\n'
-                  'nội dung nhiệm vụ sẽ hiển thị tại đây.',
-            ),
-          );
+        // ── Final Assessment mode ──
+        if (wp.isFinalAssessmentMode) {
+          return _buildFinalAssessmentContent(context, isDark, wp);
         }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Source badge
-              Row(
-                children: [
-                  _buildBadge(
-                    assignment.assignmentSource ==
-                            AssignmentSource.mentorRefined
-                        ? 'Mentor biên soạn'
-                        : 'Hệ thống tạo',
-                    assignment.assignmentSource ==
-                            AssignmentSource.mentorRefined
-                        ? AppTheme.primaryBlue
-                        : AppTheme.warningColor,
+        final assignment = wp.assignment;
+        final nodes = context.read<RoadmapDetailProvider>().currentRoadmap?.roadmap;
+        final roadmapNode = nodes != null && nodes.any((n) => n.id == wp.selectedNodeId)
+            ? nodes.firstWhere((n) => n.id == wp.selectedNodeId)
+            : null;
+
+        return RefreshIndicator(
+          onRefresh: () => wp.selectNode(wp.selectedNodeId),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ═══════════════════════════════════════════════════════════
+                // BLOCK 1: Nội dung Node (luôn hiển thị)
+                // ═══════════════════════════════════════════════════════════
+                if (roadmapNode != null) ...[
+                  _buildSectionHeader(
+                    context,
+                    icon: Icons.book_outlined,
+                    title: 'Nội dung Node',
+                    isDark: isDark,
                   ),
-                  const Spacer(),
-                  if (assignment.createdAt != null)
+                  const SizedBox(height: 12),
+                  // Description
+                  GlassCard(
+                    padding: const EdgeInsets.all(14),
+                    child: _buildMarkdown(roadmapNode.description, isDark),
+                  ),
+                  // Learning Objectives
+                  if (roadmapNode.learningObjectives != null &&
+                      roadmapNode.learningObjectives!.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _buildNodeMetaSection(
+                      context,
+                      icon: Icons.check_circle_outline,
+                      title: 'Mục tiêu học tập',
+                      items: roadmapNode.learningObjectives!,
+                      isDark: isDark,
+                    ),
+                  ],
+                  // Key Concepts
+                  if (roadmapNode.keyConcepts != null &&
+                      roadmapNode.keyConcepts!.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _buildNodeMetaSection(
+                      context,
+                      icon: Icons.lightbulb_outline,
+                      title: 'Khái niệm trọng tâm',
+                      items: roadmapNode.keyConcepts!,
+                      isDark: isDark,
+                    ),
+                  ],
+                  // Practical Exercises
+                  if (roadmapNode.practicalExercises != null &&
+                      roadmapNode.practicalExercises!.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _buildNodeMetaSection(
+                      context,
+                      icon: Icons.code,
+                      title: 'Bài tập cần hoàn thành',
+                      items: roadmapNode.practicalExercises!,
+                      isDark: isDark,
+                    ),
+                  ],
+                  // Success Criteria
+                  if (roadmapNode.successCriteria != null &&
+                      roadmapNode.successCriteria!.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _buildNodeMetaSection(
+                      context,
+                      icon: Icons.verified_outlined,
+                      title: 'Tiêu chí hoàn thành',
+                      items: roadmapNode.successCriteria!,
+                      isDark: isDark,
+                    ),
+                  ],
+                  // Prerequisites
+                  if (roadmapNode.prerequisites != null &&
+                      roadmapNode.prerequisites!.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _buildNodeMetaSection(
+                      context,
+                      icon: Icons.account_tree_outlined,
+                      title: 'Điều kiện tiên quyết',
+                      items: _resolvePrerequisiteLabels(
+                        roadmapNode.prerequisites!,
+                        nodes,
+                      ),
+                      isDark: isDark,
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  Divider(
+                    color: isDark
+                        ? AppTheme.darkBorderColor
+                        : AppTheme.lightBorderColor,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ═══════════════════════════════════════════════════════════
+                // BLOCK 2: Nhiệm vụ chi tiết (Assignment)
+                // ═══════════════════════════════════════════════════════════
+                _buildAssignmentBlock(context, isDark, assignment),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Block 2: Assignment section with source badge
+  Widget _buildAssignmentBlock(
+    BuildContext context,
+    bool isDark,
+    NodeAssignmentResponse? assignment,
+  ) {
+    final isMentor = assignment != null &&
+        assignment.assignmentSource == AssignmentSource.mentorRefined;
+    final sourceLabel = isMentor ? 'Mentor cập nhật' : 'Hệ thống gợi ý';
+    final sourceColor = isMentor ? AppTheme.primaryBlue : AppTheme.warningColor;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.assignment_outlined,
+              size: 18,
+              color: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Nhiệm vụ chi tiết',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                ),
+              ),
+            ),
+            _buildBadge(sourceLabel, sourceColor),
+          ],
+        ),
+        if (assignment?.updatedAt != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Cập nhật: ${DateFormat('dd/MM/yyyy').format(assignment!.updatedAt!)}',
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
+          ),
+        ] else if (assignment?.createdAt != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            DateFormat('dd/MM/yyyy').format(assignment!.createdAt!),
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        if (assignment != null && assignment.title != null) ...[
+          Text(
+            assignment.title!,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isDark
+                  ? AppTheme.darkTextPrimary
+                  : AppTheme.lightTextPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (assignment != null && assignment.description != null)
+          GlassCard(
+            padding: const EdgeInsets.all(14),
+            child: _buildMarkdown(assignment.description!, isDark),
+          )
+        else
+          GlassCard(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.hourglass_empty,
+                  size: 28,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Mentor chưa giao nhiệm vụ cụ thể.\n'
+                  'Bạn có thể bắt đầu dựa vào nội dung node phía trên.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (!isMentor && assignment != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Nếu mentor đã cập nhật, hãy kéo xuống để làm mới.',
+            style: TextStyle(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Section header with icon for assignment tab blocks
+  Widget _buildSectionHeader(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required bool isDark,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: isDark
+                ? AppTheme.darkTextPrimary
+                : AppTheme.lightTextPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Compact list section for node metadata (objectives, exercises, criteria)
+  Widget _buildNodeMetaSection(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required List<String> items,
+    required bool isDark,
+  }) {
+    return GlassCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 15, color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: (isDark ? AppTheme.accentCyan : AppTheme.primaryBlue)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${items.length}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...items.map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('•  ', style: TextStyle(
+                  color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+                  fontWeight: FontWeight.bold,
+                )),
+                Expanded(
+                  child: Text(
+                    item,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  /// Resolves prerequisite node IDs to their titles.
+  /// Matches the prototype's `resolvePrerequisiteLabels` utility.
+  List<String> _resolvePrerequisiteLabels(
+    List<String> prerequisites,
+    List<RoadmapNode>? allNodes,
+  ) {
+    if (allNodes == null || allNodes.isEmpty) return prerequisites;
+    final byId = {for (final n in allNodes) n.id: n.title};
+    return prerequisites.map((item) => byId[item] ?? item).toList();
+  }
+
+  /// Builds the Final Assessment content when no specific node is selected.
+  Widget _buildFinalAssessmentContent(
+    BuildContext context,
+    bool isDark,
+    WorkspaceProvider wp,
+  ) {
+    final assignment = wp.assignment; // loaded from finalNodeId
+    final outputAssessment = wp.outputAssessment;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.primaryBlue.withValues(alpha: 0.12),
+                  AppTheme.accentCyan.withValues(alpha: 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: (isDark ? AppTheme.accentCyan : AppTheme.primaryBlue)
+                    .withValues(alpha: 0.25),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.emoji_events_outlined,
+                  color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bài đánh giá cuối khoá',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Hoàn thành bài tập tổng kết để mở cổng xác thực.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Show assignment from the final CORE node if available
+          if (assignment != null) ...[
+            _buildSectionTitle('Yêu cầu từ Mentor', isDark),
+            const SizedBox(height: 8),
+            if (assignment.title != null)
+              Text(
+                assignment.title!,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                ),
+              ),
+            if (assignment.title != null) const SizedBox(height: 8),
+            if (assignment.description != null)
+              GlassCard(
+                padding: const EdgeInsets.all(14),
+                child: _buildMarkdown(assignment.description!, isDark),
+              ),
+            if (assignment.updatedAt != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Cập nhật: ${DateFormat('dd/MM/yyyy HH:mm').format(assignment.updatedAt!)}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+          ],
+
+          // Output assessment status (if already submitted)
+          if (outputAssessment != null) ...[
+            _buildSectionTitle('Trạng thái nộp bài', isDark),
+            const SizedBox(height: 8),
+            GlassCard(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        outputAssessment.assessmentStatus == 'PASSED'
+                            ? Icons.check_circle
+                            : Icons.schedule,
+                        color: outputAssessment.assessmentStatus == 'PASSED'
+                            ? AppTheme.successColor
+                            : AppTheme.warningColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          outputAssessment.assessmentStatus == 'PASSED'
+                              ? 'Đã được đánh giá — Đạt'
+                              : outputAssessment.assessmentStatus == 'FAILED'
+                              ? 'Đã được đánh giá — Chưa đạt'
+                              : 'Đã nộp — Chờ mentor đánh giá',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.lightTextPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (outputAssessment.submissionText != null) ...[
+                    const SizedBox(height: 8),
                     Text(
-                      DateFormat('dd/MM/yyyy').format(assignment.createdAt!),
+                      outputAssessment.submissionText!,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: isDark
                             ? AppTheme.darkTextSecondary
                             : AppTheme.lightTextSecondary,
                       ),
                     ),
+                  ],
                 ],
               ),
-              const SizedBox(height: 12),
-              if (assignment.title != null) ...[
-                Text(
-                  assignment.title!,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.lightTextPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              if (assignment.description != null)
-                GlassCard(
-                  padding: const EdgeInsets.all(14),
-                  child: _buildMarkdown(assignment.description!, isDark),
-                ),
-            ],
-          ),
-        );
-      },
+            ),
+          ] else if (assignment == null) ...[
+            EmptyStateWidget(
+              icon: Icons.assignment_turned_in_outlined,
+              title: 'Chưa có bài đánh giá cuối khoá',
+              subtitle:
+                  'Mentor sẽ giao bài đánh giá tổng kết khi bạn\nhoàn thành đủ các node CORE trong lộ trình.',
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -1418,6 +1885,11 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
           return Center(child: CommonLoading.small());
         }
 
+        // ── Final Assessment mode: show completion report banner ──
+        if (wp.isFinalAssessmentMode) {
+          return _buildFinalAssessmentReport(context, isDark, wp);
+        }
+
         final evidence = wp.evidence;
         if (evidence == null) {
           return SingleChildScrollView(
@@ -1459,8 +1931,9 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                 ),
               const SizedBox(height: 12),
 
-              // Latest Review
-              if (evidence.latestReview != null) ...[
+              // Latest Review — hide stale review when learner has resubmitted
+              if (evidence.latestReview != null &&
+                  evidence.submissionStatus != NodeSubmissionStatus.resubmitted) ...[
                 _buildSectionTitle('Đánh giá của Mentor', isDark),
                 const SizedBox(height: 8),
                 GlassCard(
@@ -1636,6 +2109,226 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
   }
 
   // ═══════════════════════════════════════════════════════════════════════
+  //  FINAL ASSESSMENT REPORT (PASS/FAIL Banner)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  Widget _buildFinalAssessmentReport(
+    BuildContext context,
+    bool isDark,
+    WorkspaceProvider wp,
+  ) {
+    final report = wp.completionReport;
+    final outputAssessment = wp.outputAssessment;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── PASS/FAIL Banner ──
+          if (report != null) ...[
+            _buildCompletionReportBanner(context, isDark, report),
+            const SizedBox(height: 16),
+          ],
+
+          // ── Output Assessment Result ──
+          if (outputAssessment != null) ...[
+            _buildSectionTitle('Kết quả bài đánh giá cuối khoá', isDark),
+            const SizedBox(height: 8),
+            GlassCard(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      _buildBadge(
+                        outputAssessment.assessmentStatus == 'PASSED'
+                            ? 'Đạt'
+                            : outputAssessment.assessmentStatus == 'FAILED'
+                            ? 'Chưa đạt'
+                            : 'Chờ đánh giá',
+                        outputAssessment.assessmentStatus == 'PASSED'
+                            ? AppTheme.successColor
+                            : outputAssessment.assessmentStatus == 'FAILED'
+                            ? AppTheme.errorColor
+                            : AppTheme.warningColor,
+                      ),
+                      if (outputAssessment.score != null) ...[
+                        const Spacer(),
+                        Text(
+                          '${outputAssessment.score}/100',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? AppTheme.accentCyan
+                                : AppTheme.primaryBlue,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (outputAssessment.feedback != null &&
+                      outputAssessment.feedback!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _buildMarkdown(outputAssessment.feedback!, isDark),
+                  ],
+                  if (outputAssessment.submittedAt != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ngày nộp: ${_formatDate(outputAssessment.submittedAt!)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+
+          // ── Empty state ──
+          if (report == null && outputAssessment == null)
+            EmptyStateWidget(
+              icon: Icons.grading_outlined,
+              title: 'Chưa có kết quả',
+              subtitle:
+                  'Bạn cần nộp bài đánh giá cuối khoá trước.\n'
+                  'Sau khi mentor đánh giá, kết quả sẽ hiển thị tại đây.',
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Build the PASS/FAIL completion banner from mentor's report.
+  Widget _buildCompletionReportBanner(
+    BuildContext context,
+    bool isDark,
+    JourneyCompletionReportResponse report,
+  ) {
+    final isPassed = report.gateDecision == GateDecision.pass;
+    final isFailed = report.gateDecision == GateDecision.fail;
+    final bannerColor = isPassed
+        ? AppTheme.successColor
+        : isFailed
+        ? AppTheme.errorColor
+        : AppTheme.warningColor;
+    final bannerIcon = isPassed
+        ? Icons.check_circle
+        : isFailed
+        ? Icons.cancel
+        : Icons.hourglass_top;
+    final bannerTitle = isPassed
+        ? '🎉 ĐẠT — Chúc mừng bạn!'
+        : isFailed
+        ? '❌ CHƯA ĐẠT'
+        : '⏳ Đang chờ xác nhận';
+    final bannerSubtitle = isPassed
+        ? 'Mentor đã xác nhận bạn hoàn thành toàn bộ lộ trình.'
+        : isFailed
+        ? 'Mentor chưa công nhận bạn hoàn thành. Xem phản hồi bên dưới.'
+        : 'Mentor đang xem xét bài nộp của bạn.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(
+          colors: [
+            bannerColor.withValues(alpha: isDark ? 0.25 : 0.12),
+            bannerColor.withValues(alpha: isDark ? 0.10 : 0.04),
+          ],
+        ),
+        border: Border.all(
+          color: bannerColor.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(bannerIcon, color: bannerColor, size: 28),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  bannerTitle,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            bannerSubtitle,
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+            ),
+          ),
+          if (report.completionNote != null &&
+              report.completionNote!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.grey.shade50,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Nhận xét của Mentor:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  _buildMarkdown(report.completionNote!, isDark),
+                ],
+              ),
+            ),
+          ],
+          if (report.confirmedAt != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Xác nhận: ${DateFormat('dd/MM/yyyy HH:mm').format(report.confirmedAt!)}',
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
   //  MEETINGS PANEL (bottom collapsible)
   // ═══════════════════════════════════════════════════════════════════════
 
@@ -1722,8 +2415,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
     final status = m.status?.toUpperCase() ?? 'SCHEDULED';
     final canAccept = status == 'PENDING_LEARNER';
     final canJoin = m.canJoin == true;
-    final canDelete =
-        status == 'PENDING_MENTOR'; // Learner can delete own pending meetings
+    final canDelete = m.createdByRole == 'LEARNER';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
