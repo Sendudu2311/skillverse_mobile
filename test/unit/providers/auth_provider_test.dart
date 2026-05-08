@@ -1,4 +1,6 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:skillverse_mobile/core/network/api_client.dart';
 import 'package:skillverse_mobile/presentation/providers/auth_provider.dart';
 
 /// ============================================================
@@ -12,6 +14,27 @@ import 'package:skillverse_mobile/presentation/providers/auth_provider.dart';
 /// Đây là cách tiếp cận QA thực tế khi không thể inject mocks.
 
 void main() {
+  /// Khởi tạo ApiClient singleton một lần trước toàn bộ test suite.
+  /// ApiClient dùng `late final Dio _dio` — chỉ được gán khi `initialize()`
+  /// được gọi. Nếu không có bước này, mọi network call sẽ throw
+  /// `LateInitializationError: Field '_dio' has not been initialized`.
+  setUpAll(() async {
+    // Load .env (fallback an toàn nếu file không tồn tại trong test env)
+    try {
+      await dotenv.load(fileName: '.env');
+    } catch (_) {
+      // Nếu .env không tồn tại trong test env, Environment sẽ dùng fallback URL
+    }
+    // Khởi tạo Dio cho ApiClient singleton.
+    // Guard bằng try-catch vì `late final` chỉ có thể assign 1 lần:
+    // nếu file test khác đã gọi initialize() trong cùng process, sẽ throw.
+    try {
+      ApiClient().initialize();
+    } catch (_) {
+      // ApiClient đã được khởi tạo bởi test file khác — bỏ qua.
+    }
+  });
+
   group('AuthProvider - Initial State', () {
     late AuthProvider provider;
 

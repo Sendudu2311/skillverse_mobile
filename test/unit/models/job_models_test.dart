@@ -19,7 +19,7 @@ void main() {
 
   group('ShortTermJobStatus enum', () {
     test('values contain all expected statuses', () {
-      expect(ShortTermJobStatus.values.length, 15);
+      expect(ShortTermJobStatus.values.length, 18);
       expect(ShortTermJobStatus.values, contains(ShortTermJobStatus.draft));
       expect(ShortTermJobStatus.values, contains(ShortTermJobStatus.published));
       expect(
@@ -36,7 +36,7 @@ void main() {
 
   group('JobApplicationStatus enum', () {
     test('values contain all expected statuses', () {
-      expect(JobApplicationStatus.values.length, 4);
+      expect(JobApplicationStatus.values.length, 12);
       expect(
         JobApplicationStatus.values,
         contains(JobApplicationStatus.pending),

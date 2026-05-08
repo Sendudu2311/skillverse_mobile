@@ -17,8 +17,8 @@ void main() {
   // JourneyStatus Enum Tests
   // ============================================================
   group('JourneyStatus enum', () {
-    test('contains all 10 expected values', () {
-      expect(JourneyStatus.values.length, 10);
+    test('contains all 13 expected values', () {
+      expect(JourneyStatus.values.length, 13);
     });
 
     test('contains all lifecycle states', () {

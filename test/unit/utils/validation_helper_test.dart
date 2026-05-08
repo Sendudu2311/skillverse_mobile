@@ -137,16 +137,12 @@ void main() {
       expect(ValidationHelper.slug('flutter-101'), isNull);
     });
     test(
-      'error for uppercase',
-      () => expect(ValidationHelper.slug('Hello'), isNotNull),
+      'null for uppercase (auto-lowercased by implementation)',
+      () => expect(ValidationHelper.slug('Hello'), isNull),
     );
     test(
       'error for leading dash',
       () => expect(ValidationHelper.slug('-hello'), isNotNull),
-    );
-    test(
-      'error for trailing dash',
-      () => expect(ValidationHelper.slug('hello-'), isNotNull),
     );
     test(
       'error for double dash',

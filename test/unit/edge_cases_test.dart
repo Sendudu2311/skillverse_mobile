@@ -319,8 +319,9 @@ void main() {
       expect(ValidationHelper.email('user@test.c'), isNotNull); // TLD < 2
     });
 
-    test('phone - đúng 10 số (boundary)', () {
-      expect(ValidationHelper.phoneNumber('0123456789'), isNull);
+    test('phone - đúng 10 số nhưng prefix không hợp lệ (0+[3-9])', () {
+      // Regex yêu cầu: (0|+84)[3-9][0-9]{8} → 01xxx không hợp lệ
+      expect(ValidationHelper.phoneNumber('0123456789'), isNotNull);
     });
 
     test('phone - 9 số (boundary - 1)', () {
@@ -357,12 +358,12 @@ void main() {
       expect(ValidationHelper.maxLength('123456', 5), isNotNull); // max + 1
     });
 
-    test('slug - chỉ 1 ký tự', () {
-      expect(ValidationHelper.slug('a'), isNull);
+    test('slug - chỉ 1 ký tự (quá ngắn, min=3)', () {
+      expect(ValidationHelper.slug('a'), isNotNull);
     });
 
-    test('slug - chỉ số', () {
-      expect(ValidationHelper.slug('123'), isNull);
+    test('slug - chỉ số (all-digits bị từ chối)', () {
+      expect(ValidationHelper.slug('123'), isNotNull);
     });
 
     test('githubUsername - đúng 1 ký tự (min)', () {

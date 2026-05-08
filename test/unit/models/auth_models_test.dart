@@ -115,7 +115,7 @@ void main() {
 
       expect(user.id, 2);
       expect(user.fullName, isNull);
-      expect(user.roles, isNull);
+      expect(user.roles, isEmpty);
     });
 
     test('toJson() produces correct map', () {
