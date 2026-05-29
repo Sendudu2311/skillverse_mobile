@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/journey_provider.dart';
+import '../../providers/career_taxonomy_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../data/models/journey_models.dart';
-import '../../../data/models/expert_chat_models.dart';
-import '../../../data/services/expert_chat_service.dart';
-import '../../../data/services/question_bank_service.dart';
+import '../../../data/models/career_taxonomy_models.dart';
 
 class JourneyCompatibilityWarning {
   final String title;
@@ -100,23 +99,16 @@ class JourneyCreatePage extends StatefulWidget {
 
 class _JourneyCreatePageState extends State<JourneyCreatePage> {
   late final JourneyProvider _journeyProvider;
+  late final CareerTaxonomyProvider _taxonomyProvider;
 
   // ── Step navigation ────────────────────────────────────────────────────────
-  // Main step: 0 = SkillForm (domain→industry→role→skills), 1 = Config
+  // Main step: 0 = SkillForm (domain→jobPosition→track), 1 = Config
   int _currentStep = 0;
-  // Sub-step within step 0 (SkillForm)
-  int _skillStep = 1; // 1: Domain, 2: Industry, 3: Role, 4: Skills
+  // Sub-step within step 0 (Taxonomy SkillForm)
+  int _skillStep = 1; // 1: Domain, 2: JobPosition, 3: Track + Skills
 
   // ── Step 0: Journey type ─────────────────────────────────────────────────
-  final JourneyType _selectedType = JourneyType.skill;
-
-  // ── Step 1: SkillForm state ───────────────────────────────────────────────
-  String _selectedDomain = '';
-  String _selectedIndustry = '';
-  String _selectedJobRole = '';
-  final List<String> _selectedSkills = [];
-  final _customSkillCtrl = TextEditingController();
-  bool _isResolvingSkill = false;
+  final JourneyType _selectedType = JourneyType.career;
 
   // ── Step 2: Config state ──────────────────────────────────────────────────
   String _selectedGoal = '';
@@ -125,70 +117,6 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   String _selectedDuration = 'STANDARD';
   final List<String> _existingSkills = [];
   final _existingSkillCtrl = TextEditingController();
-
-  // ── Expert fields ─────────────────────────────────────────────────────────
-  bool _isLoadingExpertFields = false;
-  List<ExpertFieldResponse> _expertFields = [];
-  String? _fieldsError;
-
-  // ── Options ───────────────────────────────────────────────────────────────
-  static const Map<String, String> _domainLabels = {
-    'IT': 'Công nghệ thông tin',
-    'BUSINESS': 'Kinh doanh',
-    'DESIGN': 'Thiết kế',
-  };
-
-  static IconData _domainIcon(String enumVal) {
-    switch (enumVal) {
-      case 'IT':
-        return Icons.computer;
-      case 'BUSINESS':
-        return Icons.business;
-      case 'DESIGN':
-        return Icons.palette;
-      default:
-        return Icons.school;
-    }
-  }
-
-  /// Convert display domain name from API → backend enum (IT / BUSINESS / DESIGN).
-  static String _mapDomainToEnum(String domain) {
-    final u = domain.toUpperCase();
-    if (u == 'IT' || u.contains('INFORMATION') || u.contains('CÔNG NGHỆ')) {
-      return 'IT';
-    }
-    if (u == 'BUSINESS' ||
-        u.contains('KINH DOANH') ||
-        u.contains('MARKETING')) {
-      return 'BUSINESS';
-    }
-    if (u == 'DESIGN' || u.contains('THIẾT KẾ') || u.contains('SÁNG TẠO')) {
-      return 'DESIGN';
-    }
-    return u;
-  }
-
-  /// Aggregate all industries from API entries that map to [domainEnum].
-  List<IndustryInfo> _industriesForDomain(String domainEnum) {
-    final seen = <String>{};
-    return _expertFields
-        .where((f) => _mapDomainToEnum(f.domain) == domainEnum)
-        .expand((f) => f.industries)
-        .where((i) => seen.add(i.industry))
-        .toList();
-  }
-
-  /// Aggregate roles for [industry] across all entries matching [domainEnum].
-  List<RoleInfo> _rolesForIndustry(String domainEnum, String industry) {
-    final seen = <String>{};
-    return _expertFields
-        .where((f) => _mapDomainToEnum(f.domain) == domainEnum)
-        .expand((f) => f.industries)
-        .where((i) => i.industry == industry)
-        .expand((i) => i.roles)
-        .where((r) => seen.add(r.jobRole))
-        .toList();
-  }
 
   static const List<Map<String, String>> _goalOptions = [
     {
@@ -238,64 +166,14 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
     {'value': 'ADVANCED', 'label': 'Advanced', 'desc': 'Xử lý được công việc phức tạp'},
   ];
 
-
-
   // ── Computed ──────────────────────────────────────────────────────────────
-
-  /// Keywords from selected role to suggest as skills.
-  List<String> get _roleKeywordSuggestions {
-    if (_selectedDomain.isEmpty ||
-        _selectedIndustry.isEmpty ||
-        _selectedJobRole.isEmpty) {
-      return [];
-    }
-    try {
-      final domainData = _expertFields.firstWhere(
-        (e) => e.domain == _selectedDomain,
-      );
-      final industryData = domainData.industries.firstWhere(
-        (e) => e.industry == _selectedIndustry,
-      );
-      final role = industryData.roles.firstWhere(
-        (r) => r.jobRole == _selectedJobRole,
-      );
-      if (role.keywords != null && role.keywords!.isNotEmpty) {
-        return role.keywords!
-            .split(',')
-            .map((k) => k.trim())
-            .where((k) => k.isNotEmpty)
-            .toList();
-      }
-    } catch (_) {}
-    return [];
-  }
-
-  /// All unique skills across all domains/industries/roles
-  List<String> get _allSystemSkills {
-    final Set<String> allSkills = {};
-    for (final domain in _expertFields) {
-      for (final ind in domain.industries) {
-        for (final role in ind.roles) {
-          if (role.keywords != null && role.keywords!.isNotEmpty) {
-            allSkills.addAll(
-              role.keywords!
-                  .split(',')
-                  .map((k) => k.trim())
-                  .where((k) => k.isNotEmpty),
-            );
-          }
-        }
-      }
-    }
-    return allSkills.toList()..sort();
-  }
 
   bool get _canProceed {
     if (_currentStep == 0) {
       return switch (_skillStep) {
-        1 => _selectedDomain.isNotEmpty,
-        2 => _selectedIndustry.isNotEmpty,
-        3 => _selectedJobRole.isNotEmpty && _selectedSkills.isNotEmpty,
+        1 => _taxonomyProvider.selectedDomainId != null,
+        2 => _taxonomyProvider.selectedJobPositionId != null,
+        3 => _taxonomyProvider.canProceed,
         _ => false,
       };
     }
@@ -307,27 +185,15 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   void initState() {
     super.initState();
     _journeyProvider = context.read<JourneyProvider>();
-    _loadExpertFields();
+    _taxonomyProvider = context.read<CareerTaxonomyProvider>();
+    _taxonomyProvider.loadDomains();
   }
 
   @override
   void dispose() {
     _journeyProvider.clearPendingJourneyForTestGeneration();
-    _customSkillCtrl.dispose();
     _existingSkillCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadExpertFields() async {
-    setState(() => _isLoadingExpertFields = true);
-    try {
-      _expertFields = await ExpertChatService().getExpertFields();
-      _fieldsError = null;
-    } catch (_) {
-      _fieldsError = 'Không thể tải danh sách ngành nghề';
-    } finally {
-      if (mounted) setState(() => _isLoadingExpertFields = false);
-    }
   }
 
   void _handleNext() {
@@ -356,18 +222,26 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   }
 
   Future<void> _handleSubmit() async {
+    final tp = _taxonomyProvider;
+    final selectedDomain = tp.selectedDomain;
+    final selectedJobPosition = tp.selectedJobPosition;
+    final selectedTrack = tp.selectedTrack;
+    final skillNames = tp.selectedSkillNames;
+
     final request = StartJourneyRequest(
       type: _selectedType,
-      domain: _mapDomainToEnum(_selectedDomain),
-      industry: _selectedIndustry.isNotEmpty ? _selectedIndustry : null,
-      subCategory: _selectedIndustry.isNotEmpty ? _selectedIndustry : null,
-      jobRole: _selectedJobRole.isNotEmpty ? _selectedJobRole : null,
-      skills: _selectedSkills.isNotEmpty ? _selectedSkills : null,
+      domain: selectedDomain?.code ?? '',
+      subCategory: selectedTrack?.name,
+      jobRole: selectedJobPosition?.name,
+      jobPositionId: selectedJobPosition?.id,
+      jobPositionTrackId: selectedTrack?.id,
+      skills: skillNames.isNotEmpty ? skillNames : null,
       existingSkills: _existingSkills.isNotEmpty ? _existingSkills : null,
       goal: _selectedGoal,
       level: _selectedLevel,
       language: _selectedLanguage,
       duration: _selectedDuration,
+      questionCount: 50,
     );
 
     final journey = await _journeyProvider.startJourneyAndGenerateTest(request);
@@ -432,17 +306,21 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
             title: 'Tạo hành trình mới',
             onBack: _handleBack,
           ),
-          body: Column(
-            children: [
-              _buildStepIndicator(isDark),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: _buildCurrentStepContent(isDark),
-                ),
-              ),
-              _buildBottomNav(isDark),
-            ],
+          body: Consumer<CareerTaxonomyProvider>(
+            builder: (context, tp, child) {
+              return Column(
+                children: [
+                  _buildStepIndicator(isDark),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: _buildCurrentStepContent(isDark),
+                    ),
+                  ),
+                  _buildBottomNav(isDark),
+                ],
+              );
+            },
           ),
         );
       },
@@ -536,9 +414,9 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
               children: [
                 _subStepDot(1, 'Lĩnh vực'),
                 _subStepConnector(),
-                _subStepDot(2, 'Ngành'),
+                _subStepDot(2, 'Vị trí'),
                 _subStepConnector(),
-                _subStepDot(3, 'Vị trí & Kỹ năng'),
+                _subStepDot(3, 'Track & Kỹ năng'),
               ],
             ),
           ),
@@ -584,59 +462,55 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   Widget _buildCurrentStepContent(bool isDark) {
     if (_currentStep == 1) return _buildStep2Config(isDark);
 
-    // Step 1 sub-steps
-    // Step 0 sub-steps (SkillForm)
-    if (_isLoadingExpertFields && _skillStep > 1) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: CommonLoading.center(),
-        ),
-      );
-    }
-    if (_fieldsError != null && _skillStep > 1) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            children: [
-              Text(_fieldsError!, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _loadExpertFields,
-                child: const Text('Thử lại'),
+    // Step 0 sub-steps (Taxonomy SkillForm)
+    return Consumer<CareerTaxonomyProvider>(
+      builder: (context, tp, _) {
+        if (tp.error != null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                children: [
+                  Text(tp.error!, style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => tp.loadDomains(),
+                    child: const Text('Thử lại'),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      );
-    }
+            ),
+          );
+        }
 
-    return switch (_skillStep) {
-      1 => _buildDomainSelection(isDark),
-      2 => _buildIndustrySelection(isDark),
-      3 => _buildRoleAndSkillsSelection(isDark),
-      _ => const SizedBox(),
-    };
+        return switch (_skillStep) {
+          1 => _buildDomainSelection(isDark, tp),
+          2 => _buildJobPositionSelection(isDark, tp),
+          3 => _buildTrackAndSkillsSelection(isDark, tp),
+          _ => const SizedBox(),
+        };
+      },
+    );
   }
 
   // ============================================================================
-  // Step 1 — Sub-step 1: Domain
+  // Step 1 — Sub-step 1: Domain (from Taxonomy API)
   // ============================================================================
 
-  Widget _buildDomainSelection(bool isDark) {
+  Widget _buildDomainSelection(bool isDark, CareerTaxonomyProvider tp) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Chọn lĩnh vực',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context)
+              .textTheme
+              .headlineSmall
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
-          'Lĩnh vực bạn muốn học kỹ năng',
+          'Danh sách được lấy từ taxonomy do admin quản lý.',
           style: TextStyle(
             color: isDark
                 ? AppTheme.darkTextSecondary
@@ -644,141 +518,30 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
           ),
         ),
         const SizedBox(height: 20),
-        if (_isLoadingExpertFields)
+        if (tp.loadingDomains)
           const Center(child: CircularProgressIndicator())
-        else if (_fieldsError != null)
-          Text(_fieldsError!, style: const TextStyle(color: Colors.red))
-        else if (_expertFields.isEmpty)
-          const Text('Không có lĩnh vực nào.')
-        else
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 0.95,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemCount: _domainLabels.length,
-            itemBuilder: (context, index) {
-              final domain = _domainLabels.keys.elementAt(index);
-              final isSelected = _selectedDomain == domain;
-              return InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => setState(() {
-                  _selectedDomain = domain;
-                  _selectedIndustry = '';
-                  _selectedJobRole = '';
-                  _selectedSkills.clear();
-                }),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppTheme.primaryBlueDark
-                          : (isDark
-                                ? AppTheme.darkBorderColor
-                                : Colors.grey.shade300),
-                      width: isSelected ? 2 : 1,
-                    ),
-                    color: isSelected
-                        ? AppTheme.primaryBlueDark.withValues(alpha: 0.08)
-                        : (isDark ? AppTheme.darkCardBackground : Colors.white),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _domainIcon(domain),
-                          size: 28,
-                          color: isSelected
-                              ? AppTheme.primaryBlueDark
-                              : (isDark
-                                    ? AppTheme.darkTextSecondary
-                                    : Colors.grey),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _domainLabels[domain] ?? domain,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                            color: isSelected
-                                ? AppTheme.primaryBlueDark
-                                : (isDark
-                                      ? AppTheme.darkTextPrimary
-                                      : AppTheme.lightTextPrimary),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-      ],
-    );
-  }
-
-  // ============================================================================
-  // Step 1 — Sub-step 2: Industry
-  // ============================================================================
-
-  Widget _buildIndustrySelection(bool isDark) {
-    final industries = _industriesForDomain(_selectedDomain);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Chọn ngành chi tiết',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Ngành bạn muốn học trong lĩnh vực ${_domainLabels[_selectedDomain] ?? _selectedDomain}',
-          style: TextStyle(
-            color: isDark
-                ? AppTheme.darkTextSecondary
-                : AppTheme.lightTextSecondary,
-          ),
-        ),
-        const SizedBox(height: 20),
-        if (industries.isEmpty)
+        else if (tp.domains.isEmpty)
           const Center(
             child: Padding(
               padding: EdgeInsets.all(32),
-              child: Text('Không có ngành nào. Vui lòng chọn lĩnh vực khác.'),
+              child: Text('Chưa có lĩnh vực đang hoạt động.'),
             ),
           )
         else
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: industries.length,
+            itemCount: tp.domains.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
-              final industry = industries[index].industry;
-              final isSelected = _selectedIndustry == industry;
+              final domain = tp.domains[index];
+              final isSelected = tp.selectedDomainId == domain.id;
               return InkWell(
                 borderRadius: BorderRadius.circular(12),
-                onTap: () => setState(() {
-                  _selectedIndustry = industry;
-                  _selectedJobRole = '';
-                  _selectedSkills.clear();
-                }),
+                onTap: () {
+                  tp.selectDomain(domain.id);
+                  setState(() => _skillStep = 2);
+                },
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -787,8 +550,8 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                       color: isSelected
                           ? AppTheme.primaryBlueDark
                           : (isDark
-                                ? AppTheme.darkBorderColor
-                                : Colors.grey.shade300),
+                              ? AppTheme.darkBorderColor
+                              : Colors.grey.shade300),
                       width: isSelected ? 2 : 1,
                     ),
                     color: isSelected
@@ -797,27 +560,53 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                   ),
                   child: Row(
                     children: [
+                      Icon(
+                        Icons.layers,
+                        size: 24,
+                        color: isSelected
+                            ? AppTheme.primaryBlueDark
+                            : (isDark
+                                ? AppTheme.darkTextSecondary
+                                : Colors.grey),
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          industry,
-                          style: TextStyle(
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                            color: isSelected
-                                ? AppTheme.primaryBlueDark
-                                : (isDark
-                                      ? AppTheme.darkTextPrimary
-                                      : AppTheme.lightTextPrimary),
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              domain.displayLabel,
+                              style: TextStyle(
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                                color: isSelected
+                                    ? AppTheme.primaryBlueDark
+                                    : (isDark
+                                        ? AppTheme.darkTextPrimary
+                                        : AppTheme.lightTextPrimary),
+                              ),
+                            ),
+                            if (domain.description != null &&
+                                domain.description!.isNotEmpty)
+                              Text(
+                                domain.description!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          color: AppTheme.primaryBlueDark,
-                          size: 20,
-                        ),
+                      Icon(
+                        Icons.chevron_right,
+                        color: isSelected
+                            ? AppTheme.primaryBlueDark
+                            : Colors.grey,
+                      ),
                     ],
                   ),
                 ),
@@ -829,15 +618,11 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
   }
 
   // ============================================================================
-  // Step 1 — Sub-step 3: Job Role + Skills (merged)
+  // Step 1 — Sub-step 2: Job Position (from Taxonomy API)
   // ============================================================================
 
-  Widget _buildRoleAndSkillsSelection(bool isDark) {
-    final roles = _rolesForIndustry(_selectedDomain, _selectedIndustry);
-    final suggestions = _roleKeywordSuggestions
-        .where((k) => !_selectedSkills.contains(k))
-        .toList();
-
+  Widget _buildJobPositionSelection(bool isDark, CareerTaxonomyProvider tp) {
+    final selectedDomain = tp.selectedDomain;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -850,7 +635,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Vị trí bạn hướng đến trong ngành $_selectedIndustry',
+          'Lĩnh vực đã chọn: ${selectedDomain?.displayLabel ?? ''}',
           style: TextStyle(
             color: isDark
                 ? AppTheme.darkTextSecondary
@@ -858,43 +643,35 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
           ),
         ),
         const SizedBox(height: 20),
-        if (roles.isEmpty)
+        if (tp.loadingJobs)
+          const Center(child: CircularProgressIndicator())
+        else if (tp.jobPositions.isEmpty)
           const Center(
             child: Padding(
               padding: EdgeInsets.all(32),
-              child: Text('Không có vị trí nào. Vui lòng chọn ngành khác.'),
+              child: Text(
+                  'Lĩnh vực này chưa có vị trí công việc đang hoạt động.'),
             ),
           )
         else
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: roles.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemCount: tp.jobPositions.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
-              final role = roles[index];
-              final isSelected = _selectedJobRole == role.jobRole;
+              final job = tp.jobPositions[index];
+              final isSelected = tp.selectedJobPositionId == job.id;
               return InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 onTap: () {
-                  // Auto-fill skills from role keywords on selection
-                  final keywords = role.keywords
-                          ?.split(',')
-                          .map((k) => k.trim())
-                          .where((k) => k.isNotEmpty)
-                          .toList() ??
-                      [];
-                  setState(() {
-                    _selectedJobRole = role.jobRole;
-                    _selectedSkills
-                      ..clear()
-                      ..addAll(keywords.take(3));
-                  });
+                  tp.selectJobPosition(job.id);
+                  setState(() => _skillStep = 3);
                 },
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isSelected
                           ? AppTheme.primaryBlueDark
@@ -905,9 +682,130 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                     ),
                     color: isSelected
                         ? AppTheme.primaryBlueDark.withValues(alpha: 0.08)
-                        : (isDark
-                            ? AppTheme.darkCardBackground
-                            : Colors.white),
+                        : (isDark ? AppTheme.darkCardBackground : Colors.white),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.work_outline,
+                        size: 24,
+                        color: isSelected
+                            ? AppTheme.primaryBlueDark
+                            : (isDark
+                                ? AppTheme.darkTextSecondary
+                                : Colors.grey),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              job.displayLabel,
+                              style: TextStyle(
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                                color: isSelected
+                                    ? AppTheme.primaryBlueDark
+                                    : (isDark
+                                        ? AppTheme.darkTextPrimary
+                                        : AppTheme.lightTextPrimary),
+                              ),
+                            ),
+                            if (job.description != null &&
+                                job.description!.isNotEmpty)
+                              Text(
+                                job.description!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        color: isSelected
+                            ? AppTheme.primaryBlueDark
+                            : Colors.grey,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  // ============================================================================
+  // Step 1 — Sub-step 3: Track + Auto-loaded Skills
+  // ============================================================================
+
+  Widget _buildTrackAndSkillsSelection(bool isDark, CareerTaxonomyProvider tp) {
+    final selectedJobPosition = tp.selectedJobPosition;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Chọn track mục tiêu',
+          style: Theme.of(context)
+              .textTheme
+              .headlineSmall
+              ?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Vị trí đã chọn: ${selectedJobPosition?.displayLabel ?? ''}',
+          style: TextStyle(
+            color: isDark
+                ? AppTheme.darkTextSecondary
+                : AppTheme.lightTextSecondary,
+          ),
+        ),
+        const SizedBox(height: 20),
+        if (tp.loadingTracks)
+          const Center(child: CircularProgressIndicator())
+        else if (tp.tracks.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Text(
+                  'Vị trí này chưa có track mục tiêu đang hoạt động.'),
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: tp.tracks.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final track = tp.tracks[index];
+              final isSelected = tp.selectedTrackId == track.id;
+              return InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => tp.selectTrack(track.id),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppTheme.primaryBlueDark
+                          : (isDark
+                              ? AppTheme.darkBorderColor
+                              : Colors.grey.shade300),
+                      width: isSelected ? 2 : 1,
+                    ),
+                    color: isSelected
+                        ? AppTheme.primaryBlueDark.withValues(alpha: 0.08)
+                        : (isDark ? AppTheme.darkCardBackground : Colors.white),
                   ),
                   child: Row(
                     children: [
@@ -916,42 +814,28 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              role.jobRole,
-                              style: const TextStyle(
+                              track.displayLabel,
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
+                                color: isSelected
+                                    ? AppTheme.primaryBlueDark
+                                    : (isDark
+                                        ? AppTheme.darkTextPrimary
+                                        : AppTheme.lightTextPrimary),
                               ),
                             ),
-                            if (role.keywords != null &&
-                                role.keywords!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 4,
-                                runSpacing: 4,
-                                children: role.keywords!
-                                    .split(',')
-                                    .take(3)
-                                    .map(
-                                      (k) => Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: isDark
-                                              ? AppTheme.darkBorderColor
-                                              : Colors.grey.shade200,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          k.trim(),
-                                          style:
-                                              const TextStyle(fontSize: 10),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
+                            if (track.description != null &&
+                                track.description!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                track.description!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                ),
                               ),
                             ],
                           ],
@@ -970,15 +854,15 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
             },
           ),
 
-        // ── Inline skill section (shown after a role is selected) ────────────
-        if (_selectedJobRole.isNotEmpty) ...[
-          const SizedBox(height: 28),
+        // ── Auto-loaded skills from selected track ──────────────────────────
+        if (tp.selectedTrack != null) ...[
+          const SizedBox(height: 24),
           Divider(
             color: isDark ? AppTheme.darkBorderColor : Colors.grey.shade200,
           ),
           const SizedBox(height: 16),
           Text(
-            'Kỹ năng mục tiêu',
+            'Kỹ năng tự động từ track',
             style: Theme.of(context)
                 .textTheme
                 .titleMedium
@@ -986,7 +870,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Chọn hoặc chỉnh sửa kỹ năng bạn muốn phát triển',
+            'Kỹ năng được lấy tự động từ taxonomy, không cần chỉnh sửa.',
             style: TextStyle(
               fontSize: 12,
               color: isDark
@@ -994,173 +878,83 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                   : AppTheme.lightTextSecondary,
             ),
           ),
-          // Selected chips
-          if (_selectedSkills.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _selectedSkills
-                  .map(
-                    (skill) => Chip(
-                      label: Text(skill),
-                      backgroundColor:
-                          AppTheme.primaryBlueDark.withValues(alpha: 0.1),
-                      labelStyle: const TextStyle(
-                        color: AppTheme.primaryBlueDark,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      deleteIcon: const Icon(Icons.close, size: 16),
-                      deleteIconColor: AppTheme.primaryBlueDark,
-                      onDeleted: () =>
-                          setState(() => _selectedSkills.remove(skill)),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-          // Suggestion chips (remaining keywords not yet selected)
-          if (suggestions.isNotEmpty) ...[
-            const SizedBox(height: 12),
+          const SizedBox(height: 12),
+          if (tp.loadingSkills)
+            const Center(child: CircularProgressIndicator())
+          else if (tp.selectedSkillNames.isEmpty)
             Text(
-              'Thêm từ gợi ý:',
+              'Track này chưa có kỹ năng.',
               style: TextStyle(
                 fontSize: 12,
                 color: isDark
                     ? AppTheme.darkTextSecondary
                     : AppTheme.lightTextSecondary,
               ),
-            ),
-            const SizedBox(height: 6),
+            )
+          else
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: suggestions
-                  .map(
-                    (k) => ActionChip(
-                      label: Text('+ $k'),
-                      onPressed: () =>
-                          setState(() => _selectedSkills.add(k)),
-                      backgroundColor: isDark
-                          ? AppTheme.darkCardBackground
-                          : Colors.grey.shade100,
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-          // Custom input
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _customSkillCtrl,
-                  enabled: !_isResolvingSkill,
-                  decoration: InputDecoration(
-                    hintText: 'Thêm kỹ năng khác (VD: Java)...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                  ),
-                  onSubmitted: (_) => _addCustomSkill(),
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _isResolvingSkill ? null : _addCustomSkill,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlueDark,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: _isResolvingSkill
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+              children: tp.trackSkills.map((skill) {
+                final reqType = skill.requirementType;
+                final IconData icon;
+                final Color chipBg;
+                final Color textColor;
+                final String badge;
+                switch (reqType) {
+                  case RequirementType.required:
+                    icon = Icons.check_circle;
+                    chipBg = const Color(0xFF32d6ff).withValues(alpha: 0.12);
+                    textColor = const Color(0xFF32d6ff);
+                    badge = 'Bắt buộc';
+                  case RequirementType.important:
+                    icon = Icons.star;
+                    chipBg = const Color(0xFFffb454).withValues(alpha: 0.12);
+                    textColor = const Color(0xFFffb454);
+                    badge = 'Quan trọng';
+                  case RequirementType.niceToHave:
+                    icon = Icons.lightbulb_outline;
+                    chipBg = Colors.grey.withValues(alpha: 0.12);
+                    textColor = Colors.grey.shade400;
+                    badge = 'Khuyến khích';
+                  case null:
+                    icon = Icons.check;
+                    chipBg = AppTheme.primaryBlueDark.withValues(alpha: 0.1);
+                    textColor = AppTheme.primaryBlueDark;
+                    badge = '';
+                }
+                return Chip(
+                  avatar: Icon(icon, size: 14, color: textColor),
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(skill.displayName),
+                      if (badge.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          badge,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: textColor,
+                          ),
                         ),
-                      )
-                    : const Text('Thêm'),
-              ),
-            ],
-          ),
-          if (_selectedSkills.isEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              '* Chọn ít nhất 1 kỹ năng để tiếp tục',
-              style: TextStyle(fontSize: 12, color: AppTheme.errorColor),
+                      ],
+                    ],
+                  ),
+                  backgroundColor: chipBg,
+                  labelStyle: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              }).toList(),
             ),
-          ],
-          const SizedBox(height: 8),
         ],
       ],
     );
   }
 
-  Future<void> _addCustomSkill() async {
-    final trimmed = _customSkillCtrl.text.trim();
-    if (trimmed.isEmpty || _selectedSkills.contains(trimmed)) return;
-    
-    // Check locally first if it matches exactly any system skill to avoid API call
-    if (_allSystemSkills.any((s) => s.toLowerCase() == trimmed.toLowerCase())) {
-      setState(() {
-        _selectedSkills.add(trimmed);
-        _customSkillCtrl.clear();
-      });
-      return;
-    }
-
-    setState(() => _isResolvingSkill = true);
-    try {
-      final res = await QuestionBankService().resolveSkill(trimmed);
-      
-      if (res.confidence >= 0.3 && res.skillName.isNotEmpty) {
-        setState(() {
-          _selectedSkills.add(res.skillName);
-          _customSkillCtrl.clear();
-        });
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Kỹ năng không hợp lệ hoặc không nhận diện được.'),
-              backgroundColor: AppTheme.errorColor,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('AI Resolve failed, falling back to manual add: $e');
-      // If the API fails (e.g., 403 Forbidden or 404), fallback to allowing the user
-      // to add the skill anyway, to prevent blocking the Journey creation flow.
-      if (mounted) {
-        setState(() {
-          _selectedSkills.add(trimmed);
-          _customSkillCtrl.clear();
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đã thêm kỹ năng (Bỏ qua AI kiểm duyệt do lỗi hệ thống).'),
-            backgroundColor: AppTheme.warningColor,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isResolvingSkill = false);
-      }
-    }
-  }
 
   // ============================================================================
   // Step 2: Config (Goal + Level + Language + Duration + Existing Skills)
@@ -1429,21 +1223,61 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _selectedSkills
-              .map(
-                (s) => Chip(
-                  label: Text(s),
-                  backgroundColor: AppTheme.primaryBlueDark.withValues(
-                    alpha: 0.1,
-                  ),
-                  labelStyle: const TextStyle(
-                    color: AppTheme.primaryBlueDark,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-              )
-              .toList(),
+          children: _taxonomyProvider.trackSkills.map((skill) {
+            final reqType = skill.requirementType;
+            final IconData icon;
+            final Color chipBg;
+            final Color textColor;
+            final String badge;
+            switch (reqType) {
+              case RequirementType.required:
+                icon = Icons.check_circle;
+                chipBg = const Color(0xFF32d6ff).withValues(alpha: 0.12);
+                textColor = const Color(0xFF32d6ff);
+                badge = 'Bắt buộc';
+              case RequirementType.important:
+                icon = Icons.star;
+                chipBg = const Color(0xFFffb454).withValues(alpha: 0.12);
+                textColor = const Color(0xFFffb454);
+                badge = 'Quan trọng';
+              case RequirementType.niceToHave:
+                icon = Icons.lightbulb_outline;
+                chipBg = Colors.grey.withValues(alpha: 0.12);
+                textColor = Colors.grey.shade400;
+                badge = 'Khuyến khích';
+              case null:
+                icon = Icons.check;
+                chipBg = AppTheme.primaryBlueDark.withValues(alpha: 0.1);
+                textColor = AppTheme.primaryBlueDark;
+                badge = '';
+            }
+            return Chip(
+              avatar: Icon(icon, size: 14, color: textColor),
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(skill.displayName),
+                  if (badge.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      badge,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: textColor,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              backgroundColor: chipBg,
+              labelStyle: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            );
+          }).toList(),
         ),
 
         const SizedBox(height: 20),
@@ -1531,16 +1365,16 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              _summaryRow('Lĩnh vực', _selectedDomain),
-              if (_selectedIndustry.isNotEmpty)
-                _summaryRow('Ngành', _selectedIndustry),
-              if (_selectedJobRole.isNotEmpty)
-                _summaryRow('Vị trí', _selectedJobRole),
+              _summaryRow('Lĩnh vực', _taxonomyProvider.selectedDomain?.displayLabel ?? ''),
+              if (_taxonomyProvider.selectedJobPosition != null)
+                _summaryRow('Vị trí', _taxonomyProvider.selectedJobPosition!.displayLabel),
+              if (_taxonomyProvider.selectedTrack != null)
+                _summaryRow('Track', _taxonomyProvider.selectedTrack!.displayLabel),
               _summaryRow(
                 'Kỹ năng',
-                _selectedSkills.isEmpty
+                _taxonomyProvider.selectedSkillNames.isEmpty
                     ? 'Chưa chọn'
-                    : _selectedSkills.join(', '),
+                    : _taxonomyProvider.selectedSkillNames.join(', '),
               ),
               if (_selectedGoal.isNotEmpty)
                 _summaryRow(
@@ -1567,7 +1401,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
     final trimmed = _existingSkillCtrl.text.trim();
     if (trimmed.isEmpty ||
         _existingSkills.contains(trimmed) ||
-        _selectedSkills.contains(trimmed)) {
+        _taxonomyProvider.selectedSkillNames.contains(trimmed)) {
       return;
     }
     setState(() {

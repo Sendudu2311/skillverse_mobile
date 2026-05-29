@@ -169,6 +169,15 @@ class ExtendedProfileDto {
   final String? customUrlSlug;
   final String? metaDescription;
 
+  // Achievements (JSON array — for mentor accounts)
+  final String? achievements; // e.g. '["Best Mentor 2024"]'
+
+  // Owner role for frontend tab visibility
+  final String? primaryRole; // MENTOR, USER, RECRUITER, ADMIN
+
+  // Roadmap mentoring price (for mentor accounts)
+  final double? roadmapMentoringPrice;
+
   final String? createdAt;
   final String? updatedAt;
 
@@ -214,6 +223,9 @@ class ExtendedProfileDto {
     this.totalCertificates,
     this.customUrlSlug,
     this.metaDescription,
+    this.achievements,
+    this.primaryRole,
+    this.roadmapMentoringPrice,
     this.createdAt,
     this.updatedAt,
   });
@@ -362,6 +374,22 @@ class CreateExtendedProfileRequest {
   Map<String, dynamic> toJson() => _$CreateExtendedProfileRequestToJson(this);
 }
 
+// ==================== PROJECT ATTACHMENT ====================
+// Maps to backend ProjectAttachmentDTO
+
+@JsonSerializable()
+class ProjectAttachmentDto {
+  final String? fileName;
+  final String? fileUrl;
+  final String? fileType;
+
+  const ProjectAttachmentDto({this.fileName, this.fileUrl, this.fileType});
+
+  factory ProjectAttachmentDto.fromJson(Map<String, dynamic> json) =>
+      _$ProjectAttachmentDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$ProjectAttachmentDtoToJson(this);
+}
+
 // ==================== PROJECT ====================
 // Maps to backend PortfolioProjectDTO
 
@@ -383,6 +411,7 @@ class ProjectDto {
   final String? projectUrl;
   final String? githubUrl;
   final String? thumbnailUrl;
+  final List<ProjectAttachmentDto>? attachments;
   @JsonKey(name: 'isFeatured')
   final bool? isFeatured;
   final String? createdAt;
@@ -404,6 +433,7 @@ class ProjectDto {
     this.projectUrl,
     this.githubUrl,
     this.thumbnailUrl,
+    this.attachments,
     this.isFeatured,
     this.createdAt,
     this.updatedAt,

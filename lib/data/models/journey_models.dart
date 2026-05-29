@@ -105,6 +105,8 @@ class StartJourneyRequest {
   final String level;
   final String? jobRole;
   final String? subCategory;
+  final int? jobPositionId;
+  final int? jobPositionTrackId;
   final List<String>? skills;
   final List<String>? existingSkills;
   final List<String>? focusAreas;
@@ -120,6 +122,8 @@ class StartJourneyRequest {
     required this.level,
     this.jobRole,
     this.subCategory,
+    this.jobPositionId,
+    this.jobPositionTrackId,
     this.skills,
     this.existingSkills,
     this.focusAreas,

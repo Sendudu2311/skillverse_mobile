@@ -38,6 +38,8 @@ import 'presentation/providers/booking_dispute_provider.dart';
 import 'presentation/providers/workspace_provider.dart';
 import 'presentation/providers/student_verification_provider.dart';
 import 'presentation/providers/student_skill_verification_provider.dart';
+import 'presentation/providers/roadmap_package_provider.dart';
+import 'presentation/providers/career_taxonomy_provider.dart';
 import 'presentation/app.dart';
 import 'core/utils/storage_helper.dart';
 import 'core/utils/date_time_helper.dart';
@@ -98,6 +100,7 @@ void main() async {
         ),
         ChangeNotifierProvider(create: (_) => JobProvider()),
         ChangeNotifierProvider(create: (_) => JourneyProvider()),
+        ChangeNotifierProvider(create: (_) => CareerTaxonomyProvider()),
         ChangeNotifierProvider(create: (_) => WalletProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => LearningReportProvider()),
@@ -112,6 +115,7 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => StudentSkillVerificationProvider(),
         ),
+        ChangeNotifierProvider(create: (_) => RoadmapPackageProvider()),
       ],
       child: const SkillVerseApp(),
     ),

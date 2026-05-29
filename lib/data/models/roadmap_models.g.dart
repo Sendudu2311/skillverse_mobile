@@ -31,9 +31,9 @@ RoadmapNode _$RoadmapNodeFromJson(Map<String, dynamic> json) => RoadmapNode(
   prerequisites: (json['prerequisites'] as List<dynamic>?)
       ?.map((e) => e as String)
       .toList(),
-  children: (json['children'] as List<dynamic>)
-      .map((e) => e as String)
-      .toList(),
+  children:
+      (json['children'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      [],
   estimatedCompletionRate: json['estimatedCompletionRate'] as String?,
   isCore: json['isCore'] as bool?,
   parentId: json['parentId'] as String?,
@@ -54,6 +54,14 @@ RoadmapNode _$RoadmapNodeFromJson(Map<String, dynamic> json) => RoadmapNode(
       ?.map((e) => e as String)
       .toList(),
   importanceValidationStatus: json['importanceValidationStatus'] as String?,
+  lessons: (json['lessons'] as List<dynamic>?)
+      ?.map((e) => RoadmapLesson.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  skills: (json['skills'] as List<dynamic>?)
+      ?.map(
+        (e) => RoadmapNodeSkillRequirement.fromJson(e as Map<String, dynamic>),
+      )
+      .toList(),
 );
 
 Map<String, dynamic> _$RoadmapNodeToJson(RoadmapNode instance) =>
@@ -85,6 +93,8 @@ Map<String, dynamic> _$RoadmapNodeToJson(RoadmapNode instance) =>
       'reason': instance.reason,
       'evidence': instance.evidence,
       'importanceValidationStatus': instance.importanceValidationStatus,
+      'lessons': instance.lessons,
+      'skills': instance.skills,
     };
 
 const _$NodeTypeEnumMap = {NodeType.main: 'MAIN', NodeType.side: 'SIDE'};
@@ -649,4 +659,38 @@ Map<String, dynamic> _$ClarificationQuestionToJson(
   'question': instance.question,
   'context': instance.context,
   'suggestedAnswers': instance.suggestedAnswers,
+};
+
+RoadmapLesson _$RoadmapLessonFromJson(Map<String, dynamic> json) =>
+    RoadmapLesson(
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      learningObjective: json['learningObjective'] as String?,
+      estimatedMinutes: (json['estimatedMinutes'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$RoadmapLessonToJson(RoadmapLesson instance) =>
+    <String, dynamic>{
+      'title': instance.title,
+      'description': instance.description,
+      'learningObjective': instance.learningObjective,
+      'estimatedMinutes': instance.estimatedMinutes,
+    };
+
+RoadmapNodeSkillRequirement _$RoadmapNodeSkillRequirementFromJson(
+  Map<String, dynamic> json,
+) => RoadmapNodeSkillRequirement(
+  skillId: (json['skillId'] as num?)?.toInt(),
+  skillName: json['skillName'] as String?,
+  canonicalKey: json['canonicalKey'] as String?,
+  requirementType: json['requirementType'] as String?,
+);
+
+Map<String, dynamic> _$RoadmapNodeSkillRequirementToJson(
+  RoadmapNodeSkillRequirement instance,
+) => <String, dynamic>{
+  'skillId': instance.skillId,
+  'skillName': instance.skillName,
+  'canonicalKey': instance.canonicalKey,
+  'requirementType': instance.requirementType,
 };

@@ -90,20 +90,33 @@ class PortfolioService {
     }
   }
 
-  /// Create extended profile (multipart: profile JSON part)
+  /// Create extended profile (multipart: profile JSON + optional files)
   /// POST /api/portfolio/profile
   Future<ExtendedProfileDto> createExtendedProfile({
     required CreateExtendedProfileRequest request,
+    String? avatarPath,
+    String? videoPath,
+    String? coverImagePath,
   }) async {
     try {
       final profileJson = jsonEncode(request.toJson());
-      final formData = FormData.fromMap({
+      final map = <String, dynamic>{
         'profile': MultipartFile.fromString(
           profileJson,
           filename: 'profile.json',
           contentType: DioMediaType('application', 'json'),
         ),
-      });
+      };
+      if (avatarPath != null) {
+        map['avatar'] = await MultipartFile.fromFile(avatarPath);
+      }
+      if (videoPath != null) {
+        map['video'] = await MultipartFile.fromFile(videoPath);
+      }
+      if (coverImagePath != null) {
+        map['coverImage'] = await MultipartFile.fromFile(coverImagePath);
+      }
+      final formData = FormData.fromMap(map);
       final response = await _apiClient.dio.post(
         '/portfolio/profile',
         data: formData,
@@ -117,20 +130,33 @@ class PortfolioService {
     }
   }
 
-  /// Update extended profile (multipart)
+  /// Update extended profile (multipart + optional files)
   /// PUT /api/portfolio/profile
   Future<ExtendedProfileDto> updateExtendedProfile({
     required CreateExtendedProfileRequest request,
+    String? avatarPath,
+    String? videoPath,
+    String? coverImagePath,
   }) async {
     try {
       final profileJson = jsonEncode(request.toJson());
-      final formData = FormData.fromMap({
+      final map = <String, dynamic>{
         'profile': MultipartFile.fromString(
           profileJson,
           filename: 'profile.json',
           contentType: DioMediaType('application', 'json'),
         ),
-      });
+      };
+      if (avatarPath != null) {
+        map['avatar'] = await MultipartFile.fromFile(avatarPath);
+      }
+      if (videoPath != null) {
+        map['video'] = await MultipartFile.fromFile(videoPath);
+      }
+      if (coverImagePath != null) {
+        map['coverImage'] = await MultipartFile.fromFile(coverImagePath);
+      }
+      final formData = FormData.fromMap(map);
       final response = await _apiClient.dio.put(
         '/portfolio/profile',
         data: formData,
@@ -196,19 +222,24 @@ class PortfolioService {
     }
   }
 
-  /// POST /api/portfolio/projects (multipart)
+  /// POST /api/portfolio/projects (multipart + optional thumbnail)
   Future<ProjectDto> createProject({
     required CreateProjectRequest request,
+    String? thumbnailPath,
   }) async {
     try {
       final projectJson = jsonEncode(request.toJson());
-      final formData = FormData.fromMap({
+      final map = <String, dynamic>{
         'project': MultipartFile.fromString(
           projectJson,
           filename: 'project.json',
           contentType: DioMediaType('application', 'json'),
         ),
-      });
+      };
+      if (thumbnailPath != null) {
+        map['thumbnail'] = await MultipartFile.fromFile(thumbnailPath);
+      }
+      final formData = FormData.fromMap(map);
       final response = await _apiClient.dio.post(
         '/portfolio/projects',
         data: formData,
@@ -222,20 +253,25 @@ class PortfolioService {
     }
   }
 
-  /// PUT /api/portfolio/projects/{projectId} (multipart)
+  /// PUT /api/portfolio/projects/{projectId} (multipart + optional thumbnail)
   Future<ProjectDto> updateProject({
     required int projectId,
     required UpdateProjectRequest request,
+    String? thumbnailPath,
   }) async {
     try {
       final projectJson = jsonEncode(request.toJson());
-      final formData = FormData.fromMap({
+      final map = <String, dynamic>{
         'project': MultipartFile.fromString(
           projectJson,
           filename: 'project.json',
           contentType: DioMediaType('application', 'json'),
         ),
-      });
+      };
+      if (thumbnailPath != null) {
+        map['thumbnail'] = await MultipartFile.fromFile(thumbnailPath);
+      }
+      final formData = FormData.fromMap(map);
       final response = await _apiClient.dio.put(
         '/portfolio/projects/$projectId',
         data: formData,
@@ -270,19 +306,24 @@ class PortfolioService {
     }
   }
 
-  /// POST /api/portfolio/certificates (multipart)
+  /// POST /api/portfolio/certificates (multipart + optional image)
   Future<CertificateDto> createCertificate({
     required CreateCertificateRequest request,
+    String? imagePath,
   }) async {
     try {
       final certJson = jsonEncode(request.toJson());
-      final formData = FormData.fromMap({
+      final map = <String, dynamic>{
         'certificate': MultipartFile.fromString(
           certJson,
           filename: 'certificate.json',
           contentType: DioMediaType('application', 'json'),
         ),
-      });
+      };
+      if (imagePath != null) {
+        map['image'] = await MultipartFile.fromFile(imagePath);
+      }
+      final formData = FormData.fromMap(map);
       final response = await _apiClient.dio.post(
         '/portfolio/certificates',
         data: formData,
@@ -324,6 +365,23 @@ class PortfolioService {
     try {
       final response = await _apiClient.dio.post(
         '/portfolio/cv/generate',
+        data: request?.toJson() ?? {},
+      );
+      return _unwrap(
+        response.data,
+        (d) => CVDto.fromJson(d as Map<String, dynamic>),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Export CV from portfolio without AI generation
+  /// POST /api/portfolio/cv/export
+  Future<CVDto> exportCV({GenerateCVRequest? request}) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/portfolio/cv/export',
         data: request?.toJson() ?? {},
       );
       return _unwrap(

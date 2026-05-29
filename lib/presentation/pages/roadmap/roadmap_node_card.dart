@@ -236,6 +236,52 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
                           : null,
                     ),
                   ),
+                  // Skill requirement tags
+                  if (node.skills != null && node.skills!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: node.skills!.map((skill) {
+                        final (Color tagColor, String tagLabel) = switch (skill.requirementType?.toUpperCase()) {
+                          'REQUIRED' => (const Color(0xFF22d3ee), 'Bắt buộc'),
+                          'IMPORTANT' => (const Color(0xFFf59e0b), 'Quan trọng'),
+                          'NICE_TO_HAVE' => (const Color(0xFF6366f1), 'Nên có'),
+                          _ => (const Color(0xFF22d3ee), 'Bắt buộc'),
+                        };
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: tagColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: tagColor.withValues(alpha: 0.35)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                skill.skillName ?? '',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: tagColor,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                tagLabel,
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w500,
+                                  color: tagColor.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
                   const SizedBox(height: 8),
 
                   // Description
@@ -417,6 +463,9 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
               Icons.account_tree_outlined,
               _resolvePrerequisiteLabels(node.prerequisites!),
             ),
+          // Lessons
+          if (node.lessons != null && node.lessons!.isNotEmpty)
+            _buildLessonsSection(context, node.lessons!),
           // ── Feature B: Assignment + Evidence ─────────────────────────────
           if (_isLoadingMentoring)
             Padding(
@@ -794,6 +843,137 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLessonsSection(
+    BuildContext context,
+    List<RoadmapLesson> lessons,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.menu_book_outlined,
+                size: 16,
+                color: widget.isDark
+                    ? AppTheme.primaryBlueDark
+                    : AppTheme.primaryBlue,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Nội dung bài học (${lessons.length})',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: widget.isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...lessons.asMap().entries.map((entry) {
+            final index = entry.key;
+            final lesson = entry.value;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: widget.isDark
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: widget.isDark
+                      ? AppTheme.accentCyan.withValues(alpha: 0.15)
+                      : AppTheme.primaryBlue.withValues(alpha: 0.12),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Bài ${index + 1}: ${lesson.title}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: widget.isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.lightTextPrimary,
+                          ),
+                        ),
+                      ),
+                      if (lesson.estimatedMinutes != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentCyan.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${lesson.estimatedMinutes} phút',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.accentCyan,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (lesson.description != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      lesson.description!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: widget.isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ],
+                  if (lesson.learningObjective != null) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.only(top: 6),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: widget.isDark
+                                ? AppTheme.darkBorderColor
+                                : AppTheme.lightBorderColor,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Mục tiêu: ${lesson.learningObjective}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          color: widget.isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

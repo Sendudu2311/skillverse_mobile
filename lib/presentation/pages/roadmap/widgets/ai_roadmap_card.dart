@@ -124,13 +124,15 @@ class AiRoadmapCard extends StatelessWidget {
                       isDark,
                     ),
                     const SizedBox(width: 12),
-                    _buildStatChip(
-                      context,
-                      Icons.schedule_outlined,
-                      roadmap.duration,
-                      isDark,
+                    Expanded(
+                      child: _buildStatChip(
+                        context,
+                        Icons.schedule_outlined,
+                        roadmap.duration,
+                        isDark,
+                      ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Text(
                       DateTimeHelper.formatRelativeTime(
                         DateTimeHelper.tryParseIso8601(roadmap.createdAt) ??
@@ -263,13 +265,17 @@ class AiRoadmapCard extends StatelessWidget {
           color: isDark ? AppTheme.primaryBlueDark : AppTheme.primaryBlue,
         ),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: isDark
-                ? AppTheme.darkTextSecondary
-                : AppTheme.lightTextSecondary,
-            fontSize: 12,
+        Flexible(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: isDark
+                  ? AppTheme.darkTextSecondary
+                  : AppTheme.lightTextSecondary,
+              fontSize: 12,
+            ),
           ),
         ),
       ],

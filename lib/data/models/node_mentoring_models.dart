@@ -117,6 +117,80 @@ enum NodeReviewResult {
   }
 }
 
+// ── GradingCriterion ───────────────────────────────────────────────────────
+
+class GradingCriterion {
+  final String id;
+  final String title;
+  final num maxScore;
+
+  const GradingCriterion({
+    required this.id,
+    required this.title,
+    required this.maxScore,
+  });
+
+  factory GradingCriterion.fromJson(Map<String, dynamic> json) {
+    return GradingCriterion(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      maxScore: json['maxScore'] as num? ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'maxScore': maxScore,
+  };
+}
+
+// ── GradingCriterionScore ─────────────────────────────────────────────────
+
+class GradingCriterionScore {
+  final String criterionId;
+  final String title;
+  final num score;
+  final num maxScore;
+
+  const GradingCriterionScore({
+    required this.criterionId,
+    required this.title,
+    required this.score,
+    required this.maxScore,
+  });
+
+  factory GradingCriterionScore.fromJson(Map<String, dynamic> json) {
+    return GradingCriterionScore(
+      criterionId: json['criterionId'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      score: json['score'] as num? ?? 0,
+      maxScore: json['maxScore'] as num? ?? 0,
+    );
+  }
+}
+
+// ── AssignmentVerificationStatus ──────────────────────────────────────────
+
+enum AssignmentVerificationStatus {
+  pendingReview,
+  approved,
+  revisionRequested;
+
+  static AssignmentVerificationStatus? fromString(String? value) {
+    switch (value?.toUpperCase()) {
+      case 'PENDING_REVIEW':
+        return pendingReview;
+      case 'APPROVED':
+        return approved;
+      case 'REVISION_REQUESTED':
+        return revisionRequested;
+      default:
+        return null;
+    }
+  }
+}
+
 // ── NodeAssignmentResponse ─────────────────────────────────────────────────
 
 class NodeAssignmentResponse {
@@ -128,9 +202,13 @@ class NodeAssignmentResponse {
   final AssignmentSource? assignmentSource;
   final String? title;
   final String? description;
+  final String? expectedOutput;
+  final String? rubric;
   final int? createdBy;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final List<GradingCriterion>? criteria;
+  final AssignmentVerificationStatus? verificationStatus;
 
   const NodeAssignmentResponse({
     required this.id,
@@ -141,9 +219,13 @@ class NodeAssignmentResponse {
     this.assignmentSource,
     this.title,
     this.description,
+    this.expectedOutput,
+    this.rubric,
     this.createdBy,
     this.createdAt,
     this.updatedAt,
+    this.criteria,
+    this.verificationStatus,
   });
 
   factory NodeAssignmentResponse.fromJson(Map<String, dynamic> json) {
@@ -158,6 +240,8 @@ class NodeAssignmentResponse {
       ),
       title: json['title'] as String?,
       description: json['description'] as String?,
+      expectedOutput: json['expectedOutput'] as String?,
+      rubric: json['rubric'] as String?,
       createdBy: (json['createdBy'] as num?)?.toInt(),
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())?.toLocal()
@@ -165,6 +249,12 @@ class NodeAssignmentResponse {
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'].toString())?.toLocal()
           : null,
+      criteria: (json['criteria'] as List<dynamic>?)
+          ?.map((e) => GradingCriterion.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      verificationStatus: AssignmentVerificationStatus.fromString(
+        json['verificationStatus'] as String?,
+      ),
     );
   }
 }
@@ -271,8 +361,12 @@ class NodeEvidenceRecordResponse {
   final bool? learnerMarkedComplete;
   final String? roadmapProgressStatus;
 
+  /// True when an active mentor booking covers this node.
+  final bool? hasMentorCoverage;
   final NodeReviewResponse? latestReview;
   final NodeVerificationResponse? latestVerification;
+  final int? latestAiReviewId;
+  final String? latestAiReviewStatus;
 
   const NodeEvidenceRecordResponse({
     required this.id,
@@ -291,8 +385,11 @@ class NodeEvidenceRecordResponse {
     this.updatedAt,
     this.learnerMarkedComplete,
     this.roadmapProgressStatus,
+    this.hasMentorCoverage,
     this.latestReview,
     this.latestVerification,
+    this.latestAiReviewId,
+    this.latestAiReviewStatus,
   });
 
   bool get reworkRequested =>
@@ -324,6 +421,7 @@ class NodeEvidenceRecordResponse {
           : null,
       learnerMarkedComplete: json['learnerMarkedComplete'] as bool?,
       roadmapProgressStatus: json['roadmapProgressStatus'] as String?,
+      hasMentorCoverage: json['hasMentorCoverage'] as bool?,
       latestReview: json['latestReview'] != null
           ? NodeReviewResponse.fromJson(
               json['latestReview'] as Map<String, dynamic>,
@@ -334,6 +432,8 @@ class NodeEvidenceRecordResponse {
               json['latestVerification'] as Map<String, dynamic>,
             )
           : null,
+      latestAiReviewId: (json['latestAiReviewId'] as num?)?.toInt(),
+      latestAiReviewStatus: json['latestAiReviewStatus'] as String?,
     );
   }
 }
@@ -547,6 +647,8 @@ class JourneyOutputAssessmentResponse {
   final OutputAssessmentStatus assessmentStatus;
   final DateTime? submittedAt;
   final DateTime? assessedAt;
+  final int? latestAiReviewId;
+  final String? latestAiReviewStatus;
 
   const JourneyOutputAssessmentResponse({
     this.id,
@@ -561,6 +663,8 @@ class JourneyOutputAssessmentResponse {
     this.assessmentStatus = OutputAssessmentStatus.pending,
     this.submittedAt,
     this.assessedAt,
+    this.latestAiReviewId,
+    this.latestAiReviewStatus,
   });
 
   factory JourneyOutputAssessmentResponse.fromJson(Map<String, dynamic> json) {
@@ -583,6 +687,8 @@ class JourneyOutputAssessmentResponse {
       assessedAt: json['assessedAt'] != null
           ? DateTime.tryParse(json['assessedAt'].toString())?.toLocal()
           : null,
+      latestAiReviewId: (json['latestAiReviewId'] as num?)?.toInt(),
+      latestAiReviewStatus: json['latestAiReviewStatus'] as String?,
     );
   }
 
@@ -660,6 +766,8 @@ class JourneyCompletionGateResponse {
   final bool journeyOutputVerificationRequired;
   final bool hasPassCompletionReport;
   final bool outputAssessmentApproved;
+  final String? finalAssignmentInstructions;
+  final String? finalAssignmentRubric;
   final List<String> blockingReasons;
 
   const JourneyCompletionGateResponse({
@@ -669,6 +777,8 @@ class JourneyCompletionGateResponse {
     this.journeyOutputVerificationRequired = false,
     this.hasPassCompletionReport = false,
     this.outputAssessmentApproved = false,
+    this.finalAssignmentInstructions,
+    this.finalAssignmentRubric,
     this.blockingReasons = const [],
   });
 
@@ -686,6 +796,9 @@ class JourneyCompletionGateResponse {
           json['hasPassCompletionReport'] as bool? ?? false,
       outputAssessmentApproved:
           json['outputAssessmentApproved'] as bool? ?? false,
+      finalAssignmentInstructions:
+          json['finalAssignmentInstructions'] as String?,
+      finalAssignmentRubric: json['finalAssignmentRubric'] as String?,
       blockingReasons:
           (json['blockingReasons'] as List<dynamic>?)
               ?.map((e) => e.toString())
@@ -766,6 +879,7 @@ class UserVerifiedSkillDTO {
   final int? journeyId;
   final int? bookingId;
   final String? verificationNote;
+  final int? featuredOrder;
   final DateTime verifiedAt;
 
   const UserVerifiedSkillDTO({
@@ -777,6 +891,7 @@ class UserVerifiedSkillDTO {
     this.journeyId,
     this.bookingId,
     this.verificationNote,
+    this.featuredOrder,
     required this.verifiedAt,
   });
 
@@ -790,6 +905,7 @@ class UserVerifiedSkillDTO {
       journeyId: (json['journeyId'] as num?)?.toInt(),
       bookingId: (json['bookingId'] as num?)?.toInt(),
       verificationNote: json['verificationNote'] as String?,
+      featuredOrder: (json['featuredOrder'] as num?)?.toInt(),
       verifiedAt:
           DateTime.tryParse(json['verifiedAt']?.toString() ?? '')?.toLocal() ??
           DateTime.now(),

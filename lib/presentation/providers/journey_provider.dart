@@ -7,8 +7,11 @@ import '../../core/mixins/provider_loading_mixin.dart';
 class JourneyProvider
     with ChangeNotifier, LoadingStateProviderMixin, MultiLoadingProviderMixin {
   final JourneyService _journeyService = JourneyService();
-  static const String activeJourneyBlockReason =
-      'Bạn đang có một hành trình chưa hoàn thành. Hãy hoàn thành hoặc xóa hành trình cũ trước khi tạo mới.';
+
+  /// Backend: MAX_CONCURRENT_LEARNING_JOURNEYS = 5
+  static const int maxConcurrentLearningJourneys = 5;
+  static const String journeyLimitBlockReason =
+      'Bạn đang học tối đa 5 hành trình cùng lúc. Hãy hoàn thành, tạm dừng hoặc xóa một hành trình trước khi tạo mới.';
 
   // State
   List<JourneySummaryDto> _journeys = [];
@@ -37,9 +40,13 @@ class JourneyProvider
   bool get isCreating => _isCreating;
   bool get isAutoGenerating => _isAutoGenerating;
 
-  /// True if any active-journey entry is still non-terminal for creation.
-  bool get hasActiveJourney =>
-      _activeJourneys.any((journey) => !_isTerminalForCreation(journey.status));
+  /// Number of currently-learning journeys (excludes terminal & paused).
+  int get concurrentLearningCount =>
+      _activeJourneys.where((j) => !_isTerminalOrPaused(j.status)).length;
+
+  /// True when the concurrent learning slot limit has been reached.
+  bool get hasReachedJourneyLimit =>
+      concurrentLearningCount >= maxConcurrentLearningJourneys;
 
   // ============================================================================
   // WIZARD CONTROL
@@ -107,13 +114,15 @@ class JourneyProvider
   }
 
   /// Returns whether user can create a new journey based on backend-active data.
+  /// Backend allows up to [maxConcurrentLearningJourneys] concurrent learning
+  /// journeys; paused and terminal journeys do NOT consume slots.
   Future<bool> canCreateJourney({
     bool force = false,
     bool silent = false,
   }) async {
     try {
       await loadActiveJourneys(force: force, silent: silent);
-      return !hasActiveJourney;
+      return !hasReachedJourneyLimit;
     } catch (_) {
       // Allow navigation when pre-check fails; backend still enforces the rule.
       return true;
@@ -370,14 +379,18 @@ class JourneyProvider
     }, errorMessageBuilder: (error) => error.toString());
   }
 
-  bool _isTerminalForCreation(JourneyStatus status) {
-    const terminal = {
+  /// Terminal or paused statuses that do NOT consume a concurrent learning slot.
+  /// Matches backend query: countConcurrentLearningJourneys excludes
+  /// COMPLETED, PAUSED, CANCELLED, COMPLETED_UNVERIFIED, COMPLETED_VERIFIED.
+  bool _isTerminalOrPaused(JourneyStatus status) {
+    const nonLearning = {
       JourneyStatus.completed,
       JourneyStatus.completedVerified,
       JourneyStatus.completedUnverified,
       JourneyStatus.cancelled,
+      JourneyStatus.paused,
     };
-    return terminal.contains(status);
+    return nonLearning.contains(status);
   }
 
   void _syncJourneyInCollections(JourneySummaryDto journey) {
@@ -389,7 +402,7 @@ class JourneyProvider
     }
 
     final activeIndex = _activeJourneys.indexWhere((j) => j.id == journey.id);
-    if (_isTerminalForCreation(journey.status)) {
+    if (_isTerminalOrPaused(journey.status)) {
       if (activeIndex != -1) {
         _activeJourneys.removeAt(activeIndex);
       }

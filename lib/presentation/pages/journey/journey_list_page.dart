@@ -106,7 +106,7 @@ class _JourneyListPageState extends State<JourneyListPage> {
     List<JourneySummaryDto> journeys,
     bool isDark,
   ) {
-    final canCreate = !context.read<JourneyProvider>().hasActiveJourney;
+    final canCreate = !context.read<JourneyProvider>().hasReachedJourneyLimit;
 
     return RefreshIndicator(
       onRefresh: () => context.read<JourneyProvider>().refresh(),

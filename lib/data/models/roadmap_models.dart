@@ -79,6 +79,7 @@ class RoadmapNode {
   final List<String>? suggestedResources;
   final List<String>? successCriteria;
   final List<String>? prerequisites;
+  @JsonKey(defaultValue: [])
   final List<String> children;
   final String? estimatedCompletionRate;
 
@@ -100,6 +101,10 @@ class RoadmapNode {
   final String? reason;            // 1-sentence explanation
   final List<String>? evidence;    // signals: skill gap, job market, prereq chain
   final String? importanceValidationStatus; // ACCEPTED, ADJUSTED, LOW_CONFIDENCE, FALLBACK
+
+  // Lessons & skill requirements (V3 - node enrichment)
+  final List<RoadmapLesson>? lessons;
+  final List<RoadmapNodeSkillRequirement>? skills;
 
   RoadmapNode({
     required this.id,
@@ -129,6 +134,8 @@ class RoadmapNode {
     this.reason,
     this.evidence,
     this.importanceValidationStatus,
+    this.lessons,
+    this.skills,
   });
 
   factory RoadmapNode.fromJson(Map<String, dynamic> json) =>
@@ -828,4 +835,48 @@ class ClarificationQuestion {
   factory ClarificationQuestion.fromJson(Map<String, dynamic> json) =>
       _$ClarificationQuestionFromJson(json);
   Map<String, dynamic> toJson() => _$ClarificationQuestionToJson(this);
+}
+
+// ============================================================================
+// NODE ENRICHMENT MODELS (V3)
+// ============================================================================
+
+/// Individual lesson within a roadmap node
+@JsonSerializable()
+class RoadmapLesson {
+  final String title;
+  final String? description;
+  final String? learningObjective;
+  final int? estimatedMinutes;
+
+  const RoadmapLesson({
+    required this.title,
+    this.description,
+    this.learningObjective,
+    this.estimatedMinutes,
+  });
+
+  factory RoadmapLesson.fromJson(Map<String, dynamic> json) =>
+      _$RoadmapLessonFromJson(json);
+  Map<String, dynamic> toJson() => _$RoadmapLessonToJson(this);
+}
+
+/// Skill requirement for a roadmap node
+@JsonSerializable()
+class RoadmapNodeSkillRequirement {
+  final int? skillId;
+  final String? skillName;
+  final String? canonicalKey;
+  final String? requirementType; // "REQUIRED", "IMPORTANT", "NICE_TO_HAVE"
+
+  const RoadmapNodeSkillRequirement({
+    this.skillId,
+    this.skillName,
+    this.canonicalKey,
+    this.requirementType,
+  });
+
+  factory RoadmapNodeSkillRequirement.fromJson(Map<String, dynamic> json) =>
+      _$RoadmapNodeSkillRequirementFromJson(json);
+  Map<String, dynamic> toJson() => _$RoadmapNodeSkillRequirementToJson(this);
 }

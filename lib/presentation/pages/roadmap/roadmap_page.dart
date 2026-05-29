@@ -97,8 +97,53 @@ class _RoadmapPageState extends State<RoadmapPage> {
               ),
             ),
 
+            /*
+            // ── Mentor Packages Entry Point ─────────────────────────────────
+            GestureDetector(
+              onTap: () => context.push('/roadmap-packages'),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.purpleGradient,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.workspace_premium, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Gói Roadmap có Mentor',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            'Học có người hướng dẫn — mua gói lộ trình từ Mentor',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+            */
+
             // Scope tabs: Learning | Deleted
             _buildScopeTabs(context, isDark),
+
 
             // Search & Filters
             _buildSearchAndFilters(context, isDark),

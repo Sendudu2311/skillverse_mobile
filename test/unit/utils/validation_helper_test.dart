@@ -370,4 +370,290 @@ void main() {
       expect(v(''), contains('Username'));
     });
   });
+
+  // ============================================================
+  // TASK 6 — BỔ SUNG CÁC TEST THIẾU
+  // ============================================================
+
+  group('ValidationHelper.httpsUrl()', () {
+    test('null cho chuỗi rỗng khi optional', () {
+      expect(ValidationHelper.httpsUrl(''), isNull);
+    });
+
+    test('error cho chuỗi rỗng khi required', () {
+      expect(ValidationHelper.httpsUrl('', isRequired: true), isNotNull);
+    });
+
+    test('null cho HTTPS URL hợp lệ', () {
+      expect(ValidationHelper.httpsUrl('https://example.com'), isNull);
+    });
+
+    test('null cho HTTPS URL với path', () {
+      expect(
+        ValidationHelper.httpsUrl('https://example.com/path/to/page'),
+        isNull,
+      );
+    });
+
+    test('error cho HTTP URL (không phải HTTPS)', () {
+      final result = ValidationHelper.httpsUrl('http://example.com');
+      expect(result, isNotNull);
+      expect(result, contains('HTTPS'));
+    });
+
+    test('error cho URL không có scheme', () {
+      expect(ValidationHelper.httpsUrl('example.com'), isNotNull);
+    });
+
+    test('error cho URL không hợp lệ hoàn toàn', () {
+      expect(ValidationHelper.httpsUrl('not a url at all'), isNotNull);
+    });
+
+    test('null cho HTTPS URL với query parameters', () {
+      expect(
+        ValidationHelper.httpsUrl('https://example.com?q=hello&page=1'),
+        isNull,
+      );
+    });
+
+    test('null cho HTTPS URL với subdomain', () {
+      expect(ValidationHelper.httpsUrl('https://www.example.com'), isNull);
+    });
+  });
+
+  group('ValidationHelper.githubUrl()', () {
+    test('null cho chuỗi rỗng khi optional', () {
+      expect(ValidationHelper.githubUrl(''), isNull);
+    });
+
+    test('error cho chuỗi rỗng khi required', () {
+      expect(ValidationHelper.githubUrl('', isRequired: true), isNotNull);
+    });
+
+    test('null cho GitHub URL hợp lệ', () {
+      expect(
+        ValidationHelper.githubUrl('https://github.com/user/repo'),
+        isNull,
+      );
+    });
+
+    test('null cho GitHub URL profile', () {
+      expect(
+        ValidationHelper.githubUrl('https://github.com/username'),
+        isNull,
+      );
+    });
+
+    test('error cho domain khác (gitlab)', () {
+      final result = ValidationHelper.githubUrl('https://gitlab.com/user/repo');
+      expect(result, isNotNull);
+      expect(result, contains('github.com'));
+    });
+
+    test('error cho domain khác (bitbucket)', () {
+      expect(
+        ValidationHelper.githubUrl('https://bitbucket.org/user/repo'),
+        isNotNull,
+      );
+    });
+
+    test('error cho HTTP thay vì HTTPS', () {
+      final result =
+          ValidationHelper.githubUrl('http://github.com/user/repo');
+      expect(result, isNotNull);
+      expect(result, contains('HTTPS'));
+    });
+
+    test('null cho GitHub URL với www', () {
+      expect(
+        ValidationHelper.githubUrl('https://www.github.com/user'),
+        isNull,
+      );
+    });
+  });
+
+  group('ValidationHelper.behanceUrl()', () {
+    test('null cho chuỗi rỗng khi optional', () {
+      expect(ValidationHelper.behanceUrl(''), isNull);
+    });
+
+    test('error cho chuỗi rỗng khi required', () {
+      expect(ValidationHelper.behanceUrl('', isRequired: true), isNotNull);
+    });
+
+    test('null cho Behance URL hợp lệ', () {
+      expect(
+        ValidationHelper.behanceUrl('https://www.behance.net/username'),
+        isNull,
+      );
+    });
+
+    test('null cho Behance URL không có www', () {
+      expect(
+        ValidationHelper.behanceUrl('https://behance.net/username'),
+        isNull,
+      );
+    });
+
+    test('error cho domain khác', () {
+      final result =
+          ValidationHelper.behanceUrl('https://dribbble.com/username');
+      expect(result, isNotNull);
+      expect(result, contains('behance.net'));
+    });
+
+    test('error cho HTTP thay vì HTTPS', () {
+      final result =
+          ValidationHelper.behanceUrl('http://behance.net/username');
+      expect(result, isNotNull);
+      expect(result, contains('HTTPS'));
+    });
+  });
+
+  group('ValidationHelper.dribbbleUrl()', () {
+    test('null cho chuỗi rỗng khi optional', () {
+      expect(ValidationHelper.dribbbleUrl(''), isNull);
+    });
+
+    test('error cho chuỗi rỗng khi required', () {
+      expect(ValidationHelper.dribbbleUrl('', isRequired: true), isNotNull);
+    });
+
+    test('null cho Dribbble URL hợp lệ', () {
+      expect(
+        ValidationHelper.dribbbleUrl('https://dribbble.com/username'),
+        isNull,
+      );
+    });
+
+    test('null cho Dribbble URL với www', () {
+      expect(
+        ValidationHelper.dribbbleUrl('https://www.dribbble.com/username'),
+        isNull,
+      );
+    });
+
+    test('error cho domain khác', () {
+      final result =
+          ValidationHelper.dribbbleUrl('https://behance.net/username');
+      expect(result, isNotNull);
+      expect(result, contains('dribbble.com'));
+    });
+
+    test('error cho HTTP thay vì HTTPS', () {
+      final result =
+          ValidationHelper.dribbbleUrl('http://dribbble.com/username');
+      expect(result, isNotNull);
+      expect(result, contains('HTTPS'));
+    });
+  });
+
+  group('ValidationHelper.slug() — bổ sung reserved words & edge cases', () {
+    test('error cho reserved word: create', () {
+      final result = ValidationHelper.slug('create');
+      expect(result, isNotNull);
+      expect(result, contains('dự trữ'));
+    });
+
+    test('error cho reserved word: api', () {
+      final result = ValidationHelper.slug('api');
+      expect(result, isNotNull);
+      expect(result, contains('dự trữ'));
+    });
+
+    test('error cho reserved word: admin', () {
+      final result = ValidationHelper.slug('admin');
+      expect(result, isNotNull);
+      expect(result, contains('dự trữ'));
+    });
+
+    test('error cho reserved word: www', () {
+      final result = ValidationHelper.slug('www');
+      expect(result, isNotNull);
+      expect(result, contains('dự trữ'));
+    });
+
+    test('error cho reserved word: portfolio', () {
+      final result = ValidationHelper.slug('portfolio');
+      expect(result, isNotNull);
+      expect(result, contains('dự trữ'));
+    });
+
+    test('error cho slug quá dài (> 60 ký tự)', () {
+      final longSlug = 'a' * 61;
+      final result = ValidationHelper.slug(longSlug);
+      expect(result, isNotNull);
+      expect(result, contains('60'));
+    });
+
+    test('null cho slug đúng 60 ký tự', () {
+      final slug60 = 'a' * 60;
+      expect(ValidationHelper.slug(slug60), isNull);
+    });
+
+    test('error cho slug chỉ chứa số và dấu gạch ngang', () {
+      final result = ValidationHelper.slug('123-456');
+      expect(result, isNotNull);
+      expect(result, contains('số'));
+    });
+
+    test('error cho slug chỉ chứa số', () {
+      final result = ValidationHelper.slug('12345');
+      expect(result, isNotNull);
+    });
+
+    test('error cho slug kết thúc bằng dấu gạch ngang', () {
+      expect(ValidationHelper.slug('hello-'), isNotNull);
+    });
+
+    test('error cho slug quá ngắn (< 3 ký tự)', () {
+      expect(ValidationHelper.slug('ab'), isNotNull);
+    });
+
+    test('null cho slug 3 ký tự hợp lệ', () {
+      expect(ValidationHelper.slug('abc'), isNull);
+    });
+
+    test('error cho slug chứa ký tự đặc biệt', () {
+      expect(ValidationHelper.slug('hello@world'), isNotNull);
+    });
+
+    test('null cho chuỗi rỗng khi optional', () {
+      expect(ValidationHelper.slug(''), isNull);
+    });
+
+    test('error cho chuỗi rỗng khi required', () {
+      expect(ValidationHelper.slug('', isRequired: true), isNotNull);
+    });
+  });
+
+  group('ValidationHelper.phoneNumber() — bổ sung +84 prefix', () {
+    test('valid cho +84 prefix', () {
+      expect(ValidationHelper.phoneNumber('+84912345678'), isNull);
+    });
+
+    test('valid cho +84 prefix với đầu 3', () {
+      expect(ValidationHelper.phoneNumber('+84312345678'), isNull);
+    });
+
+    test('valid cho +84 prefix với đầu 9', () {
+      expect(ValidationHelper.phoneNumber('+84912345678'), isNull);
+    });
+
+    test('error cho +84 prefix sai đầu số (đầu 1)', () {
+      expect(ValidationHelper.phoneNumber('+84112345678'), isNotNull);
+    });
+
+    test('error cho +84 prefix thiếu số', () {
+      expect(ValidationHelper.phoneNumber('+849123456'), isNotNull);
+    });
+
+    test('error cho prefix +85 (không phải Việt Nam)', () {
+      expect(ValidationHelper.phoneNumber('+85912345678'), isNotNull);
+    });
+
+    test('valid cho số bắt đầu bằng 0 với đầu 7', () {
+      expect(ValidationHelper.phoneNumber('0712345678'), isNull);
+    });
+  });
 }

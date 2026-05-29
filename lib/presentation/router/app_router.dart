@@ -30,6 +30,7 @@ import '../pages/community/post_form_page.dart';
 import '../pages/roadmap/roadmap_page.dart';
 import '../pages/roadmap/roadmap_detail_page.dart';
 import '../pages/roadmap/roadmap_workspace_page.dart';
+import '../pages/roadmap/roadmap_packages_page.dart';
 import '../pages/mentor/mentor_list_page.dart';
 import '../pages/mentor/mentor_detail_page.dart';
 import '../pages/mentor/my_bookings_page.dart';
@@ -127,7 +128,7 @@ class AppRouter {
           );
           if (!canCreate) {
             final reason = Uri.encodeComponent(
-              JourneyProvider.activeJourneyBlockReason,
+              JourneyProvider.journeyLimitBlockReason,
             );
             return '/journey?blockReason=$reason';
           }
@@ -456,7 +457,12 @@ class AppRouter {
           },
         ),
 
-        // Mentor Routes
+        // Roadmap Packages (Learner buys mentor-guided roadmap offerings)
+        GoRoute(
+          path: '/roadmap-packages',
+          name: 'roadmap-packages',
+          builder: (context, state) => const RoadmapPackagesPage(),
+        ),
         GoRoute(
           path: '/mentors',
           name: 'mentors',

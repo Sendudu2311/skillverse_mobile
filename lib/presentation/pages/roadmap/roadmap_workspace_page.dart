@@ -651,6 +651,52 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                     isDark: isDark,
                   ),
                   const SizedBox(height: 12),
+                  // Skill requirement tags
+                  if (roadmapNode.skills != null && roadmapNode.skills!.isNotEmpty) ...[
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: roadmapNode.skills!.map((skill) {
+                        final (Color tagColor, String tagLabel) = switch (skill.requirementType?.toUpperCase()) {
+                          'REQUIRED' => (const Color(0xFF22d3ee), 'Bắt buộc'),
+                          'IMPORTANT' => (const Color(0xFFf59e0b), 'Quan trọng'),
+                          'NICE_TO_HAVE' => (const Color(0xFF6366f1), 'Nên có'),
+                          _ => (const Color(0xFF22d3ee), 'Bắt buộc'),
+                        };
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: tagColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: tagColor.withValues(alpha: 0.35)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                skill.skillName ?? '',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: tagColor,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                tagLabel,
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w500,
+                                  color: tagColor.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   // Description
                   GlassCard(
                     padding: const EdgeInsets.all(14),
@@ -716,6 +762,16 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                         roadmapNode.prerequisites!,
                         nodes,
                       ),
+                      isDark: isDark,
+                    ),
+                  ],
+                  // Lessons
+                  if (roadmapNode.lessons != null &&
+                      roadmapNode.lessons!.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _buildLessonsSection(
+                      context,
+                      lessons: roadmapNode.lessons!,
                       isDark: isDark,
                     ),
                   ],
@@ -958,6 +1014,158 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
               ],
             ),
           )),
+        ],
+      ),
+    );
+  }
+
+  /// Lesson cards section for node metadata — matches prototype pattern
+  Widget _buildLessonsSection(
+    BuildContext context, {
+    required List<RoadmapLesson> lessons,
+    required bool isDark,
+  }) {
+    return GlassCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.menu_book_outlined,
+                size: 15,
+                color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Nội dung bài học',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.lightTextPrimary,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: (isDark ? AppTheme.accentCyan : AppTheme.primaryBlue)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${lessons.length}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...lessons.asMap().entries.map((entry) {
+            final index = entry.key;
+            final lesson = entry.value;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.25)
+                    : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark
+                      ? AppTheme.accentCyan.withValues(alpha: 0.15)
+                      : AppTheme.primaryBlue.withValues(alpha: 0.12),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Bài ${index + 1}: ${lesson.title}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.lightTextPrimary,
+                          ),
+                        ),
+                      ),
+                      if (lesson.estimatedMinutes != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentCyan.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${lesson.estimatedMinutes} phút',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? AppTheme.accentCyan
+                                  : AppTheme.primaryBlue,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (lesson.description != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      lesson.description!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ],
+                  if (lesson.learningObjective != null) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.only(top: 6),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: isDark
+                                ? AppTheme.darkBorderColor
+                                : AppTheme.lightBorderColor,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Mục tiêu: ${lesson.learningObjective}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -1256,6 +1464,67 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                   ),
                 ),
               ],
+              // ── Assignment verification block ──
+              // Mirrors prototype: prevent submission when mentor hasn't
+              // approved the assignment yet (mentor-guided flow only).
+              if (wp.assignment != null &&
+                  wp.assignment!.verificationStatus != null &&
+                  wp.assignment!.verificationStatus !=
+                      AssignmentVerificationStatus.approved &&
+                  widget.bookingId != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.warningColor.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.shield_outlined,
+                        size: 20,
+                        color: AppTheme.warningColor,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Assessment chưa được mentor duyệt',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? AppTheme.darkTextPrimary
+                                    : AppTheme.lightTextPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Mentor cần duyệt hoặc cập nhật bài tập trước khi '
+                              'bạn nộp minh chứng. Bạn sẽ nhận thông báo khi '
+                              'assessment được duyệt.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               GlassCard(
                 padding: const EdgeInsets.all(14),
                 child: Column(
@@ -1305,7 +1574,10 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed:
-                            _isReadOnly || wp.isSubmitting || wp.isUploading
+                            _isReadOnly || wp.isSubmitting || wp.isUploading ||
+                            (wp.assignment?.verificationStatus != null &&
+                             wp.assignment!.verificationStatus != AssignmentVerificationStatus.approved &&
+                             widget.bookingId != null)
                             ? null
                             : _onSubmitEvidence,
                         style: ElevatedButton.styleFrom(

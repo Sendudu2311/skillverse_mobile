@@ -164,8 +164,12 @@ class JobPostingResponse {
 
   // Recruiter info
   final String? recruiterCompanyName;
+  final String? recruiterCompanyLogoUrl;
   final String? recruiterEmail;
   final int? recruiterUserId;
+
+  // Primary skill for job matching display
+  final String? primarySkill;
 
   final String? createdAt;
   final String? updatedAt;
@@ -191,8 +195,10 @@ class JobPostingResponse {
     this.negotiable,
     this.highlighted,
     this.recruiterCompanyName,
+    this.recruiterCompanyLogoUrl,
     this.recruiterEmail,
     this.recruiterUserId,
+    this.primarySkill,
     this.createdAt,
     this.updatedAt,
     this.hasApplied,
