@@ -3,6 +3,7 @@ import '../../core/utils/error_handler.dart';
 import '../../data/models/roadmap_models.dart';
 import '../../data/services/roadmap_service.dart';
 import '../../data/services/journey_service.dart';
+import '../../data/services/task_board_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
 
 /// Manages state for a single opened roadmap (detail view + quest progress).
@@ -10,9 +11,21 @@ import '../../core/mixins/provider_loading_mixin.dart';
 class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
   final RoadmapService _roadmapService = RoadmapService();
   final JourneyService _journeyService = JourneyService();
+  final TaskBoardService _taskBoardService = TaskBoardService();
 
   RoadmapResponse? _currentRoadmap;
   Map<String, QuestProgress> _progressMap = {};
+
+  /// Node IDs that have linked study-plan tasks on the Task Board.
+  /// Mirrors prototype's `studyTaskNodeIds` state.
+  Set<String> _studyPlanNodeIds = {};
+
+  /// Canonical regex matching [ROADMAP_NODE_LINK] markers in task.userNotes.
+  /// Pattern: [ROADMAP_NODE_LINK] (optional journey=N) roadmap={id} node={id}
+  static final _nodeLinkPattern = RegExp(
+    r'\[ROADMAP_NODE_LINK\](?:\s+journey=\d+)?\s+roadmap=(\d+)\s+node=(\S+)',
+    caseSensitive: false,
+  );
 
   // ============================================================================
   // GETTERS
@@ -21,6 +34,9 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
   RoadmapResponse? get currentRoadmap => _currentRoadmap;
   Map<String, QuestProgress> get progressMap => _progressMap;
 
+  /// Whether the given node has at least one linked study-plan task.
+  bool hasStudyPlan(String nodeId) => _studyPlanNodeIds.contains(nodeId);
+
   // ============================================================================
   // LOAD
   // ============================================================================
@@ -28,7 +44,21 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
   Future<RoadmapResponse?> loadRoadmapById(int sessionId) async {
     return await executeAsync<RoadmapResponse>(
       () async {
-        _currentRoadmap = await _roadmapService.getRoadmapById(sessionId);
+        // Sync with Prototype: auto-activate PAUSED roadmaps on 403
+        try {
+          _currentRoadmap = await _roadmapService.getRoadmapById(sessionId);
+        } catch (e) {
+          final errorStr = e.toString().toLowerCase();
+          if (errorStr.contains('403') ||
+              errorStr.contains('tạm dừng') ||
+              errorStr.contains('forbidden')) {
+            await _roadmapService.activateRoadmap(sessionId);
+            _currentRoadmap =
+                await _roadmapService.getRoadmapById(sessionId);
+          } else {
+            rethrow;
+          }
+        }
 
         if (_currentRoadmap?.progress != null) {
           _progressMap = Map<String, QuestProgress>.from(
@@ -37,6 +67,9 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
         } else {
           _progressMap = {};
         }
+
+        // Load linked study-plan tasks (non-blocking — failures are silent)
+        _loadStudyPlanNodeIds(_currentRoadmap!.sessionId);
 
         notifyListeners();
         return _currentRoadmap!;
@@ -49,6 +82,7 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
       },
     );
   }
+
 
   // ============================================================================
   // QUEST PROGRESS
@@ -105,10 +139,14 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
     required String nodeId,
   }) async {
     try {
-      return await _journeyService.createStudyPlanForRoadmapNode(
+      final result = await _journeyService.createStudyPlanForRoadmapNode(
         roadmapSessionId: roadmapSessionId,
         nodeId: nodeId,
       );
+      // Optimistically mark this node as having a study plan
+      _studyPlanNodeIds.add(nodeId);
+      notifyListeners();
+      return result;
     } catch (e) {
       rethrow;
     }
@@ -160,7 +198,43 @@ class RoadmapDetailProvider with ChangeNotifier, LoadingStateProviderMixin {
   void clearCurrentRoadmap() {
     _currentRoadmap = null;
     _progressMap = {};
+    _studyPlanNodeIds = {};
     notifyListeners();
+  }
+
+  // ============================================================================
+  // PRIVATE — Study Plan Node Link Detection
+  // ============================================================================
+
+  /// Loads the task board for [sessionId] and parses `userNotes` to find
+  /// nodes that have linked study-plan tasks (via [ROADMAP_NODE_LINK] marker).
+  Future<void> _loadStudyPlanNodeIds(int sessionId) async {
+    try {
+      final board = await _taskBoardService.getBoard(
+        roadmapSessionId: sessionId,
+      );
+      final nodeIds = <String>{};
+      for (final column in board) {
+        for (final task in column.tasks) {
+          final notes = task.userNotes?.trim();
+          if (notes == null || notes.isEmpty) continue;
+          final match = _nodeLinkPattern.firstMatch(notes);
+          if (match == null) continue;
+          final matchedRoadmapId = int.tryParse(match.group(1) ?? '');
+          final matchedNodeId = match.group(2)?.trim();
+          if (matchedRoadmapId == sessionId &&
+              matchedNodeId != null &&
+              matchedNodeId.isNotEmpty) {
+            nodeIds.add(matchedNodeId);
+          }
+        }
+      }
+      _studyPlanNodeIds = nodeIds;
+      notifyListeners();
+    } catch (e) {
+      // Non-critical: badge simply won't show if board loading fails
+      debugPrint('⚠️ Failed to load study plan node IDs: $e');
+    }
   }
 
   /// Called by app-level logout listener to purge user data.

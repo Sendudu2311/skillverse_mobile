@@ -54,7 +54,7 @@ class AuthorDto {
   final int id;
   final String? firstName;
   final String? lastName;
-  final String email;
+  final String? email;
   final String? fullName;
   final List<String>? roles;
   final String? authProvider;
@@ -64,7 +64,7 @@ class AuthorDto {
     required this.id,
     this.firstName,
     this.lastName,
-    required this.email,
+    this.email,
     this.fullName,
     this.roles,
     this.authProvider,
@@ -114,10 +114,11 @@ class CourseSummaryDto {
   final CourseLevel level;
   @JsonKey(unknownEnumValue: CourseStatus.public)
   final CourseStatus status;
-  final AuthorDto author;
+  final AuthorDto? author;
   final String? authorName;
   final MediaDto? thumbnail;
   final String? thumbnailUrl;
+  @JsonKey(defaultValue: 0)
   final int enrollmentCount;
   final int? moduleCount;
   final int? lessonCount;
@@ -141,7 +142,7 @@ class CourseSummaryDto {
     this.category,
     required this.level,
     required this.status,
-    required this.author,
+    this.author,
     this.authorName,
     this.thumbnail,
     this.thumbnailUrl,
@@ -213,12 +214,13 @@ class CourseDetailDto {
   final String? category;
   final String? level;
   final String? status;
-  final AuthorDto author;
+  final AuthorDto? author;
   final MediaDto? thumbnail;
   final double? price;
   final String? currency;
   final String? authorName;
   final String? thumbnailUrl;
+  @JsonKey(defaultValue: 0)
   final int enrollmentCount;
   final int? moduleCount;
   final int? lessonCount;
@@ -249,13 +251,13 @@ class CourseDetailDto {
     this.category,
     this.level,
     this.status,
-    required this.author,
+    this.author,
     this.thumbnail,
     this.price,
     this.currency,
     this.authorName,
     this.thumbnailUrl,
-    required this.enrollmentCount,
+    this.enrollmentCount = 0,
     this.moduleCount,
     this.lessonCount,
     this.estimatedDurationHours,

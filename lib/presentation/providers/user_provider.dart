@@ -75,6 +75,21 @@ class UserProvider with ChangeNotifier, LoadingStateProviderMixin {
     return result ?? false;
   }
 
+  /// Upload a new avatar for the current user.
+  /// [filePath] is the absolute path to the selected image file.
+  Future<bool> uploadAvatar(String filePath) async {
+    final result = await executeAsync<bool>(() async {
+      final userId = _userProfile?.id;
+      if (userId == null) throw Exception('Không tìm thấy thông tin người dùng');
+      await _userService.uploadAvatar(filePath, userId);
+      // Reload profile to get updated avatarMediaUrl
+      _userProfile = await _userService.getMyProfile();
+      notifyListeners();
+      return true;
+    }, errorMessageBuilder: (e) => ErrorHandler.getErrorMessage(e));
+    return result ?? false;
+  }
+
   // ==================== User Skills ====================
 
   Future<bool> loadUserSkills(int userId) async {

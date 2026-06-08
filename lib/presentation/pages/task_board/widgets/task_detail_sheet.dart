@@ -596,6 +596,18 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
         await provider.createTask(request);
       }
 
+      // executeAsync() nuốt exception và set provider.hasError — phải check ở đây
+      if (provider.hasError) {
+        if (mounted) {
+          ErrorHandler.showErrorSnackBar(
+            context,
+            provider.errorMessage ??
+                (isEditMode ? 'Cập nhật thất bại' : 'Tạo nhiệm vụ thất bại'),
+          );
+        }
+        return;
+      }
+
       if (mounted) {
         navigator.pop();
         ErrorHandler.showSuccessSnackBar(
@@ -640,6 +652,18 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
     try {
       final provider = context.read<TaskBoardProvider>();
       await provider.deleteTask(widget.task!.id);
+
+      // executeAsync() nuốt exception và set provider.hasError — phải check ở đây
+      if (provider.hasError) {
+        if (mounted) {
+          ErrorHandler.showErrorSnackBar(
+            context,
+            provider.errorMessage ?? 'Xóa nhiệm vụ thất bại',
+          );
+        }
+        return;
+      }
+
       if (mounted) {
         navigator.pop();
         ErrorHandler.showSuccessSnackBar(context, 'Đã xóa nhiệm vụ!');

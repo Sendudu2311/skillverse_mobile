@@ -58,12 +58,24 @@ class RoadmapService {
         throw UnknownException('Không có dữ liệu phản hồi');
       }
 
-      return RoadmapResponse.fromJson(response.data!);
+      try {
+        return RoadmapResponse.fromJson(response.data!);
+      } catch (parseError, parseStack) {
+        debugPrint('═══════════════════════════════════════════════════════');
+        debugPrint('🔴 ROADMAP PARSE ERROR (sessionId=$sessionId)');
+        debugPrint('   Type : ${parseError.runtimeType}');
+        debugPrint('   Error: $parseError');
+        debugPrint('   Stack: $parseStack');
+        debugPrint('═══════════════════════════════════════════════════════');
+        rethrow;
+      }
     } on DioException catch (e) {
       throw _handleDioError(e, 'Lỗi lấy thông tin lộ trình');
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('🔴 RoadmapService.getRoadmapById UNHANDLED: ${e.runtimeType}: $e');
+      debugPrint('   Stack: $stack');
       if (e is AppException) rethrow;
-      throw UnknownException('Lỗi không xác định');
+      throw UnknownException('Lỗi parse dữ liệu: ${e.runtimeType} — $e');
     }
   }
 

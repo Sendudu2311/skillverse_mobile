@@ -314,6 +314,7 @@ class GenerateTestResponseDto {
   final String? difficultyLevel;
   final String? questionsJson;
   final String? message;
+  final String? userAnswersJson;
 
   const GenerateTestResponseDto({
     this.journeyId,
@@ -326,6 +327,7 @@ class GenerateTestResponseDto {
     this.difficultyLevel,
     this.questionsJson,
     this.message,
+    this.userAnswersJson,
   });
 
   factory GenerateTestResponseDto.fromJson(Map<String, dynamic> json) =>
@@ -358,6 +360,7 @@ class AssessmentTestDto {
   final SkillLevel? testedLevel;
   final int? parentTestId;
   final String? questionSource;
+  final String? userAnswersJson;
 
   const AssessmentTestDto({
     required this.id,
@@ -376,6 +379,7 @@ class AssessmentTestDto {
     this.testedLevel,
     this.parentTestId,
     this.questionSource,
+    this.userAnswersJson,
   });
 
   factory AssessmentTestDto.fromJson(Map<String, dynamic> json) =>

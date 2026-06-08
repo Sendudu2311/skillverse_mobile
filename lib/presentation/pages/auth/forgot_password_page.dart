@@ -35,15 +35,23 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     await ErrorHandler.handleAsync(
       context: context,
       operation: () async {
-        await AuthService().forgotPassword(_emailController.text.trim());
+        final email = _emailController.text.trim();
+        await AuthService().forgotPassword(email);
         
         if (mounted) {
           setState(() {
             _emailSent = true;
           });
+
+          // Redirect to reset password after 2 seconds
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              context.go('/reset-password?email=$email');
+            }
+          });
         }
       },
-      successMessage: 'Hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn',
+      successMessage: 'Mã OTP đặt lại mật khẩu đã được gửi đến email của bạn',
     );
 
     if (mounted) {
@@ -141,8 +149,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 ] else ...[
                   // Success Actions
                   ElevatedButton(
-                    onPressed: () => context.go('/login'),
-                    child: const Text('Quay lại đăng nhập'),
+                    onPressed: () => context.go('/reset-password?email=${_emailController.text.trim()}'),
+                    child: const Text('Tiếp tục đặt lại mật khẩu'),
                   ),
                   
                   const SizedBox(height: 16),

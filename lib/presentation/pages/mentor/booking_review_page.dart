@@ -80,7 +80,7 @@ class _BookingReviewPageState extends State<BookingReviewPage> {
       if (mounted) {
         ErrorHandler.showErrorSnackBar(
           context,
-          'Lỗi gửi đánh giá: ${e.toString()}',
+          e, // pass exception object for proper DioException parsing
         );
       }
     } finally {

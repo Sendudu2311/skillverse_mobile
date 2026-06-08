@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../core/utils/error_handler.dart';
 import '../../data/models/final_verification_models.dart';
 import '../../data/models/node_mentoring_models.dart'
     show NodeEvidenceRecordResponse;
@@ -62,7 +63,7 @@ class FinalVerificationProvider extends ChangeNotifier {
       _outputAssessment = results[1] as JourneyOutputAssessmentResponse?;
       _history = results[2] as List<VerificationEvidenceReportResponse>;
     } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+      _error = ErrorHandler.getErrorMessage(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -91,7 +92,7 @@ class FinalVerificationProvider extends ChangeNotifier {
         },
       );
     } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+      _error = ErrorHandler.getErrorMessage(e);
       return null;
     } finally {
       _isUploading = false;
@@ -114,7 +115,7 @@ class FinalVerificationProvider extends ChangeNotifier {
       await load(journeyId);
       return true;
     } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+      _error = ErrorHandler.getErrorMessage(e);
       notifyListeners();
       return false;
     } finally {
@@ -131,7 +132,7 @@ class FinalVerificationProvider extends ChangeNotifier {
     try {
       return await _service.createFinalMeeting(journeyId);
     } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+      _error = ErrorHandler.getErrorMessage(e);
       return null;
     } finally {
       _isBusy = false;

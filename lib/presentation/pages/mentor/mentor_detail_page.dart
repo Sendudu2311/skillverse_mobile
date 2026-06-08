@@ -16,6 +16,7 @@ class MentorDetailPage extends StatefulWidget {
   final int mentorId;
   final String? action;
   final int? journeyId;
+  final int? roadmapSessionId;
   final String? nodeId;
 
   const MentorDetailPage({
@@ -23,6 +24,7 @@ class MentorDetailPage extends StatefulWidget {
     required this.mentorId,
     this.action,
     this.journeyId,
+    this.roadmapSessionId,
     this.nodeId,
   });
 
@@ -458,8 +460,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
     MentorProfile mentor,
     bool isDark,
   ) {
-    final hasRoadmapPrice = mentor.roadmapMentoringPrice != null &&
-        mentor.roadmapMentoringPrice! > 0;
+    final hasRoadmapPrice = mentor.canOfferRoadmapMentoring;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -556,13 +557,13 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                         children: [
                           Text(
                             'Đồng hành Roadmap',
-                            style:
-                                Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? AppTheme.darkTextPrimary
-                                  : AppTheme.lightTextPrimary,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark
+                                      ? AppTheme.darkTextPrimary
+                                      : AppTheme.lightTextPrimary,
+                                ),
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -578,7 +579,7 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
                       ),
                     ),
                     Text(
-                      mentor.formattedRoadmapMentoringPrice,
+                      mentor.formattedEffectiveRoadmapMentoringPrice,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppTheme.successColor,
@@ -733,8 +734,6 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       );
     }
 
-
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -795,10 +794,9 @@ class _MentorDetailPageState extends State<MentorDetailPage> {
       builder: (context) => RoadmapMentoringBookingSheet(
         mentor: mentor,
         journeyId: widget.journeyId,
+        roadmapSessionId: widget.roadmapSessionId,
         roadmapMentoringPrice: mentor.roadmapMentoringPrice,
       ),
     );
   }
-
-
 }

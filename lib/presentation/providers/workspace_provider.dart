@@ -393,6 +393,55 @@ class WorkspaceProvider extends ChangeNotifier {
     }
   }
 
+  // ─── AI Review Blocking ─────────────────────────────────────────────
+
+  /// True when system/admin review blocks the learner from self-confirming.
+  ///
+  /// Prototype behavior: in unmentored flow, a submitted node can only be
+  /// self-confirmed after the system passed it or admin verified it. Null AI
+  /// status is treated as "waiting for system/admin review", because some
+  /// templates route evidence directly to admin review.
+  bool get isAiReviewBlocking {
+    final evidence = _evidence;
+    if (evidence == null) return false;
+
+    final hasMentor = evidence.hasMentorCoverage == true;
+    if (hasMentor) return false; // Mentor handles review, no AI blocking
+
+    final aiStatus = AiReviewStatus.fromString(evidence.latestAiReviewStatus);
+    final verStatus = evidence.verificationStatus;
+
+    return aiStatus != AiReviewStatus.passed &&
+        verStatus != NodeVerificationStatus.verified;
+  }
+
+  // ─── Self-Confirm Node ──────────────────────────────────────────────
+
+  /// Learner self-confirms node completion (only available when AI passed
+  /// or has mentor coverage).
+  Future<bool> selfConfirmNode() async {
+    if (_journeyId == null || _selectedNodeId == null) return false;
+
+    _isSubmitting = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _evidence = await _nodeMentoringService.selfConfirmNode(
+        _journeyId!,
+        _selectedNodeId!,
+      );
+      return true;
+    } catch (e) {
+      _error = ErrorHandler.getErrorMessage(e);
+      debugPrint('WorkspaceProvider.selfConfirmNode error: $e');
+      return false;
+    } finally {
+      _isSubmitting = false;
+      notifyListeners();
+    }
+  }
+
   /// Clear error state
   void clearError() {
     _error = null;

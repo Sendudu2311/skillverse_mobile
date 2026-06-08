@@ -123,7 +123,11 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
                     _buildGateStatusCard(context, gate, isDark),
                     const SizedBox(height: 16),
                     _buildOutputAssessmentSection(
-                        context, provider, gate, isDark),
+                      context,
+                      provider,
+                      gate,
+                      isDark,
+                    ),
                     // Dossier section (all node evidences)
                     if (widget.nodeIds != null &&
                         widget.nodeIds!.isNotEmpty) ...[
@@ -132,12 +136,19 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
                         nodeEvidences: provider.nodeEvidences,
                         nodeTitles: widget.nodeTitles ?? {},
                         isLoading: provider.isLoadingDossier,
+                        learnerName: context
+                            .read<AuthProvider>()
+                            .user
+                            ?.fullName,
+                        learnerAvatarUrl: context
+                            .read<AuthProvider>()
+                            .user
+                            ?.avatarUrl,
                       ),
                     ],
                     if (provider.history.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      _buildHistorySection(
-                          context, provider.history, isDark),
+                      _buildHistorySection(context, provider.history, isDark),
                     ],
                     const SizedBox(height: 32),
                   ],
@@ -170,26 +181,29 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
       borderColor = AppTheme.successColor.withValues(alpha: 0.4);
       statusIcon = Icons.verified;
       statusTitle = 'Hành trình đã xác minh';
-      statusSubtitle = 'Bạn đã hoàn thành và được xác nhận bởi Mentor. Chúc mừng!';
+      statusSubtitle =
+          'Bạn đã hoàn thành và được xác nhận bởi Mentor. Chúc mừng!';
     } else if (isBlocked) {
       cardColor = AppTheme.warningColor.withValues(alpha: 0.07);
       borderColor = AppTheme.warningColor.withValues(alpha: 0.35);
       statusIcon = Icons.pending_outlined;
       statusTitle = 'Đang chờ xác minh';
-      statusSubtitle = 'Hoàn thành các bước bên dưới để được xác nhận hoàn thành hành trình.';
+      statusSubtitle =
+          'Hoàn thành các bước bên dưới để được xác nhận hoàn thành hành trình.';
     } else {
       cardColor = AppTheme.infoColor.withValues(alpha: 0.07);
       borderColor = AppTheme.infoColor.withValues(alpha: 0.3);
       statusIcon = Icons.school_outlined;
       statusTitle = 'Chế độ Tự học';
-      statusSubtitle = 'Lộ trình này không bắt buộc xác minh. Bạn có thể thuê Mentor để nhận Chứng chỉ kỹ năng.';
+      statusSubtitle =
+          'Lộ trình này không bắt buộc xác minh. Bạn có thể thuê Mentor để nhận Chứng chỉ kỹ năng.';
     }
 
     final Color accentColor = isPassed
         ? AppTheme.successColor
         : isBlocked
-            ? AppTheme.warningColor
-            : AppTheme.infoColor;
+        ? AppTheme.warningColor
+        : AppTheme.infoColor;
 
     return Container(
       width: double.infinity,
@@ -255,7 +269,9 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
               ),
             ),
             const SizedBox(height: 8),
@@ -272,8 +288,11 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
                         color: AppTheme.warningColor.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.close,
-                          size: 10, color: AppTheme.warningColor),
+                      child: Icon(
+                        Icons.close,
+                        size: 10,
+                        color: AppTheme.warningColor,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -346,7 +365,8 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
           // Already has an active booking — show status + link to detail.
           final statusLabel = switch (activeBooking.status) {
             BookingStatus.pending => 'Đang chờ Mentor xác nhận',
-            BookingStatus.confirmed => 'Mentor đã xác nhận — chờ vào buổi phỏng vấn',
+            BookingStatus.confirmed =>
+              'Mentor đã xác nhận — chờ vào buổi phỏng vấn',
             BookingStatus.ongoing => 'Buổi phỏng vấn đang diễn ra',
             BookingStatus.mentoringActive => 'Mentor đang theo sát',
             _ => 'Đã đặt lịch',
@@ -357,16 +377,20 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
             decoration: BoxDecoration(
               color: AppTheme.successColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
-              border:
-                  Border.all(color: AppTheme.successColor.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: AppTheme.successColor.withValues(alpha: 0.3),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.check_circle_outline,
-                        color: AppTheme.successColor, size: 18),
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: AppTheme.successColor,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -447,7 +471,9 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(
-            title: 'Sản phẩm nộp', icon: Icons.upload_file_outlined),
+          title: 'Sản phẩm nộp',
+          icon: Icons.upload_file_outlined,
+        ),
         const SizedBox(height: 8),
         if (assessment == null)
           GlassCard(
@@ -483,13 +509,12 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
                     Expanded(
                       child: Text(
                         'Sản phẩm của bạn',
-                        style:
-                            Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark
-                                      ? AppTheme.darkTextPrimary
-                                      : AppTheme.lightTextPrimary,
-                                ),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                        ),
                       ),
                     ),
                     StatusBadge(
@@ -599,8 +624,11 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.feedback_outlined,
-                                size: 14, color: AppTheme.errorColor),
+                            Icon(
+                              Icons.feedback_outlined,
+                              size: 14,
+                              color: AppTheme.errorColor,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               'Phản hồi từ mentor',
@@ -648,7 +676,9 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(
-            title: 'Lịch sử xác minh', icon: Icons.history_outlined),
+          title: 'Lịch sử xác minh',
+          icon: Icons.history_outlined,
+        ),
         const SizedBox(height: 8),
         ...history.map(
           (report) => Padding(
@@ -663,9 +693,7 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
                       Expanded(
                         child: Text(
                           'Lần ${report.attemptNumber ?? '-'}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
+                          style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: isDark
@@ -693,8 +721,10 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
                       onPressed: () async {
                         final uri = Uri.tryParse(report.meetingJitsiLink!);
                         if (uri != null) {
-                          await launchUrl(uri,
-                              mode: LaunchMode.externalApplication);
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
                         }
                       },
                       icon: const Icon(Icons.video_call, size: 16),
@@ -725,7 +755,9 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
   // ─── Submit dialog ────────────────────────────────────────────────────────
 
   void _showSubmitDialog(
-      BuildContext context, FinalVerificationProvider provider) {
+    BuildContext context,
+    FinalVerificationProvider provider,
+  ) {
     final textCtrl = TextEditingController();
     final urlCtrl = TextEditingController();
     PlatformFile? pickedFile;
@@ -742,152 +774,172 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
             right: 16,
             top: 16,
           ),
-        child: StatefulBuilder(
-          builder: (ctx, setSheetState) {
-            return Consumer<FinalVerificationProvider>(
-              builder: (_, p, __) => Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Nộp sản phẩm',
-                    style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: textCtrl,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      labelText: 'Mô tả sản phẩm *',
-                      border: OutlineInputBorder(),
+          child: StatefulBuilder(
+            builder: (ctx, setSheetState) {
+              return Consumer<FinalVerificationProvider>(
+                builder: (_, p, __) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nộp sản phẩm',
+                      style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: urlCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Link minh chứng (tuỳ chọn)',
-                      border: OutlineInputBorder(),
-                      hintText: 'https://...',
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: textCtrl,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Mô tả sản phẩm *',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSheetAttachmentZone(
-                    ctx,
-                    p,
-                    onPick: () async {
-                      final res = await FilePicker.platform.pickFiles(
-                        type: FileType.custom,
-                        allowedExtensions: const [
-                          'pdf',
-                          'docx',
-                          'jpg',
-                          'jpeg',
-                          'png',
-                          'gif',
-                          'webp',
-                        ],
-                        withData: false,
-                      );
-                      if (res == null || res.files.isEmpty) return;
-                      final file = res.files.first;
-                      if (file.size > 10 * 1024 * 1024) {
-                        if (!mounted) return;
-                        ErrorHandler.showWarningSnackBar(
-                          ctx,
-                          'File vượt quá 10MB',
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: urlCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Link minh chứng (tuỳ chọn)',
+                        border: OutlineInputBorder(),
+                        hintText: 'https://...',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildSheetAttachmentZone(
+                      ctx,
+                      p,
+                      onPick: () async {
+                        final res = await FilePicker.platform.pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: const [
+                            'pdf',
+                            'docx',
+                            'jpg',
+                            'jpeg',
+                            'png',
+                            'gif',
+                            'webp',
+                          ],
+                          withData: false,
                         );
-                        return;
-                      }
-                      setSheetState(() => pickedFile = file);
-                    },
-                    onRemove: () => setSheetState(() => pickedFile = null),
-                    pickedFile: pickedFile,
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: p.isUploading || p.isBusy
-                          ? null
-                          : () async {
-                              if (textCtrl.text.trim().isEmpty) return;
-                              final stateContext = this.context;
-
-                              // Step 1: upload if a new file was picked
-                              String? attachmentUrl;
-                              if (pickedFile != null &&
-                                  pickedFile!.path != null) {
-                                final actorId = stateContext
-                                    .read<AuthProvider>()
-                                    .user
-                                    ?.id;
-                                if (actorId == null) {
-                                  ErrorHandler.showErrorSnackBar(
-                                    stateContext,
-                                    'Bạn cần đăng nhập lại.',
-                                  );
-                                  return;
-                                }
-                                attachmentUrl = await provider.uploadAttachment(
-                                  filePath: pickedFile!.path!,
-                                  fileName: pickedFile!.name,
-                                  actorId: actorId,
-                                );
-                                if (attachmentUrl == null) {
-                                  if (!mounted) return;
-                                  ErrorHandler.showErrorSnackBar(
-                                    stateContext,
-                                    provider.error ?? 'Tải file thất bại',
-                                  );
-                                  return;
-                                }
-                              }
-
-                              if (!mounted) return;
-                              Navigator.pop(ctx);
-                              final ok = await provider.submitOutput(
-                                widget.journeyId,
-                                SubmitJourneyOutputRequest(
-                                  submissionText: textCtrl.text.trim(),
-                                  evidenceUrl: urlCtrl.text.trim().isEmpty
-                                      ? null
-                                      : urlCtrl.text.trim(),
-                                  attachmentUrl: attachmentUrl,
-                                ),
-                              );
-                              if (!mounted) return;
-                              if (ok) {
-                                await AnimatedSuccessOverlay.show(
-                                  context: stateContext,
-                                  title: 'Đã gửi thành công!',
-                                  subtitle:
-                                      'Mentor sẽ xem xét sản phẩm của bạn sớm.',
-                                );
-                              } else if (provider.error != null) {
-                                ErrorDialog.show(
-                                  context: stateContext,
-                                  title: 'Lỗi',
-                                  message: provider.error!,
-                                );
-                              }
-                            },
-                      child: p.isUploading
-                          ? Text(
-                              'Đang tải file ${(p.uploadProgress * 100).toStringAsFixed(0)}%',
-                            )
-                          : const Text('Gửi'),
+                        if (res == null || res.files.isEmpty) return;
+                        final file = res.files.first;
+                        if (file.size > 10 * 1024 * 1024) {
+                          if (!mounted) return;
+                          ErrorHandler.showWarningSnackBar(
+                            ctx,
+                            'File vượt quá 10MB',
+                          );
+                          return;
+                        }
+                        setSheetState(() => pickedFile = file);
+                      },
+                      onRemove: () => setSheetState(() => pickedFile = null),
+                      pickedFile: pickedFile,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            );
-          },
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: p.isUploading || p.isBusy
+                            ? null
+                            : () async {
+                                final stateContext = this.context;
+                                if (textCtrl.text.trim().isEmpty) {
+                                  ErrorHandler.showWarningSnackBar(
+                                    stateContext,
+                                    'Vui lòng nhập mô tả sản phẩm bàn giao trước khi gửi.',
+                                  );
+                                  return;
+                                }
+                                final evidenceUrl = urlCtrl.text.trim();
+                                if (evidenceUrl.isNotEmpty) {
+                                  final uri = Uri.tryParse(evidenceUrl);
+                                  if (uri == null ||
+                                      !uri.hasScheme ||
+                                      !uri.host.contains('.')) {
+                                    ErrorHandler.showWarningSnackBar(
+                                      stateContext,
+                                      'URL không hợp lệ. VD: https://drive.google.com/...',
+                                    );
+                                    return;
+                                  }
+                                }
+
+                                // Step 1: upload if a new file was picked
+                                String? attachmentUrl;
+                                if (pickedFile != null &&
+                                    pickedFile!.path != null) {
+                                  final actorId = stateContext
+                                      .read<AuthProvider>()
+                                      .user
+                                      ?.id;
+                                  if (actorId == null) {
+                                    ErrorHandler.showErrorSnackBar(
+                                      stateContext,
+                                      'Bạn cần đăng nhập lại.',
+                                    );
+                                    return;
+                                  }
+                                  attachmentUrl = await provider
+                                      .uploadAttachment(
+                                        filePath: pickedFile!.path!,
+                                        fileName: pickedFile!.name,
+                                        actorId: actorId,
+                                      );
+                                  if (attachmentUrl == null) {
+                                    if (!mounted) return;
+                                    ErrorHandler.showErrorSnackBar(
+                                      stateContext,
+                                      provider.error ?? 'Tải file thất bại',
+                                    );
+                                    return;
+                                  }
+                                }
+
+                                if (!mounted) return;
+                                Navigator.pop(ctx);
+                                final ok = await provider.submitOutput(
+                                  widget.journeyId,
+                                  SubmitJourneyOutputRequest(
+                                    submissionText: textCtrl.text.trim(),
+                                    evidenceUrl: evidenceUrl.isEmpty
+                                        ? null
+                                        : evidenceUrl,
+                                    attachmentUrl: attachmentUrl,
+                                  ),
+                                );
+                                if (!mounted) return;
+                                if (ok) {
+                                  await AnimatedSuccessOverlay.show(
+                                    context: stateContext,
+                                    title: 'Đã gửi thành công!',
+                                    subtitle:
+                                        'Mentor sẽ xem xét sản phẩm của bạn sớm.',
+                                  );
+                                } else if (provider.error != null) {
+                                  ErrorDialog.show(
+                                    context: stateContext,
+                                    title: 'Lỗi',
+                                    message: provider.error!,
+                                  );
+                                }
+                              },
+                        child: p.isUploading
+                            ? Text(
+                                'Đang tải file ${(p.uploadProgress * 100).toStringAsFixed(0)}%',
+                              )
+                            : const Text('Gửi'),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
-      ),
       ),
     );
   }
@@ -972,8 +1024,9 @@ class _FinalVerificationPageState extends State<FinalVerificationPage> {
   }
 
   Widget _buildMarkdown(String data, bool isDark) {
-    final baseColor =
-        isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final baseColor = isDark
+        ? AppTheme.darkTextPrimary
+        : AppTheme.lightTextPrimary;
     return MarkdownBody(
       data: data,
       onTapLink: (_, href, _) {

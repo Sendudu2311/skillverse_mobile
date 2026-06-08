@@ -193,10 +193,16 @@ class DateTimeHelper {
   /// Check if date is this week
   static bool isThisWeek(DateTime date) {
     final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    final endOfWeek = startOfWeek.add(const Duration(days: 6));
+    final today = DateTime(now.year, now.month, now.day);
+    final startOfWeek = today.subtract(
+      Duration(days: today.weekday - DateTime.monday),
+    );
+    final startOfNextWeek = startOfWeek.add(const Duration(days: 7));
+    final localDate = date.toLocal();
+    final dateOnly = DateTime(localDate.year, localDate.month, localDate.day);
 
-    return date.isAfter(startOfWeek) && date.isBefore(endOfWeek);
+    return !dateOnly.isBefore(startOfWeek) &&
+        dateOnly.isBefore(startOfNextWeek);
   }
 
   /// Get difference in days

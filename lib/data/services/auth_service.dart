@@ -184,6 +184,51 @@ class AuthService {
     }
   }
 
+  /// Đặt lại mật khẩu với OTP
+  Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      await _apiClient.post(
+        '/auth/reset-password',
+        data: {
+          'email': email,
+          'otp': otp,
+          'newPassword': newPassword,
+          'confirmPassword': confirmPassword,
+        },
+      );
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ApiException('Đặt lại mật khẩu thất bại');
+    }
+  }
+
+  /// Đổi mật khẩu (người dùng đã đăng nhập)
+  /// POST /auth/change-password
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      await _apiClient.post(
+        '/auth/change-password',
+        data: {
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+          'confirmPassword': confirmPassword,
+        },
+      );
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ApiException('Đổi mật khẩu thất bại');
+    }
+  }
+
   /// Đăng xuất
   Future<void> logout() async {
     try {

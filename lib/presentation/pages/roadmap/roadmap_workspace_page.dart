@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/journey_provider.dart';
 import '../../providers/mentor_booking_provider.dart';
 import '../../providers/workspace_provider.dart';
 import '../../providers/roadmap_detail_provider.dart';
@@ -13,8 +14,8 @@ import '../../themes/app_theme.dart';
 import '../../../data/models/mentor_models.dart';
 import '../../../data/models/node_mentoring_models.dart';
 import '../../../data/models/roadmap_models.dart';
-import '../../../data/models/final_verification_models.dart'
-    show JourneyCompletionReportResponse;
+import '../../../data/models/final_verification_models.dart' as fv;
+import '../../../data/services/journey_service.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/common_loading.dart';
 import '../../widgets/empty_state_widget.dart';
@@ -53,6 +54,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
   final _submissionTextCtrl = TextEditingController();
   final _evidenceUrlCtrl = TextEditingController();
   bool _hasPreFilled = false;
+  bool _isSwitchingNode = false; // Guard against concurrent selectNode calls
 
   // Attachment state
   PlatformFile? _pickedAttachment;
@@ -95,6 +97,10 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
       final workspaceProvider = context.read<WorkspaceProvider>();
       final roadmapProvider = context.read<RoadmapDetailProvider>();
 
+      if (roadmapProvider.currentRoadmap?.sessionId != widget.sessionId) {
+        await roadmapProvider.loadRoadmapById(widget.sessionId);
+      }
+
       // ── Ensure bookings are loaded ──
       if (bookingProvider.bookings.isEmpty) {
         await bookingProvider.loadBookings();
@@ -125,21 +131,19 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
       _syncNodesFromRoadmap(roadmapProvider);
 
       // ── Init workspace provider ──
-      final jId = widget.journeyId ?? match?.journeyId;
-      if (jId != null && match != null) {
-        workspaceProvider.init(journeyId: jId, bookingId: match.id);
+      final jId =
+          widget.journeyId ?? match?.journeyId ?? await _resolveJourneyId();
+      if (jId != null) {
+        workspaceProvider.init(journeyId: jId, bookingId: match?.id);
 
         // Determine finalNodeId = last CORE node
-        final coreNodes =
-            _nodes.where((n) => n['type'] == 'CORE').toList();
+        final coreNodes = _nodes.where((n) => n['type'] == 'CORE').toList();
         if (coreNodes.isNotEmpty) {
-          workspaceProvider.setFinalNodeId(
-            coreNodes.last['id'] as String?,
-          );
+          workspaceProvider.setFinalNodeId(coreNodes.last['id'] as String?);
         }
 
         await Future.wait([
-          workspaceProvider.loadMeetings(),
+          if (match != null) workspaceProvider.loadMeetings(),
           workspaceProvider.loadCompletionGate(),
         ]);
 
@@ -151,19 +155,36 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
       }
     } catch (e) {
       debugPrint('❌ _loadAll error: $e');
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          'Không thể tải dữ liệu workspace. Vui lòng thử lại.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _onNodeSelected(String? nodeId) {
-    setState(() => _selectedNodeId = nodeId);
-    final wp = context.read<WorkspaceProvider>();
-    wp.selectNode(nodeId);
+  Future<void> _onNodeSelected(String? nodeId) async {
+    // Prevent concurrent selectNode calls (race condition)
+    if (_isSwitchingNode) return;
+    setState(() {
+      _selectedNodeId = nodeId;
+      _isSwitchingNode = true;
+    });
+    try {
+      final wp = context.read<WorkspaceProvider>();
+      await wp.selectNode(nodeId);
+    } finally {
+      if (mounted) setState(() => _isSwitchingNode = false);
+    }
     // Clear form and reset pre-fill flag when switching nodes
-    _submissionTextCtrl.clear();
-    _evidenceUrlCtrl.clear();
-    _hasPreFilled = false;
+    if (mounted) {
+      _submissionTextCtrl.clear();
+      _evidenceUrlCtrl.clear();
+      _hasPreFilled = false;
+    }
   }
 
   void _syncNodesFromRoadmap(RoadmapDetailProvider roadmapProvider) {
@@ -181,6 +202,34 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
           .toList();
     } else {
       _nodes = [];
+    }
+  }
+
+  Future<int?> _resolveJourneyId() async {
+    final jp = context.read<JourneyProvider>();
+    final current = jp.currentJourney;
+    if (current != null && current.roadmapSessionId == widget.sessionId) {
+      return current.id;
+    }
+
+    final activeMatch = jp.activeJourneys
+        .where((journey) => journey.roadmapSessionId == widget.sessionId)
+        .firstOrNull;
+    if (activeMatch != null) return activeMatch.id;
+
+    final cachedMatch = jp.journeys
+        .where((journey) => journey.roadmapSessionId == widget.sessionId)
+        .firstOrNull;
+    if (cachedMatch != null) return cachedMatch.id;
+
+    try {
+      await jp.loadActiveJourneys();
+      return jp.activeJourneys
+          .where((journey) => journey.roadmapSessionId == widget.sessionId)
+          .firstOrNull
+          ?.id;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -222,6 +271,29 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
     return evidence.learnerMarkedComplete == true;
   }
 
+  bool _canSubmitNodeEvidence(NodeEvidenceRecordResponse? evidence) {
+    if (evidence == null) return true;
+    if (evidence.submissionStatus == NodeSubmissionStatus.submitted ||
+        evidence.submissionStatus == NodeSubmissionStatus.resubmitted) {
+      return false;
+    }
+    return evidence.submissionStatus == NodeSubmissionStatus.draft ||
+        evidence.submissionStatus == NodeSubmissionStatus.reworkRequested ||
+        evidence.verificationStatus == NodeVerificationStatus.rejected ||
+        evidence.latestReview?.reviewResult ==
+            NodeReviewResult.reworkRequested ||
+        evidence.latestReview?.reviewResult == NodeReviewResult.rejected ||
+        evidence.latestVerification?.nodeVerificationStatus ==
+            NodeVerificationStatus.rejected;
+  }
+
+  bool _canSubmitFinalAssessment(
+    JourneyOutputAssessmentResponse? outputAssessment,
+  ) {
+    return outputAssessment == null ||
+        outputAssessment.assessmentStatus == OutputAssessmentStatus.rejected;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -231,7 +303,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
         bottom: true,
         child: _isLoading
             ? Center(child: CommonLoading.center())
-            : _booking == null
+            : context.read<WorkspaceProvider>().journeyId == null
             ? _buildNoBookingState(context, isDark)
             : _buildWorkspaceContent(context, isDark),
       ),
@@ -248,9 +320,9 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
           child: EmptyStateWidget(
             icon: Icons.person_search_outlined,
             title: 'Chưa có Mentor đồng hành',
-            subtitle:
-                'Bạn chưa có booking ROADMAP_MENTORING nào đang hoạt động.\n'
-                'Hãy quay lại Roadmap và bấm "Tìm Mentor đồng hành".',
+            subtitle: widget.journeyId == null
+                ? 'Không xác định được journey gắn với roadmap này.\nVui lòng mở workspace từ Journey hoặc Roadmap Detail.'
+                : 'Bạn có thể học roadmap, nhưng cần journey context để nộp minh chứng.',
             ctaLabel: 'Quay lại',
             onCtaPressed: () => context.pop(),
           ),
@@ -281,7 +353,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
           ),
           Expanded(
             child: Text(
-              'Không gian Mentor',
+              _booking == null ? 'Workspace Roadmap' : 'Không gian Mentor',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: isDark
@@ -298,7 +370,10 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
 
   /// Icon shortcut to Final Verification page. State reflects gate status.
   Widget _buildVerificationGateAction(BuildContext context) {
-    final journeyId = widget.journeyId ?? _booking?.journeyId;
+    final journeyId =
+        context.read<WorkspaceProvider>().journeyId ??
+        widget.journeyId ??
+        _booking?.journeyId;
     if (journeyId == null) return const SizedBox.shrink();
 
     return Consumer<WorkspaceProvider>(
@@ -416,8 +491,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
             ],
           ),
         ),
-        // Meetings panel at bottom
-        _buildMeetingsPanel(context, isDark),
+        if (_booking != null) _buildMeetingsPanel(context, isDark),
       ],
     );
   }
@@ -425,7 +499,36 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
   // ─── Mentor Header ────────────────────────────────────────────────────
 
   Widget _buildMentorHeader(BuildContext context, bool isDark) {
-    final booking = _booking!;
+    final booking = _booking;
+    if (booking == null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: GlassCard(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                size: 20,
+                color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Bạn đang học không có mentor đồng hành. Kết quả final assessment sẽ ở trạng thái chưa xác thực cho đến khi có mentor review.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: GlassCard(
@@ -529,7 +632,9 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+                      color: isDark
+                          ? AppTheme.accentCyan
+                          : AppTheme.primaryBlue,
                     ),
                   ),
                 ),
@@ -559,16 +664,29 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                     ),
                     child: const Text(
                       'Phụ',
-                      style: TextStyle(fontSize: 9, color: AppTheme.warningColor),
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: AppTheme.warningColor,
+                      ),
                     ),
                   ),
                 ],
                 if (status == 'COMPLETED') ...[
                   const SizedBox(width: 6),
-                  const Icon(Icons.check_circle, size: 14, color: AppTheme.successColor),
+                  const Icon(
+                    Icons.check_circle,
+                    size: 14,
+                    color: AppTheme.successColor,
+                  ),
                 ] else if (isLocked) ...[
                   const SizedBox(width: 6),
-                  Icon(Icons.lock_outline, size: 14, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                  Icon(
+                    Icons.lock_outline,
+                    size: 14,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
                 ],
               ],
             ),
@@ -577,6 +695,32 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
       );
     }
 
+    items.add(
+      DropdownMenuItem<String?>(
+        value: null,
+        child: Row(
+          children: [
+            Icon(
+              Icons.emoji_events_outlined,
+              size: 18,
+              color: isDark ? AppTheme.accentGold : AppTheme.warningColor,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Final Assessment',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     if (items.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -584,7 +728,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: DropdownButtonFormField<String?>(
-        value: _selectedNodeId,
+        initialValue: _selectedNodeId,
         decoration: InputDecoration(
           labelText: 'Chọn Node',
           labelStyle: TextStyle(
@@ -600,6 +744,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
           ),
           isDense: true,
         ),
+        hint: _selectedNodeId == null ? const Text('Final Assessment') : null,
         items: items,
         onChanged: _onNodeSelected,
         isExpanded: true,
@@ -627,8 +772,12 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
         }
 
         final assignment = wp.assignment;
-        final nodes = context.read<RoadmapDetailProvider>().currentRoadmap?.roadmap;
-        final roadmapNode = nodes != null && nodes.any((n) => n.id == wp.selectedNodeId)
+        final nodes = context
+            .read<RoadmapDetailProvider>()
+            .currentRoadmap
+            ?.roadmap;
+        final roadmapNode =
+            nodes != null && nodes.any((n) => n.id == wp.selectedNodeId)
             ? nodes.firstWhere((n) => n.id == wp.selectedNodeId)
             : null;
 
@@ -652,23 +801,34 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                   ),
                   const SizedBox(height: 12),
                   // Skill requirement tags
-                  if (roadmapNode.skills != null && roadmapNode.skills!.isNotEmpty) ...[
+                  if (roadmapNode.skills != null &&
+                      roadmapNode.skills!.isNotEmpty) ...[
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
                       children: roadmapNode.skills!.map((skill) {
-                        final (Color tagColor, String tagLabel) = switch (skill.requirementType?.toUpperCase()) {
+                        final (Color tagColor, String tagLabel) = switch (skill
+                            .requirementType
+                            ?.toUpperCase()) {
                           'REQUIRED' => (const Color(0xFF22d3ee), 'Bắt buộc'),
-                          'IMPORTANT' => (const Color(0xFFf59e0b), 'Quan trọng'),
+                          'IMPORTANT' => (
+                            const Color(0xFFf59e0b),
+                            'Quan trọng',
+                          ),
                           'NICE_TO_HAVE' => (const Color(0xFF6366f1), 'Nên có'),
                           _ => (const Color(0xFF22d3ee), 'Bắt buộc'),
                         };
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: tagColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: tagColor.withValues(alpha: 0.35)),
+                            border: Border.all(
+                              color: tagColor.withValues(alpha: 0.35),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -736,6 +896,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                       title: 'Bài tập cần hoàn thành',
                       items: roadmapNode.practicalExercises!,
                       isDark: isDark,
+                      isMarkdown: true,
                     ),
                   ],
                   // Success Criteria
@@ -802,10 +963,15 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
     bool isDark,
     NodeAssignmentResponse? assignment,
   ) {
-    final isMentor = assignment != null &&
+    final isMentor =
+        assignment != null &&
         assignment.assignmentSource == AssignmentSource.mentorRefined;
     final sourceLabel = isMentor ? 'Mentor cập nhật' : 'Hệ thống gợi ý';
     final sourceColor = isMentor ? AppTheme.primaryBlue : AppTheme.warningColor;
+    final assignmentDescription = _normalizeMeaningfulMarkdown(
+      assignment?.description,
+    );
+    final hasAssignmentTitle = assignment?.title?.trim().isNotEmpty == true;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -857,9 +1023,9 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
           ),
         ],
         const SizedBox(height: 12),
-        if (assignment != null && assignment.title != null) ...[
+        if (assignment != null && hasAssignmentTitle) ...[
           Text(
-            assignment.title!,
+            assignment.title!.trim(),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: isDark
@@ -869,10 +1035,10 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
           ),
           const SizedBox(height: 8),
         ],
-        if (assignment != null && assignment.description != null)
+        if (assignmentDescription != null)
           GlassCard(
             padding: const EdgeInsets.all(14),
-            child: _buildMarkdown(assignment.description!, isDark),
+            child: _buildMarkdown(assignmentDescription, isDark),
           )
         else
           GlassCard(
@@ -888,8 +1054,11 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Mentor chưa giao nhiệm vụ cụ thể.\n'
-                  'Bạn có thể bắt đầu dựa vào nội dung node phía trên.',
+                  isMentor
+                      ? 'Mentor chưa giao nhiệm vụ cụ thể.\n'
+                            'Bạn có thể bắt đầu dựa vào nội dung node phía trên.'
+                      : 'Chưa có nhiệm vụ chi tiết từ hệ thống.\n'
+                            'Bạn có thể bắt đầu dựa vào nội dung node phía trên.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
@@ -927,7 +1096,11 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
   }) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue),
+        Icon(
+          icon,
+          size: 18,
+          color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+        ),
         const SizedBox(width: 6),
         Text(
           title,
@@ -950,6 +1123,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
     required String title,
     required List<String> items,
     required bool isDark,
+    bool isMarkdown = false,
   }) {
     return GlassCard(
       padding: const EdgeInsets.all(12),
@@ -958,7 +1132,11 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
         children: [
           Row(
             children: [
-              Icon(icon, size: 15, color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue),
+              Icon(
+                icon,
+                size: 15,
+                color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
+              ),
               const SizedBox(width: 6),
               Text(
                 title,
@@ -990,30 +1168,49 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
             ],
           ),
           const SizedBox(height: 8),
-          ...items.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('•  ', style: TextStyle(
-                  color: isDark ? AppTheme.accentCyan : AppTheme.primaryBlue,
-                  fontWeight: FontWeight.bold,
-                )),
-                Expanded(
-                  child: Text(
-                    item,
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.4,
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
-                    ),
-                  ),
+          // isMarkdown: render mỗi item qua MarkdownBody (dùng cho practicalExercises)
+          // plain text: bullet list thông thường (keyConcepts, successCriteria, prerequisites)
+          if (isMarkdown)
+            ...items.asMap().entries.map(
+              (e) => Padding(
+                padding: EdgeInsets.only(
+                  bottom: e.key < items.length - 1 ? 12 : 0,
                 ),
-              ],
+                child: _buildMarkdown(e.value, isDark),
+              ),
+            )
+          else
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '•  ',
+                      style: TextStyle(
+                        color: isDark
+                            ? AppTheme.accentCyan
+                            : AppTheme.primaryBlue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        item,
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.4,
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          )),
         ],
       ),
     );
@@ -1300,10 +1497,13 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                   Row(
                     children: [
                       Icon(
-                        outputAssessment.assessmentStatus == 'PASSED'
+                        outputAssessment.assessmentStatus ==
+                                OutputAssessmentStatus.approved
                             ? Icons.check_circle
                             : Icons.schedule,
-                        color: outputAssessment.assessmentStatus == 'PASSED'
+                        color:
+                            outputAssessment.assessmentStatus ==
+                                OutputAssessmentStatus.approved
                             ? AppTheme.successColor
                             : AppTheme.warningColor,
                         size: 20,
@@ -1311,9 +1511,11 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          outputAssessment.assessmentStatus == 'PASSED'
+                          outputAssessment.assessmentStatus ==
+                                  OutputAssessmentStatus.approved
                               ? 'Đã được đánh giá — Đạt'
-                              : outputAssessment.assessmentStatus == 'FAILED'
+                              : outputAssessment.assessmentStatus ==
+                                    OutputAssessmentStatus.rejected
                               ? 'Đã được đánh giá — Chưa đạt'
                               : 'Đã nộp — Chờ mentor đánh giá',
                           style: TextStyle(
@@ -1471,7 +1673,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                   wp.assignment!.verificationStatus != null &&
                   wp.assignment!.verificationStatus !=
                       AssignmentVerificationStatus.approved &&
-                  widget.bookingId != null) ...[
+                  wp.bookingId != null) ...[
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
@@ -1574,10 +1776,13 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed:
-                            _isReadOnly || wp.isSubmitting || wp.isUploading ||
-                            (wp.assignment?.verificationStatus != null &&
-                             wp.assignment!.verificationStatus != AssignmentVerificationStatus.approved &&
-                             widget.bookingId != null)
+                            _isReadOnly ||
+                                wp.isSubmitting ||
+                                wp.isUploading ||
+                                (wp.assignment?.verificationStatus != null &&
+                                    wp.assignment!.verificationStatus !=
+                                        AssignmentVerificationStatus.approved &&
+                                    wp.bookingId != null)
                             ? null
                             : _onSubmitEvidence,
                         style: ElevatedButton.styleFrom(
@@ -1794,7 +1999,9 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
             ),
           ),
         ],
-        if (picked == null && existingUrl != null && existingUrl.isNotEmpty) ...[
+        if (picked == null &&
+            existingUrl != null &&
+            existingUrl.isNotEmpty) ...[
           const SizedBox(height: 8),
           InkWell(
             onTap: () => _openUrl(existingUrl),
@@ -1852,8 +2059,10 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
       }
       final ext = (file.extension ?? '').toLowerCase();
       if (!_allowedExtensions.contains(ext)) {
-        setState(() => _attachmentPickError =
-            'Định dạng không hỗ trợ. Cho phép: ${_allowedExtensions.join(", ")}');
+        setState(
+          () => _attachmentPickError =
+              'Định dạng không hỗ trợ. Cho phép: ${_allowedExtensions.join(", ")}',
+        );
         return;
       }
       setState(() => _pickedAttachment = file);
@@ -1876,12 +2085,33 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
   }
 
   Future<void> _onSubmitEvidence() async {
-    final text = _submissionTextCtrl.text.trim();
-    final urlText = _evidenceUrlCtrl.text.trim();
-    if (text.isEmpty && urlText.isEmpty && _pickedAttachment == null) {
+    final wp = context.read<WorkspaceProvider>();
+    if (wp.isFinalAssessmentMode) {
+      if (!_canSubmitFinalAssessment(wp.outputAssessment)) {
+        ErrorHandler.showWarningSnackBar(
+          context,
+          'Bạn chỉ có thể nộp lại Final Assessment khi mentor từ chối bài nộp.',
+        );
+        _tabController.animateTo(2);
+        return;
+      }
+    } else if (!_canSubmitNodeEvidence(wp.evidence)) {
       ErrorHandler.showWarningSnackBar(
         context,
-        'Vui lòng nhập nội dung, link hoặc đính kèm file.',
+        'Bạn chỉ có thể nộp lại khi mentor yêu cầu làm lại hoặc đánh fail node này.',
+      );
+      _tabController.animateTo(2);
+      return;
+    }
+
+    final text = _submissionTextCtrl.text.trim();
+    final urlText = _evidenceUrlCtrl.text.trim();
+    if (text.isEmpty) {
+      ErrorHandler.showWarningSnackBar(
+        context,
+        wp.isFinalAssessmentMode
+            ? 'Vui lòng nhập nội dung Final Assessment.'
+            : 'Vui lòng nhập nội dung mô tả minh chứng.',
       );
       return;
     }
@@ -1897,8 +2127,6 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
         return;
       }
     }
-
-    final wp = context.read<WorkspaceProvider>();
 
     // Step 1: upload attachment if a new file was picked
     String? attachmentUrl =
@@ -1935,11 +2163,29 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
 
     if (success && mounted) {
       setState(() => _pickedAttachment = null);
+      if (wp.isFinalAssessmentMode &&
+          _booking == null &&
+          wp.journeyId != null) {
+        try {
+          await JourneyService().completeJourney(wp.journeyId!);
+        } catch (e) {
+          debugPrint(
+            'Complete unmentored journey after final submit failed: $e',
+          );
+        }
+      }
       ErrorHandler.showSuccessSnackBar(
         context,
-        'Đã nộp minh chứng thành công!',
+        wp.isFinalAssessmentMode && _booking == null
+            ? 'Đã nộp final assessment. Journey sẽ ở trạng thái chưa xác thực.'
+            : 'Đã nộp minh chứng thành công!',
       );
       _tabController.animateTo(2); // Switch to Report tab
+    } else if (!success && mounted) {
+      ErrorHandler.showErrorSnackBar(
+        context,
+        wp.error ?? 'Nộp minh chứng thất bại. Vui lòng thử lại.',
+      );
     }
   }
 
@@ -1957,7 +2203,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
     }
 
     if (_isSelectedNodeMarkedComplete(wp.evidence)) {
-      ErrorHandler.showSuccessSnackBar(
+      ErrorHandler.showWarningSnackBar(
         context,
         'Node này đã được đánh dấu hoàn thành rồi.',
       );
@@ -1993,7 +2239,17 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
 
     try {
       final roadmapProvider = context.read<RoadmapDetailProvider>();
-      await roadmapProvider.completeNode(widget.sessionId, nodeId);
+      final success = await wp.selfConfirmNode();
+      if (!success) {
+        if (!mounted) return;
+        ErrorHandler.showErrorSnackBar(
+          context,
+          wp.error ?? 'Đánh dấu hoàn thành node thất bại',
+        );
+        return;
+      }
+
+      await roadmapProvider.loadRoadmapById(widget.sessionId);
       if (!mounted) return;
 
       _syncNodesFromRoadmap(roadmapProvider);
@@ -2001,11 +2257,63 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
       await wp.loadCompletionGate();
       if (!mounted) return;
 
+      final hasMentor = wp.evidence?.hasMentorCoverage == true;
       ErrorHandler.showSuccessSnackBar(
         context,
-        'Đã đánh dấu hoàn thành node. Mentor giờ có thể bắt đầu đánh giá.',
+        hasMentor
+            ? 'Đã đánh dấu hoàn thành. Node đang chờ mentor đánh giá trước khi mở bước tiếp theo.'
+            : 'Đã hoàn thành node. Node tiếp theo đã được mở nếu đủ điều kiện.',
       );
       _tabController.animateTo(2);
+    } catch (e) {
+      if (!mounted) return;
+      ErrorHandler.showErrorSnackBar(context, e);
+    } finally {
+      if (mounted) {
+        setState(() => _isCompletingNode = false);
+      }
+    }
+  }
+
+  /// Self-confirm node completion (unmentored flow).
+  Future<void> _selfConfirmNode(BuildContext context) async {
+    if (_isCompletingNode) return;
+    final wp = context.read<WorkspaceProvider>();
+    if (wp.isAiReviewBlocking) {
+      ErrorHandler.showWarningSnackBar(
+        context,
+        'Node này cần được hệ thống hoặc quản trị viên đánh giá đạt trước khi xác nhận hoàn thành.',
+      );
+      _tabController.animateTo(2);
+      return;
+    }
+
+    setState(() => _isCompletingNode = true);
+
+    try {
+      final success = await wp.selfConfirmNode();
+      if (!mounted) return;
+
+      if (success) {
+        final roadmapProvider = context.read<RoadmapDetailProvider>();
+        await roadmapProvider.loadRoadmapById(widget.sessionId);
+        if (!mounted) return;
+        _syncNodesFromRoadmap(roadmapProvider);
+        await wp.selectNode(wp.selectedNodeId);
+        if (!mounted) return;
+        await wp.loadCompletionGate();
+        if (!mounted) return;
+        ErrorHandler.showSuccessSnackBar(
+          context,
+          'Đã xác nhận hoàn thành node. Node tiếp theo đã được mở nếu đủ điều kiện.',
+        );
+        _tabController.animateTo(2);
+      } else {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          wp.error ?? 'Xác nhận hoàn thành thất bại',
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ErrorHandler.showErrorSnackBar(context, e);
@@ -2027,34 +2335,66 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
     final requiresResubmission = _requiresResubmissionBeforeComplete(evidence);
     final isResubmitted =
         evidence?.submissionStatus == NodeSubmissionStatus.resubmitted;
+    final isAiBlocking = wp.isAiReviewBlocking;
+    final hasMentor = evidence?.hasMentorCoverage == true;
     final canComplete =
         hasEvidence &&
         !isCompleted &&
         !requiresResubmission &&
+        !isAiBlocking &&
         !_isReadOnly &&
         !_isCompletingNode &&
         !wp.isSubmitting;
 
-    final title = isCompleted
-        ? 'Node đã sẵn sàng để mentor đánh giá'
-        : requiresResubmission
-        ? 'Mentor yêu cầu bạn làm lại node này'
-        : isResubmitted
-        ? 'Bước 2: Xác nhận lại hoàn thành node'
-        : 'Bước 2: Đánh dấu hoàn thành node';
-    final subtitle = isCompleted
-        ? 'Bạn đã xác nhận hoàn thành "$_selectedNodeTitle". Mentor có thể review bài nộp và quyết định bước xác thực tiếp theo.'
-        : requiresResubmission
-        ? 'Mentor đã yêu cầu chỉnh sửa bài nộp của "$_selectedNodeTitle". Hãy cập nhật minh chứng trước, sau đó quay lại đây để xác nhận hoàn thành lại node.'
-        : hasEvidence
-        ? isResubmitted
-              ? 'Bạn đã nộp lại minh chứng cho "$_selectedNodeTitle". Hãy xác nhận hoàn thành lại node để mentor có thể review lần tiếp theo.'
-              : 'Bạn đã nộp minh chứng cho "$_selectedNodeTitle". Hãy xác nhận hoàn thành node để mentor có thể bắt đầu đánh giá.'
-        : 'Sau khi nộp minh chứng, bạn cần quay lại đây để xác nhận đã hoàn tất node. Mentor chỉ review khi node đã được learner đánh dấu hoàn thành.';
-    final color = isCompleted
-        ? AppTheme.successColor
-        : requiresResubmission
+    // Determine title / subtitle based on state
+    final String title;
+    final String subtitle;
+    if (isAiBlocking) {
+      final aiStatus = AiReviewStatus.fromString(
+        evidence?.latestAiReviewStatus,
+      );
+      title = aiStatus == AiReviewStatus.failed
+          ? 'Hệ thống yêu cầu nộp lại'
+          : aiStatus == AiReviewStatus.needsAdminReview || aiStatus == null
+          ? 'Đang chờ hệ thống/admin đánh giá'
+          : 'Đang chờ hệ thống đánh giá';
+      subtitle = aiStatus == AiReviewStatus.failed
+          ? 'AI đã đánh giá bài nộp chưa đạt yêu cầu. Hãy cập nhật minh chứng và nộp lại.'
+          : aiStatus == AiReviewStatus.needsAdminReview || aiStatus == null
+          ? 'Node này cần được hệ thống hoặc quản trị viên đánh giá đạt trước khi xác nhận hoàn thành.'
+          : 'Bài nộp của bạn đang được hệ thống đánh giá. Vui lòng chờ kết quả.';
+    } else if (isCompleted) {
+      title = hasMentor
+          ? 'Node đã sẵn sàng để mentor đánh giá'
+          : 'Node đã xác nhận hoàn thành';
+      subtitle = hasMentor
+          ? 'Bạn đã xác nhận hoàn thành "$_selectedNodeTitle". Mentor có thể review bài nộp và quyết định bước xác thực tiếp theo.'
+          : 'Bạn đã xác nhận hoàn thành "$_selectedNodeTitle". Hệ thống đã đánh giá đạt bài nộp.';
+    } else if (requiresResubmission) {
+      title = 'Yêu cầu bạn làm lại node này';
+      subtitle =
+          'Hãy cập nhật minh chứng của "$_selectedNodeTitle" trước, sau đó quay lại đây để xác nhận hoàn thành lại node.';
+    } else if (isResubmitted) {
+      title = 'Bước 2: Xác nhận lại hoàn thành node';
+      subtitle =
+          'Bạn đã nộp lại minh chứng cho "$_selectedNodeTitle". Hãy xác nhận hoàn thành lại node.';
+    } else if (hasEvidence) {
+      title = hasMentor
+          ? 'Bước 2: Đánh dấu hoàn thành node'
+          : 'Bước 2: Xác nhận hoàn thành node';
+      subtitle = hasMentor
+          ? 'Bạn đã nộp minh chứng cho "$_selectedNodeTitle". Hãy xác nhận hoàn thành node để mentor có thể bắt đầu đánh giá.'
+          : 'Bạn đã nộp minh chứng cho "$_selectedNodeTitle". Hãy xác nhận hoàn thành node.';
+    } else {
+      title = 'Bước 2: Đánh dấu hoàn thành node';
+      subtitle =
+          'Sau khi nộp minh chứng, bạn cần quay lại đây để xác nhận đã hoàn tất node.';
+    }
+
+    final color = isAiBlocking || requiresResubmission
         ? AppTheme.warningColor
+        : isCompleted
+        ? AppTheme.successColor
         : hasEvidence
         ? AppTheme.warningColor
         : (isDark ? AppTheme.accentCyan : AppTheme.primaryBlue);
@@ -2069,7 +2409,9 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
           Row(
             children: [
               Icon(
-                isCompleted
+                isAiBlocking
+                    ? Icons.hourglass_top_outlined
+                    : isCompleted
                     ? Icons.check_circle_outline
                     : Icons.assignment_turned_in_outlined,
                 size: 18,
@@ -2104,7 +2446,9 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: canComplete
-                  ? () => _completeSelectedNode(context)
+                  ? hasMentor
+                        ? () => _completeSelectedNode(context)
+                        : () => _selfConfirmNode(context)
                   : null,
               icon: _isCompletingNode
                   ? const SizedBox(
@@ -2116,24 +2460,35 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                       ),
                     )
                   : Icon(
-                      isCompleted
+                      isAiBlocking
+                          ? Icons.hourglass_top_outlined
+                          : isCompleted
                           ? Icons.verified_outlined
                           : Icons.done_all_outlined,
                       size: 18,
                     ),
               label: Text(
-                isCompleted
+                isAiBlocking
+                    ? (AiReviewStatus.fromString(
+                                wp.evidence?.latestAiReviewStatus,
+                              ) ==
+                              AiReviewStatus.failed
+                          ? 'AI yêu cầu nộp lại'
+                          : 'Đang chờ đánh giá')
+                    : isCompleted
                     ? 'Đã hoàn thành node'
                     : requiresResubmission
                     ? 'Cập nhật minh chứng trước'
                     : hasEvidence
                     ? isResubmitted
                           ? 'Xác nhận hoàn thành lại node'
-                          : 'Đánh dấu hoàn thành node'
+                          : hasMentor
+                          ? 'Đánh dấu hoàn thành node'
+                          : 'Xác nhận hoàn thành node'
                     : 'Nộp minh chứng trước',
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isCompleted ? AppTheme.successColor : color,
+                backgroundColor: color,
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: isDark
                     ? AppTheme.darkCardBackground
@@ -2183,11 +2538,18 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
             children: [
               _buildNodeCompletionCard(context, isDark, wp),
               const SizedBox(height: 16),
-              // Verification status
+              // Verification status + AI status badge
               if (evidence.verificationStatus != null)
                 Row(
                   children: [
                     _buildStatusChip(evidence.verificationStatus!),
+                    const SizedBox(width: 6),
+                    if (evidence.latestAiReviewStatus != null)
+                      _buildAiStatusBadge(
+                        AiReviewStatus.fromString(
+                          evidence.latestAiReviewStatus,
+                        ),
+                      ),
                     const Spacer(),
                     if (evidence.submittedAt != null)
                       Text(
@@ -2205,7 +2567,8 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
 
               // Latest Review — hide stale review when learner has resubmitted
               if (evidence.latestReview != null &&
-                  evidence.submissionStatus != NodeSubmissionStatus.resubmitted) ...[
+                  evidence.submissionStatus !=
+                      NodeSubmissionStatus.resubmitted) ...[
                 _buildSectionTitle('Đánh giá của Mentor', isDark),
                 const SizedBox(height: 8),
                 GlassCard(
@@ -2240,7 +2603,10 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                       ),
                       if (evidence.latestReview!.feedback != null) ...[
                         const SizedBox(height: 10),
-                        _buildMarkdown(evidence.latestReview!.feedback!, isDark),
+                        _buildMarkdown(
+                          evidence.latestReview!.feedback!,
+                          isDark,
+                        ),
                       ],
                     ],
                   ),
@@ -2415,14 +2781,18 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                   Row(
                     children: [
                       _buildBadge(
-                        outputAssessment.assessmentStatus == 'PASSED'
+                        outputAssessment.assessmentStatus ==
+                                OutputAssessmentStatus.approved
                             ? 'Đạt'
-                            : outputAssessment.assessmentStatus == 'FAILED'
+                            : outputAssessment.assessmentStatus ==
+                                  OutputAssessmentStatus.rejected
                             ? 'Chưa đạt'
                             : 'Chờ đánh giá',
-                        outputAssessment.assessmentStatus == 'PASSED'
+                        outputAssessment.assessmentStatus ==
+                                OutputAssessmentStatus.approved
                             ? AppTheme.successColor
-                            : outputAssessment.assessmentStatus == 'FAILED'
+                            : outputAssessment.assessmentStatus ==
+                                  OutputAssessmentStatus.rejected
                             ? AppTheme.errorColor
                             : AppTheme.warningColor,
                       ),
@@ -2481,10 +2851,10 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
   Widget _buildCompletionReportBanner(
     BuildContext context,
     bool isDark,
-    JourneyCompletionReportResponse report,
+    fv.JourneyCompletionReportResponse report,
   ) {
-    final isPassed = report.gateDecision == GateDecision.pass;
-    final isFailed = report.gateDecision == GateDecision.fail;
+    final isPassed = report.gateDecision == fv.GateDecision.pass;
+    final isFailed = report.gateDecision == fv.GateDecision.fail;
     final bannerColor = isPassed
         ? AppTheme.successColor
         : isFailed
@@ -2517,9 +2887,7 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
             bannerColor.withValues(alpha: isDark ? 0.10 : 0.04),
           ],
         ),
-        border: Border.all(
-          color: bannerColor.withValues(alpha: 0.35),
-        ),
+        border: Border.all(color: bannerColor.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3073,6 +3441,17 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                       );
                       return;
                     }
+                    // Validate: meeting must be at least 30 min from now
+                    final minTime = DateTime.now().add(
+                      const Duration(minutes: 30),
+                    );
+                    if (selectedDate.isBefore(minTime)) {
+                      ErrorHandler.showWarningSnackBar(
+                        context,
+                        'Thời gian meeting phải cách ít nhất 30 phút kể từ bây giờ.',
+                      );
+                      return;
+                    }
                     final wp = context.read<WorkspaceProvider>();
                     final success = await wp.createMeeting(
                       CreateFollowUpMeetingRequest(
@@ -3090,6 +3469,12 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
                           'Đã gửi yêu cầu meeting!',
                         );
                       }
+                    } else if (mounted) {
+                      ErrorHandler.showErrorSnackBar(
+                        context,
+                        wp.error ??
+                            'Gửi đề xuất meeting thất bại. Vui lòng thử lại.',
+                      );
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -3140,6 +3525,23 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
   // ═══════════════════════════════════════════════════════════════════════
   //  HELPERS
   // ═══════════════════════════════════════════════════════════════════════
+
+  String? _normalizeMeaningfulMarkdown(String? data) {
+    final normalized = (data ?? '').replaceAll(r'\n', '\n').trim();
+    if (normalized.isEmpty) return null;
+
+    final meaningfulLines = normalized
+        .split(RegExp(r'\r?\n'))
+        .map((line) => line.trim())
+        .where((line) {
+          if (line.isEmpty) return false;
+          return !RegExp(r'^([-*+]|\u2022|\d+[.)])\s*$').hasMatch(line);
+        })
+        .toList();
+
+    if (meaningfulLines.isEmpty) return null;
+    return meaningfulLines.join('\n');
+  }
 
   Widget _buildMarkdown(String data, bool isDark) {
     final baseColor = isDark
@@ -3216,6 +3618,47 @@ class _RoadmapWorkspacePageState extends State<RoadmapWorkspacePage>
 
   Widget _buildStatusChip(NodeVerificationStatus status) {
     return _buildBadge(status.displayName, _verificationStatusColor(status));
+  }
+
+  /// AI Review status badge — mirrors Prototype's aiStatusBadge() with Cpu icon.
+  Widget _buildAiStatusBadge(AiReviewStatus? status) {
+    if (status == null) return const SizedBox.shrink();
+    final color = _aiReviewStatusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.smart_toy_outlined, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            status.displayName,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _aiReviewStatusColor(AiReviewStatus status) {
+    switch (status) {
+      case AiReviewStatus.passed:
+        return AppTheme.successColor;
+      case AiReviewStatus.failed:
+        return AppTheme.errorColor;
+      case AiReviewStatus.pending:
+      case AiReviewStatus.needsAdminReview:
+        return AppTheme.warningColor;
+    }
   }
 
   Widget _buildSectionTitle(String title, bool isDark) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/error/exceptions.dart' as app_exceptions;
 import '../../data/models/journey_models.dart';
 import '../../data/services/journey_service.dart';
 import '../../core/utils/error_handler.dart';
@@ -20,6 +21,7 @@ class JourneyProvider
   GenerateTestResponseDto? _generatedTest;
   TestResultDto? _testResult;
   JourneySummaryDto? _pendingJourneyForTestGeneration;
+  final Set<int> _roadmapGenerationPendingJourneyIds = {};
   bool _hasLoadedActiveJourneys = false;
 
   // Wizard state
@@ -39,6 +41,9 @@ class JourneyProvider
   int get wizardStep => _wizardStep;
   bool get isCreating => _isCreating;
   bool get isAutoGenerating => _isAutoGenerating;
+
+  bool isRoadmapGenerationPendingFor(int journeyId) =>
+      _roadmapGenerationPendingJourneyIds.contains(journeyId);
 
   /// Number of currently-learning journeys (excludes terminal & paused).
   int get concurrentLearningCount =>
@@ -271,15 +276,25 @@ class JourneyProvider
 
   /// Generate roadmap from test results
   Future<JourneySummaryDto?> generateRoadmap(int journeyId) async {
-    return await performAsyncFor<JourneySummaryDto>(
-      'generateRoadmap',
-      () async {
-        _currentJourney = await _journeyService.generateRoadmap(journeyId);
-        _syncJourneyInCollections(_currentJourney!);
-        notifyListeners();
-        return _currentJourney!;
-      },
-    );
+    if (isLoadingFor('generateRoadmap') ||
+        _roadmapGenerationPendingJourneyIds.contains(journeyId)) {
+      return _currentJourney;
+    }
+
+    setLoadingFor('generateRoadmap', true);
+    try {
+      _currentJourney = await _journeyService.generateRoadmap(journeyId);
+      _roadmapGenerationPendingJourneyIds.remove(journeyId);
+      _syncJourneyInCollections(_currentJourney!);
+      notifyListeners();
+      return _currentJourney!;
+    } on app_exceptions.TimeoutException {
+      _roadmapGenerationPendingJourneyIds.add(journeyId);
+      notifyListeners();
+      rethrow;
+    } finally {
+      setLoadingFor('generateRoadmap', false);
+    }
   }
 
   // ============================================================================
@@ -394,6 +409,10 @@ class JourneyProvider
   }
 
   void _syncJourneyInCollections(JourneySummaryDto journey) {
+    if (journey.roadmapSessionId != null) {
+      _roadmapGenerationPendingJourneyIds.remove(journey.id);
+    }
+
     final listIndex = _journeys.indexWhere((j) => j.id == journey.id);
     if (listIndex == -1) {
       _journeys.insert(0, journey);
@@ -422,6 +441,7 @@ class JourneyProvider
     _generatedTest = null;
     _testResult = null;
     _pendingJourneyForTestGeneration = null;
+    _roadmapGenerationPendingJourneyIds.clear();
     notifyListeners();
   }
 

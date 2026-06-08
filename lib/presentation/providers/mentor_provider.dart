@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/mentor_models.dart';
+import '../../data/models/mentor_eligibility_models.dart';
+import '../../data/services/mentor_eligibility_service.dart';
 import '../../data/services/mentor_service.dart';
 import '../../core/mixins/provider_loading_mixin.dart';
 import '../../core/utils/error_handler.dart';
@@ -10,6 +12,8 @@ import '../../core/utils/string_helper.dart';
 /// For booking and pre-chat operations use [MentorBookingProvider].
 class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
   final MentorService _mentorService = MentorService();
+  final MentorEligibilityService _eligibilityService =
+      MentorEligibilityService();
 
   // ==================== State ====================
 
@@ -33,6 +37,12 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool _isLoadingDetail = false;
   bool _isLoadingAvailability = false;
   bool _isEnrichingVerifiedSkills = false;
+  bool _isLoadingEligibility = false;
+  bool _roadmapContextMode = false;
+  int? _contextJourneyId;
+  int? _contextRoadmapSessionId;
+  String? _contextNodeId;
+  Map<int, MentorTeachingEligibilityResponse> _eligibilityByMentorId = {};
 
   // ==================== Getters ====================
 
@@ -59,14 +69,18 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool get isLoadingAvailability => _isLoadingAvailability;
   bool get showVerifiedOnly => _showVerifiedOnly;
   bool get isEnrichingVerifiedSkills => _isEnrichingVerifiedSkills;
+  bool get isLoadingEligibility => _isLoadingEligibility;
   String? get contextSkillName => _contextSkillName;
+  Map<int, MentorTeachingEligibilityResponse> get eligibilityByMentorId =>
+      _eligibilityByMentorId;
+
+  MentorTeachingEligibilityResponse? eligibilityFor(int mentorId) =>
+      _eligibilityByMentorId[mentorId];
 
   /// Normalize skill name to match backend SkillNameUtils logic.
   /// Strips non-alphanumeric → collapses → UPPERCASE.
   static String _normalizeSkill(String raw) {
-    return raw
-        .replaceAll(RegExp(r'[^a-zA-Z0-9]'), '')
-        .toUpperCase();
+    return raw.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
   }
 
   // ==================== Mentor Discovery ====================
@@ -86,6 +100,74 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
       setError(ErrorHandler.getErrorMessage(e));
     } finally {
       _isLoadingMentors = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadRoadmapMentors({
+    required int? journeyId,
+    required int? roadmapSessionId,
+    required String? skillName,
+    String? nodeId,
+    bool refresh = false,
+  }) async {
+    if (_isLoadingMentors) return;
+    if (!refresh &&
+        _roadmapContextMode &&
+        _mentors.isNotEmpty &&
+        _contextJourneyId == journeyId &&
+        _contextRoadmapSessionId == roadmapSessionId &&
+        _contextSkillName == skillName &&
+        _contextNodeId == nodeId) {
+      return;
+    }
+
+    _roadmapContextMode = true;
+    _contextJourneyId = journeyId;
+    _contextRoadmapSessionId = roadmapSessionId;
+    _contextNodeId = nodeId;
+    _contextSkillName = skillName?.trim();
+    _showVerifiedOnly = false;
+    _isLoadingMentors = true;
+    _isLoadingEligibility = true;
+    _eligibilityByMentorId = {};
+    notifyListeners();
+
+    try {
+      List<MentorProfile> candidates = [];
+      if (skillName != null && skillName.trim().isNotEmpty) {
+        try {
+          candidates = await _mentorService.getMentorsByVerifiedSkill(
+            skillName.trim(),
+          );
+        } catch (e) {
+          debugPrint('Verified-skill mentor lookup failed: $e');
+        }
+      }
+
+      if (candidates.isEmpty) {
+        final allMentors = await _mentorService.getAllMentors();
+        candidates = allMentors
+            .where((m) => m.canOfferRoadmapMentoring)
+            .toList();
+      } else {
+        candidates = candidates
+            .where((m) => m.canOfferRoadmapMentoring)
+            .toList();
+      }
+
+      _mentors = _dedupeMentors(candidates);
+      _applyFilters();
+      notifyListeners();
+
+      await _loadEligibilityForCurrentMentors();
+      _enrichVerifiedSkills();
+    } catch (e) {
+      setError(ErrorHandler.getErrorMessage(e));
+    } finally {
+      _isLoadingMentors = false;
+      _isLoadingEligibility = false;
+      _applyFilters();
       notifyListeners();
     }
   }
@@ -174,23 +256,88 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
       filtered = filtered.where((m) => m.hasVerifiedSkills).toList();
     }
 
+    if (_roadmapContextMode) {
+      filtered = filtered.where((m) {
+        final eligibility = _eligibilityByMentorId[m.id];
+        return eligibility?.summaryStatus !=
+            TeachingEligibilityStatus.notEligible;
+      }).toList();
+    }
+
     _filteredMentors = filtered;
 
     // Sort: mentors with context skill match first
     if (_contextSkillName != null && _contextSkillName!.isNotEmpty) {
       final normalizedContext = _normalizeSkill(_contextSkillName!);
       _filteredMentors.sort((a, b) {
-        final aMatch = a.verifiedSkills?.any(
+        final aMatch =
+            a.verifiedSkills?.any(
               (s) => _normalizeSkill(s) == normalizedContext,
-            ) ?? false;
-        final bMatch = b.verifiedSkills?.any(
+            ) ??
+            false;
+        final bMatch =
+            b.verifiedSkills?.any(
               (s) => _normalizeSkill(s) == normalizedContext,
-            ) ?? false;
+            ) ??
+            false;
         if (aMatch && !bMatch) return -1;
         if (!aMatch && bMatch) return 1;
         return 0; // keep original order within same group
       });
     }
+
+    if (_roadmapContextMode) {
+      _filteredMentors.sort((a, b) {
+        final aEligibility = _eligibilityByMentorId[a.id];
+        final bEligibility = _eligibilityByMentorId[b.id];
+        final statusCompare = (bEligibility?.summaryStatus.sortWeight ?? 1)
+            .compareTo(aEligibility?.summaryStatus.sortWeight ?? 1);
+        if (statusCompare != 0) return statusCompare;
+        return (bEligibility?.overallMatchPercent ?? 0).compareTo(
+          aEligibility?.overallMatchPercent ?? 0,
+        );
+      });
+    }
+  }
+
+  List<MentorProfile> _dedupeMentors(List<MentorProfile> mentors) {
+    final byId = <int, MentorProfile>{};
+    for (final mentor in mentors) {
+      byId[mentor.id] = mentor;
+    }
+    return byId.values.toList();
+  }
+
+  Future<void> _loadEligibilityForCurrentMentors() async {
+    if (!_roadmapContextMode || _mentors.isEmpty) return;
+    if (_contextJourneyId == null && _contextRoadmapSessionId == null) return;
+
+    final futures = _mentors.take(8).map((mentor) async {
+      try {
+        final eligibility = _contextJourneyId != null
+            ? await _eligibilityService.evaluateJourney(
+                journeyId: _contextJourneyId!,
+                mentorId: mentor.id,
+                nodeId: _contextNodeId,
+              )
+            : await _eligibilityService.evaluateRoadmap(
+                roadmapSessionId: _contextRoadmapSessionId!,
+                mentorId: mentor.id,
+                nodeId: _contextNodeId,
+              );
+        return MapEntry(mentor.id, eligibility);
+      } catch (e) {
+        debugPrint('Mentor eligibility check failed for ${mentor.id}: $e');
+        return MapEntry(
+          mentor.id,
+          MentorTeachingEligibilityResponse.needsReview(mentor.id),
+        );
+      }
+    });
+
+    final entries = await Future.wait(futures);
+    _eligibilityByMentorId =
+        Map<int, MentorTeachingEligibilityResponse>.fromEntries(entries);
   }
 
   /// Enrich all mentors with verified skills data in parallel.
@@ -336,11 +483,17 @@ class MentorProvider with ChangeNotifier, LoadingStateProviderMixin {
     _searchQuery = null;
     _skillFilter = null;
     _contextSkillName = null;
+    _contextJourneyId = null;
+    _contextRoadmapSessionId = null;
+    _contextNodeId = null;
+    _roadmapContextMode = false;
+    _eligibilityByMentorId = {};
     _showVerifiedOnly = true;
     _isLoadingMentors = false;
     _isLoadingDetail = false;
     _isLoadingAvailability = false;
     _isEnrichingVerifiedSkills = false;
+    _isLoadingEligibility = false;
     resetState();
     notifyListeners();
   }

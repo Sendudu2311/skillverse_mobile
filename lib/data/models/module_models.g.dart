@@ -27,7 +27,7 @@ ModuleDetailDto _$ModuleDetailDtoFromJson(Map<String, dynamic> json) =>
       id: (json['id'] as num).toInt(),
       title: json['title'] as String,
       description: json['description'] as String?,
-      orderIndex: (json['orderIndex'] as num).toInt(),
+      orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.parse(json['createdAt'] as String),

@@ -14,6 +14,7 @@ enum MessageStatus {
 /// Matches backend PreChatMessageResponse.java
 @JsonSerializable()
 class MessagingMessage {
+  @JsonKey(defaultValue: 0)
   final int id;
   @JsonKey(name: 'bookingId')
   final int? bookingId;
@@ -21,15 +22,15 @@ class MessagingMessage {
   final int? mentorId;
   @JsonKey(name: 'learnerId')
   final int? learnerId;
-  @JsonKey(name: 'senderId')
+  @JsonKey(name: 'senderId', defaultValue: 0)
   final int senderId;
   @JsonKey(name: 'senderName')
   final String? senderName;
   @JsonKey(name: 'senderAvatar')
   final String? senderAvatar;
-  @JsonKey(name: 'content')
+  @JsonKey(name: 'content', defaultValue: '')
   final String content;
-  @JsonKey(name: 'createdAt')
+  @JsonKey(name: 'createdAt', defaultValue: '')
   final String createdAt;
   @JsonKey(name: 'chatEnabled')
   final bool chatEnabled;
@@ -76,13 +77,13 @@ class MessagingConversation {
   final int? bookingId;
   @JsonKey(name: 'counterpartId')
   final int counterpartId;
-  @JsonKey(name: 'counterpartName')
+  @JsonKey(name: 'counterpartName', defaultValue: '')
   final String counterpartName;
   @JsonKey(name: 'counterpartAvatar')
   final String? counterpartAvatar;
-  @JsonKey(name: 'lastContent')
+  @JsonKey(name: 'lastContent', defaultValue: '')
   final String lastContent;
-  @JsonKey(name: 'lastTime')
+  @JsonKey(name: 'lastTime', defaultValue: '')
   final String lastTime;
   @JsonKey(name: 'unreadCount')
   final int unreadCount;

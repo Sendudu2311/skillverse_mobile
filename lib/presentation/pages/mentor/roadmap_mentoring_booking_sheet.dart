@@ -17,12 +17,14 @@ import '../../widgets/glass_card.dart';
 class RoadmapMentoringBookingSheet extends StatefulWidget {
   final MentorProfile mentor;
   final int? journeyId;
+  final int? roadmapSessionId;
   final double? roadmapMentoringPrice;
 
   const RoadmapMentoringBookingSheet({
     super.key,
     required this.mentor,
     this.journeyId,
+    this.roadmapSessionId,
     this.roadmapMentoringPrice,
   });
 
@@ -42,6 +44,8 @@ class _RoadmapMentoringBookingSheetState
   int? _selectedJourneyId;
   MentorProfile? _latestMentorProfile;
 
+  bool get _isJourneyLocked => widget.journeyId != null;
+
   MentorProfile get _effectiveMentorProfile =>
       _latestMentorProfile ?? widget.mentor;
 
@@ -49,8 +53,6 @@ class _RoadmapMentoringBookingSheetState
       _effectiveMentorProfile.roadmapMentoringPrice ??
       widget.roadmapMentoringPrice ??
       widget.mentor.roadmapMentoringPrice ??
-      _effectiveMentorProfile.hourlyRate ??
-      widget.mentor.hourlyRate ??
       0;
 
   JourneySummaryDto? get _selectedJourney {
@@ -77,7 +79,7 @@ class _RoadmapMentoringBookingSheetState
         page: 0,
         size: 50,
       );
-      final activeJourneys = journeys
+      var activeJourneys = journeys
           .where(
             (journey) =>
                 journey.status == JourneyStatus.active ||
@@ -85,6 +87,11 @@ class _RoadmapMentoringBookingSheetState
                 journey.status == JourneyStatus.roadmapGenerated,
           )
           .toList();
+      if (_isJourneyLocked) {
+        activeJourneys = activeJourneys
+            .where((journey) => journey.id == widget.journeyId)
+            .toList();
+      }
       if (!mounted) return;
       setState(() {
         _activeJourneys = activeJourneys;
@@ -341,7 +348,9 @@ class _RoadmapMentoringBookingSheetState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Chọn hành trình cần đồng hành',
+          _isJourneyLocked
+              ? 'Hành trình đồng hành'
+              : 'Chọn hành trình cần đồng hành',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color: isDark
@@ -351,7 +360,9 @@ class _RoadmapMentoringBookingSheetState
         ),
         const SizedBox(height: 4),
         Text(
-          'Mentor sẽ được gắn trực tiếp với roadmap bạn chọn.',
+          _isJourneyLocked
+              ? 'Mentor sẽ được gắn với roadmap hiện tại.'
+              : 'Mentor sẽ được gắn trực tiếp với roadmap bạn chọn.',
           style: TextStyle(
             fontSize: 13,
             color: isDark
@@ -372,7 +383,9 @@ class _RoadmapMentoringBookingSheetState
             padding: const EdgeInsets.all(24),
             child: Center(
               child: Text(
-                'Bạn chưa có hành trình nào đang hoạt động.\nHãy tạo hoặc kích hoạt một roadmap trước khi thuê mentor đồng hành.',
+                _isJourneyLocked
+                    ? 'Không tìm thấy hành trình hiện tại trong danh sách đang hoạt động.\nVui lòng quay lại roadmap và thử lại.'
+                    : 'Bạn chưa có hành trình nào đang hoạt động.\nHãy tạo hoặc kích hoạt một roadmap trước khi thuê mentor đồng hành.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: isDark
@@ -402,7 +415,9 @@ class _RoadmapMentoringBookingSheetState
     final levelLabel = journey.currentLevel?.name.toUpperCase();
 
     return GestureDetector(
-      onTap: () => setState(() => _selectedJourneyId = journey.id),
+      onTap: _isJourneyLocked
+          ? null
+          : () => setState(() => _selectedJourneyId = journey.id),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(

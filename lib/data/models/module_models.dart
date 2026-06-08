@@ -30,6 +30,7 @@ class ModuleDetailDto {
   final int id;
   final String title;
   final String? description;
+  @JsonKey(defaultValue: 0)
   final int orderIndex;
   final DateTime? createdAt;
   final DateTime? updatedAt;

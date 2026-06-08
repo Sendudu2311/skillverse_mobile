@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../core/utils/error_handler.dart';
 import '../../data/services/ai_grading_service.dart';
 import '../../data/models/ai_grading_models.dart';
 
@@ -28,7 +29,7 @@ class AiGradingProvider extends ChangeNotifier {
     try {
       _currentResult = await _service.getAiGradeResult(submissionId);
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = ErrorHandler.getErrorMessage(e);
       _currentResult = null;
     } finally {
       _isLoading = false;
@@ -47,7 +48,7 @@ class AiGradingProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = ErrorHandler.getErrorMessage(e);
       _isDisputing = false;
       notifyListeners();
       return false;

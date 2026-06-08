@@ -164,11 +164,13 @@ class _NotificationPageState extends State<NotificationPage> {
 
   String? _routeForType(AppNotification n) {
     switch (n.type) {
+      // ── Social ──────────────────────────────────────────────────────────
       case NotificationType.like:
       case NotificationType.comment:
         if (n.relatedId != null) return '/community/${n.relatedId}';
         return '/community';
 
+      // ── Bookings ─────────────────────────────────────────────────────────
       case NotificationType.bookingCreated:
       case NotificationType.bookingConfirmed:
       case NotificationType.bookingRejected:
@@ -176,13 +178,17 @@ class _NotificationPageState extends State<NotificationPage> {
       case NotificationType.bookingCompleted:
       case NotificationType.bookingCancelled:
       case NotificationType.bookingRefund:
+      case NotificationType.bookingStarted:
+      case NotificationType.bookingMentorCompleted:
         return '/my-bookings';
 
+      // ── Premium ───────────────────────────────────────────────────────────
       case NotificationType.premiumPurchase:
       case NotificationType.premiumExpiration:
       case NotificationType.premiumCancel:
         return '/premium';
 
+      // ── Wallet ────────────────────────────────────────────────────────────
       case NotificationType.walletDeposit:
       case NotificationType.coinPurchase:
       case NotificationType.withdrawalApproved:
@@ -192,11 +198,25 @@ class _NotificationPageState extends State<NotificationPage> {
       case NotificationType.escrowRefunded:
         return '/wallet';
 
+      // ── Tasks ─────────────────────────────────────────────────────────────
       case NotificationType.taskDeadline:
       case NotificationType.taskOverdue:
       case NotificationType.taskReview:
         return '/task-board';
 
+      // ── Assignments ───────────────────────────────────────────────────────
+      case NotificationType.assignmentSubmitted:
+      case NotificationType.assignmentGraded:
+      case NotificationType.assignmentLate:
+        return '/task-board';
+
+      // ── Courses ───────────────────────────────────────────────────────────
+      case NotificationType.courseRejected:
+      case NotificationType.courseSuspended:
+      case NotificationType.courseRestored:
+        return '/courses';
+
+      // ── Jobs ──────────────────────────────────────────────────────────────
       case NotificationType.jobApproved:
       case NotificationType.jobRejected:
       case NotificationType.jobDeleted:
@@ -204,22 +224,64 @@ class _NotificationPageState extends State<NotificationPage> {
       case NotificationType.jobUnbanned:
         return '/jobs';
 
+      // ── Short-term Job Applications ───────────────────────────────────────
+      case NotificationType.shortTermApplicationSubmitted:
+      case NotificationType.shortTermApplicationAccepted:
+      case NotificationType.shortTermApplicationRejected:
+      case NotificationType.shortTermWorkSubmitted:
+      case NotificationType.shortTermWorkApproved:
+        if (n.relatedId != null) return '/jobs/${n.relatedId}';
+        return '/jobs';
+
+      // ── Fulltime Job Applications ─────────────────────────────────────────
+      case NotificationType.fulltimeApplicationReviewed:
+      case NotificationType.fulltimeApplicationAccepted:
+      case NotificationType.fulltimeApplicationRejected:
+        if (n.relatedId != null) return '/jobs/${n.relatedId}';
+        return '/jobs';
+
+      // ── Worker Cancellation ───────────────────────────────────────────────
+      case NotificationType.workerCancellationRequested:
+      case NotificationType.workerAutoCancelled:
+      case NotificationType.workerAutoApproved:
+      case NotificationType.recruiterAutoApprovedWarning:
+        return '/jobs';
+
+      // ── Disputes ──────────────────────────────────────────────────────────
+      case NotificationType.disputeOpened:
+      case NotificationType.disputeResolved:
+      case NotificationType.adminDisputeEscalated:
+      case NotificationType.disputeEligibilityUnlocked:
+        return '/support';
+
+      case NotificationType.reviewWindowExpiring:
+        if (n.relatedId != null) return '/jobs/${n.relatedId}';
+        return '/jobs';
+
+      // ── Mentor ────────────────────────────────────────────────────────────
       case NotificationType.mentorReviewReceived:
       case NotificationType.mentorLevelUp:
       case NotificationType.mentorBadgeAwarded:
         return '/mentors';
 
+      // ── Messaging ─────────────────────────────────────────────────────────
       case NotificationType.prechatMessage:
         return '/chat';
 
       case NotificationType.recruitmentMessage:
-        if (n.relatedId != null) {
-          return '/recruitment-chat/${n.relatedId}';
-        }
+        if (n.relatedId != null) return '/recruitment-chat/${n.relatedId}';
         return '/recruitment-sessions';
 
-      default:
+      // ── System ────────────────────────────────────────────────────────────
+      case NotificationType.welcome:
+      case NotificationType.system:
+      case NotificationType.warning:
+      case NotificationType.violationReport:
+      case NotificationType.unknown:
         return null; // stay on notification page
+
+      default:
+        return null;
     }
   }
 }

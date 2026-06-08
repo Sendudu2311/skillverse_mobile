@@ -5,6 +5,7 @@ import '../pages/auth/login_page.dart';
 import '../pages/auth/register_page.dart';
 import '../pages/auth/verify_email_page.dart';
 import '../pages/auth/forgot_password_page.dart';
+import '../pages/auth/reset_password_page.dart';
 import '../pages/dashboard/dashboard_page.dart';
 import '../pages/courses/courses_page.dart';
 import '../pages/courses/course_detail_page.dart';
@@ -101,6 +102,7 @@ class AppRouter {
             '/register',
             '/verify-email',
             '/forgot-password',
+            '/reset-password',
           ];
           if (!authPages.contains(state.matchedLocation)) {
             return '/login';
@@ -114,6 +116,7 @@ class AppRouter {
             '/register',
             '/verify-email',
             '/forgot-password',
+            '/reset-password',
             '/splash',
           ];
           if (authPages.contains(state.matchedLocation)) {
@@ -167,6 +170,14 @@ class AppRouter {
           path: '/forgot-password',
           name: 'forgot-password',
           builder: (context, state) => const ForgotPasswordPage(),
+        ),
+        GoRoute(
+          path: '/reset-password',
+          name: 'reset-password',
+          builder: (context, state) {
+            final email = state.uri.queryParameters['email'] ?? '';
+            return ResetPasswordPage(email: email);
+          },
         ),
 
         // Main App Routes
@@ -435,7 +446,13 @@ class AppRouter {
           name: 'roadmap-detail',
           builder: (context, state) {
             final sessionId = int.parse(state.pathParameters['sessionId']!);
-            return RoadmapDetailPage(sessionId: sessionId);
+            final journeyId = int.tryParse(
+              state.uri.queryParameters['journeyId'] ?? '',
+            );
+            return RoadmapDetailPage(
+              sessionId: sessionId,
+              journeyId: journeyId,
+            );
           },
         ),
         GoRoute(
@@ -469,11 +486,16 @@ class AppRouter {
           builder: (context, state) {
             final action = state.uri.queryParameters['action'];
             final journeyId = state.uri.queryParameters['journeyId'];
+            final roadmapSessionId =
+                state.uri.queryParameters['roadmapSessionId'];
             final skillName = state.uri.queryParameters['skillName'];
             final nodeId = state.uri.queryParameters['nodeId'];
             return MentorListPage(
               action: action,
               journeyId: journeyId != null ? int.tryParse(journeyId) : null,
+              roadmapSessionId: roadmapSessionId != null
+                  ? int.tryParse(roadmapSessionId)
+                  : null,
               skillName: skillName,
               nodeId: nodeId,
             );
@@ -486,11 +508,16 @@ class AppRouter {
             final mentorId = int.parse(state.pathParameters['mentorId']!);
             final action = state.uri.queryParameters['action'];
             final journeyId = state.uri.queryParameters['journeyId'];
+            final roadmapSessionId =
+                state.uri.queryParameters['roadmapSessionId'];
             final nodeId = state.uri.queryParameters['nodeId'];
             return MentorDetailPage(
               mentorId: mentorId,
               action: action,
               journeyId: journeyId != null ? int.tryParse(journeyId) : null,
+              roadmapSessionId: roadmapSessionId != null
+                  ? int.tryParse(roadmapSessionId)
+                  : null,
               nodeId: nodeId,
             );
           },

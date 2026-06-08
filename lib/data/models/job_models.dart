@@ -612,6 +612,73 @@ class ShortTermAppJobInfo {
   Map<String, dynamic> toJson() => _$ShortTermAppJobInfoToJson(this);
 }
 
+// ==================== DISPUTE ====================
+
+enum DisputeType {
+  @JsonValue('WORKER_PROTECTION')
+  workerProtection,
+  @JsonValue('POOR_QUALITY')
+  poorQuality,
+  @JsonValue('SCOPE_CHANGE')
+  scopeChange,
+  @JsonValue('OTHER')
+  other,
+}
+
+enum DisputeStatus {
+  @JsonValue('OPEN')
+  open,
+  @JsonValue('UNDER_INVESTIGATION')
+  underInvestigation,
+  @JsonValue('AWAITING_RESPONSE')
+  awaitingResponse,
+  @JsonValue('ESCALATED')
+  escalated,
+  @JsonValue('RESOLVED')
+  resolved,
+  @JsonValue('DISMISSED')
+  dismissed,
+}
+
+@JsonSerializable()
+class DisputeResponse {
+  final int? id;
+  final int? jobId;
+  final int? applicationId;
+  final String? jobTitle;
+  final String? disputeType;
+  final String? reason;
+  final String? status;
+  final String? resolution;
+  final String? resolutionNotes;
+  final String? initiatorName;
+  final String? respondentName;
+  final String? adminResolutionDeadlineAt;
+  final String? resolvedAt;
+  final String? createdAt;
+
+  DisputeResponse({
+    this.id,
+    this.jobId,
+    this.applicationId,
+    this.jobTitle,
+    this.disputeType,
+    this.reason,
+    this.status,
+    this.resolution,
+    this.resolutionNotes,
+    this.initiatorName,
+    this.respondentName,
+    this.adminResolutionDeadlineAt,
+    this.resolvedAt,
+    this.createdAt,
+  });
+
+  factory DisputeResponse.fromJson(Map<String, dynamic> json) =>
+      _$DisputeResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$DisputeResponseToJson(this);
+}
+
 // ==================== REQUEST DTOs ====================
 
 @JsonSerializable()

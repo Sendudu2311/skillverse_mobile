@@ -356,6 +356,12 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
   Future<void> _createTask() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Validate date range
+    if (_startDate != null && _deadline != null && _deadline!.isBefore(_startDate!)) {
+      ErrorHandler.showErrorSnackBar(context, 'Hạn chốt không thể trước ngày bắt đầu');
+      return;
+    }
+
     setState(() => _isLoading = true);
     final provider = context.read<TaskBoardProvider>();
     final navigator = Navigator.of(context);
@@ -379,7 +385,19 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
 
       await provider.createTask(request);
 
+      // executeAsync() nuốt exception và set provider.hasError — phải check ở đây
+      if (provider.hasError) {
+        if (mounted) {
+          ErrorHandler.showErrorSnackBar(
+            context,
+            provider.errorMessage ?? 'Tạo nhiệm vụ thất bại',
+          );
+        }
+        return;
+      }
+
       if (mounted) {
+        ErrorHandler.showSuccessSnackBar(context, 'Đã tạo nhiệm vụ thành công!');
         navigator.pop();
       }
     } catch (e) {

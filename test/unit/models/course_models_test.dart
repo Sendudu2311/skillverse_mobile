@@ -199,7 +199,7 @@ void main() {
       expect(course.moduleCount, 5);
       expect(course.price, 99.99);
       expect(course.rating, 4.5);
-      expect(course.author.id, 1);
+      expect(course.author?.id, 1);
     });
 
     test('fromJson() with minimal data', () {

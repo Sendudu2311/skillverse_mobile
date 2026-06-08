@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/skeleton_loaders.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../../data/models/mentor_eligibility_models.dart';
 import '../../../data/models/mentor_models.dart';
 import '../../providers/mentor_provider.dart';
 import '../../themes/app_theme.dart';
@@ -16,10 +17,18 @@ import '../../../core/utils/number_formatter.dart';
 class MentorListPage extends StatefulWidget {
   final String? action;
   final int? journeyId;
+  final int? roadmapSessionId;
   final String? skillName;
   final String? nodeId;
 
-  const MentorListPage({super.key, this.action, this.journeyId, this.skillName, this.nodeId});
+  const MentorListPage({
+    super.key,
+    this.action,
+    this.journeyId,
+    this.roadmapSessionId,
+    this.skillName,
+    this.nodeId,
+  });
 
   @override
   State<MentorListPage> createState() => _MentorListPageState();
@@ -37,7 +46,16 @@ class _MentorListPageState extends State<MentorListPage> {
       if (widget.skillName != null) {
         provider.setContextSkill(widget.skillName!);
       }
-      provider.loadMentors();
+      if (widget.action == 'roadmap_mentoring') {
+        provider.loadRoadmapMentors(
+          journeyId: widget.journeyId,
+          roadmapSessionId: widget.roadmapSessionId,
+          skillName: widget.skillName,
+          nodeId: widget.nodeId,
+        );
+      } else {
+        provider.loadMentors();
+      }
       provider.loadAvailableSkills();
       provider.loadFavorites();
     });
@@ -117,7 +135,7 @@ class _MentorListPageState extends State<MentorListPage> {
                 final selectedIndex = _selectedSkill == null
                     ? 0
                     : provider.availableSkills.indexOf(_selectedSkill!) + 1;
-                    
+
                 final isActive = provider.showVerifiedOnly;
                 final isEnriching = provider.isEnrichingVerifiedSkills;
 
@@ -141,15 +159,15 @@ class _MentorListPageState extends State<MentorListPage> {
                             color: isActive
                                 ? AppTheme.successColor.withValues(alpha: 0.1)
                                 : (isDark
-                                    ? Colors.white.withValues(alpha: 0.05)
-                                    : Colors.grey.withValues(alpha: 0.08)),
+                                      ? Colors.white.withValues(alpha: 0.05)
+                                      : Colors.grey.withValues(alpha: 0.08)),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: isActive
                                   ? AppTheme.successColor.withValues(alpha: 0.4)
                                   : (isDark
-                                      ? Colors.white.withValues(alpha: 0.1)
-                                      : AppTheme.lightBorderColor),
+                                        ? Colors.white.withValues(alpha: 0.1)
+                                        : AppTheme.lightBorderColor),
                             ),
                           ),
                           child: Row(
@@ -161,8 +179,8 @@ class _MentorListPageState extends State<MentorListPage> {
                                 color: isActive
                                     ? AppTheme.successColor
                                     : (isDark
-                                        ? AppTheme.darkTextSecondary
-                                        : AppTheme.lightTextSecondary),
+                                          ? AppTheme.darkTextSecondary
+                                          : AppTheme.lightTextSecondary),
                               ),
                               if (isActive) ...[
                                 const SizedBox(width: 6),
@@ -190,7 +208,7 @@ class _MentorListPageState extends State<MentorListPage> {
                           ),
                         ),
                       ),
-                      
+
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Container(
@@ -199,12 +217,15 @@ class _MentorListPageState extends State<MentorListPage> {
                           color: isDark ? Colors.white24 : Colors.black12,
                         ),
                       ),
-                      
+
                       Expanded(
                         child: SelectableChipRow(
                           labels: labels,
                           padding: const EdgeInsets.only(right: 20),
-                          selectedIndex: selectedIndex.clamp(0, labels.length - 1),
+                          selectedIndex: selectedIndex.clamp(
+                            0,
+                            labels.length - 1,
+                          ),
                           onSelected: (i) {
                             final skill = i == 0
                                 ? null
@@ -229,7 +250,7 @@ class _MentorListPageState extends State<MentorListPage> {
   Widget _buildMentorList(BuildContext context, bool isDark) {
     return Consumer<MentorProvider>(
       builder: (context, provider, _) {
-        if (provider.isLoadingMentors) {
+        if (provider.isLoadingMentors || provider.isLoadingEligibility) {
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: 4,
@@ -238,8 +259,26 @@ class _MentorListPageState extends State<MentorListPage> {
         }
 
         if (provider.mentors.isEmpty) {
+          if (widget.action == 'roadmap_mentoring') {
+            return EmptyStateWidget(
+              icon: Icons.person_search,
+              title: 'Chưa có mentor phù hợp',
+              subtitle:
+                  'Không tìm thấy mentor đủ điều kiện cho roadmap này lúc này.',
+              ctaLabel: 'Tải lại',
+              onCtaPressed: () => provider.loadRoadmapMentors(
+                journeyId: widget.journeyId,
+                roadmapSessionId: widget.roadmapSessionId,
+                skillName: widget.skillName,
+                nodeId: widget.nodeId,
+                refresh: true,
+              ),
+              iconGradient: AppTheme.blueGradient,
+            );
+          }
           // Special empty state when verified filter is active
-          if (provider.showVerifiedOnly && !provider.isEnrichingVerifiedSkills) {
+          if (provider.showVerifiedOnly &&
+              !provider.isEnrichingVerifiedSkills) {
             return EmptyStateWidget(
               icon: Icons.verified_user_outlined,
               title: 'Chưa có mentor đã xác thực',
@@ -263,7 +302,15 @@ class _MentorListPageState extends State<MentorListPage> {
         }
 
         return RefreshIndicator(
-          onRefresh: () => provider.loadMentors(refresh: true),
+          onRefresh: () => widget.action == 'roadmap_mentoring'
+              ? provider.loadRoadmapMentors(
+                  journeyId: widget.journeyId,
+                  roadmapSessionId: widget.roadmapSessionId,
+                  skillName: widget.skillName,
+                  nodeId: widget.nodeId,
+                  refresh: true,
+                )
+              : provider.loadMentors(refresh: true),
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: provider.mentors.length,
@@ -287,20 +334,24 @@ class _MentorListPageState extends State<MentorListPage> {
     MentorProvider provider,
   ) {
     final isFavorite = provider.isMentorFavorite(mentor.id);
+    final eligibility = provider.eligibilityFor(mentor.id);
 
     return GestureDetector(
       onTap: () {
-        final base = '/mentors/${mentor.id}';
         final params = <String, String>{};
         if (widget.action != null) params['action'] = widget.action!;
-        if (widget.journeyId != null)
+        if (widget.journeyId != null) {
           params['journeyId'] = '${widget.journeyId}';
-        if (widget.nodeId != null)
-          params['nodeId'] = widget.nodeId!;
-        final query = params.isNotEmpty
-            ? '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}'
-            : '';
-        context.push('$base$query');
+        }
+        if (widget.roadmapSessionId != null) {
+          params['roadmapSessionId'] = '${widget.roadmapSessionId}';
+        }
+        if (widget.nodeId != null) params['nodeId'] = widget.nodeId!;
+        final uri = Uri(
+          path: '/mentors/${mentor.id}',
+          queryParameters: params.isNotEmpty ? params : null,
+        );
+        context.push(uri.toString());
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -314,8 +365,8 @@ class _MentorListPageState extends State<MentorListPage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppTheme.primaryBlueDark.withOpacity(0.15),
-                      AppTheme.primaryBlue.withOpacity(0.05),
+                      AppTheme.primaryBlueDark.withValues(alpha: 0.15),
+                      AppTheme.primaryBlue.withValues(alpha: 0.05),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -332,8 +383,8 @@ class _MentorListPageState extends State<MentorListPage> {
                       children: [
                         CircleAvatar(
                           radius: 36,
-                          backgroundColor: AppTheme.primaryBlueDark.withOpacity(
-                            0.3,
+                          backgroundColor: AppTheme.primaryBlueDark.withValues(
+                            alpha: 0.3,
                           ),
                           backgroundImage: mentor.avatar != null
                               ? NetworkImage(mentor.avatar!)
@@ -480,14 +531,16 @@ class _MentorListPageState extends State<MentorListPage> {
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
-                                  AppTheme.primaryBlueDark.withOpacity(0.15),
-                                  AppTheme.primaryBlue.withOpacity(0.1),
+                                  AppTheme.primaryBlueDark.withValues(
+                                    alpha: 0.15,
+                                  ),
+                                  AppTheme.primaryBlue.withValues(alpha: 0.1),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: AppTheme.primaryBlueDark.withOpacity(
-                                  0.3,
+                                color: AppTheme.primaryBlueDark.withValues(
+                                  alpha: 0.3,
                                 ),
                               ),
                             ),
@@ -508,8 +561,7 @@ class _MentorListPageState extends State<MentorListPage> {
                     ],
 
                     // Roadmap mentoring badge
-                    if (mentor.roadmapMentoringPrice != null &&
-                        mentor.roadmapMentoringPrice! > 0) ...[
+                    if (mentor.canOfferRoadmapMentoring) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -519,8 +571,7 @@ class _MentorListPageState extends State<MentorListPage> {
                           color: AppTheme.successColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color:
-                                AppTheme.successColor.withValues(alpha: 0.3),
+                            color: AppTheme.successColor.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -543,6 +594,11 @@ class _MentorListPageState extends State<MentorListPage> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    if (eligibility != null) ...[
+                      _buildEligibilityBlock(eligibility, isDark),
                       const SizedBox(height: 12),
                     ],
 
@@ -579,12 +635,14 @@ class _MentorListPageState extends State<MentorListPage> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppTheme.successColor
-                                    .withValues(alpha: 0.08),
+                                color: AppTheme.successColor.withValues(
+                                  alpha: 0.08,
+                                ),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: AppTheme.successColor
-                                      .withValues(alpha: 0.25),
+                                  color: AppTheme.successColor.withValues(
+                                    alpha: 0.25,
+                                  ),
                                 ),
                               ),
                               child: Row(
@@ -662,11 +720,10 @@ class _MentorListPageState extends State<MentorListPage> {
                                   color: AppTheme.successColor,
                                 ),
                               ),
-                              if (mentor.roadmapMentoringPrice != null &&
-                                  mentor.roadmapMentoringPrice! > 0) ...[
+                              if (mentor.canOfferRoadmapMentoring) ...[
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Đồng hành: ${mentor.formattedRoadmapMentoringPrice}',
+                                  'Đồng hành: ${mentor.formattedEffectiveRoadmapMentoringPrice}',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w500,
@@ -698,8 +755,8 @@ class _MentorListPageState extends State<MentorListPage> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primaryBlueDark.withOpacity(
-                                  0.3,
+                                color: AppTheme.primaryBlueDark.withValues(
+                                  alpha: 0.3,
                                 ),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
@@ -725,6 +782,72 @@ class _MentorListPageState extends State<MentorListPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildEligibilityBlock(
+    MentorTeachingEligibilityResponse eligibility,
+    bool isDark,
+  ) {
+    final color = switch (eligibility.summaryStatus) {
+      TeachingEligibilityStatus.eligible => AppTheme.successColor,
+      TeachingEligibilityStatus.partiallyEligible => AppTheme.primaryBlue,
+      TeachingEligibilityStatus.needsReview => AppTheme.warningColor,
+      TeachingEligibilityStatus.notEligible => AppTheme.errorColor,
+    };
+    final topNode = eligibility.nodes.isNotEmpty
+        ? eligibility.nodes.first
+        : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.verified_outlined, size: 14, color: color),
+              const SizedBox(width: 6),
+              Text(
+                '${eligibility.summaryStatus.displayLabel} (${eligibility.overallMatchPercent}%)',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          if (topNode != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Dạy tốt nhất: ${topNode.title ?? topNode.nodeId ?? 'Node'} (${topNode.matchPercent}%)',
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+              ),
+            ),
+            if (topNode.missingSkillsText.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Thiếu skill phụ: ${topNode.missingSkillsText}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.warningColor,
+                ),
+              ),
+            ],
+          ],
+        ],
       ),
     );
   }

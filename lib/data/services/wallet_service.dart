@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../../../core/error/exceptions.dart';
 import '../../../core/exceptions/api_exception.dart';
 import '../../../core/network/api_client.dart';
@@ -200,6 +201,103 @@ class WalletService {
     } catch (e) {
       if (e is AppException) rethrow;
       throw ApiException('Tạo yêu cầu rút tiền thất bại');
+    }
+  }
+
+  /// Get withdrawal request history (paginated)
+  /// GET /wallet/withdraw/my-requests?page={page}&size={size}
+  Future<List<WithdrawalRequest>> getWithdrawalHistory({
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/wallet/withdraw/my-requests',
+        queryParameters: {'page': page, 'size': size},
+      );
+
+      if (response.data == null) return [];
+
+      // Backend có thể trả về paginated (có 'content') hoặc list thẳng
+      final data = response.data!;
+      if (data.containsKey('content')) {
+        final content = data['content'] as List<dynamic>? ?? [];
+        return content
+            .map(
+              (json) =>
+                  WithdrawalRequest.fromJson(json as Map<String, dynamic>),
+            )
+            .toList();
+      } else if (data.containsKey('items')) {
+        final items = data['items'] as List<dynamic>? ?? [];
+        return items
+            .map(
+              (json) =>
+                  WithdrawalRequest.fromJson(json as Map<String, dynamic>),
+            )
+            .toList();
+      }
+
+      return [];
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ApiException('Không thể tải lịch sử rút tiền');
+    }
+  }
+
+  /// Download invoice PDF for a completed wallet transaction.
+  /// GET /wallet/transactions/{id}/invoice
+  Future<List<int>> downloadTransactionInvoice(int transactionId) async {
+    try {
+      final response = await _apiClient.dio.get<List<int>>(
+        '/wallet/transactions/$transactionId/invoice',
+        options: Options(responseType: ResponseType.bytes),
+      );
+
+      final data = response.data;
+      if (data == null || data.isEmpty) {
+        throw ApiException('Không có dữ liệu hóa đơn');
+      }
+      return data;
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ApiException('Không thể tải hóa đơn. Vui lòng thử lại sau.');
+    }
+  }
+
+  /// Set/update transaction PIN
+  /// PUT /wallet/pin
+  Future<void> setTransactionPin(String newPin) async {
+    try {
+      await _apiClient.dio.put(
+        '/wallet/pin',
+        data: {'newPin': newPin},
+      );
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ApiException('Cài đặt mã PIN giao dịch thất bại');
+    }
+  }
+
+  /// Update bank account info
+  /// PUT /wallet/bank-account
+  Future<void> updateBankAccount({
+    required String bankName,
+    required String bankAccountNumber,
+    required String bankAccountName,
+  }) async {
+    try {
+      await _apiClient.dio.put(
+        '/wallet/bank-account',
+        data: {
+          'bankName': bankName,
+          'bankAccountNumber': bankAccountNumber,
+          'bankAccountName': bankAccountName,
+        },
+      );
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw ApiException('Cập nhật tài khoản ngân hàng thất bại');
     }
   }
 }

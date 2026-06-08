@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../core/utils/error_handler.dart';
 import '../../data/models/student_skill_verification_models.dart';
 import '../../data/services/student_skill_verification_service.dart';
 
@@ -33,7 +34,7 @@ class StudentSkillVerificationProvider extends ChangeNotifier {
     try {
       _verifications = await _service.getMyVerifications();
     } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+      _error = ErrorHandler.getErrorMessage(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -61,7 +62,7 @@ class StudentSkillVerificationProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString().replaceFirst('Exception: ', '');
+      _error = ErrorHandler.getErrorMessage(e);
       notifyListeners();
       return false;
     } finally {

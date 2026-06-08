@@ -54,11 +54,31 @@ class _LoginPageState extends State<LoginPage> {
     if (success && mounted) {
       await _navigateAfterAuth();
     } else if (mounted) {
-      ErrorHandler.showErrorSnackBar(
-        context,
-        authProvider.errorMessage ?? 'Đăng nhập thất bại',
-      );
+      final errorMsg = authProvider.errorMessage ?? 'Đăng nhập thất bại';
+
+      // Detect EMAIL_NOT_VERIFIED from backend error message
+      if (_isEmailNotVerifiedError(errorMsg)) {
+        ErrorHandler.showWarningSnackBar(
+          context,
+          'Email chưa được xác thực. Vui lòng kiểm tra email của bạn.',
+        );
+        // Navigate to verify-email page with the entered email
+        final email = Uri.encodeComponent(_emailController.text.trim());
+        context.go('/verify-email?email=$email');
+      } else {
+        ErrorHandler.showErrorSnackBar(context, errorMsg);
+      }
     }
+  }
+
+  /// Check if the error indicates that the user's email is not verified.
+  /// Backend returns message containing 'EMAIL_NOT_VERIFIED' or 'verify your email'.
+  bool _isEmailNotVerifiedError(String errorMsg) {
+    final lower = errorMsg.toLowerCase();
+    return lower.contains('email_not_verified') ||
+        lower.contains('email not verified') ||
+        lower.contains('verify your email') ||
+        lower.contains('xác thực email');
   }
 
   Future<void> _handleGoogleSignIn() async {

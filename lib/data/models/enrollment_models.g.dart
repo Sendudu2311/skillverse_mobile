@@ -16,11 +16,11 @@ EnrollmentDetailDto _$EnrollmentDetailDtoFromJson(Map<String, dynamic> json) =>
     EnrollmentDetailDto(
       id: (json['id'] as num?)?.toInt(),
       courseId: (json['courseId'] as num).toInt(),
-      courseTitle: json['courseTitle'] as String,
-      courseSlug: json['courseSlug'] as String,
+      courseTitle: json['courseTitle'] as String? ?? 'Khóa học',
+      courseSlug: json['courseSlug'] as String? ?? '',
       userId: (json['userId'] as num).toInt(),
-      status: json['status'] as String,
-      progressPercent: (json['progressPercent'] as num).toInt(),
+      status: json['status'] as String? ?? 'ENROLLED',
+      progressPercent: (json['progressPercent'] as num?)?.toInt() ?? 0,
       entitlementSource: json['entitlementSource'] as String?,
       entitlementRef: json['entitlementRef'] as String?,
       learningRevisionId: (json['learningRevisionId'] as num?)?.toInt(),
@@ -66,11 +66,12 @@ Map<String, dynamic> _$EnrollmentStatusDtoToJson(
 
 EnrollmentStatsDto _$EnrollmentStatsDtoFromJson(Map<String, dynamic> json) =>
     EnrollmentStatsDto(
-      totalEnrollments: (json['totalEnrollments'] as num).toInt(),
-      activeEnrollments: (json['activeEnrollments'] as num).toInt(),
-      completedEnrollments: (json['completedEnrollments'] as num).toInt(),
-      averageProgress: (json['averageProgress'] as num).toDouble(),
-      completionRate: (json['completionRate'] as num).toDouble(),
+      totalEnrollments: (json['totalEnrollments'] as num?)?.toInt() ?? 0,
+      activeEnrollments: (json['activeEnrollments'] as num?)?.toInt() ?? 0,
+      completedEnrollments:
+          (json['completedEnrollments'] as num?)?.toInt() ?? 0,
+      averageProgress: (json['averageProgress'] as num?)?.toDouble() ?? 0.0,
+      completionRate: (json['completionRate'] as num?)?.toDouble() ?? 0.0,
     );
 
 Map<String, dynamic> _$EnrollmentStatsDtoToJson(EnrollmentStatsDto instance) =>

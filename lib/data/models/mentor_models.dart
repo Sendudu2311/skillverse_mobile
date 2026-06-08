@@ -147,6 +147,19 @@ class MentorProfile {
     return NumberFormatter.formatCurrency(roadmapMentoringPrice!);
   }
 
+  /// Backend only accepts ROADMAP_MENTORING bookings when a dedicated roadmap
+  /// package price is configured.
+  double? get effectiveRoadmapMentoringPrice => roadmapMentoringPrice;
+
+  bool get canOfferRoadmapMentoring =>
+      (effectiveRoadmapMentoringPrice ?? 0) > 0;
+
+  String get formattedEffectiveRoadmapMentoringPrice {
+    final price = effectiveRoadmapMentoringPrice;
+    if (price == null) return 'Liên hệ';
+    return NumberFormatter.formatCurrency(price);
+  }
+
   factory MentorProfile.fromJson(Map<String, dynamic> json) =>
       _$MentorProfileFromJson(json);
   Map<String, dynamic> toJson() => _$MentorProfileToJson(this);

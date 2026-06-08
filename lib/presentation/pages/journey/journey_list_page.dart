@@ -10,6 +10,7 @@ import '../../widgets/skillverse_app_bar.dart';
 import '../../widgets/animated_list_item.dart';
 import '../../widgets/status_badge.dart';
 import '../../../data/models/journey_models.dart';
+import '../../../core/utils/error_handler.dart';
 
 class JourneyListPage extends StatefulWidget {
   final String? blockReason;
@@ -36,9 +37,7 @@ class _JourneyListPageState extends State<JourneyListPage> {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ErrorHandler.showWarningSnackBar(context, message);
     context.replace('/journey');
   }
 
@@ -239,7 +238,7 @@ class _JourneyCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        journey.domain,
+                        _getDomainLabel(journey.domain),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -265,9 +264,9 @@ class _JourneyCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // Goal
+              // Primary label: ưu tiên jobRole label, fallback domain label
               Text(
-                _getGoalLabel(),
+                _getJourneyPrimaryLabel(),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: isDark
@@ -275,17 +274,23 @@ class _JourneyCard extends StatelessWidget {
                       : AppTheme.lightTextPrimary,
                 ),
               ),
-              if (journey.jobRole != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  journey.jobRole!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
+              // Skill label: tên skill trọng tâm hoặc fallback text
+              Builder(builder: (_) {
+                final skillLabel = journey.skillName;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    skillLabel != null
+                        ? 'Skill trọng tâm: $skillLabel'
+                        : 'Lộ trình theo vị trí công việc',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
                   ),
-                ),
-              ],
+                );
+              }),
               const SizedBox(height: 12),
 
               // Progress bar
@@ -412,20 +417,32 @@ class _JourneyCard extends StatelessWidget {
     return AppTheme.primaryBlueDark;
   }
 
-  String _getGoalLabel() {
-    switch (journey.goal.toUpperCase()) {
-      case 'EXPLORE':
-        return 'Khám phá ngành';
-      case 'INTERNSHIP':
-        return 'Chuẩn bị thực tập';
-      case 'CAREER_CHANGE':
-        return 'Chuyển ngành';
-      case 'UPSKILL':
-        return 'Nâng cao kỹ năng';
-      case 'FROM_SCRATCH':
-        return 'Bắt đầu từ đầu';
+  /// Tương đương getJourneyPrimaryLabel() của Prototype:
+  /// Ưu tiên jobRole label, fallback domain label.
+  String _getJourneyPrimaryLabel() {
+    if (journey.jobRole != null && journey.jobRole!.isNotEmpty) {
+      return journey.jobRole!;
+    }
+    return _getDomainLabel(journey.domain);
+  }
+
+  /// Tương đương getDomainLabel() của Prototype.
+  String _getDomainLabel(String domain) {
+    switch (domain.toUpperCase()) {
+      case 'IT':
+        return 'Công nghệ thông tin';
+      case 'DESIGN':
+        return 'Thiết kế';
+      case 'BUSINESS':
+        return 'Kinh doanh';
+      case 'ENGINEERING':
+        return 'Kỹ thuật';
+      case 'HEALTHCARE':
+        return 'Y tế';
+      case 'EDUCATION':
+        return 'Giáo dục';
       default:
-        return journey.goal;
+        return domain;
     }
   }
 

@@ -212,7 +212,9 @@ mixin LoadingStateProviderMixin on ChangeNotifier {
       final result = await operation();
       setLoading(false);
       return result;
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('🔴 executeAsync caught: ${e.runtimeType}: $e');
+      debugPrint('   Stack: $stack');
       final message = errorMessageBuilder?.call(e) ?? e.toString();
       setError(message);
       return null;

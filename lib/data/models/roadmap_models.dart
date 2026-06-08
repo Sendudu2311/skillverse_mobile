@@ -70,9 +70,12 @@ class RoadmapNode {
   final String id;
   final String title;
   final String description;
+  @JsonKey(defaultValue: 0)
   final int estimatedTimeMinutes;
   final NodeType type;
-  final DifficultyLevel? difficulty;
+  /// Raw difficulty string from backend (e.g. 'easy', 'medium', 'hard', 'expert', 'research').
+  /// Kept as String? to avoid crash on unknown enum values.
+  final String? difficulty;
   final List<String>? learningObjectives;
   final List<String>? keyConcepts;
   final List<String>? practicalExercises;
@@ -180,7 +183,8 @@ class RoadmapMetadata {
   final List<String>? toolPreferences;
   final String? difficultyConcern;
   final bool? incomeGoal;
-  final RoadmapMode? roadmapMode;
+  /// Raw roadmap mode string from backend (e.g. 'SKILL_BASED', 'CAREER_BASED', 'TEMPLATE_GUIDED').
+  final String? roadmapMode;
   final SkillModeMeta? skillMode;
   final CareerModeMeta? careerMode;
 

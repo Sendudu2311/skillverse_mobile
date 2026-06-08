@@ -16,9 +16,11 @@ class JourneyService {
 
   final ApiClient _apiClient = ApiClient();
 
-  // AI calls thường mất 15-60s, dùng 2 phút/attempt thay vì 10 phút flat.
-  // Nếu timeout → tự retry tối đa maxRetries lần trước khi báo lỗi.
+  // AI calls thường mất 15-60s, dùng 5 phút/attempt.
   static const Duration _aiTimeout = Duration(minutes: 5);
+  // Prototype uses 10 minutes for journey roadmap generation.
+  static const Duration _roadmapGenerationTimeout = Duration(minutes: 10);
+  final Map<int, Future<JourneySummaryDto>> _roadmapGenerateRequests = {};
 
   /// Thực thi [call] với retry logic cho các AI endpoint.
   /// Chỉ retry khi timeout (DioExceptionType.receiveTimeout / sendTimeout).
@@ -226,7 +228,9 @@ class JourneyService {
           data: request.toJson(),
           options: Options(sendTimeout: _aiTimeout, receiveTimeout: _aiTimeout),
         );
-        return TestResultDto.fromJson(TestResultMapper.enrich(response.data as Map<String, dynamic>));
+        return TestResultDto.fromJson(
+          TestResultMapper.enrich(response.data as Map<String, dynamic>),
+        );
       },
       errorMessage: 'Nộp bài đánh giá thất bại',
     );
@@ -242,7 +246,9 @@ class JourneyService {
       final response = await _apiClient.dio.get(
         '/v1/journey/$journeyId/result/$resultId',
       );
-      return TestResultDto.fromJson(TestResultMapper.enrich(response.data as Map<String, dynamic>));
+      return TestResultDto.fromJson(
+        TestResultMapper.enrich(response.data as Map<String, dynamic>),
+      );
     } on DioException catch (e) {
       throw _handleDioError(e, 'Lấy kết quả bài đánh giá thất bại');
     } catch (e) {
@@ -251,30 +257,71 @@ class JourneyService {
     }
   }
 
+  /// Save temporary test progress (auto-save on each answer selection).
+  /// POST /api/v1/journey/{journeyId}/test/{testId}/progress
+  /// Fire-and-forget — errors are logged but NOT thrown to caller,
+  /// matching the Prototype's behavior (GSJTestTaking.tsx L116-119).
+  Future<void> saveTestProgress({
+    required int journeyId,
+    required int testId,
+    required Map<int, String> answers,
+  }) async {
+    try {
+      await _apiClient.dio.post(
+        '/v1/journey/$journeyId/test/$testId/progress',
+        data: {'answers': answers},
+      );
+    } on DioException catch (e) {
+      debugPrint('⚠️ Auto-save test progress failed: ${e.message}');
+      // Silently fail — fire-and-forget, user should not be interrupted
+    } catch (e) {
+      debugPrint('⚠️ Auto-save test progress error: $e');
+    }
+  }
+
   // ============================================================
   // Roadmap Integration
   // ============================================================
 
-  /// Generate roadmap based on test results
+  /// Generate roadmap based on test results.
+  ///
+  /// This endpoint creates persistent roadmap data, so it must not be retried
+  /// automatically after a timeout: the first server request may still finish
+  /// and a second POST can create a duplicate roadmap.
   /// POST /api/v1/journey/{journeyId}/generate-roadmap
-  Future<JourneySummaryDto> generateRoadmap(
-    int journeyId, {
-    int maxRetries = 2,
-  }) async {
-    return _retryAiCall(
-      maxRetries: maxRetries,
-      call: () async {
-        final response = await _apiClient.dio.post(
-          '/v1/journey/$journeyId/generate-roadmap',
-          data: {},
-          options: Options(sendTimeout: _aiTimeout, receiveTimeout: _aiTimeout),
-        );
-        return JourneySummaryDto.fromJson(
-          response.data as Map<String, dynamic>,
-        );
-      },
-      errorMessage: 'Tạo lộ trình thất bại',
-    );
+  Future<JourneySummaryDto> generateRoadmap(int journeyId) async {
+    final existingRequest = _roadmapGenerateRequests[journeyId];
+    if (existingRequest != null) {
+      debugPrint(
+        '⏳ Roadmap generation already in progress for journey $journeyId',
+      );
+      return existingRequest;
+    }
+
+    final request = _generateRoadmapOnce(journeyId);
+    _roadmapGenerateRequests[journeyId] = request;
+    return request.whenComplete(() {
+      _roadmapGenerateRequests.remove(journeyId);
+    });
+  }
+
+  Future<JourneySummaryDto> _generateRoadmapOnce(int journeyId) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/v1/journey/$journeyId/generate-roadmap',
+        data: {},
+        options: Options(
+          sendTimeout: _roadmapGenerationTimeout,
+          receiveTimeout: _roadmapGenerationTimeout,
+        ),
+      );
+      return JourneySummaryDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Tạo lộ trình thất bại');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định');
+    }
   }
 
   /// Get roadmap for a journey

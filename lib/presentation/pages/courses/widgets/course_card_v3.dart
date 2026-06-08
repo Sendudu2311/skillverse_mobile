@@ -117,8 +117,8 @@ class CourseCardV3 extends StatelessWidget {
   Widget _buildInfo(BuildContext context, bool isDark) {
     final authorName =
         course.authorName ??
-        course.author.fullName ??
-        '${course.author.firstName ?? ''} ${course.author.lastName ?? ''}'
+        course.author?.fullName ??
+        '${course.author?.firstName ?? ''} ${course.author?.lastName ?? ''}'
             .trim();
 
     return Column(

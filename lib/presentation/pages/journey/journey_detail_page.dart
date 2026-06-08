@@ -6,6 +6,7 @@ import '../../providers/journey_provider.dart';
 import '../../providers/task_board_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../../data/models/journey_models.dart';
+import '../../../data/services/journey_service.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../widgets/ai_generation_loading_view.dart';
 import '../../widgets/error_state_widget.dart';
@@ -28,6 +29,9 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
   final Map<String, String> _answers = {};
   List<dynamic>? _loadedQuestions;
   bool _isLoadingQuestions = false;
+  String? _loadQuestionsError;
+  int _currentQuestionIndex = 0;
+  final Set<int> _bookmarkedQuestions = {};
 
   @override
   void initState() {
@@ -54,7 +58,10 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
 
   Future<void> _loadQuestions(int journeyId, int testId) async {
     if (_isLoadingQuestions) return;
-    setState(() => _isLoadingQuestions = true);
+    setState(() {
+      _isLoadingQuestions = true;
+      _loadQuestionsError = null;
+    });
     try {
       final test = await context.read<JourneyProvider>().getAssessmentTest(
         journeyId: journeyId,
@@ -65,6 +72,24 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
           try {
             _loadedQuestions = jsonDecode(test!.questionsJson!);
           } catch (_) {}
+          // Restore saved answers from backend (resume in-progress test)
+          if (test!.userAnswersJson != null && _answers.isEmpty) {
+            try {
+              final parsed =
+                  jsonDecode(test.userAnswersJson!) as Map<String, dynamic>;
+              parsed.forEach((key, value) {
+                if (value is String) {
+                  _answers[key] = value;
+                }
+              });
+            } catch (_) {}
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadQuestionsError = ErrorHandler.getErrorMessage(e);
         });
       }
     } finally {
@@ -129,52 +154,116 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
           );
         }
 
-        return Scaffold(
-          appBar: SkillVerseAppBar(
-            title: journey.domain,
-            onBack: () => context.go('/journey'),
-            actions: _buildActions(context, journey),
-          ),
-          body: RefreshIndicator(
-            onRefresh: () async => _loadJourney(),
-            child: SafeArea(
-              bottom: true,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Status Header
-                    _buildStatusHeader(context, journey, isDark),
-                    const SizedBox(height: 20),
-
-                    // Main Content based on status
-                    _buildContentByStatus(context, journey, provider, isDark),
-
-                    // Milestones
-                    if (journey.milestones != null &&
-                        journey.milestones!.isNotEmpty) ...[
-                      const SizedBox(height: 24),
-                      _buildMilestones(context, journey.milestones!, isDark),
+        // ── Intercept back navigation when test is in progress ──
+        final isTestInProgress = journey.status == JourneyStatus.testInProgress;
+        return PopScope(
+          canPop: !isTestInProgress || _answers.isEmpty,
+          onPopInvokedWithResult: (didPop, _) async {
+            if (didPop) return;
+            // Only fires when canPop == false (test in progress with answers)
+            if (!context.mounted) return;
+            final leave = await showDialog<bool>(
+              context: context,
+              builder: (dialogCtx) => AlertDialog(
+                title: const Text('Thoát bài test?'),
+                content: const Text(
+                  'Tiến trình đã được lưu tự động.\nBạn có thể quay lại làm tiếp sau.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogCtx).pop(false),
+                    child: const Text('Ở lại làm bài'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogCtx).pop(true),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Thoát'),
+                  ),
+                ],
+              ),
+            );
+            if (leave == true && context.mounted) {
+              context.go('/journey');
+            }
+          },
+          child: Scaffold(
+            appBar: SkillVerseAppBar(
+              title: journey.domain,
+              onBack: () async {
+                if (!isTestInProgress || _answers.isEmpty) {
+                  context.go('/journey');
+                  return;
+                }
+                final leave = await showDialog<bool>(
+                  context: context,
+                  builder: (dialogCtx) => AlertDialog(
+                    title: const Text('Thoát bài test?'),
+                    content: const Text(
+                      'Tiến trình đã được lưu tự động.\nBạn có thể quay lại làm tiếp sau.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(false),
+                        child: const Text('Ở lại làm bài'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(true),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                        child: const Text('Thoát'),
+                      ),
                     ],
-
-                    // Final Verification CTA
-                    if (journey.finalVerificationRequired == true &&
-                        (journey.status == JourneyStatus.awaitingVerification ||
-                            journey.status ==
-                                JourneyStatus.completedUnverified)) ...[
+                  ),
+                );
+                if (leave == true && context.mounted) {
+                  context.go('/journey');
+                }
+              },
+              actions: _buildActions(context, journey),
+            ),
+            body: RefreshIndicator(
+              onRefresh: () async => _loadJourney(),
+              child: SafeArea(
+                bottom: true,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Status Header
+                      _buildStatusHeader(context, journey, isDark),
                       const SizedBox(height: 20),
-                      _buildVerificationCta(context, journey),
+
+                      // Main Content based on status
+                      _buildContentByStatus(context, journey, provider, isDark),
+
+                      // Milestones
+                      if (journey.milestones != null &&
+                          journey.milestones!.isNotEmpty) ...[
+                        const SizedBox(height: 24),
+                        _buildMilestones(context, journey.milestones!, isDark),
+                      ],
+
+                      // Final Verification CTA
+                      if (journey.finalVerificationRequired == true &&
+                          (journey.status ==
+                                  JourneyStatus.awaitingVerification ||
+                              journey.status ==
+                                  JourneyStatus.completedUnverified)) ...[
+                        const SizedBox(height: 20),
+                        _buildVerificationCta(context, journey),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      },
-    );
+          ), // end Scaffold
+        ); // end PopScope
+      }, // end Consumer builder
+    ); // end Consumer
   }
 
   List<Widget> _buildActions(BuildContext context, JourneySummaryDto journey) {
@@ -230,8 +319,22 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
         IconButton(
           icon: const Icon(Icons.play_arrow),
           tooltip: 'Tiếp tục',
-          onPressed: () =>
-              context.read<JourneyProvider>().resumeJourney(journey.id),
+          onPressed: () async {
+            final provider = context.read<JourneyProvider>();
+            await provider.resumeJourney(journey.id);
+            if (!context.mounted) return;
+            if (provider.hasError) {
+              ErrorHandler.showErrorSnackBar(
+                context,
+                provider.errorMessage ?? 'Tiếp tục hành trình thất bại',
+              );
+            } else {
+              ErrorHandler.showSuccessSnackBar(
+                context,
+                'Đã tiếp tục hành trình',
+              );
+            }
+          },
         ),
       PopupMenuButton<String>(
         onSelected: (value) async {
@@ -257,25 +360,46 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
               break;
             case 'complete':
               await provider.completeJourney(journey.id);
+              if (context.mounted && provider.hasError) {
+                final msg = provider.errorMessage ?? '';
+                // 409: Gate blocked — journey chưa đạt final verification gate
+                if (msg.contains('409') ||
+                    msg.toLowerCase().contains('gate') ||
+                    msg.toLowerCase().contains('chưa đạt')) {
+                  ErrorHandler.showWarningSnackBar(
+                    context,
+                    'Hành trình chưa đạt final verification gate. Vui lòng hoàn thành xác thực trước.',
+                  );
+                } else {
+                  ErrorHandler.showErrorSnackBar(
+                    context,
+                    msg.isNotEmpty ? msg : 'Không thể hoàn thành hành trình',
+                  );
+                }
+              } else if (context.mounted) {
+                ErrorHandler.showSuccessSnackBar(
+                  context,
+                  'Đã hoàn thành hành trình 🎉',
+                );
+              }
               break;
             case 'cancel':
               if (journey.hasActiveMentorBooking == true) {
                 if (context.mounted) {
                   showDialog(
                     context: context,
-                    builder:
-                        (ctx) => AlertDialog(
-                          title: const Text('Không thể hủy'),
-                          content: const Text(
-                            'Bạn đang có lịch booking mentor đang hoạt động cho hành trình này. Vui lòng giải quyết booking trước khi hủy.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Đã hiểu'),
-                            ),
-                          ],
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Không thể hủy'),
+                      content: const Text(
+                        'Bạn đang có lịch booking mentor đang hoạt động cho hành trình này. Vui lòng giải quyết booking trước khi hủy.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Đã hiểu'),
                         ),
+                      ],
+                    ),
                   );
                 }
                 return;
@@ -308,19 +432,18 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                 if (context.mounted) {
                   showDialog(
                     context: context,
-                    builder:
-                        (ctx) => AlertDialog(
-                          title: const Text('Không thể xóa'),
-                          content: const Text(
-                            'Bạn đang có lịch booking mentor đang hoạt động cho hành trình này. Bạn cần hoàn thành lộ trình học và giải phóng tiền cho mentor trước.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Đã hiểu'),
-                            ),
-                          ],
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Không thể xóa'),
+                      content: const Text(
+                        'Bạn đang có lịch booking mentor đang hoạt động cho hành trình này. Bạn cần hoàn thành lộ trình học và giải phóng tiền cho mentor trước.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Đã hiểu'),
                         ),
+                      ],
+                    ),
                   );
                 }
                 return;
@@ -387,10 +510,9 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
     JourneySummaryDto journey,
     bool isDark,
   ) {
-    final String mainTitle =
-        journey.type == 'SKILL'
-            ? (journey.skillName ?? journey.domain)
-            : (journey.jobRole ?? journey.domain);
+    final String mainTitle = journey.type == 'SKILL'
+        ? (journey.skillName ?? journey.domain)
+        : (journey.jobRole ?? journey.domain);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -773,6 +895,35 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
     }
 
     if (questions.isEmpty && journey.assessmentTestId != null) {
+      // Error state — show retry button
+      if (_loadQuestionsError != null) {
+        return _sectionCard(
+          isDark: isDark,
+          icon: Icons.error_outline,
+          title: 'Không thể tải bài test',
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              children: [
+                Text(
+                  _loadQuestionsError!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isDark ? Colors.red[300] : Colors.red[700],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      _loadQuestions(journey.id, journey.assessmentTestId!),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Thử lại'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
       // Auto-trigger nếu chưa loading
       if (!_isLoadingQuestions) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -801,96 +952,330 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
       );
     }
 
-    // Render questions
+    // ── Single-question-at-a-time view ──
+    final totalQ = questions.length;
+    // Clamp index to valid range
+    if (_currentQuestionIndex >= totalQ) _currentQuestionIndex = totalQ - 1;
+    if (_currentQuestionIndex < 0) _currentQuestionIndex = 0;
+
+    final q = questions[_currentQuestionIndex] as Map<String, dynamic>;
+    final questionId =
+        q['questionId']?.toString() ??
+        q['id']?.toString() ??
+        '$_currentQuestionIndex';
+    final questionText =
+        q['question'] ??
+        q['questionText'] ??
+        'Câu ${_currentQuestionIndex + 1}';
+    final isBookmarked = _bookmarkedQuestions.contains(_currentQuestionIndex);
+    final answeredCount = _answers.length;
+    final isLastQuestion = _currentQuestionIndex == totalQ - 1;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionCard(
           isDark: isDark,
           icon: Icons.edit_note,
-          title: 'Bài đánh giá (${questions.length} câu)',
+          title: 'Bài đánh giá ($totalQ câu)',
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ...questions.asMap().entries.map((entry) {
-                final idx = entry.key;
-                final q = entry.value as Map<String, dynamic>;
-                final questionId =
-                    q['questionId']?.toString() ??
-                    q['id']?.toString() ??
-                    '$idx';
-                final questionText =
-                    q['question'] ?? q['questionText'] ?? 'Câu ${idx + 1}';
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.03)
-                        : Colors.grey.shade50,
-                    border: Border.all(
+              // ── Progress bar ──
+              Row(
+                children: [
+                  Text(
+                    'Đã trả lời: $answeredCount/$totalQ',
+                    style: TextStyle(
+                      fontSize: 12,
                       color: isDark
-                          ? AppTheme.darkBorderColor
-                          : Colors.grey.shade200,
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Câu ${idx + 1}: $questionText',
+                  const Spacer(),
+                  // Bookmark toggle
+                  Semantics(
+                    label: isBookmarked ? 'Bỏ đánh dấu' : 'Đánh dấu câu hỏi',
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () {
+                        setState(() {
+                          if (isBookmarked) {
+                            _bookmarkedQuestions.remove(_currentQuestionIndex);
+                          } else {
+                            _bookmarkedQuestions.add(_currentQuestionIndex);
+                          }
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                          color: isBookmarked
+                              ? Colors.amber
+                              : (isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : Colors.grey),
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: totalQ > 0 ? answeredCount / totalQ : 0,
+                  backgroundColor: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppTheme.primaryBlueDark,
+                  ),
+                  minHeight: 6,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Question card ──
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : Colors.grey.shade50,
+                  border: Border.all(
+                    color: isDark
+                        ? AppTheme.darkBorderColor
+                        : Colors.grey.shade200,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Semantics(
+                      label: 'Câu ${_currentQuestionIndex + 1}',
+                      child: Text(
+                        'Câu ${_currentQuestionIndex + 1}: $questionText',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      // Render A-D multiple-choice options
-                      ..._buildOptionsRadio(q, questionId, isDark),
-                    ],
-                  ),
-                );
-              }),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    if (_answers.isEmpty) {
-                      ErrorHandler.showWarningSnackBar(
-                        context,
-                        'Vui lòng trả lời ít nhất một câu hỏi',
-                      );
-                      return;
-                    }
-                    try {
-                      final request = SubmitTestRequest(
-                        testId: journey.assessmentTestId ?? 0,
-                        answers: _answers,
-                      );
-                      await provider.submitTest(
-                        journeyId: journey.id,
-                        request: request,
-                      );
-                    } catch (e) {
-                      if (context.mounted) {
-                        ErrorHandler.showErrorSnackBar(
-                          context,
-                          ErrorHandler.getErrorMessage(e),
-                        );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.send),
-                  label: const Text('Nộp bài'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlueDark,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Render A-D multiple-choice options
+                    ..._buildOptionsRadio(
+                      q,
+                      questionId,
+                      isDark,
+                      journeyId: journey.id,
+                      testId: journey.assessmentTestId,
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(height: 16),
+
+              // ── Navigation dots ──
+              Center(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  alignment: WrapAlignment.center,
+                  children: List.generate(totalQ, (i) {
+                    final qId =
+                        (questions[i] as Map<String, dynamic>)['questionId']
+                            ?.toString() ??
+                        (questions[i] as Map<String, dynamic>)['id']
+                            ?.toString() ??
+                        '$i';
+                    final isAnswered = _answers.containsKey(qId);
+                    final isCurrent = i == _currentQuestionIndex;
+                    final isBm = _bookmarkedQuestions.contains(i);
+
+                    return GestureDetector(
+                      onTap: () => setState(() => _currentQuestionIndex = i),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isCurrent
+                              ? AppTheme.primaryBlueDark
+                              : isAnswered
+                              ? AppTheme.primaryBlueDark.withValues(alpha: 0.25)
+                              : (isDark
+                                    ? Colors.white.withValues(alpha: 0.08)
+                                    : Colors.grey.shade200),
+                          border: isBm
+                              ? Border.all(color: Colors.amber, width: 2)
+                              : null,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${i + 1}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isCurrent
+                                  ? Colors.white
+                                  : isAnswered
+                                  ? AppTheme.primaryBlueDark
+                                  : (isDark
+                                        ? AppTheme.darkTextSecondary
+                                        : Colors.grey.shade600),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ── Prev / Next buttons ──
+              Row(
+                children: [
+                  if (_currentQuestionIndex > 0)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () =>
+                            setState(() => _currentQuestionIndex--),
+                        icon: const Icon(Icons.arrow_back_ios, size: 16),
+                        label: Semantics(
+                          label: 'Câu trước',
+                          child: const Text('Câu trước'),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.lightTextPrimary,
+                          side: BorderSide(
+                            color: isDark
+                                ? AppTheme.darkBorderColor
+                                : Colors.grey.shade300,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    )
+                  else
+                    const Spacer(),
+                  const SizedBox(width: 12),
+                  if (!isLastQuestion)
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () =>
+                            setState(() => _currentQuestionIndex++),
+                        icon: Semantics(
+                          label: 'Câu tiếp',
+                          child: const Text('Câu tiếp'),
+                        ),
+                        label: const Icon(Icons.arrow_forward_ios, size: 16),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlueDark,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    )
+                  else
+                    const Spacer(),
+                ],
+              ),
+
+              // ── Submit button (visible on last question or when all answered) ──
+              if (isLastQuestion || answeredCount == totalQ) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed:
+                        (journey.assessmentTestId == null ||
+                            journey.assessmentTestId == 0 ||
+                            isSubmitting)
+                        ? null
+                        : () async {
+                            if (_answers.isEmpty) {
+                              ErrorHandler.showWarningSnackBar(
+                                context,
+                                'Vui lòng trả lời ít nhất một câu hỏi',
+                              );
+                              return;
+                            }
+                            // Confirm if not all questions answered
+                            if (_answers.length < totalQ) {
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (dialogCtx) => AlertDialog(
+                                  title: const Text('Nộp bài chưa hoàn tất?'),
+                                  content: Text(
+                                    'Bạn mới trả lời ${_answers.length}/$totalQ câu.\n'
+                                    'Những câu chưa trả lời sẽ được tính là sai.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(dialogCtx).pop(false),
+                                      child: const Text('Làm tiếp'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          Navigator.of(dialogCtx).pop(true),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            AppTheme.primaryBlueDark,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Nộp ngay'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirmed != true || !context.mounted) return;
+                            }
+                            try {
+                              final request = SubmitTestRequest(
+                                testId: journey.assessmentTestId!,
+                                answers: _answers,
+                              );
+                              await provider.submitTest(
+                                journeyId: journey.id,
+                                request: request,
+                              );
+                              // Show celebration dialog on success
+                              if (context.mounted) {
+                                _showCompletionCelebration(context, isDark);
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ErrorHandler.showErrorSnackBar(
+                                  context,
+                                  ErrorHandler.getErrorMessage(e),
+                                );
+                              }
+                            }
+                          },
+                    icon: const Icon(Icons.send),
+                    label: Semantics(
+                      label: 'Nộp bài',
+                      child: const Text('Nộp bài'),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlueDark,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -902,8 +1287,10 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
   List<Widget> _buildOptionsRadio(
     Map<String, dynamic> question,
     String questionId,
-    bool isDark,
-  ) {
+    bool isDark, {
+    int? journeyId,
+    int? testId,
+  }) {
     final options = question['options'];
     if (options == null || options is! List || options.isEmpty) {
       return [
@@ -935,6 +1322,18 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
             setState(() {
               _answers[questionId] = optionKey;
             });
+            // Fire-and-forget auto-save to backend (matches Prototype)
+            if (journeyId != null && testId != null) {
+              JourneyService().saveTestProgress(
+                journeyId: journeyId,
+                testId: testId,
+                answers: Map.fromEntries(
+                  _answers.entries
+                      .where((e) => int.tryParse(e.key) != null)
+                      .map((e) => MapEntry(int.parse(e.key), e.value)),
+                ),
+              );
+            }
           },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1020,7 +1419,11 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
     bool isDark,
   ) {
     final result = journey.latestTestResult;
-    final isGenerating = provider.isLoadingFor('generateRoadmap');
+    final isGenerating =
+        provider.isLoadingFor('generateRoadmap') ||
+        provider.isRoadmapGenerationPendingFor(journey.id);
+    final challengeBlocksRoadmap =
+        result?.challengeRequired == true && result?.challengeAvailable == true;
 
     return Column(
       children: [
@@ -1141,12 +1544,28 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        // Re-trigger test generation for challenge-up
-                        provider.generateTest(journey.id);
-                      },
-                      icon: const Icon(Icons.trending_up, size: 18),
-                      label: const Text('Làm bài Challenge-up'),
+                      onPressed: provider.isLoadingFor('generateTest')
+                          ? null
+                          : () async {
+                              try {
+                                await provider.generateTest(journey.id);
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ErrorHandler.showErrorSnackBar(
+                                    context,
+                                    e.toString().replaceAll('Exception: ', ''),
+                                  );
+                                }
+                              }
+                            },
+                      icon: provider.isLoadingFor('generateTest')
+                          ? CommonLoading.button(color: Colors.white)
+                          : const Icon(Icons.trending_up, size: 18),
+                      label: Text(
+                        provider.isLoadingFor('generateTest')
+                            ? 'Đang tạo Challenge-up...'
+                            : 'Làm bài Challenge-up',
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryBlueDark,
                         foregroundColor: Colors.white,
@@ -1220,6 +1639,21 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                   useSafeArea: false,
                   scrollable: false,
                 )
+              : challengeBlocksRoadmap
+              ? Column(
+                  children: [
+                    Icon(
+                      Icons.trending_up,
+                      size: 40,
+                      color: AppTheme.warningColor,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Bạn cần hoàn thành bài challenge-up để xác nhận trình độ trước khi tạo roadmap.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                )
               : Column(
                   children: [
                     const Text(
@@ -1229,7 +1663,17 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                     ElevatedButton.icon(
                       onPressed: () async {
                         try {
-                          await provider.generateRoadmap(journey.id);
+                          final updated = await provider.generateRoadmap(
+                            journey.id,
+                          );
+                          final roadmapSessionId =
+                              updated?.roadmapSessionId ??
+                              provider.currentJourney?.roadmapSessionId;
+                          if (roadmapSessionId != null && context.mounted) {
+                            context.push(
+                              '/roadmap/$roadmapSessionId?journeyId=${journey.id}',
+                            );
+                          }
                         } catch (e) {
                           if (context.mounted) {
                             ErrorHandler.showErrorSnackBar(
@@ -1272,8 +1716,9 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
           const SizedBox(height: 16),
           if (journey.roadmapSessionId != null)
             ElevatedButton.icon(
-              onPressed: () =>
-                  context.push('/roadmap/${journey.roadmapSessionId}'),
+              onPressed: () => context.push(
+                '/roadmap/${journey.roadmapSessionId}?journeyId=${journey.id}',
+              ),
               icon: const Icon(Icons.open_in_new),
               label: const Text('Xem lộ trình'),
               style: ElevatedButton.styleFrom(
@@ -1307,8 +1752,9 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () =>
-                        context.push('/roadmap/${journey.roadmapSessionId}'),
+                    onPressed: () => context.push(
+                      '/roadmap/${journey.roadmapSessionId}?journeyId=${journey.id}',
+                    ),
                     icon: const Icon(Icons.map),
                     label: const Text('Xem lộ trình'),
                     style: ElevatedButton.styleFrom(
@@ -1377,7 +1823,9 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                           context.read<JourneyProvider>().isLoadingFor(
                             'getTestResult',
                           )
-                          ? CommonLoading.button(color: AppTheme.primaryBlueDark)
+                          ? CommonLoading.button(
+                              color: AppTheme.primaryBlueDark,
+                            )
                           : const Icon(Icons.info_outline),
                       label: Text(
                         context.read<JourneyProvider>().isLoadingFor(
@@ -1725,8 +2173,9 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
                   if (!context.mounted) return;
 
                   if (result != null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Đã gửi yêu cầu xác minh')),
+                    ErrorHandler.showSuccessSnackBar(
+                      context,
+                      'Đã gửi yêu cầu xác minh hành trình',
                     );
                   } else if (provider.hasError) {
                     ErrorHandler.showErrorSnackBar(
@@ -1759,6 +2208,106 @@ class _JourneyDetailPageState extends State<JourneyDetailPage> {
             ),
         ],
       ),
+    );
+  }
+
+  // ── Celebration modal after test submission ──
+  void _showCompletionCelebration(BuildContext context, bool isDark) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Celebration icon
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.primaryBlueDark,
+                        AppTheme.primaryBlueDark.withValues(alpha: 0.6),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.celebration,
+                    color: Colors.white,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  '🎉 Tuyệt vời!',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Bạn đã hoàn thành bài đánh giá!\nMeowl đang chấm bài và phân tích năng lực cho bạn.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '🐱 "Cố lên nào, Meowl tin bạn sẽ làm tốt!"',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.amber.shade700,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlueDark,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Xem kết quả',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

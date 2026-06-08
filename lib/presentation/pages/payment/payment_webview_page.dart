@@ -85,6 +85,8 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
   bool _isCallbackUrl(String url) {
     final uri = Uri.tryParse(url);
     if (uri == null) return false;
+    final lowerUrl = url.toLowerCase();
+    final status = uri.queryParameters['status']?.toLowerCase();
 
     // Check if matches success or cancel URL pattern
     if (widget.successUrl != null &&
@@ -97,16 +99,16 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
     }
 
     // Check for common success/cancel patterns
-    if (url.contains('payment/success') ||
-        url.contains('payment/completed') ||
-        url.contains('status=success') ||
-        url.contains('status=completed')) {
+    if (lowerUrl.contains('payment/success') ||
+        lowerUrl.contains('payment/completed') ||
+        status == 'success' ||
+        status == 'completed') {
       return true;
     }
-    if (url.contains('payment/cancel') ||
-        url.contains('payment/failed') ||
-        url.contains('status=cancel') ||
-        url.contains('status=failed')) {
+    if (lowerUrl.contains('payment/cancel') ||
+        lowerUrl.contains('payment/failed') ||
+        status == 'cancel' ||
+        status == 'failed') {
       return true;
     }
 
@@ -124,11 +126,23 @@ class _PaymentWebViewPageState extends State<PaymentWebViewPage> {
     if (uri == null) return;
 
     // Determine if success or cancel
+    final lowerUrl = url.toLowerCase();
+    final status = uri.queryParameters['status']?.toLowerCase();
     bool isSuccess = false;
-    if (widget.successUrl != null &&
-        url.startsWith(widget.successUrl!.split('?')[0])) {
+    if (status == 'cancel' ||
+        status == 'failed' ||
+        lowerUrl.contains('payment/cancel') ||
+        lowerUrl.contains('payment/failed')) {
+      isSuccess = false;
+    } else if (status == 'success' ||
+        status == 'completed' ||
+        lowerUrl.contains('success') ||
+        lowerUrl.contains('completed')) {
       isSuccess = true;
-    } else if (url.contains('success') || url.contains('completed')) {
+    } else if (widget.successUrl != null &&
+        url.startsWith(widget.successUrl!.split('?')[0]) &&
+        (widget.cancelUrl == null ||
+            !url.startsWith(widget.cancelUrl!.split('?')[0]))) {
       isSuccess = true;
     }
 

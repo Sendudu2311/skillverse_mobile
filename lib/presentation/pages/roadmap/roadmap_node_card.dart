@@ -28,6 +28,7 @@ class RoadmapNodeCard extends StatefulWidget {
   final bool isCompleted;
   final bool isDark;
   final int sessionId;
+  final bool hasStudyPlan;
   final VoidCallback onToggleExpand;
   final void Function(String questId, bool completed) onToggleQuestCompletion;
 
@@ -38,6 +39,7 @@ class RoadmapNodeCard extends StatefulWidget {
     required this.isCompleted,
     required this.isDark,
     required this.sessionId,
+    this.hasStudyPlan = false,
     required this.onToggleExpand,
     required this.onToggleQuestCompletion,
   });
@@ -172,52 +174,102 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
                 children: [
                   // Type badge & checkbox row
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isMainQuest
-                              ? AppTheme.primaryBlueDark.withValues(alpha: 0.15)
-                              : AppTheme.secondaryPurple.withValues(
-                                  alpha: 0.15,
-                                ),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      Expanded(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
-                            Icon(
-                              isMainQuest ? Icons.star : Icons.bookmark_outline,
-                              size: 12,
-                              color: isMainQuest
-                                  ? AppTheme.primaryBlueDark
-                                  : AppTheme.secondaryPurple,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isMainQuest ? 'Nhiệm vụ chính' : 'Nhiệm vụ phụ',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
                                 color: isMainQuest
-                                    ? AppTheme.primaryBlueDark
-                                    : AppTheme.secondaryPurple,
+                                    ? AppTheme.primaryBlueDark.withValues(
+                                        alpha: 0.15,
+                                      )
+                                    : AppTheme.secondaryPurple.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isMainQuest
+                                        ? Icons.star
+                                        : Icons.bookmark_outline,
+                                    size: 12,
+                                    color: isMainQuest
+                                        ? AppTheme.primaryBlueDark
+                                        : AppTheme.secondaryPurple,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isMainQuest
+                                        ? 'Nhiệm vụ chính'
+                                        : 'Nhiệm vụ phụ',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: isMainQuest
+                                          ? AppTheme.primaryBlueDark
+                                          : AppTheme.secondaryPurple,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                            if (node.nodeStatus != null)
+                              StatusBadge(
+                                status: node.nodeStatus!,
+                                icon: _getNodeStatusIcon(node.nodeStatus!),
+                              ),
+                            if (widget.hasStudyPlan)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.accentCyan.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: AppTheme.accentCyan.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.event_note_outlined,
+                                      size: 11,
+                                      color: AppTheme.accentCyan,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'Kế hoạch',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.accentCyan,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                       ),
-                      if (node.nodeStatus != null) ...[
-                        const SizedBox(width: 8),
-                        StatusBadge(
-                          status: node.nodeStatus!,
-                          icon: _getNodeStatusIcon(node.nodeStatus!),
-                        ),
-                      ],
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       _buildQuestCheckbox(node),
                     ],
                   ),
@@ -370,24 +422,30 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
     );
   }
 
-  Widget _buildDifficultyBadge(DifficultyLevel difficulty) {
+  Widget _buildDifficultyBadge(String difficulty) {
     String label;
     Color color;
-    switch (difficulty) {
-      case DifficultyLevel.easy:
-      case DifficultyLevel.beginner:
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+      case 'beginner':
         label = 'EASY';
         color = AppTheme.successColor;
         break;
-      case DifficultyLevel.medium:
-      case DifficultyLevel.intermediate:
+      case 'medium':
+      case 'intermediate':
         label = 'MEDIUM';
         color = AppTheme.warningColor;
         break;
-      case DifficultyLevel.hard:
-      case DifficultyLevel.advanced:
-        label = 'HARD';
+      case 'hard':
+      case 'advanced':
+      case 'expert':
+      case 'research':
+        label = difficulty.toUpperCase();
         color = AppTheme.errorColor;
+        break;
+      default:
+        label = difficulty.toUpperCase();
+        color = AppTheme.warningColor;
         break;
     }
 
@@ -1027,7 +1085,15 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
             child: OutlinedButton.icon(
               onPressed: _isCreatingPlan || _isCompletingNode
                   ? null
-                  : () => _createStudyPlan(node),
+                  : widget.hasStudyPlan
+                      ? () {
+                          // Navigate to Task Board scoped to this roadmap
+                          context.read<TaskBoardProvider>().loadBoardForRoadmap(
+                            widget.sessionId,
+                          );
+                          context.push('/task-board');
+                        }
+                      : () => _createStudyPlan(node),
               icon: _isCreatingPlan
                   ? CommonLoading.small()
                   : Icon(
@@ -1040,7 +1106,9 @@ class _RoadmapNodeCardState extends State<RoadmapNodeCard> {
               label: Text(
                 _isCreatingPlan 
                     ? 'Đang tạo KH...' 
-                    : (_assignment != null ? 'Tạo Task học tập' : 'Lên kế hoạch'),
+                    : widget.hasStudyPlan
+                        ? 'Xem kế hoạch'
+                        : (_assignment != null ? 'Tạo Task học tập' : 'Lên kế hoạch'),
                 style: TextStyle(
                   color: _isCreatingPlan || _isCompletingNode
                       ? (widget.isDark

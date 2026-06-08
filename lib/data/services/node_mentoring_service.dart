@@ -107,6 +107,28 @@ class NodeMentoringService {
     }
   }
 
+  /// Learner self-confirms node completion (for unmentored flows).
+  /// POST /api/v1/journeys/{journeyId}/nodes/{nodeId}/self-confirm
+  Future<NodeEvidenceRecordResponse> selfConfirmNode(
+    int journeyId,
+    String nodeId,
+  ) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/v1/journeys/$journeyId/nodes/${Uri.encodeComponent(nodeId)}/self-confirm',
+      );
+      if (response.data == null) {
+        throw UnknownException('Không có dữ liệu phản hồi');
+      }
+      return NodeEvidenceRecordResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Xác nhận hoàn thành node thất bại');
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw UnknownException('Lỗi không xác định');
+    }
+  }
+
   // ─── Output Assessment (Final Assessment) ──────────────────────────────
 
   /// Get latest output assessment for a journey (null if none).

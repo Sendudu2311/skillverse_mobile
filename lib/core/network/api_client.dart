@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../constants/environment.dart';
@@ -49,6 +50,7 @@ class ApiClient {
         baseUrl: Environment.backendUrl,
         connectTimeout: Duration(milliseconds: Environment.apiTimeout),
         receiveTimeout: Duration(milliseconds: Environment.apiTimeout),
+        sendTimeout: Duration(milliseconds: Environment.apiTimeout),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -248,7 +250,10 @@ class ApiClient {
       case DioExceptionType.cancel:
         return NetworkException('Yêu cầu đã bị hủy');
       default:
-        return UnknownException(error.message);
+        if (error.error is SocketException) {
+          return NetworkException('Không có kết nối Internet. Vui lòng kiểm tra lại.');
+        }
+        return UnknownException(error.message ?? 'Lỗi không xác định');
     }
   }
 

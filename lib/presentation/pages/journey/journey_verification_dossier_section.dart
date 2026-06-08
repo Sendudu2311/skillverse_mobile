@@ -11,12 +11,16 @@ class JourneyVerificationDossierSection extends StatefulWidget {
   final Map<String, NodeEvidenceRecordResponse?> nodeEvidences;
   final Map<String, String> nodeTitles; // nodeId → human-readable title
   final bool isLoading;
+  final String? learnerName;
+  final String? learnerAvatarUrl;
 
   const JourneyVerificationDossierSection({
     super.key,
     required this.nodeEvidences,
     required this.nodeTitles,
     this.isLoading = false,
+    this.learnerName,
+    this.learnerAvatarUrl,
   });
 
   @override
@@ -103,9 +107,58 @@ class _JourneyVerificationDossierSectionState
   // ─── Header ────────────────────────────────────────────────────────────
 
   Widget _buildHeader(bool isDark) {
-    return InkWell(
-      onTap: () => setState(() => _isExpanded = !_isExpanded),
-      borderRadius: BorderRadius.circular(8),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Personalized learner row ──
+        if (widget.learnerName != null) ...[
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: isDark
+                    ? AppTheme.accentCyan.withValues(alpha: 0.2)
+                    : AppTheme.primaryBlue.withValues(alpha: 0.1),
+                backgroundImage: widget.learnerAvatarUrl != null
+                    ? NetworkImage(widget.learnerAvatarUrl!)
+                    : null,
+                child: widget.learnerAvatarUrl == null
+                    ? Text(
+                        widget.learnerName!.isNotEmpty
+                            ? widget.learnerName![0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppTheme.accentCyan
+                              : AppTheme.primaryBlue,
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Dossier của ${widget.learnerName}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+        ],
+        // ── Collapse header ──
+        InkWell(
+          onTap: () => setState(() => _isExpanded = !_isExpanded),
+          borderRadius: BorderRadius.circular(8),
       child: Row(
         children: [
           Icon(
@@ -153,9 +206,11 @@ class _JourneyVerificationDossierSectionState
                   ? AppTheme.darkTextSecondary
                   : AppTheme.lightTextSecondary,
             ),
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+        ),
+      ],
     );
   }
 

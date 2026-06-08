@@ -27,6 +27,9 @@ class WalletResponse {
   final bool hasBankAccount;
   final bool hasTransactionPin;
   final bool require2FA;
+  final String? bankName;
+  final String? bankAccountNumber;
+  final String? bankAccountName;
   final String createdAt;
   final String? lastTransactionAt;
 
@@ -45,6 +48,9 @@ class WalletResponse {
     required this.hasBankAccount,
     required this.hasTransactionPin,
     required this.require2FA,
+    this.bankName,
+    this.bankAccountNumber,
+    this.bankAccountName,
     required this.createdAt,
     this.lastTransactionAt,
   });

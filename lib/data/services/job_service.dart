@@ -574,4 +574,60 @@ class JobService {
     if (statusCode == 404) return 'Không tìm thấy công việc';
     return fallback;
   }
+
+  // ==================== DISPUTE ====================
+
+  /// Open a dispute for a short-term job application (worker/learner)
+  /// POST /api/disputes
+  Future<DisputeResponse> openDispute({
+    required int jobId,
+    required int applicationId,
+    required String disputeType,
+    required String reason,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post<Map<String, dynamic>>(
+        '/disputes',
+        data: {
+          'jobId': jobId,
+          'applicationId': applicationId,
+          'disputeType': disputeType,
+          'reason': reason,
+        },
+      );
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      return DisputeResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException(_extractErrorMessage(e, 'Gửi khiếu nại thất bại'));
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Gửi khiếu nại thất bại');
+    }
+  }
+
+  /// Get all disputes submitted by the current user
+  /// GET /api/disputes/my-submitted
+  Future<List<DisputeResponse>> getMyDisputes() async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/disputes/my-submitted',
+        queryParameters: {'page': 0, 'size': 50},
+      );
+      if (response.data == null) {
+        throw ApiException('Không có dữ liệu phản hồi');
+      }
+      // Response is a Page<UserSubmittedDisputeResponse>
+      final content = response.data!['content'] as List<dynamic>? ?? [];
+      return content
+          .map(
+            (json) => DisputeResponse.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Lấy danh sách khiếu nại thất bại');
+    }
+  }
 }

@@ -31,6 +31,8 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
   bool _avoidLateNight = true;
   bool _allowLateNight = false;
   bool _isLoading = false;
+  bool _isSaving = false;              // Step 2: saving to DB
+  List<StudySessionResponse>? _proposedSessions; // null = not yet generated
 
   final List<String> _selectedDays = [
     'MONDAY',
@@ -87,8 +89,14 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildHeader(isDark),
-            Flexible(child: _buildForm()),
-            _buildActions(isDark),
+            Flexible(
+              child: _proposedSessions == null
+                  ? _buildForm()
+                  : _buildProposalPreview(isDark),
+            ),
+            _proposedSessions == null
+                ? _buildActions(isDark)
+                : _buildConfirmActions(isDark),
           ],
         ),
       ),
@@ -402,6 +410,144 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
     );
   }
 
+  // Step 2: Preview generated sessions
+  Widget _buildProposalPreview(bool isDark) {
+    final sessions = _proposedSessions!;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.preview, color: AppTheme.accentOrange, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                'XEM TRƯỚC ${sessions.length} PHÊN HỌC',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  color: AppTheme.accentOrange,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...sessions.take(5).map((s) => _buildSessionPreviewTile(s, isDark)),
+          if (sessions.length > 5)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                '... và ${sessions.length - 5} phiên học khác',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSessionPreviewTile(StudySessionResponse s, bool isDark) {
+    final dateStr =
+        '${s.startTime.day.toString().padLeft(2, '0')}/${s.startTime.month.toString().padLeft(2, '0')}/${s.startTime.year}';
+    final timeStr =
+        '${s.startTime.hour.toString().padLeft(2, '0')}:${s.startTime.minute.toString().padLeft(2, '0')} - ${s.endTime.hour.toString().padLeft(2, '0')}:${s.endTime.minute.toString().padLeft(2, '0')}';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.darkCardBackground
+            : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppTheme.accentOrange.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.schedule, size: 16, color: AppTheme.accentOrange),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.topic ?? s.subject ?? 'Phiên học',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                ),
+                Text(
+                  '$dateStr • $timeStr • ${s.durationMinutes} phút',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfirmActions(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? AppTheme.darkBorderColor
+                : AppTheme.lightBorderColor,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          OutlinedButton.icon(
+            onPressed: _isSaving
+                ? null
+                : () => setState(() => _proposedSessions = null),
+            icon: const Icon(Icons.arrow_back, size: 16),
+            label: const Text('Sửa lại'),
+          ),
+          const Spacer(),
+          ElevatedButton.icon(
+            onPressed: _isSaving ? null : _confirmAndSave,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.successColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            icon: _isSaving
+                ? CommonLoading.small()
+                : const Icon(Icons.save_alt, size: 18),
+            label: Text(
+              'Đồng ý & Lưu ${_proposedSessions!.length} phiên',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // === Helper Widgets ===
 
   Widget _buildSectionHeader(String label, IconData icon) {
@@ -614,14 +760,15 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
     );
   }
 
-  // === Generate Proposal ===
+  // === Generate Proposal (Step 1 — NOT saved to DB) ===
 
   Future<void> _generateProposal() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_deadline.isBefore(_startDate)) {
+      ErrorHandler.showErrorSnackBar(context, 'Deadline phải sau ngày bắt đầu');
+      return;
+    }
     setState(() => _isLoading = true);
-
-    final navigator = Navigator.of(context);
-    final taskProvider = context.read<TaskBoardProvider>();
 
     try {
       final request = GenerateScheduleRequest(
@@ -644,20 +791,70 @@ class _AIStudyPlannerDialogState extends State<AIStudyPlannerDialog> {
 
       final sessions = await _studyPlannerService.generateProposal(request);
 
+      if (sessions.isEmpty) {
+        if (mounted) {
+          ErrorHandler.showWarningSnackBar(
+            context,
+            'AI không tạo được phiên học nào. Vui lòng điều chỉnh thông số.',
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
+        // Go to Step 2: preview the generated sessions
+        setState(() => _proposedSessions = sessions);
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, ErrorHandler.getErrorMessage(e));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // === Confirm & Save (Step 2 — saves to DB via batch endpoint) ===
+
+  Future<void> _confirmAndSave() async {
+    final sessions = _proposedSessions;
+    if (sessions == null || sessions.isEmpty) return;
+
+    setState(() => _isSaving = true);
+    final navigator = Navigator.of(context);
+    final taskProvider = context.read<TaskBoardProvider>();
+
+    try {
+      final requests = sessions
+          .map(
+            (s) => CreateStudySessionRequest(
+              subject: s.subject,
+              topic: s.topic,
+              startTime: s.startTime,
+              endTime: s.endTime,
+              durationMinutes: s.durationMinutes,
+              notes: s.notes,
+            ),
+          )
+          .toList();
+
+      await _studyPlannerService.createSessions(requests);
+
       if (mounted) {
         navigator.pop();
         ErrorHandler.showSuccessSnackBar(
           context,
-          'Đã tạo ${sessions.length} phiên học! 🎉',
+          'Đã lưu ${sessions.length} phiên học! 🎉',
         );
+        // Switch to Timeline tab (index 1) after save
         taskProvider.setSelectedTab(1);
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, 'Lỗi: ${e.toString()}');
+        ErrorHandler.showErrorSnackBar(context, ErrorHandler.getErrorMessage(e));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 }

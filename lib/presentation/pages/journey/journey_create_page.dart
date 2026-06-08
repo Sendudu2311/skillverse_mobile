@@ -241,7 +241,7 @@ class _JourneyCreatePageState extends State<JourneyCreatePage> {
       level: _selectedLevel,
       language: _selectedLanguage,
       duration: _selectedDuration,
-      questionCount: 50,
+      questionCount: 40,
     );
 
     final journey = await _journeyProvider.startJourneyAndGenerateTest(request);

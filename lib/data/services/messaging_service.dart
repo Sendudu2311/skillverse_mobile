@@ -55,6 +55,12 @@ class MessagingService {
         url: _wsUrl,
         stompConnectHeaders: headers,
         webSocketConnectHeaders: headers,
+        beforeConnect: () async {
+          final token = _apiClient.authToken;
+          if (token != null) {
+            headers['Authorization'] = 'Bearer $token';
+          }
+        },
         onConnect: _onConnected,
         onDisconnect: _onDisconnected,
         onStompError: (frame) =>

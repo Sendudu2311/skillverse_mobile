@@ -10,7 +10,7 @@ AuthorDto _$AuthorDtoFromJson(Map<String, dynamic> json) => AuthorDto(
   id: (json['id'] as num).toInt(),
   firstName: json['firstName'] as String?,
   lastName: json['lastName'] as String?,
-  email: json['email'] as String,
+  email: json['email'] as String?,
   fullName: json['fullName'] as String?,
   roles: (json['roles'] as List<dynamic>?)?.map((e) => e as String).toList(),
   authProvider: json['authProvider'] as String?,
@@ -67,13 +67,15 @@ CourseSummaryDto _$CourseSummaryDtoFromJson(Map<String, dynamic> json) =>
         json['status'],
         unknownValue: CourseStatus.public,
       ),
-      author: AuthorDto.fromJson(json['author'] as Map<String, dynamic>),
+      author: json['author'] == null
+          ? null
+          : AuthorDto.fromJson(json['author'] as Map<String, dynamic>),
       authorName: json['authorName'] as String?,
       thumbnail: json['thumbnail'] == null
           ? null
           : MediaDto.fromJson(json['thumbnail'] as Map<String, dynamic>),
       thumbnailUrl: json['thumbnailUrl'] as String?,
-      enrollmentCount: (json['enrollmentCount'] as num).toInt(),
+      enrollmentCount: (json['enrollmentCount'] as num?)?.toInt() ?? 0,
       moduleCount: (json['moduleCount'] as num?)?.toInt(),
       lessonCount: (json['lessonCount'] as num?)?.toInt(),
       price: (json['price'] as num?)?.toDouble(),
@@ -170,7 +172,9 @@ CourseDetailDto _$CourseDetailDtoFromJson(Map<String, dynamic> json) =>
       category: json['category'] as String?,
       level: json['level'] as String?,
       status: json['status'] as String?,
-      author: AuthorDto.fromJson(json['author'] as Map<String, dynamic>),
+      author: json['author'] == null
+          ? null
+          : AuthorDto.fromJson(json['author'] as Map<String, dynamic>),
       thumbnail: json['thumbnail'] == null
           ? null
           : MediaDto.fromJson(json['thumbnail'] as Map<String, dynamic>),
@@ -178,7 +182,7 @@ CourseDetailDto _$CourseDetailDtoFromJson(Map<String, dynamic> json) =>
       currency: json['currency'] as String?,
       authorName: json['authorName'] as String?,
       thumbnailUrl: json['thumbnailUrl'] as String?,
-      enrollmentCount: (json['enrollmentCount'] as num).toInt(),
+      enrollmentCount: (json['enrollmentCount'] as num?)?.toInt() ?? 0,
       moduleCount: (json['moduleCount'] as num?)?.toInt(),
       lessonCount: (json['lessonCount'] as num?)?.toInt(),
       estimatedDurationHours: (json['estimatedDurationHours'] as num?)?.toInt(),

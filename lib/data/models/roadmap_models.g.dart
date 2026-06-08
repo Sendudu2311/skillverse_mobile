@@ -10,9 +10,9 @@ RoadmapNode _$RoadmapNodeFromJson(Map<String, dynamic> json) => RoadmapNode(
   id: json['id'] as String,
   title: json['title'] as String,
   description: json['description'] as String,
-  estimatedTimeMinutes: (json['estimatedTimeMinutes'] as num).toInt(),
+  estimatedTimeMinutes: (json['estimatedTimeMinutes'] as num?)?.toInt() ?? 0,
   type: $enumDecode(_$NodeTypeEnumMap, json['type']),
-  difficulty: $enumDecodeNullable(_$DifficultyLevelEnumMap, json['difficulty']),
+  difficulty: json['difficulty'] as String?,
   learningObjectives: (json['learningObjectives'] as List<dynamic>?)
       ?.map((e) => e as String)
       .toList(),
@@ -71,7 +71,7 @@ Map<String, dynamic> _$RoadmapNodeToJson(RoadmapNode instance) =>
       'description': instance.description,
       'estimatedTimeMinutes': instance.estimatedTimeMinutes,
       'type': _$NodeTypeEnumMap[instance.type]!,
-      'difficulty': _$DifficultyLevelEnumMap[instance.difficulty],
+      'difficulty': instance.difficulty,
       'learningObjectives': instance.learningObjectives,
       'keyConcepts': instance.keyConcepts,
       'practicalExercises': instance.practicalExercises,
@@ -98,15 +98,6 @@ Map<String, dynamic> _$RoadmapNodeToJson(RoadmapNode instance) =>
     };
 
 const _$NodeTypeEnumMap = {NodeType.main: 'MAIN', NodeType.side: 'SIDE'};
-
-const _$DifficultyLevelEnumMap = {
-  DifficultyLevel.easy: 'easy',
-  DifficultyLevel.beginner: 'beginner',
-  DifficultyLevel.medium: 'medium',
-  DifficultyLevel.intermediate: 'intermediate',
-  DifficultyLevel.hard: 'hard',
-  DifficultyLevel.advanced: 'advanced',
-};
 
 RoadmapMetadata _$RoadmapMetadataFromJson(Map<String, dynamic> json) =>
     RoadmapMetadata(
@@ -139,10 +130,7 @@ RoadmapMetadata _$RoadmapMetadataFromJson(Map<String, dynamic> json) =>
           .toList(),
       difficultyConcern: json['difficultyConcern'] as String?,
       incomeGoal: json['incomeGoal'] as bool?,
-      roadmapMode: $enumDecodeNullable(
-        _$RoadmapModeEnumMap,
-        json['roadmapMode'],
-      ),
+      roadmapMode: json['roadmapMode'] as String?,
       skillMode: json['skillMode'] == null
           ? null
           : SkillModeMeta.fromJson(json['skillMode'] as Map<String, dynamic>),
@@ -178,15 +166,10 @@ Map<String, dynamic> _$RoadmapMetadataToJson(RoadmapMetadata instance) =>
       'toolPreferences': instance.toolPreferences,
       'difficultyConcern': instance.difficultyConcern,
       'incomeGoal': instance.incomeGoal,
-      'roadmapMode': _$RoadmapModeEnumMap[instance.roadmapMode],
+      'roadmapMode': instance.roadmapMode,
       'skillMode': instance.skillMode,
       'careerMode': instance.careerMode,
     };
-
-const _$RoadmapModeEnumMap = {
-  RoadmapMode.skillBased: 'SKILL_BASED',
-  RoadmapMode.careerBased: 'CAREER_BASED',
-};
 
 SkillModeMeta _$SkillModeMetaFromJson(Map<String, dynamic> json) =>
     SkillModeMeta(

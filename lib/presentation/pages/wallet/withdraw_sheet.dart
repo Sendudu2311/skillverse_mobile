@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/common_loading.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../data/services/wallet_service.dart';
+import '../../providers/wallet_provider.dart';
+import 'setup_wallet_sheet.dart';
 
 /// Bottom sheet for creating a withdrawal request
 class WithdrawSheet extends StatefulWidget {
@@ -38,6 +41,24 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
   bool _isLoading = false;
   String? _error;
   bool _obscurePin = true;
+
+  static const int _minWithdraw = 100000;
+  static const int _maxWithdraw = 10000000;
+  static const double _withdrawFeePercent = 0.02;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.hasBankAccount) {
+        final walletProvider = context.read<WalletProvider>();
+        setState(() {
+          _bankNameController.text = walletProvider.bankName ?? '';
+          _accountNameController.text = walletProvider.bankAccountName ?? '';
+        });
+      }
+    });
+  }
 
   static const List<String> _banks = [
     'Vietcombank',
@@ -77,12 +98,28 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
       int.tryParse(_amountController.text.replaceAll(RegExp(r'[^0-9]'), '')) ??
       0;
 
+  int get _withdrawFee => (_amount * _withdrawFeePercent).round();
+  int get _netAmount => (_amount - _withdrawFee).clamp(0, _amount).toInt();
+
   Future<void> _handleWithdraw() async {
+    final walletProvider = context.read<WalletProvider>();
+    if (!walletProvider.hasBankAccount || !walletProvider.hasTransactionPin) {
+      setState(() {
+        _error =
+            'Vui lòng thiết lập tài khoản ngân hàng và mã PIN giao dịch trước khi rút tiền.';
+      });
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     final amount = _amount;
-    if (amount < 100000) {
+    if (amount < _minWithdraw) {
       setState(() => _error = 'Số tiền rút tối thiểu là 100.000 đ');
+      return;
+    }
+    if (amount > _maxWithdraw) {
+      setState(() => _error = 'Số tiền rút tối đa là 10.000.000 đ');
       return;
     }
     if (amount > widget.currentCashBalance) {
@@ -206,6 +243,9 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   children: [
+                    // Warning Box if no PIN or Bank Account
+                    _buildWarningBox(context, isDark),
+
                     // Amount
                     _buildLabel('Số tiền rút (VNĐ)', isDark),
                     TextFormField(
@@ -218,8 +258,8 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
                         final amount =
                             int.tryParse(v.replaceAll(RegExp(r'[^0-9]'), '')) ??
                             0;
-                        if (amount < 100000) return 'Tối thiểu 100.000 đ';
-                        if (amount > 100000000) return 'Tối đa 100.000.000 đ';
+                        if (amount < _minWithdraw) return 'Tối thiểu 100.000 đ';
+                        if (amount > _maxWithdraw) return 'Tối đa 10.000.000 đ';
                         if (amount > widget.currentCashBalance) {
                           return 'Vượt quá số dư';
                         }
@@ -234,7 +274,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '💡 Tối thiểu: 100.000 đ | Tối đa: 100.000.000 đ',
+                      '💡 Tối thiểu: 100.000 đ | Tối đa: 10.000.000 đ',
                       style: TextStyle(
                         fontSize: 11,
                         color: isDark
@@ -243,6 +283,11 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    if (_amount >= _minWithdraw) ...[
+                      _buildWithdrawalSummary(isDark),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Bank name dropdown
                     _buildLabel('Ngân hàng', isDark),
@@ -273,7 +318,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
                     _buildLabel('Số tài khoản', isDark),
                     TextFormField(
                       controller: _accountNumberController,
-                      keyboardType: TextInputType.number,
+                      keyboardType: TextInputType.text,
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
                           RegExp(r'[A-Za-z0-9]'),
@@ -281,10 +326,17 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
                       ],
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Nhập số tài khoản';
-                        if (v.length < 5 || v.length > 19) return '5-19 ký tự';
+                        if (!RegExp(r'^[A-Za-z0-9]{5,19}$').hasMatch(v)) {
+                          return 'Số tài khoản phải từ 5-19 ký tự chữ hoặc số';
+                        }
                         return null;
                       },
-                      decoration: _inputDecoration(isDark, hint: '1234567890'),
+                      decoration: _inputDecoration(
+                        isDark,
+                        hint: widget.hasBankAccount
+                            ? _getBankMaskHint(context.read<WalletProvider>())
+                            : '1234567890',
+                      ),
                       style: _inputTextStyle(isDark),
                     ),
                     const SizedBox(height: 16),
@@ -541,5 +593,171 @@ class _WithdrawSheetState extends State<WithdrawSheet> {
       fontSize: 15,
       color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
     );
+  }
+
+  Widget _buildWithdrawalSummary(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.accentCyan.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.accentCyan.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        children: [
+          _buildSummaryRow(
+            'Số tiền rút',
+            NumberFormatter.formatCurrency(_amount.toDouble(), currency: 'đ'),
+            isDark,
+            isBold: true,
+          ),
+          const SizedBox(height: 8),
+          _buildSummaryRow(
+            'Phí xử lý (2%)',
+            '-${NumberFormatter.formatCurrency(_withdrawFee.toDouble(), currency: 'đ')}',
+            isDark,
+          ),
+          const Divider(height: 18),
+          _buildSummaryRow(
+            'Thực nhận',
+            NumberFormatter.formatCurrency(_netAmount.toDouble(), currency: 'đ'),
+            isDark,
+            isBold: true,
+            valueColor: AppTheme.themeGreenStart,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.schedule, size: 16, color: AppTheme.accentCyan),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Yêu cầu được xử lý trong 1-3 ngày làm việc sau khi Admin duyệt.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(
+    String label,
+    String value,
+    bool isDark, {
+    bool isBold = false,
+    Color? valueColor,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: isDark
+                ? AppTheme.darkTextSecondary
+                : AppTheme.lightTextSecondary,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+            fontFamily: 'monospace',
+            color: valueColor ??
+                (isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWarningBox(BuildContext context, bool isDark) {
+    final walletProvider = context.watch<WalletProvider>();
+    final hasPin = walletProvider.hasTransactionPin;
+    final hasBank = walletProvider.hasBankAccount;
+
+    if (hasPin && hasBank) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: AppTheme.themeOrangeStart.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.themeOrangeStart.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: AppTheme.themeOrangeStart, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  !hasBank && !hasPin
+                      ? 'Bạn chưa thiết lập tài khoản ngân hàng và mã PIN'
+                      : (!hasBank
+                          ? 'Bạn chưa thiết lập tài khoản ngân hàng'
+                          : 'Bạn chưa thiết lập mã PIN giao dịch'),
+                  style: TextStyle(
+                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => SetupWalletSheet(
+                    needsPin: !hasPin,
+                    needsBank: !hasBank,
+                    onSuccess: () => walletProvider.refresh(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.settings, size: 14),
+              label: const Text('Thiết lập ngay'),
+              style: TextButton.styleFrom(
+                backgroundColor: AppTheme.themeOrangeStart,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getBankMaskHint(WalletProvider provider) {
+    final number = provider.bankAccountNumber;
+    if (number != null && number.length >= 4) {
+      return 'Nhập lại số TK (***${number.substring(number.length - 4)})';
+    }
+    return '1234567890';
   }
 }

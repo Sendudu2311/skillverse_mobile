@@ -26,6 +26,13 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool _isLoadingLongTermApps = false;
   String? _longTermApplicationsError;
 
+  // Dispute state
+  List<DisputeResponse> _myDisputes = [];
+  bool _isLoadingDisputes = false;
+  String? _disputesError;
+  bool _isSubmittingDispute = false;
+  bool _isAcceptingCancellation = false;
+
   // Lazy PaginationHelpers
   PaginationHelper<JobPostingResponse>? _longTermPagination;
   PaginationHelper<ShortTermJobResponse>? _shortTermPagination;
@@ -140,8 +147,16 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
   bool get isApplying => _isApplying;
   bool get isSubmittingDeliverable => _isSubmittingDeliverable;
 
+  // Dispute
+  List<DisputeResponse> get myDisputes => _myDisputes;
+  bool get isLoadingDisputes => _isLoadingDisputes;
+  String? get disputesError => _disputesError;
+  bool get isSubmittingDispute => _isSubmittingDispute;
+  bool get isAcceptingCancellation => _isAcceptingCancellation;
+
   // Aliases for existing code compatibility
-  bool get isLoadingJobs => isLoadingLongTermJobs || isLoadingShortTermJobs;
+  bool get isLoadingJobs =>
+      isLoadingLongTermJobs || isLoadingShortTermJobs;
   bool get isLoadingApplications =>
       _isLoadingLongTermApps || isLoadingShortTermApps;
 
@@ -398,6 +413,72 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
     }
   }
 
+  /// Accept cancellation requested by recruiter (worker side)
+  Future<bool> acceptCancellation(int applicationId) async {
+    _isAcceptingCancellation = true;
+    notifyListeners();
+    try {
+      final updated = await _jobService.acceptCancellation(applicationId);
+      final idx = myShortTermApplications.indexWhere(
+        (a) => a.id == updated.id,
+      );
+      if (idx != -1) _shortTermApp.updateItem(idx, updated);
+      setError(null);
+      return true;
+    } catch (e) {
+      setError(ErrorHandler.getErrorMessage(e));
+      return false;
+    } finally {
+      _isAcceptingCancellation = false;
+      notifyListeners();
+    }
+  }
+
+  /// Open a dispute for a short-term job application
+  Future<bool> openDispute({
+    required int jobId,
+    required int applicationId,
+    required String disputeType,
+    required String reason,
+  }) async {
+    _isSubmittingDispute = true;
+    notifyListeners();
+    try {
+      await _jobService.openDispute(
+        jobId: jobId,
+        applicationId: applicationId,
+        disputeType: disputeType,
+        reason: reason,
+      );
+      // Reload both disputes and short-term apps after opening dispute
+      await Future.wait([loadMyDisputes(), loadMyShortTermApplications(refresh: true)]);
+      setError(null);
+      return true;
+    } catch (e) {
+      setError(ErrorHandler.getErrorMessage(e));
+      return false;
+    } finally {
+      _isSubmittingDispute = false;
+      notifyListeners();
+    }
+  }
+
+  /// Load all disputes submitted by the current user
+  Future<void> loadMyDisputes() async {
+    if (_isLoadingDisputes) return;
+    _isLoadingDisputes = true;
+    _disputesError = null;
+    notifyListeners();
+    try {
+      _myDisputes = await _jobService.getMyDisputes();
+    } catch (e) {
+      _disputesError = ErrorHandler.getErrorMessage(e);
+    } finally {
+      _isLoadingDisputes = false;
+      notifyListeners();
+    }
+  }
+
   // ==================== SEARCH ====================
 
   /// Search jobs based on current tab
@@ -456,6 +537,9 @@ class JobProvider with ChangeNotifier, LoadingStateProviderMixin {
     _searchQuery = '';
     _isLoadingLongTermApps = false;
     _longTermApplicationsError = null;
+    _myDisputes = [];
+    _isLoadingDisputes = false;
+    _disputesError = null;
     resetState();
     notifyListeners();
   }

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/network/api_client.dart';
 import '../models/task_board_models.dart';
@@ -279,11 +280,13 @@ class TaskBoardService {
   }
 
   /// Create a new note
+  /// Backend expects @RequestBody String — must send as text/plain.
   Future<DashboardNote> createNote(String content) async {
     try {
       final response = await _apiClient.dio.post(
         '/task-board/notes',
         data: content,
+        options: Options(headers: {'Content-Type': 'text/plain; charset=UTF-8'}),
       );
       return DashboardNote.fromJson(response.data);
     } catch (e) {
@@ -293,11 +296,13 @@ class TaskBoardService {
   }
 
   /// Update a note
+  /// Backend expects @RequestBody String — must send as text/plain.
   Future<DashboardNote> updateNote(String noteId, String content) async {
     try {
       final response = await _apiClient.dio.patch(
         '/task-board/notes/$noteId',
         data: content,
+        options: Options(headers: {'Content-Type': 'text/plain; charset=UTF-8'}),
       );
       return DashboardNote.fromJson(response.data);
     } catch (e) {

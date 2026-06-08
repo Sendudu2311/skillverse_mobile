@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../core/network/api_client.dart';
 import '../../core/constants/environment.dart';
+import '../../core/exceptions/api_exception.dart';
 import '../models/group_chat_models.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 
@@ -50,7 +51,11 @@ class GroupChatService {
         '/group-chats/$groupId/detail',
         queryParameters: {'userId': userId},
       );
-      return GroupChatResponse.fromJson(response.data!);
+      final data = response.data;
+      if (data == null) {
+        throw ApiException('Không thể tải chi tiết nhóm');
+      }
+      return GroupChatResponse.fromJson(data);
     } catch (e) {
       debugPrint('Error loading group detail: $e');
       rethrow;
@@ -99,7 +104,11 @@ class GroupChatService {
         '/group-chats/$groupId/messages',
         data: message.toJson(),
       );
-      return GroupChatMessageDTO.fromJson(response.data!);
+      final data = response.data;
+      if (data == null) {
+        throw ApiException('Gửi tin nhắn thất bại');
+      }
+      return GroupChatMessageDTO.fromJson(data);
     } catch (e) {
       debugPrint('Error sending message: $e');
       rethrow;
@@ -165,6 +174,12 @@ class GroupChatService {
         url: _wsUrl,
         stompConnectHeaders: headers,
         webSocketConnectHeaders: headers,
+        beforeConnect: () async {
+          final token = _apiClient.authToken;
+          if (token != null) {
+            headers['Authorization'] = 'Bearer $token';
+          }
+        },
         onConnect: _onStompConnected,
         onDisconnect: _onStompDisconnected,
         onStompError: (frame) {

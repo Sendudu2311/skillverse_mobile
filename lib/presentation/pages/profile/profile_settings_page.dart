@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../providers/user_provider.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/common_loading.dart';
@@ -10,6 +11,7 @@ import '../../widgets/section_header.dart';
 import '../../widgets/skillverse_app_bar.dart';
 import '../../../core/utils/validation_helper.dart';
 import '../../../core/utils/error_handler.dart';
+import 'change_password_sheet.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({super.key});
@@ -23,6 +25,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _birthdayController = TextEditingController();
   final _bioController = TextEditingController();
   final _addressController = TextEditingController();
   final _socialLinksController = TextEditingController();
@@ -30,6 +33,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
   // Focus nodes for better UX
   final _fullNameFocus = FocusNode();
   final _phoneFocus = FocusNode();
+  final _birthdayFocus = FocusNode();
   final _bioFocus = FocusNode();
   final _addressFocus = FocusNode();
 
@@ -37,6 +41,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
   bool _isSaving = false;
   bool _hasChanges = false;
   bool _isEditing = false;
+  bool _isUploadingAvatar = false;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -58,6 +63,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
     // Track changes
     _fullNameController.addListener(_markAsChanged);
     _phoneController.addListener(_markAsChanged);
+    _birthdayController.addListener(_markAsChanged);
     _bioController.addListener(_markAsChanged);
     _addressController.addListener(_markAsChanged);
     _socialLinksController.addListener(_markAsChanged);
@@ -110,6 +116,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
     if (profile != null) {
       _fullNameController.text = profile.fullName;
       _phoneController.text = profile.phone ?? '';
+      _birthdayController.text = profile.birthday ?? '';
       _bioController.text = profile.bio ?? '';
       _addressController.text = profile.address ?? '';
       _socialLinksController.text = profile.socialLinks ?? '';
@@ -128,14 +135,77 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
     _animationController.dispose();
     _fullNameController.dispose();
     _phoneController.dispose();
+    _birthdayController.dispose();
     _bioController.dispose();
     _addressController.dispose();
     _socialLinksController.dispose();
     _fullNameFocus.dispose();
     _phoneFocus.dispose();
+    _birthdayFocus.dispose();
     _bioFocus.dispose();
     _addressFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    if (!_isEditing || _isUploadingAvatar) return;
+
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1024,
+    );
+
+    if (pickedFile == null || !mounted) return;
+
+    setState(() => _isUploadingAvatar = true);
+    final userProvider = context.read<UserProvider>();
+    final success = await userProvider.uploadAvatar(pickedFile.path);
+
+    if (!mounted) return;
+    setState(() => _isUploadingAvatar = false);
+
+    if (success) {
+      ErrorHandler.showSuccessSnackBar(context, 'Cập nhật ảnh đại diện thành công!');
+    } else {
+      ErrorHandler.showErrorSnackBar(
+        context,
+        userProvider.errorMessage ?? 'Không thể tải ảnh lên, thử lại sau.',
+      );
+    }
+  }
+
+  Future<void> _selectBirthday() async {
+    DateTime initialDate = DateTime.now().subtract(const Duration(days: 365 * 18));
+    if (_birthdayController.text.isNotEmpty) {
+      try {
+        initialDate = DateTime.parse(_birthdayController.text);
+      } catch (_) {}
+    }
+    
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppTheme.accentCyan,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (picked != null) {
+      setState(() {
+        _birthdayController.text = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      });
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -154,6 +224,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
 
     if (_phoneController.text.trim().isNotEmpty) {
       updateData['phone'] = _phoneController.text.trim();
+    }
+    if (_birthdayController.text.trim().isNotEmpty) {
+      updateData['birthday'] = _birthdayController.text.trim();
     }
     if (_bioController.text.trim().isNotEmpty) {
       updateData['bio'] = _bioController.text.trim();
@@ -316,6 +389,19 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
 
                               const SizedBox(height: 12),
 
+                              _buildTextField(
+                                controller: _birthdayController,
+                                focusNode: _birthdayFocus,
+                                label: 'Ngày sinh',
+                                icon: Icons.calendar_today_outlined,
+                                enabled: _isEditing,
+                                readOnly: true,
+                                onTap: _isEditing ? _selectBirthday : null,
+                                hint: 'Chọn ngày sinh của bạn',
+                              ),
+
+                              const SizedBox(height: 12),
+
                               // Bio Section
                               SectionHeader(
                                 title: 'Giới thiệu',
@@ -349,6 +435,30 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
                                 hint: 'Số nhà, tên đường...',
                               ),
 
+                              const SizedBox(height: 24),
+
+                              if (!_isEditing) ...[
+                                SectionHeader(
+                                  title: 'Bảo mật tài khoản',
+                                  icon: Icons.shield_outlined,
+                                ),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => ChangePasswordSheet.show(context),
+                                    icon: const Icon(Icons.lock_outline),
+                                    label: const Text('Đổi mật khẩu'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+
                               const SizedBox(height: 32),
                             ],
                           ),
@@ -379,61 +489,99 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
   }
 
   Widget _buildAvatarSection() {
+    final userProvider = context.read<UserProvider>();
+    final avatarUrl = userProvider.userProfile?.avatarMediaUrl;
+
     return Center(
       child: GlassCard(
         child: Column(
           children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.2),
-                  child: Icon(
-                    Icons.person,
-                    size: 50,
-                    color: Theme.of(context).colorScheme.primary,
+            GestureDetector(
+              onTap: _isEditing ? _pickAndUploadAvatar : null,
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.2),
+                    backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                        ? NetworkImage(avatarUrl)
+                        : null,
+                    onBackgroundImageError:
+                        (avatarUrl != null && avatarUrl.isNotEmpty)
+                            ? (_, __) {}
+                            : null,
+                    child: (avatarUrl == null || avatarUrl.isEmpty)
+                        ? Icon(
+                            Icons.person,
+                            size: 50,
+                            color: Theme.of(context).colorScheme.primary,
+                          )
+                        : null,
                   ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: _isEditing
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).disabledColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        width: 2,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.camera_alt,
-                      size: 16,
-                      color: Colors.white,
-                    ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: _isUploadingAvatar
+                        ? Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).scaffoldBackgroundColor,
+                                width: 2,
+                              ),
+                            ),
+                            child: const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: _isEditing
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).disabledColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).scaffoldBackgroundColor,
+                                width: 2,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Tải ảnh đại diện',
+              _isEditing ? 'Chạm để đổi ảnh đại diện' : 'Ảnh đại diện',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Tính năng sẽ được cập nhật sau',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).hintColor,
-              ),
-            ),
+            if (!_isEditing) ...
+              [
+                const SizedBox(height: 4),
+                Text(
+                  'Chuyển sang chế độ chỉnh sửa để thay ảnh',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).hintColor,
+                  ),
+                ),
+              ],
           ],
         ),
       ),
@@ -454,6 +602,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
     TextInputAction? textInputAction,
     void Function(String)? onFieldSubmitted,
     bool enabled = true,
+    bool readOnly = false,
+    VoidCallback? onTap,
   }) {
     return GlassCard(
       padding: const EdgeInsets.all(4),
@@ -461,6 +611,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage>
         controller: controller,
         focusNode: focusNode,
         enabled: enabled,
+        readOnly: readOnly,
+        onTap: onTap,
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,

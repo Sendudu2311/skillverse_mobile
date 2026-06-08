@@ -44,11 +44,10 @@ class _RoadmapDerivedStats {
     final approxDays = dailyMinutes > 0
         ? (hours * 60 / dailyMinutes).round()
         : null;
-    final approxMonths = approxDays != null
-        ? (approxDays / 30)
-        : null;
+    final approxMonths = approxDays != null ? (approxDays / 30) : null;
     final commitmentMonths = _parseCommitmentMonths(roadmap.metadata.duration);
-    final commitmentMet = approxMonths != null &&
+    final commitmentMet =
+        approxMonths != null &&
         commitmentMonths != null &&
         approxMonths <= commitmentMonths;
     final gap = (approxMonths != null && commitmentMonths != null)
@@ -99,8 +98,9 @@ class _RoadmapDerivedStats {
 
 class RoadmapDetailPage extends StatefulWidget {
   final int sessionId;
+  final int? journeyId;
 
-  const RoadmapDetailPage({super.key, required this.sessionId});
+  const RoadmapDetailPage({super.key, required this.sessionId, this.journeyId});
 
   @override
   State<RoadmapDetailPage> createState() => _RoadmapDetailPageState();
@@ -109,7 +109,6 @@ class RoadmapDetailPage extends StatefulWidget {
 class _RoadmapDetailPageState extends State<RoadmapDetailPage>
     with WidgetsBindingObserver {
   String? _expandedNodeId;
-  String? _creatingPlanNodeId;
   int? _resolvedJourneyId;
   MentorBookingProvider? _bookingProvider;
 
@@ -125,6 +124,10 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _attachBookingProviderListener();
       context.read<RoadmapDetailProvider>().loadRoadmapById(widget.sessionId);
+      if (widget.journeyId != null) {
+        _resolvedJourneyId = widget.journeyId;
+        _resolveMentorBooking(widget.journeyId!, refresh: true);
+      }
       _resolveJourneyId();
     });
   }
@@ -145,18 +148,45 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
   }
 
   Future<void> _resolveJourneyId() async {
+    if (widget.journeyId != null) {
+      if (mounted && _resolvedJourneyId != widget.journeyId) {
+        setState(() => _resolvedJourneyId = widget.journeyId);
+      }
+      await _resolveMentorBooking(widget.journeyId!, refresh: true);
+      return;
+    }
+
     final jp = context.read<JourneyProvider>();
-    JourneySummaryDto? journey = jp.journeys
+
+    // 1️⃣ Priority 1: currentJourney (set when navigating from Journey → Roadmap)
+    JourneySummaryDto? journey;
+    final current = jp.currentJourney;
+    if (current != null && current.roadmapSessionId == widget.sessionId) {
+      journey = current;
+    }
+
+    // 2️⃣ Priority 2: activeJourneys (always populated, not paginated)
+    journey ??= jp.activeJourneys
         .where((j) => j.roadmapSessionId == widget.sessionId)
         .firstOrNull;
 
+    // 3️⃣ Priority 3: journeys (paginated list — may be stale)
+    journey ??= jp.journeys
+        .where((j) => j.roadmapSessionId == widget.sessionId)
+        .firstOrNull;
+
+    // 4️⃣ Fallback: load active journeys from network (avoids overwriting paginated data)
     if (journey == null) {
       try {
-        await jp.loadJourneys(page: 0, size: 100);
+        await jp.loadActiveJourneys();
       } catch (_) {
         // Ignore here; roadmap detail can still render without mentor CTA
       }
-      journey = jp.journeys
+      // Re-check after network fetch
+      journey = jp.activeJourneys
+          .where((j) => j.roadmapSessionId == widget.sessionId)
+          .firstOrNull;
+      journey ??= jp.journeys
           .where((j) => j.roadmapSessionId == widget.sessionId)
           .firstOrNull;
     }
@@ -169,7 +199,9 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
   }
 
   Future<void> _loadRoadmapData() async {
-    await context.read<RoadmapDetailProvider>().loadRoadmapById(widget.sessionId);
+    await context.read<RoadmapDetailProvider>().loadRoadmapById(
+      widget.sessionId,
+    );
     await _resolveJourneyId();
   }
 
@@ -223,18 +255,25 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
 
     // Resolve skill name: journey.skillName > roadmap.metadata.skillMode > target
     String? skillName;
-    final journey = context.read<JourneyProvider>().journeys
-        .where((j) => j.id == journeyId)
-        .firstOrNull;
+    final jp = context.read<JourneyProvider>();
+    // Search in same priority order as _resolveJourneyId
+    JourneySummaryDto? journey;
+    final current = jp.currentJourney;
+    if (current != null && current.id == journeyId) {
+      journey = current;
+    }
+    journey ??= jp.activeJourneys.where((j) => j.id == journeyId).firstOrNull;
+    journey ??= jp.journeys.where((j) => j.id == journeyId).firstOrNull;
     if (journey?.skillName != null && journey!.skillName!.isNotEmpty) {
       skillName = journey.skillName;
     } else {
       final roadmap = context.read<RoadmapDetailProvider>().currentRoadmap;
-      skillName = roadmap?.metadata.skillMode?.skillName
-          ?? roadmap?.metadata.target;
+      skillName =
+          roadmap?.metadata.skillMode?.skillName ?? roadmap?.metadata.target;
     }
 
-    var url = '/mentors?action=roadmap_mentoring&journeyId=$journeyId';
+    var url =
+        '/mentors?action=roadmap_mentoring&journeyId=$journeyId&roadmapSessionId=${widget.sessionId}';
     if (skillName != null && skillName.isNotEmpty) {
       url += '&skillName=${Uri.encodeComponent(skillName)}';
     }
@@ -425,64 +464,64 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-        // App Bar
-        SliverAppBar(
-          expandedHeight: 250,
-          pinned: true,
-          backgroundColor: isDark
-              ? AppTheme.galaxyDark
-              : AppTheme.lightBackgroundPrimary,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
+          // App Bar
+          SliverAppBar(
+            expandedHeight: 250,
+            pinned: true,
+            backgroundColor: isDark
+                ? AppTheme.galaxyDark
+                : AppTheme.lightBackgroundPrimary,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.pop(),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              background: _buildHeaderBackground(context, roadmap, isDark),
+            ),
           ),
-          flexibleSpace: FlexibleSpaceBar(
-            background: _buildHeaderBackground(context, roadmap, isDark),
+
+          // Content
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Stats cards
+                _buildStatsRow(context, roadmap, isDark),
+
+                // Entry-point CTA row
+                _buildActionRow(context, isDark),
+                const SizedBox(height: 20),
+
+                // V2 Overview section
+                if (roadmap.overview != null)
+                  _buildOverviewSection(
+                    context,
+                    roadmap.overview!,
+                    isDark,
+                    metadataPrerequisites: roadmap.metadata.prerequisites,
+                  ),
+
+                // Validation notes
+                if (roadmap.metadata.validationNotes != null)
+                  _buildValidationNotes(
+                    context,
+                    roadmap.metadata.validationNotes!,
+                    isDark,
+                  ),
+
+                // Learning tips
+                if (roadmap.learningTips != null &&
+                    roadmap.learningTips!.isNotEmpty)
+                  _buildLearningTips(context, roadmap.learningTips!, isDark),
+
+                // Roadmap nodes
+                _buildNodesSection(context, roadmap, provider, isDark),
+
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
-        ),
-
-        // Content
-        SliverToBoxAdapter(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Stats cards
-              _buildStatsRow(context, roadmap, isDark),
-
-              // Entry-point CTA row
-              _buildActionRow(context, isDark),
-              const SizedBox(height: 20),
-
-              // V2 Overview section
-              if (roadmap.overview != null)
-                _buildOverviewSection(
-                  context,
-                  roadmap.overview!,
-                  isDark,
-                  metadataPrerequisites: roadmap.metadata.prerequisites,
-                ),
-
-              // Validation notes
-              if (roadmap.metadata.validationNotes != null)
-                _buildValidationNotes(
-                  context,
-                  roadmap.metadata.validationNotes!,
-                  isDark,
-                ),
-
-              // Learning tips
-              if (roadmap.learningTips != null &&
-                  roadmap.learningTips!.isNotEmpty)
-                _buildLearningTips(context, roadmap.learningTips!, isDark),
-
-              // Roadmap nodes
-              _buildNodesSection(context, roadmap, provider, isDark),
-
-              const SizedBox(height: 32),
-            ],
-          ),
-        ),
-      ],
+        ],
       ),
     );
   }
@@ -561,7 +600,11 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
               const SizedBox(height: 8),
               Row(
                 children: [
-                  StatusBadge(status: roadmap.progressPercentage >= 100 ? 'COMPLETED' : (roadmap.roadmapStatus ?? 'ACTIVE')),
+                  StatusBadge(
+                    status: roadmap.progressPercentage >= 100
+                        ? 'COMPLETED'
+                        : (roadmap.roadmapStatus ?? 'ACTIVE'),
+                  ),
                   const SizedBox(width: 12),
                   const Icon(
                     Icons.signal_cellular_alt,
@@ -599,7 +642,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
     bool isDark,
   ) {
     final stats = _RoadmapDerivedStats.from(roadmap);
-    
+
     String durationValue = roadmap.metadata.duration;
     if (stats.approxDays != null) {
       if (stats.approxDays! < 7) {
@@ -609,7 +652,8 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
         durationValue = '~$w tuần';
       } else {
         final m = (stats.approxDays! / 30 * 10).round() / 10;
-        durationValue = '~${m.toString().replaceAll(RegExp(r'\.0$'), '')} tháng';
+        durationValue =
+            '~${m.toString().replaceAll(RegExp(r'\.0$'), '')} tháng';
       }
     }
 
@@ -691,7 +735,9 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
 
     final color = isOver ? AppTheme.warningColor : AppTheme.successColor;
     final icon = isOver ? Icons.warning_amber_rounded : Icons.check_circle;
-    final absGap = gap.abs().toStringAsFixed(gap.abs() == gap.abs().roundToDouble() ? 0 : 1);
+    final absGap = gap.abs().toStringAsFixed(
+      gap.abs() == gap.abs().roundToDouble() ? 0 : 1,
+    );
     final message = isOver
         ? 'Effort vượt cam kết $absGap tháng — cân nhắc giảm scope'
         : 'Effort thấp hơn cam kết $absGap tháng — có thể hoàn thành sớm';
@@ -729,6 +775,33 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                final query = <String, String>{};
+                if (_resolvedJourneyId != null) {
+                  query['journeyId'] = _resolvedJourneyId.toString();
+                }
+                final uri = Uri(
+                  path: '/roadmap/${widget.sessionId}/workspace',
+                  queryParameters: query.isNotEmpty ? query : null,
+                );
+                context.push(uri.toString());
+              },
+              icon: const Icon(Icons.assignment_turned_in_outlined, size: 18),
+              label: const Text('Đi đến Workspace'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlueDark,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -1278,6 +1351,7 @@ class _RoadmapDetailPageState extends State<RoadmapDetailPage>
               isCompleted: provider.isQuestCompleted(node.id),
               isDark: isDark,
               sessionId: widget.sessionId,
+              hasStudyPlan: provider.hasStudyPlan(node.id),
               onToggleExpand: () => setState(() {
                 _expandedNodeId = _expandedNodeId == node.id ? null : node.id;
               }),

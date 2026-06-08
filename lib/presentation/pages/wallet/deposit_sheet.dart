@@ -4,7 +4,8 @@ import '../../themes/app_theme.dart';
 import '../../widgets/common_loading.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/error_handler.dart';
-import '../../../data/services/wallet_service.dart';
+import '../../../data/models/payment_models.dart';
+import '../../../data/services/payment_service.dart';
 import '../payment/payment_webview_page.dart';
 import '../../widgets/animated_success_overlay.dart';
 
@@ -20,11 +21,14 @@ class DepositSheet extends StatefulWidget {
 
 class _DepositSheetState extends State<DepositSheet> {
   final _customAmountController = TextEditingController();
-  final _walletService = WalletService();
+  final _paymentService = PaymentService();
 
   int? _selectedAmount;
   bool _isLoading = false;
   String? _error;
+
+  static const int _minAmount = 5000;
+  static const int _maxAmount = 10000000;
 
   static const List<int> _quickAmounts = [
     20000,
@@ -66,12 +70,12 @@ class _DepositSheetState extends State<DepositSheet> {
   Future<void> _handleDeposit() async {
     final amount = _amount;
 
-    if (amount < 10000) {
-      setState(() => _error = 'Số tiền tối thiểu là 10.000 đ');
+    if (amount < _minAmount) {
+      setState(() => _error = 'Số tiền tối thiểu là 5.000 đ');
       return;
     }
-    if (amount > 50000000) {
-      setState(() => _error = 'Số tiền tối đa là 50.000.000 đ');
+    if (amount > _maxAmount) {
+      setState(() => _error = 'Số tiền tối đa là 10.000.000 đ');
       return;
     }
 
@@ -81,17 +85,28 @@ class _DepositSheetState extends State<DepositSheet> {
     });
 
     try {
-      const baseUrl = 'https://skillverse.vn';
-      const successUrl = '$baseUrl/my-wallet?status=success';
-      const cancelUrl = '$baseUrl/my-wallet?status=cancel';
-      final response = await _walletService.createDeposit(
-        amount: amount.toDouble(),
-        returnUrl: successUrl,
-        cancelUrl: cancelUrl,
+      final successUrl = Uri.https('skillverse.vn', '/my-wallet', {
+        'status': 'success',
+        'message': 'Nạp tiền thành công',
+      }).toString();
+      final cancelUrl = Uri.https('skillverse.vn', '/my-wallet', {
+        'status': 'cancel',
+      }).toString();
+      final response = await _paymentService.createPayment(
+        request: CreatePaymentRequestDto(
+          amount: amount.toDouble(),
+          type: PaymentType.walletTopup,
+          paymentMethod: PaymentMethod.payos,
+          currency: 'VND',
+          description:
+              'Nạp tiền vào ví: ${NumberFormatter.formatCurrency(amount.toDouble(), currency: 'đ')}',
+          successUrl: successUrl,
+          cancelUrl: cancelUrl,
+        ),
       );
 
-      final checkoutUrl = response['checkoutUrl'] as String?;
-      if (checkoutUrl == null || checkoutUrl.isEmpty) {
+      final checkoutUrl = response.checkoutUrl;
+      if (checkoutUrl.isEmpty) {
         throw Exception('Không nhận được URL thanh toán');
       }
 
@@ -111,8 +126,6 @@ class _DepositSheetState extends State<DepositSheet> {
 
       if (!mounted) return;
 
-      // Luôn refresh wallet sau khi quay về từ WebView
-      // vì backend PayOS callback xử lý việc cộng tiền tự động
       widget.onSuccess();
       Navigator.pop(context);
 
@@ -123,6 +136,8 @@ class _DepositSheetState extends State<DepositSheet> {
           title: '🎉 Nạp tiền thành công!',
           subtitle: 'Số dư ví đã được cập nhật.',
         );
+      } else if (result != null && result['cancelled'] == true) {
+        ErrorHandler.showWarningSnackBar(context, 'Đã hủy thanh toán.');
       } else {
         ErrorHandler.showSuccessSnackBar(context, '⏳ Đang xử lý thanh toán...');
       }
@@ -271,7 +286,7 @@ class _DepositSheetState extends State<DepositSheet> {
               ),
               const SizedBox(height: 8),
               Text(
-                '💡 Tối thiểu: 10.000 đ | Tối đa: 50.000.000 đ',
+                '💡 Tối thiểu: 5.000 đ | Tối đa: 10.000.000 đ',
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark

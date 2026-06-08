@@ -117,6 +117,43 @@ enum NodeReviewResult {
   }
 }
 
+// ── AiReviewStatus ────────────────────────────────────────────────────────
+/// Mirrors backend AiReviewStatus.java
+enum AiReviewStatus {
+  pending,
+  passed,
+  failed,
+  needsAdminReview;
+
+  static AiReviewStatus? fromString(String? value) {
+    switch (value?.toUpperCase()) {
+      case 'PENDING':
+        return pending;
+      case 'PASSED':
+        return passed;
+      case 'FAILED':
+        return failed;
+      case 'NEEDS_ADMIN_REVIEW':
+        return needsAdminReview;
+      default:
+        return null;
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case pending:
+        return 'Đang chờ đánh giá';
+      case passed:
+        return 'Hệ thống: Đạt';
+      case failed:
+        return 'Hệ thống: Cần nộp lại';
+      case needsAdminReview:
+        return 'Hệ thống: Đang chờ đánh giá';
+    }
+  }
+}
+
 // ── GradingCriterion ───────────────────────────────────────────────────────
 
 class GradingCriterion {

@@ -16,6 +16,7 @@ import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/enum_helper.dart';
 import 'job_detail_page.dart';
 import 'short_term_submit_sheet.dart';
+import 'dispute_sheet.dart';
 
 class MyApplicationsPage extends StatefulWidget {
   const MyApplicationsPage({super.key});
@@ -32,7 +33,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _scrollController.addListener(_onScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -42,6 +43,9 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
       }
       if (provider.myShortTermApplications.isEmpty) {
         provider.loadMyShortTermApplications();
+      }
+      if (provider.myDisputes.isEmpty) {
+        provider.loadMyDisputes();
       }
     });
   }
@@ -69,11 +73,12 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     return Scaffold(
       appBar: SkillVerseAppBar(
         title: 'Đơn Ứng Tuyển',
-        bottom: TabBar(
+      bottom: TabBar(
           controller: _tabController,
           tabs: const [
             Tab(text: 'Việc Làm'),
             Tab(text: 'Freelance'),
+            Tab(text: 'Tranh Chấp'),
           ],
         ),
       ),
@@ -95,6 +100,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
               children: [
                 _buildLongTermApplications(provider),
                 _buildShortTermApplications(provider),
+                _buildDisputesTab(provider),
               ],
             );
           },
@@ -455,6 +461,29 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
             _buildRevisionNotes(app.revisionNotes!),
           ],
 
+          // SLA countdown — khi SUBMITTED và có reviewDeadlineAt
+          if ((app.status == ShortTermApplicationStatus.submitted ||
+                  app.status == ShortTermApplicationStatus.underReview) &&
+              app.reviewDeadlineAt != null)
+            _buildSlaCountdown(
+              label: 'Thời hạn recruiter review',
+              deadlineStr: app.reviewDeadlineAt!,
+              icon: Icons.timer_outlined,
+            ),
+
+          // CANCELLATION_REQUESTED — banner + actions
+          if (app.status == ShortTermApplicationStatus.cancellationRequested) ...[
+            const SizedBox(height: 8),
+            _buildCancellationRequestedSection(app, provider),
+          ],
+
+          // Overdue warning
+          if (app.status == ShortTermApplicationStatus.submittedOverdue ||
+              app.status == ShortTermApplicationStatus.revisionResponseOverdue) ...[
+            const SizedBox(height: 8),
+            _buildOverdueBanner(),
+          ],
+
           // Actions row
           const SizedBox(height: 8),
           Row(
@@ -526,6 +555,431 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     );
   }
 
+  /// SLA countdown badge
+  Widget _buildSlaCountdown({
+    required String label,
+    required String deadlineStr,
+    required IconData icon,
+  }) {
+    final deadline = DateTimeHelper.tryParseIso8601(deadlineStr);
+    if (deadline == null) return const SizedBox.shrink();
+    final now = DateTime.now();
+    final isOverdue = deadline.isBefore(now);
+    final diff = deadline.difference(now);
+    final isUrgent = !isOverdue && diff.inHours < 24;
+
+    final color = isOverdue
+        ? Colors.red
+        : isUrgent
+            ? AppTheme.themeOrangeStart
+            : Theme.of(context).hintColor;
+
+    final String countdownText;
+    if (isOverdue) {
+      countdownText = 'Đã quá hạn — sẽ được tự động duyệt';
+    } else if (diff.inHours > 0) {
+      countdownText = 'Còn ${diff.inHours}h ${diff.inMinutes.remainder(60)}m';
+    } else {
+      countdownText = 'Còn ${diff.inMinutes}m';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              '$label: $countdownText',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: isUrgent || isOverdue ? FontWeight.w600 : null,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// CANCELLATION_REQUESTED: warning banner + 2 action buttons
+  Widget _buildCancellationRequestedSection(
+    ShortTermApplicationResponse app,
+    JobProvider provider,
+  ) {
+    final canDispute = app.disputeEligibilityUnlocked == true;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Warning banner
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.red.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded,
+                  color: Colors.red, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Nhà tuyển dụng yêu cầu hủy công việc',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red),
+                    ),
+                    if (app.responseDeadlineAt != null) ...[
+                      const SizedBox(height: 4),
+                      _buildSlaCountdown(
+                        label: 'Hạn phản hồi',
+                        deadlineStr: app.responseDeadlineAt!,
+                        icon: Icons.hourglass_top_rounded,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Action buttons
+        Row(
+          children: [
+            if (canDispute)
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: provider.isSubmittingDispute
+                      ? null
+                      : () => _openDisputeSheet(app),
+                  icon: const Icon(Icons.gavel_rounded, size: 14),
+                  label: const Text('Khiếu nại', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colorScheme.error,
+                    side: BorderSide(color: colorScheme.error),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ),
+            if (canDispute) const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: provider.isAcceptingCancellation
+                    ? null
+                    : () => _confirmAcceptCancellation(app.id!, provider),
+                icon: provider.isAcceptingCancellation
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.check_circle_outline, size: 14),
+                label: const Text('Chấp nhận hủy',
+                    style: TextStyle(fontSize: 12)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Overdue warning banner
+  Widget _buildOverdueBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.error_outline, color: Colors.red, size: 14),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Đã quá hạn! Công việc có thể bị hủy tự động.',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmAcceptCancellation(int applicationId, JobProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận hủy'),
+        content: const Text(
+          'Bạn có chắc muốn chấp nhận yêu cầu hủy từ nhà tuyển dụng? Thao tác này không thể hoàn tác.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Quay lại'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final success = await provider.acceptCancellation(applicationId);
+              if (mounted) {
+                if (success) {
+                  ErrorHandler.showSuccessSnackBar(
+                      context, 'Đã chấp nhận hủy công việc');
+                } else {
+                  ErrorHandler.showErrorSnackBar(
+                      context, provider.errorMessage ?? 'Có lỗi xảy ra');
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Chấp nhận hủy'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openDisputeSheet(ShortTermApplicationResponse app) async {
+    final result = await DisputeSheet.show(
+      context,
+      jobId: app.jobId!,
+      applicationId: app.id!,
+      jobTitle: app.jobTitle,
+    );
+    // If dispute opened successfully, switch to Disputes tab
+    if (result == true && mounted) {
+      _tabController.animateTo(2);
+    }
+  }
+
+  // ==================== DISPUTES TAB ====================
+
+  Widget _buildDisputesTab(JobProvider provider) {
+    if (provider.isLoadingDisputes && provider.myDisputes.isEmpty) {
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 3,
+        itemBuilder: (_, __) => const ListItemSkeleton(lineCount: 3),
+      );
+    }
+
+    if (provider.disputesError != null && provider.myDisputes.isEmpty) {
+      return ErrorStateWidget(
+        title: 'Không thể tải khiếu nại',
+        message: provider.disputesError!,
+        onRetry: () => provider.loadMyDisputes(),
+      );
+    }
+
+    if (provider.myDisputes.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.gavel_rounded,
+              size: 64,
+              color: Theme.of(context).hintColor.withValues(alpha: 0.4),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Chưa có khiếu nại nào',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).hintColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => provider.loadMyDisputes(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: provider.myDisputes.length,
+        itemBuilder: (context, index) {
+          return AnimatedListItem(
+            index: index,
+            child: _buildDisputeCard(provider.myDisputes[index]),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDisputeCard(DisputeResponse dispute) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final status = dispute.status?.toUpperCase() ?? 'OPEN';
+
+    final statusColor = switch (status) {
+      'RESOLVED' => Colors.green,
+      'DISMISSED' => Colors.grey,
+      'ESCALATED' => Colors.deepOrange,
+      _ => Colors.orange,
+    };
+    final statusLabel = switch (status) {
+      'OPEN' => 'Đang mở',
+      'UNDER_INVESTIGATION' => 'Đang điều tra',
+      'AWAITING_RESPONSE' => 'Chờ phản hồi',
+      'ESCALATED' => 'Đã leo thang',
+      'RESOLVED' => 'Đã giải quyết',
+      'DISMISSED' => 'Đã từ chối',
+      _ => status,
+    };
+    final typeLabel = switch (dispute.disputeType?.toUpperCase()) {
+      'WORKER_PROTECTION' => 'Bảo vệ quyền lợi',
+      'POOR_QUALITY' => 'Chất lượng không đạt',
+      'SCOPE_CHANGE' => 'Thay đổi phạm vi',
+      'OTHER' => 'Lý do khác',
+      _ => dispute.disputeType ?? 'Khác',
+    };
+
+    return GlassCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  dispute.jobTitle ?? 'Công việc Freelance',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Type chip
+          Row(
+            children: [
+              Icon(Icons.category_outlined,
+                  size: 13, color: colorScheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text(
+                typeLabel,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Reason
+          if (dispute.reason != null) ...[
+            Text(
+              dispute.reason!,
+              style: theme.textTheme.bodySmall,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          // Admin deadline (if OPEN)
+          if (status == 'OPEN' &&
+              dispute.adminResolutionDeadlineAt != null)
+            _buildSlaCountdown(
+              label: 'Hạn Admin giải quyết',
+              deadlineStr: dispute.adminResolutionDeadlineAt!,
+              icon: Icons.hourglass_top_rounded,
+            ),
+
+          // Resolution (if RESOLVED)
+          if (status == 'RESOLVED' && dispute.resolutionNotes != null) ...[
+            const Divider(height: 16),
+            Text(
+              'Kết quả: ${dispute.resolutionNotes}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: Colors.green.shade700,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+
+          // Created date
+          if (dispute.createdAt != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 11, color: theme.hintColor),
+                const SizedBox(width: 4),
+                Text(
+                  'Gửi ${DateTimeHelper.formatSmart(DateTimeHelper.tryParseIso8601(dispute.createdAt!) ?? DateTime.now())}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.hintColor,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   void _confirmWithdraw(int applicationId, JobProvider provider) {
     showDialog(
       context: context,
@@ -545,6 +999,11 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                 ErrorHandler.showSuccessSnackBar(
                   context,
                   'Đã rút đơn thành công',
+                );
+              } else if (mounted && !success) {
+                ErrorHandler.showErrorSnackBar(
+                  context,
+                  provider.errorMessage ?? 'Rút đơn thất bại. Vui lòng thử lại.',
                 );
               }
             },

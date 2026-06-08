@@ -20,7 +20,15 @@ class ModuleService {
         '/courses/$courseId/modules/full',
       );
 
-      final List<dynamic> data = response.data as List<dynamic>;
+      final rawData = response.data;
+      final List<dynamic> data;
+      if (rawData is List) {
+        data = rawData;
+      } else if (rawData is Map && rawData.containsKey('data') && rawData['data'] is List) {
+        data = rawData['data'] as List<dynamic>;
+      } else {
+        data = [];
+      }
       return data
           .map(
             (json) =>
@@ -41,7 +49,15 @@ class ModuleService {
     try {
       final response = await _apiClient.dio.get('/courses/$courseId/modules');
 
-      final List<dynamic> data = response.data as List<dynamic>;
+      final rawData = response.data;
+      final List<dynamic> data;
+      if (rawData is List) {
+        data = rawData;
+      } else if (rawData is Map && rawData.containsKey('data') && rawData['data'] is List) {
+        data = rawData['data'] as List<dynamic>;
+      } else {
+        data = [];
+      }
       return data
           .map(
             (json) => ModuleSummaryDto.fromJson(json as Map<String, dynamic>),
@@ -75,7 +91,15 @@ class ModuleService {
     try {
       final response = await _apiClient.dio.get('/modules/$moduleId/lessons');
 
-      final List<dynamic> data = response.data as List<dynamic>;
+      final rawData = response.data;
+      final List<dynamic> data;
+      if (rawData is List) {
+        data = rawData;
+      } else if (rawData is Map && rawData.containsKey('data') && rawData['data'] is List) {
+        data = rawData['data'] as List<dynamic>;
+      } else {
+        data = [];
+      }
       return data
           .map((json) => LessonBriefDto.fromJson(json as Map<String, dynamic>))
           .toList();

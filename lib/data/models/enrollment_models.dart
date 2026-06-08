@@ -20,10 +20,14 @@ class EnrollRequestDto {
 class EnrollmentDetailDto {
   final int? id;
   final int courseId;
+  @JsonKey(defaultValue: 'Khóa học')
   final String courseTitle;
+  @JsonKey(defaultValue: '')
   final String courseSlug;
   final int userId;
+  @JsonKey(defaultValue: 'ENROLLED')
   final String status;
+  @JsonKey(defaultValue: 0)
   final int progressPercent;
   final String? entitlementSource;
   final String? entitlementRef;
@@ -74,10 +78,15 @@ class EnrollmentStatusDto {
 /// Enrollment statistics
 @JsonSerializable()
 class EnrollmentStatsDto {
+  @JsonKey(defaultValue: 0)
   final int totalEnrollments;
+  @JsonKey(defaultValue: 0)
   final int activeEnrollments;
+  @JsonKey(defaultValue: 0)
   final int completedEnrollments;
+  @JsonKey(defaultValue: 0.0)
   final double averageProgress;
+  @JsonKey(defaultValue: 0.0)
   final double completionRate;
 
   const EnrollmentStatsDto({
